@@ -12,7 +12,7 @@ export const NAV_LINKS = [
   { label: "Beranda", href: "/#beranda" },
   { label: "Layanan", href: "/#layanan" },
   { label: "Portofolio", href: "/portofolio" },
-  { label: "Keunggulan", href: "/#keunggulan" },
+  { label: "Blog", href: "/blog" },
   { label: "Harga", href: "/#harga" },
   { label: "FAQ", href: "/#faq" },
 ];
@@ -22,7 +22,7 @@ export const PAGE_NAV_LINKS = [
   { label: "Beranda", href: "/" },
   { label: "Layanan", href: "/layanan" },
   { label: "Portofolio", href: "/portofolio" },
-  { label: "Harga", href: "/#harga" },
+  { label: "Blog", href: "/blog" },
   { label: "Kontak", href: "/kontak" },
 ];
 

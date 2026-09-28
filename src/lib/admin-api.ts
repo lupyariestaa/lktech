@@ -2,6 +2,7 @@ import { getIdToken } from "@/lib/auth";
 import type { StoredLead, LeadStatus } from "@/lib/lead-types";
 import type { MediaItem } from "@/lib/media-types";
 import type { Project, StoredProject } from "@/lib/project-types";
+import type { Article, StoredArticle } from "@/lib/article-types";
 import type { SiteSettings } from "@/lib/settings-types";
 
 async function authHeaders() {
@@ -129,4 +130,30 @@ export async function sendTestEmail(to?: string) {
     body: JSON.stringify({ to }),
   });
   return handle<{ ok: boolean; to: string }>(res);
+}
+
+export async function fetchArticles(): Promise<StoredArticle[]> {
+  const res = await fetch("/api/admin/articles", {
+    headers: await authHeaders(),
+    cache: "no-store",
+  });
+  const data = await handle<{ articles: StoredArticle[] }>(res);
+  return data.articles;
+}
+
+export async function saveArticle(article: Article) {
+  const res = await fetch("/api/admin/articles", {
+    method: "POST",
+    headers: await authHeaders(),
+    body: JSON.stringify(article),
+  });
+  return handle<{ ok: boolean; article: Article }>(res);
+}
+
+export async function deleteArticle(slug: string) {
+  const res = await fetch(
+    `/api/admin/articles?slug=${encodeURIComponent(slug)}`,
+    { method: "DELETE", headers: await authHeaders() },
+  );
+  return handle<{ ok: boolean }>(res);
 }

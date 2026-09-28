@@ -36,6 +36,12 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // Artikel blog. Publik boleh membaca, hanya admin yang boleh mengubah.
+    match /articles/{articleId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
     // Blokir akses lain secara default.
     match /{document=**} {
       allow read, write: if false;

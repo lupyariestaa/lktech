@@ -10,6 +10,7 @@ import {
   Menu,
   ExternalLink,
   FolderKanban,
+  Newspaper,
   Image as ImageIcon,
   Settings,
   X,
@@ -22,6 +23,7 @@ const NAV = [
   { label: "Ringkasan", href: "/admin", icon: LayoutDashboard },
   { label: "Lead", href: "/admin/leads", icon: Inbox },
   { label: "Portofolio", href: "/admin/projects", icon: FolderKanban },
+  { label: "Blog", href: "/admin/blog", icon: Newspaper },
   { label: "Media", href: "/admin/media", icon: ImageIcon },
   { label: "Pengaturan", href: "/admin/settings", icon: Settings },
 ];
