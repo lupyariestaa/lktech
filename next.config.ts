@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   // Sembunyikan header "X-Powered-By: Next.js".
   poweredByHeader: false,
 
+  // Jangan bundle paket server-only besar (firebase-admin & cloudinary);
+  // biarkan Node me-require langsung. Mencegah error saat build/deploy serverless.
+  serverExternalPackages: ["firebase-admin", "cloudinary"],
+
   // Optimasi import paket besar (tree-shaking per-ikon).
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion"],
