@@ -74,10 +74,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  icons: {
-    icon: [{ url: "/logo/lktech-logo.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/logo/lktech-logo.svg" }],
-  },
 };
 
 export const viewport: Viewport = {
