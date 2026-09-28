@@ -3,8 +3,8 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { PortfolioGrid } from "@/components/portfolio-grid";
 import { ButtonAnchor } from "@/components/ui/button";
-import { PROJECTS } from "@/lib/content";
 import { getPortfolioMediaMap } from "@/lib/portfolio-media";
+import { getProjectCategories, getProjects } from "@/lib/projects";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 
@@ -26,7 +26,9 @@ export const metadata: Metadata = {
 };
 
 export default async function PortofolioPage() {
-  const [mediaMap, settings] = await Promise.all([
+  const [projects, categories, mediaMap, settings] = await Promise.all([
+    getProjects(),
+    getProjectCategories(),
     getPortfolioMediaMap(),
     getSiteSettings(),
   ]);
@@ -46,7 +48,7 @@ export default async function PortofolioPage() {
             <span className="text-gradient">berbicara hasilnya</span>
           </>
         }
-        description={`Kami telah mengerjakan ${PROJECTS.length}+ proyek contoh lintas industri. Jelajahi studi kasus singkat di bawah untuk melihat cara kami bekerja.`}
+        description={`Kami telah mengerjakan ${projects.length}+ proyek lintas industri. Jelajahi studi kasus singkat di bawah untuk melihat cara kami bekerja.`}
       >
         <div className="flex flex-wrap items-center justify-center gap-3">
           <ButtonAnchor
@@ -68,7 +70,11 @@ export default async function PortofolioPage() {
 
       <section className="relative bg-surface py-16">
         <div className="mx-auto max-w-6xl px-6">
-          <PortfolioGrid mediaMap={coverMap} />
+          <PortfolioGrid
+            projects={projects}
+            categories={categories}
+            mediaMap={coverMap}
+          />
         </div>
       </section>
     </>

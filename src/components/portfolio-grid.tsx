@@ -2,17 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { PROJECT_CATEGORIES, PROJECTS } from "@/lib/content";
+import type { Project } from "@/lib/project-types";
 import { ProjectCard } from "@/components/project-card";
 import { cn } from "@/lib/utils";
 
 /**
  * Grid portofolio dengan filter kategori (client-side).
+ * `projects` & `categories` dikirim dari server (Firestore).
  * `mediaMap` memetakan slug proyek → URL cover dari Cloudinary (opsional).
  */
 export function PortfolioGrid({
+  projects,
+  categories,
   mediaMap = {},
 }: {
+  projects: Project[];
+  categories: string[];
   mediaMap?: Record<string, string>;
 }) {
   const [active, setActive] = useState("Semua");
@@ -20,15 +25,15 @@ export function PortfolioGrid({
   const filtered = useMemo(
     () =>
       active === "Semua"
-        ? PROJECTS
-        : PROJECTS.filter((p) => p.category === active),
-    [active],
+        ? projects
+        : projects.filter((p) => p.category === active),
+    [projects, active],
   );
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        {PROJECT_CATEGORIES.map((cat) => {
+        {categories.map((cat) => {
           const isActive = active === cat;
           return (
             <button

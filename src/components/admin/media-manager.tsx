@@ -16,13 +16,14 @@ import {
   type MediaCategory,
   type MediaItem,
 } from "@/lib/media-types";
-import { PROJECTS } from "@/lib/content";
+import type { Project } from "@/lib/project-types";
 import { cn } from "@/lib/utils";
 
 export function MediaManager() {
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const [pending, setPending] = useState<CloudinaryAsset | null>(null);
   const [title, setTitle] = useState("");
@@ -40,6 +41,26 @@ export function MediaManager() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/projects", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (active && Array.isArray(data?.projects)) {
+            setProjects(data.projects);
+          }
+        }
+      } catch {
+        /* abaikan */
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -169,7 +190,7 @@ export function MediaManager() {
                   className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none"
                 >
                   <option value="">— Tidak dikaitkan —</option>
-                  {PROJECTS.map((p) => (
+                  {projects.map((p) => (
                     <option key={p.slug} value={p.slug}>
                       {p.title}
                     </option>

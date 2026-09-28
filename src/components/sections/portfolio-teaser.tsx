@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { PROJECTS } from "@/lib/content";
+import { getProjects } from "@/lib/projects";
 import { SectionHeading } from "@/components/section-heading";
 import { Reveal } from "@/components/motion";
 import { ProjectCard } from "@/components/project-card";
 import { getPortfolioMediaMap } from "@/lib/portfolio-media";
 
 export async function PortfolioTeaser() {
-  const featured = PROJECTS.slice(0, 3);
-  const mediaMap = await getPortfolioMediaMap();
+  const [projects, mediaMap] = await Promise.all([
+    getProjects(),
+    getPortfolioMediaMap(),
+  ]);
+  const featured = projects.slice(0, 3);
 
   return (
     <section id="portofolio" className="relative bg-white py-24">

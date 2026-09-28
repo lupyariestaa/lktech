@@ -1,8 +1,11 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/site";
-import { getProjectSlugs, getServiceSlugs } from "@/lib/content";
+import { getServiceSlugs } from "@/lib/content";
+import { getProjectSlugs } from "@/lib/projects";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -19,7 +22,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  const projectRoutes: MetadataRoute.Sitemap = getProjectSlugs().map((slug) => ({
+  const projectSlugs = await getProjectSlugs();
+  const projectRoutes: MetadataRoute.Sitemap = projectSlugs.map((slug) => ({
     url: `${SITE.url}/portofolio/${slug}`,
     lastModified: now,
     changeFrequency: "yearly",

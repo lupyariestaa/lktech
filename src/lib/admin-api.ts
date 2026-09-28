@@ -1,6 +1,7 @@
 import { getIdToken } from "@/lib/auth";
 import type { StoredLead, LeadStatus } from "@/lib/lead-types";
 import type { MediaItem } from "@/lib/media-types";
+import type { Project, StoredProject } from "@/lib/project-types";
 import type { SiteSettings } from "@/lib/settings-types";
 
 async function authHeaders() {
@@ -93,4 +94,30 @@ export async function saveSettings(settings: SiteSettings) {
     body: JSON.stringify(settings),
   });
   return handle<{ ok: boolean; settings: SiteSettings }>(res);
+}
+
+export async function fetchProjects(): Promise<StoredProject[]> {
+  const res = await fetch("/api/admin/projects", {
+    headers: await authHeaders(),
+    cache: "no-store",
+  });
+  const data = await handle<{ projects: StoredProject[] }>(res);
+  return data.projects;
+}
+
+export async function saveProject(project: Project) {
+  const res = await fetch("/api/admin/projects", {
+    method: "POST",
+    headers: await authHeaders(),
+    body: JSON.stringify(project),
+  });
+  return handle<{ ok: boolean; project: Project }>(res);
+}
+
+export async function deleteProject(slug: string) {
+  const res = await fetch(
+    `/api/admin/projects?slug=${encodeURIComponent(slug)}`,
+    { method: "DELETE", headers: await authHeaders() },
+  );
+  return handle<{ ok: boolean }>(res);
 }

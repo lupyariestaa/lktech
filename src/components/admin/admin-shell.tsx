@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   ExternalLink,
+  FolderKanban,
   Image as ImageIcon,
   Settings,
   X,
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { label: "Ringkasan", href: "/admin", icon: LayoutDashboard },
   { label: "Lead", href: "/admin/leads", icon: Inbox },
+  { label: "Portofolio", href: "/admin/projects", icon: FolderKanban },
   { label: "Media", href: "/admin/media", icon: ImageIcon },
   { label: "Pengaturan", href: "/admin/settings", icon: Settings },
 ];

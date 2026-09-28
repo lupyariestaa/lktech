@@ -810,36 +810,15 @@ export function getServiceSlugs() {
   return SERVICES.map((s) => s.slug);
 }
 
-export type ProjectMetric = {
-  label: string;
-  value: string;
-};
-
-export type Project = {
-  slug: string;
-  title: string;
-  client: string;
-  category: string;
-  serviceSlug: string;
-  year: number;
-  summary: string;
-  cover: string;
-  accent: string;
-  tags: string[];
-  challenge: string;
-  solution: string;
-  results: string[];
-  metrics: ProjectMetric[];
-  techStack: string[];
-  testimonial?: { quote: string; author: string; role: string };
-};
+export type { ProjectMetric, Project } from "@/lib/project-types";
 
 /**
- * Daftar proyek portofolio.
+ * Daftar proyek portofolio default (fallback & seed awal).
  * Catatan: konten bersifat contoh (placeholder realistis) untuk perusahaan
  * baru — akan diganti dengan proyek & studi kasus asli seiring berjalannya waktu.
+ * Data aktual dibaca dari Firestore (lihat lib/projects.ts).
  */
-export const PROJECTS: Project[] = [
+export const PROJECTS: import("@/lib/project-types").Project[] = [
   {
     slug: "website-profil-kopi-lokal",
     title: "Website Profil & Katalog Kopi Lokal",
@@ -1027,19 +1006,6 @@ export const PROJECTS: Project[] = [
     techStack: ["Next.js", "TypeScript", "Firebase Auth", "Firestore"],
   },
 ];
-
-export const PROJECT_CATEGORIES = [
-  "Semua",
-  ...Array.from(new Set(PROJECTS.map((p) => p.category))),
-];
-
-export function getProjectBySlug(slug: string) {
-  return PROJECTS.find((p) => p.slug === slug) ?? null;
-}
-
-export function getProjectSlugs() {
-  return PROJECTS.map((p) => p.slug);
-}
 
 export const WHY_US = [
   {

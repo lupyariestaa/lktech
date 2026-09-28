@@ -16,12 +16,12 @@ import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/icon";
 import { ButtonAnchor } from "@/components/ui/button";
 import { CtaContact } from "@/components/sections/cta-contact";
+import { SERVICES } from "@/lib/content";
 import {
   getProjectBySlug,
   getProjectSlugs,
-  PROJECTS,
-  SERVICES,
-} from "@/lib/content";
+  getProjects,
+} from "@/lib/projects";
 import { getPortfolioMediaMap } from "@/lib/portfolio-media";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
@@ -29,11 +29,13 @@ import { cn } from "@/lib/utils";
 
 type Params = { slug: string };
 
-// Refresh berkala (ISR) agar gambar terbaru tampil tanpa rebuild penuh.
+// Halaman dinamis karena proyek dikelola via dashboard (Firestore).
 export const revalidate = 60;
+export const dynamicParams = true;
 
-export function generateStaticParams(): Params[] {
-  return getProjectSlugs().map((slug) => ({ slug }));
+export async function generateStaticParams(): Promise<Params[]> {
+  const slugs = await getProjectSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -42,7 +44,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const project = getProjectBySlug(slug);
+  const project = await getProjectBySlug(slug);
   if (!project) return { title: "Proyek tidak ditemukan — LKTech" };
 
   return {
@@ -64,14 +66,18 @@ export default async function ProjectDetailPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const project = getProjectBySlug(slug);
+  const project = await getProjectBySlug(slug);
   if (!project) notFound();
 
-  const service = SERVICES.find((s) => s.slug === project.serviceSlug);
-  const others = PROJECTS.filter((p) => p.slug !== slug).slice(0, 3);
+  const [allProjects, mediaMap, settings] = await Promise.all([
+    getProjects(),
+    getPortfolioMediaMap(),
+    getSiteSettings(),
+  ]);
 
-  const mediaMap = await getPortfolioMediaMap();
-  const settings = await getSiteSettings();
+  const service = SERVICES.find((s) => s.slug === project.serviceSlug);
+  const others = allProjects.filter((p) => p.slug !== slug).slice(0, 3);
+
   const projectMedia = mediaMap[slug];
   const coverImage = projectMedia?.cover.secureUrl;
   const gallery = projectMedia?.gallery ?? [];
