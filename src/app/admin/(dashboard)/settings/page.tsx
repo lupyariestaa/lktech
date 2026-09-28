@@ -1,4 +1,5 @@
 import { SettingsManager } from "@/components/admin/settings-manager";
+import { EmailNotifier } from "@/components/admin/email-notifier";
 
 export default function AdminSettingsPage() {
   return (
@@ -9,7 +10,10 @@ export default function AdminSettingsPage() {
           Kelola informasi kontak &amp; media sosial yang tampil di website.
         </p>
       </div>
-      <SettingsManager />
+      <div className="flex flex-col gap-6">
+        <SettingsManager />
+        <EmailNotifier />
+      </div>
     </div>
   );
 }

@@ -121,3 +121,12 @@ export async function deleteProject(slug: string) {
   );
   return handle<{ ok: boolean }>(res);
 }
+
+export async function sendTestEmail(to?: string) {
+  const res = await fetch("/api/admin/email/test", {
+    method: "POST",
+    headers: await authHeaders(),
+    body: JSON.stringify({ to }),
+  });
+  return handle<{ ok: boolean; to: string }>(res);
+}
