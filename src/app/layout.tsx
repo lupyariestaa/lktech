@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { SITE } from "@/lib/site";
+import { getSiteSettings } from "@/lib/settings";
 import { SkipLink } from "@/components/skip-link";
 import { StructuredData } from "@/components/structured-data";
+import { SettingsProvider } from "@/components/settings-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -83,9 +85,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const settings = await getSiteSettings();
+
   return (
     <html lang="id" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <head>
@@ -94,8 +98,10 @@ export default function RootLayout({
       </head>
       <body>
         <SkipLink />
-        {children}
-        <StructuredData />
+        <SettingsProvider initial={settings}>
+          {children}
+          <StructuredData settings={settings} />
+        </SettingsProvider>
       </body>
     </html>
   );

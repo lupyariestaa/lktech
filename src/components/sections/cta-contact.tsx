@@ -5,8 +5,11 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 import { COMPANY } from "@/lib/content";
 import { ButtonAnchor } from "@/components/ui/button";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+import { useSettings } from "@/components/settings-provider";
 
 export function CtaContact() {
+  const settings = useSettings();
+
   return (
     <section id="kontak" className="relative bg-white px-6 py-20">
       <div className="mx-auto max-w-6xl">
@@ -50,7 +53,7 @@ export function CtaContact() {
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </ButtonAnchor>
               <ButtonAnchor
-                href={waLink(WA_MESSAGES.general)}
+                href={waLink(WA_MESSAGES.general, settings.whatsapp)}
                 target="_blank"
                 rel="noopener noreferrer"
                 size="lg"
@@ -64,10 +67,10 @@ export function CtaContact() {
             <p className="mt-6 text-sm text-white/70">
               Atau kirim email ke{" "}
               <a
-                href={`mailto:${COMPANY.email}`}
+                href={`mailto:${settings.email}`}
                 className="font-medium text-white underline underline-offset-2"
               >
-                {COMPANY.email}
+                {settings.email}
               </a>
             </p>
           </div>

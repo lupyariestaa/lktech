@@ -9,6 +9,7 @@ import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import { ButtonAnchor } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
+import { useSettings } from "@/components/settings-provider";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 
 export function Navbar() {
@@ -16,6 +17,7 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const reduced = useReducedMotionPreference();
   const pathname = usePathname();
+  const settings = useSettings();
   const isLanding = pathname === "/";
   const links = isLanding ? NAV_LINKS : PAGE_NAV_LINKS;
   // Intro loader hanya ada di landing; halaman dalam tampil langsung.
@@ -111,7 +113,7 @@ export function Navbar() {
             ))}
           </ul>
           <ButtonAnchor
-            href={waLink(WA_MESSAGES.general)}
+            href={waLink(WA_MESSAGES.general, settings.whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-2 w-full"

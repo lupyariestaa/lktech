@@ -23,6 +23,7 @@ import {
   SERVICES,
 } from "@/lib/content";
 import { getPortfolioMediaMap } from "@/lib/portfolio-media";
+import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +71,7 @@ export default async function ProjectDetailPage({
   const others = PROJECTS.filter((p) => p.slug !== slug).slice(0, 3);
 
   const mediaMap = await getPortfolioMediaMap();
+  const settings = await getSiteSettings();
   const projectMedia = mediaMap[slug];
   const coverImage = projectMedia?.cover.secureUrl;
   const gallery = projectMedia?.gallery ?? [];
@@ -300,6 +302,7 @@ export default async function ProjectDetailPage({
             <ButtonAnchor
               href={waLink(
                 service ? service.waMessage : WA_MESSAGES.general,
+                settings.whatsapp,
               )}
               target="_blank"
               rel="noopener noreferrer"

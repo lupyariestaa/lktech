@@ -6,6 +6,7 @@ import { ArrowRight, MessageCircle, Sparkles, Star } from "lucide-react";
 import { ButtonAnchor } from "@/components/ui/button";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { COMPANY } from "@/lib/content";
+import { useSettings } from "@/components/settings-provider";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 
 function DeviceMockups() {
@@ -125,6 +126,7 @@ function DeviceMockups() {
 
 export function Hero() {
   const reduced = useReducedMotionPreference();
+  const settings = useSettings();
   const base = introDelay(reduced);
 
   return (
@@ -182,7 +184,7 @@ export function Hero() {
             className="mt-8 flex flex-wrap items-center gap-3"
           >
             <ButtonAnchor
-              href={waLink(WA_MESSAGES.general)}
+              href={waLink(WA_MESSAGES.general, settings.whatsapp)}
               target="_blank"
               rel="noopener noreferrer"
               size="lg"

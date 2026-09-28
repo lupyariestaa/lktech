@@ -4,7 +4,7 @@ export const COMPANY = {
   name: "LKTech",
   tagline: "Teknologi Modern, Hasil Nyata",
   location: "Padakembang, Tasikmalaya, Jawa Barat",
-  email: "hello@lktech.id",
+  email: "lupyariestaa@gmail.com",
   year: 2026,
 };
 
@@ -1202,8 +1202,5 @@ export const FAQS = [
   },
 ];
 
-export const SOCIALS = [
-  { label: "Instagram", href: "#", icon: "instagram" },
-  { label: "LinkedIn", href: "#", icon: "linkedin" },
-  { label: "GitHub", href: "#", icon: "github" },
-];
+// Sosial media default (kosong). Diisi dari pengaturan dashboard.
+export const SOCIALS: { label: string; href: string; icon: string }[] = [];

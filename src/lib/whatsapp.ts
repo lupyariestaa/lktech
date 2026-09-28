@@ -1,4 +1,4 @@
-const DEFAULT_NUMBER = "6281234567890";
+const DEFAULT_NUMBER = "6283159688549";
 
 /**
  * Membuat link WhatsApp (deep link wa.me) dengan pesan otomatis.

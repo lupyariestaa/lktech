@@ -6,9 +6,11 @@ import { SectionHeading } from "@/components/section-heading";
 import { Reveal } from "@/components/motion";
 import { ButtonAnchor } from "@/components/ui/button";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+import { useSettings } from "@/components/settings-provider";
 import { cn } from "@/lib/utils";
 
 export function Pricing() {
+  const settings = useSettings();
   return (
     <section id="harga" className="relative bg-surface py-24">
       <div className="mx-auto max-w-6xl px-6">
@@ -72,7 +74,7 @@ export function Pricing() {
                 </ul>
 
                 <ButtonAnchor
-                  href={waLink(WA_MESSAGES.pricing)}
+                  href={waLink(WA_MESSAGES.pricing, settings.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
                   variant={plan.highlight ? "primary" : "outline"}

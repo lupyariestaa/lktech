@@ -3,7 +3,7 @@ import { Clock, Mail, MapPin, MessageCircle } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { ContactForm } from "@/components/contact-form";
 import { ButtonAnchor } from "@/components/ui/button";
-import { COMPANY } from "@/lib/content";
+import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
@@ -19,38 +19,42 @@ export const metadata: Metadata = {
   },
 };
 
-const CONTACT_INFO = [
-  {
-    icon: MessageCircle,
-    label: "WhatsApp",
-    value: "Chat langsung dengan tim kami",
-    href: waLink(WA_MESSAGES.general),
-    external: true,
-  },
-  {
-    icon: Mail,
-    label: "Email",
-    value: COMPANY.email,
-    href: `mailto:${COMPANY.email}`,
-    external: false,
-  },
-  {
-    icon: MapPin,
-    label: "Lokasi",
-    value: COMPANY.location,
-    href: null,
-    external: false,
-  },
-  {
-    icon: Clock,
-    label: "Jam Respons",
-    value: "Senin–Sabtu, 09.00–18.00 WIB",
-    href: null,
-    external: false,
-  },
-];
+export const revalidate = 300;
 
-export default function KontakPage() {
+export default async function KontakPage() {
+  const settings = await getSiteSettings();
+
+  const contactInfo = [
+    {
+      icon: MessageCircle,
+      label: "WhatsApp",
+      value: "Chat langsung dengan tim kami",
+      href: waLink(WA_MESSAGES.general, settings.whatsapp),
+      external: true,
+    },
+    {
+      icon: Mail,
+      label: "Email",
+      value: settings.email,
+      href: `mailto:${settings.email}`,
+      external: false,
+    },
+    {
+      icon: MapPin,
+      label: "Lokasi",
+      value: settings.location,
+      href: null,
+      external: false,
+    },
+    {
+      icon: Clock,
+      label: "Jam Respons",
+      value: "Senin–Sabtu, 09.00–18.00 WIB",
+      href: null,
+      external: false,
+    },
+  ];
+
   return (
     <>
       <PageHero
@@ -87,7 +91,7 @@ export default function KontakPage() {
                 Informasi kontak
               </h3>
               <ul className="mt-5 flex flex-col gap-5">
-                {CONTACT_INFO.map((item) => {
+                {contactInfo.map((item) => {
                   const Icon = item.icon;
                   const content = (
                     <span className="flex items-start gap-3.5">
@@ -135,7 +139,7 @@ export default function KontakPage() {
                 Tim kami siap membantu Anda via WhatsApp pada jam kerja.
               </p>
               <ButtonAnchor
-                href={waLink(WA_MESSAGES.general)}
+                href={waLink(WA_MESSAGES.general, settings.whatsapp)}
                 target="_blank"
                 rel="noopener noreferrer"
                 variant="white"

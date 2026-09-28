@@ -10,6 +10,7 @@ import {
   Menu,
   ExternalLink,
   Image as ImageIcon,
+  Settings,
   X,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
@@ -20,6 +21,7 @@ const NAV = [
   { label: "Ringkasan", href: "/admin", icon: LayoutDashboard },
   { label: "Lead", href: "/admin/leads", icon: Inbox },
   { label: "Media", href: "/admin/media", icon: ImageIcon },
+  { label: "Pengaturan", href: "/admin/settings", icon: Settings },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

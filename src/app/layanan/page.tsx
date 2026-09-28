@@ -6,6 +6,7 @@ import { Reveal } from "@/components/motion";
 import { ButtonAnchor } from "@/components/ui/button";
 import { PROCESS, SERVICES } from "@/lib/content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+import { getSiteSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Layanan — LKTech",
@@ -20,7 +21,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LayananPage() {
+export const revalidate = 300;
+
+export default async function LayananPage() {
+  const settings = await getSiteSettings();
   return (
     <>
       <PageHero
@@ -36,7 +40,7 @@ export default function LayananPage() {
       >
         <div className="flex flex-wrap items-center justify-center gap-3">
           <ButtonAnchor
-            href={waLink(WA_MESSAGES.general)}
+            href={waLink(WA_MESSAGES.general, settings.whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
             size="lg"

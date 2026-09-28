@@ -1,11 +1,12 @@
 import { COMPANY } from "@/lib/content";
 import { SITE } from "@/lib/site";
+import type { SiteSettings } from "@/lib/settings-types";
 
 /**
  * JSON-LD structured data (schema.org) untuk SEO.
  * Membantu mesin pencari memahami identitas & layanan LKTech.
  */
-export function StructuredData() {
+export function StructuredData({ settings }: { settings: SiteSettings }) {
   const data = {
     "@context": "https://schema.org",
     "@type": "ProfessionalService",
@@ -14,7 +15,8 @@ export function StructuredData() {
     url: SITE.url,
     logo: `${SITE.url}/logo/lktech-logo.svg`,
     image: `${SITE.url}${SITE.ogImage}`,
-    email: COMPANY.email,
+    email: settings.email,
+    telephone: `+${settings.whatsapp}`,
     foundingDate: String(COMPANY.year),
     address: {
       "@type": "PostalAddress",

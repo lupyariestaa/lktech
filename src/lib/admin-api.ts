@@ -1,6 +1,7 @@
 import { getIdToken } from "@/lib/auth";
 import type { StoredLead, LeadStatus } from "@/lib/lead-types";
 import type { MediaItem } from "@/lib/media-types";
+import type { SiteSettings } from "@/lib/settings-types";
 
 async function authHeaders() {
   const token = await getIdToken();
@@ -77,4 +78,19 @@ export async function deleteMedia(id: string, publicId: string) {
     { method: "DELETE", headers: await authHeaders() },
   );
   return handle<{ ok: boolean }>(res);
+}
+
+export async function fetchSettings(): Promise<SiteSettings> {
+  const res = await fetch("/api/settings", { cache: "no-store" });
+  const data = await handle<{ settings: SiteSettings }>(res);
+  return data.settings;
+}
+
+export async function saveSettings(settings: SiteSettings) {
+  const res = await fetch("/api/admin/settings", {
+    method: "PUT",
+    headers: await authHeaders(),
+    body: JSON.stringify(settings),
+  });
+  return handle<{ ok: boolean; settings: SiteSettings }>(res);
 }

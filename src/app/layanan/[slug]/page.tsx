@@ -9,9 +9,13 @@ import { ButtonAnchor, ButtonLink } from "@/components/ui/button";
 import { CtaContact } from "@/components/sections/cta-contact";
 import { getServiceBySlug, getServiceSlugs, SERVICES } from "@/lib/content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+import { getSiteSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
 type Params = { slug: string };
+
+// Refresh berkala agar perubahan pengaturan (kontak) ikut ter-update.
+export const revalidate = 300;
 
 export function generateStaticParams(): Params[] {
   return getServiceSlugs().map((slug) => ({ slug }));
@@ -48,6 +52,7 @@ export default async function LayananDetailPage({
   const service = getServiceBySlug(slug);
   if (!service) notFound();
 
+  const settings = await getSiteSettings();
   const { detail } = service;
   const others = SERVICES.filter((s) => s.slug !== slug);
 
@@ -70,7 +75,7 @@ export default async function LayananDetailPage({
       >
         <div className="flex flex-wrap items-center gap-3">
           <ButtonAnchor
-            href={waLink(service.waMessage)}
+            href={waLink(service.waMessage, settings.whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
             size="lg"
@@ -239,7 +244,7 @@ export default async function LayananDetailPage({
                   kami bantu susun solusinya.
                 </p>
                 <ButtonAnchor
-                  href={waLink(service.waMessage)}
+                  href={waLink(service.waMessage, settings.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-5 w-full"
@@ -248,7 +253,7 @@ export default async function LayananDetailPage({
                   Chat via WhatsApp
                 </ButtonAnchor>
                 <ButtonAnchor
-                  href={waLink(WA_MESSAGES.general)}
+                  href={waLink(WA_MESSAGES.general, settings.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
                   variant="outline"

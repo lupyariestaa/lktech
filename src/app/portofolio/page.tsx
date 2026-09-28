@@ -5,6 +5,7 @@ import { PortfolioGrid } from "@/components/portfolio-grid";
 import { ButtonAnchor } from "@/components/ui/button";
 import { PROJECTS } from "@/lib/content";
 import { getPortfolioMediaMap } from "@/lib/portfolio-media";
+import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 
 // Refresh berkala (ISR) agar gambar terbaru dari Cloudinary tampil
@@ -25,7 +26,10 @@ export const metadata: Metadata = {
 };
 
 export default async function PortofolioPage() {
-  const mediaMap = await getPortfolioMediaMap();
+  const [mediaMap, settings] = await Promise.all([
+    getPortfolioMediaMap(),
+    getSiteSettings(),
+  ]);
   const coverMap: Record<string, string> = {};
   for (const [slug, media] of Object.entries(mediaMap)) {
     coverMap[slug] = media.cover.secureUrl;
@@ -46,7 +50,7 @@ export default async function PortofolioPage() {
       >
         <div className="flex flex-wrap items-center justify-center gap-3">
           <ButtonAnchor
-            href={waLink(WA_MESSAGES.general)}
+            href={waLink(WA_MESSAGES.general, settings.whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
             size="lg"
