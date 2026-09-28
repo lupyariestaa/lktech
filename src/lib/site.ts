@@ -5,9 +5,17 @@ import { COMPANY } from "@/lib/content";
  * - Menambahkan skema `https://` bila tidak ada.
  * - Fallback ke domain default bila nilainya tidak dapat diparsing,
  *   agar `new URL(metadataBase)` tidak pernah gagal saat build.
+ *
+ * Mendukung dua nama env:
+ * - `SITE_URL` (server-only, direkomendasikan untuk produksi)
+ * - `NEXT_PUBLIC_SITE_URL` (fallback / kompatibilitas)
  */
 function resolveSiteUrl(): string {
-  const raw = (process.env.NEXT_PUBLIC_SITE_URL ?? "").trim();
+  const raw = (
+    process.env.SITE_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    ""
+  ).trim();
   const fallback = "https://lktech.id";
 
   if (!raw) return fallback;
@@ -22,8 +30,8 @@ function resolveSiteUrl(): string {
 }
 
 /**
- * URL situs (produksi). Bisa dioverride lewat env NEXT_PUBLIC_SITE_URL.
- * Dipakai untuk metadataBase, canonical, sitemap, dan Open Graph.
+ * URL situs (produksi). Dipakai untuk metadataBase, canonical, sitemap,
+ * dan Open Graph — semua kebutuhan server-side.
  */
 export const SITE_URL = resolveSiteUrl();
 
