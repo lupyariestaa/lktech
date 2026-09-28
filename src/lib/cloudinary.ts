@@ -25,12 +25,21 @@ if (isCloudinaryConfigured) {
 export const CLOUDINARY_FOLDER = "lktech";
 
 /**
+ * Folder yang diizinkan untuk upload (konsisten dengan kategori media).
+ */
+export const CLOUDINARY_FOLDERS = {
+  portofolio: `${CLOUDINARY_FOLDER}/portofolio`,
+  banner: `${CLOUDINARY_FOLDER}/banner`,
+  lainnya: `${CLOUDINARY_FOLDER}/lainnya`,
+} as const;
+
+/**
  * Menghasilkan parameter signed upload untuk digunakan di sisi klien.
  * Secret TIDAK pernah dikirim ke browser; hanya signature turunannya.
  */
 export function createUploadSignature(params: { folder?: string } = {}) {
   const timestamp = Math.round(Date.now() / 1000);
-  const folder = params.folder ?? `${CLOUDINARY_FOLDER}/portfolio`;
+  const folder = params.folder ?? CLOUDINARY_FOLDERS.portofolio;
 
   const toSign = {
     folder,

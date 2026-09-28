@@ -4,7 +4,12 @@ import { PageHero } from "@/components/page-hero";
 import { PortfolioGrid } from "@/components/portfolio-grid";
 import { ButtonAnchor } from "@/components/ui/button";
 import { PROJECTS } from "@/lib/content";
+import { getPortfolioMediaMap } from "@/lib/portfolio-media";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+
+// Refresh berkala (ISR) agar gambar terbaru dari Cloudinary tampil
+// tanpa perlu rebuild penuh.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Portofolio — LKTech",
@@ -19,7 +24,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PortofolioPage() {
+export default async function PortofolioPage() {
+  const mediaMap = await getPortfolioMediaMap();
+  const coverMap: Record<string, string> = {};
+  for (const [slug, media] of Object.entries(mediaMap)) {
+    coverMap[slug] = media.cover.secureUrl;
+  }
+
   return (
     <>
       <PageHero
@@ -53,7 +64,7 @@ export default function PortofolioPage() {
 
       <section className="relative bg-surface py-16">
         <div className="mx-auto max-w-6xl px-6">
-          <PortfolioGrid />
+          <PortfolioGrid mediaMap={coverMap} />
         </div>
       </section>
     </>

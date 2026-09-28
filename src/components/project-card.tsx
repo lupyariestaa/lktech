@@ -6,7 +6,13 @@ import { ProjectCover } from "@/components/project-cover";
 /**
  * Kartu proyek untuk grid portofolio.
  */
-export function ProjectCard({ project }: { project: Project }) {
+export function ProjectCard({
+  project,
+  coverImage,
+}: {
+  project: Project;
+  coverImage?: string;
+}) {
   return (
     <Link
       href={`/portofolio/${project.slug}`}
@@ -17,6 +23,7 @@ export function ProjectCard({ project }: { project: Project }) {
           name={project.cover}
           accent={project.accent}
           label={project.category}
+          image={coverImage}
         />
       </div>
 

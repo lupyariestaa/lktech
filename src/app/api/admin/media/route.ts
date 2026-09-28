@@ -39,6 +39,7 @@ export async function GET(req: Request) {
         bytes: d.bytes ?? 0,
         category: (d.category as MediaCategory) ?? "lainnya",
         title: d.title ?? "",
+        projectSlug: d.projectSlug ?? undefined,
         createdAt: d.createdAtISO ?? null,
       };
     });
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const { publicId, secureUrl, width, height, format, bytes, category, title } =
+  const { publicId, secureUrl, width, height, format, bytes, category, title, projectSlug } =
     body;
 
   if (
@@ -108,6 +109,7 @@ export async function POST(req: Request) {
       bytes: num(bytes),
       category: cat,
       title: typeof title === "string" ? title : "",
+      projectSlug: typeof projectSlug === "string" ? projectSlug : "",
       createdAtISO: now,
       uploadedBy: check.email,
     });

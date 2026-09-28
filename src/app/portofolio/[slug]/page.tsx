@@ -22,10 +22,14 @@ import {
   PROJECTS,
   SERVICES,
 } from "@/lib/content";
+import { getPortfolioMediaMap } from "@/lib/portfolio-media";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
 type Params = { slug: string };
+
+// Refresh berkala (ISR) agar gambar terbaru tampil tanpa rebuild penuh.
+export const revalidate = 60;
 
 export function generateStaticParams(): Params[] {
   return getProjectSlugs().map((slug) => ({ slug }));
@@ -64,6 +68,11 @@ export default async function ProjectDetailPage({
 
   const service = SERVICES.find((s) => s.slug === project.serviceSlug);
   const others = PROJECTS.filter((p) => p.slug !== slug).slice(0, 3);
+
+  const mediaMap = await getPortfolioMediaMap();
+  const projectMedia = mediaMap[slug];
+  const coverImage = projectMedia?.cover.secureUrl;
+  const gallery = projectMedia?.gallery ?? [];
 
   return (
     <>
@@ -136,9 +145,28 @@ export default async function ProjectDetailPage({
                 name={project.cover}
                 accent={project.accent}
                 label={project.category}
+                image={coverImage}
+                priority
               />
             </div>
           </Reveal>
+
+          {/* Galeri gambar tambahan */}
+          {gallery.length > 0 && (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {gallery.map((g, i) => (
+                <Reveal key={g.id} delay={i * 0.06}>
+                  <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
+                    <ProjectCover
+                      name={`${project.cover}-${i}`}
+                      accent={project.accent}
+                      image={g.secureUrl}
+                    />
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          )}
 
           <div className="mt-8 grid grid-cols-3 gap-4">
             {project.metrics.map((m) => (

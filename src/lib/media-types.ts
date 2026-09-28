@@ -18,5 +18,7 @@ export type MediaItem = {
   bytes: number;
   category: MediaCategory;
   title: string;
+  /** Slug proyek portofolio terkait (opsional). */
+  projectSlug?: string;
   createdAt: string | null;
 };

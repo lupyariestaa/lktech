@@ -16,6 +16,7 @@ import {
   type MediaCategory,
   type MediaItem,
 } from "@/lib/media-types";
+import { PROJECTS } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 export function MediaManager() {
@@ -26,6 +27,7 @@ export function MediaManager() {
   const [pending, setPending] = useState<CloudinaryAsset | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<MediaCategory>("portofolio");
+  const [projectSlug, setProjectSlug] = useState("");
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -79,6 +81,7 @@ export function MediaManager() {
         bytes: pending.bytes,
         category,
         title: title.trim(),
+        projectSlug: category === "portofolio" ? projectSlug : "",
       });
       setPending(null);
       setTitle("");
@@ -154,6 +157,29 @@ export function MediaManager() {
                 ))}
               </select>
             </label>
+
+            {category === "portofolio" && (
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-secondary">
+                  Proyek terkait
+                </span>
+                <select
+                  value={projectSlug}
+                  onChange={(e) => setProjectSlug(e.target.value)}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none"
+                >
+                  <option value="">— Tidak dikaitkan —</option>
+                  {PROJECTS.map((p) => (
+                    <option key={p.slug} value={p.slug}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs text-muted">
+                  Gambar pertama proyek menjadi cover; sisanya jadi galeri.
+                </span>
+              </label>
+            )}
 
             <button
               onClick={onSave}

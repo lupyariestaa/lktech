@@ -4,9 +4,11 @@ import { PROJECTS } from "@/lib/content";
 import { SectionHeading } from "@/components/section-heading";
 import { Reveal } from "@/components/motion";
 import { ProjectCard } from "@/components/project-card";
+import { getPortfolioMediaMap } from "@/lib/portfolio-media";
 
-export function PortfolioTeaser() {
+export async function PortfolioTeaser() {
   const featured = PROJECTS.slice(0, 3);
+  const mediaMap = await getPortfolioMediaMap();
 
   return (
     <section id="portofolio" className="relative bg-white py-24">
@@ -25,7 +27,10 @@ export function PortfolioTeaser() {
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((project, i) => (
             <Reveal key={project.slug} delay={i * 0.08}>
-              <ProjectCard project={project} />
+              <ProjectCard
+                project={project}
+                coverImage={mediaMap[project.slug]?.cover.secureUrl}
+              />
             </Reveal>
           ))}
         </div>

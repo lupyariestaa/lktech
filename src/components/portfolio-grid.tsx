@@ -8,8 +8,13 @@ import { cn } from "@/lib/utils";
 
 /**
  * Grid portofolio dengan filter kategori (client-side).
+ * `mediaMap` memetakan slug proyek → URL cover dari Cloudinary (opsional).
  */
-export function PortfolioGrid() {
+export function PortfolioGrid({
+  mediaMap = {},
+}: {
+  mediaMap?: Record<string, string>;
+}) {
   const [active, setActive] = useState("Semua");
 
   const filtered = useMemo(
@@ -52,7 +57,7 @@ export function PortfolioGrid() {
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}
           >
-            <ProjectCard project={project} />
+            <ProjectCard project={project} coverImage={mediaMap[project.slug]} />
           </motion.div>
         ))}
       </div>

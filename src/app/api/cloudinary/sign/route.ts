@@ -3,18 +3,14 @@ import { requireAdmin } from "@/lib/admin-guard";
 import {
   createUploadSignature,
   isCloudinaryConfigured,
-  CLOUDINARY_FOLDER,
+  CLOUDINARY_FOLDERS,
 } from "@/lib/cloudinary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Folder yang diizinkan untuk upload (mencegah folder sembarangan). */
-const ALLOWED_FOLDERS = [
-  `${CLOUDINARY_FOLDER}/portfolio`,
-  `${CLOUDINARY_FOLDER}/banner`,
-  `${CLOUDINARY_FOLDER}/lainnya`,
-];
+const ALLOWED_FOLDERS: string[] = Object.values(CLOUDINARY_FOLDERS);
 
 /**
  * POST /api/cloudinary/sign
@@ -42,9 +38,9 @@ export async function POST(req: Request) {
     /* body opsional */
   }
 
-  // Hanya izinkan folder yang dikenal; selain itu pakai default portofolio.
+  // Hanya izinkan folder yang dikenal; selain itu pakai folder "lainnya".
   if (folder && !ALLOWED_FOLDERS.includes(folder)) {
-    folder = `${CLOUDINARY_FOLDER}/lainnya`;
+    folder = CLOUDINARY_FOLDERS.lainnya;
   }
 
   try {
