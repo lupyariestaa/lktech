@@ -31,18 +31,20 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className="fixed top-0 right-0 left-0 z-[100] px-4 pt-3 sm:px-6">
+    <header
+      className={cn(
+        "fixed top-0 right-0 left-0 z-[100] transition-all duration-500",
+        scrolled
+          ? "border-b border-slate-200 bg-white/90 backdrop-blur-md shadow-sm shadow-slate-900/5"
+          : "border-b border-transparent bg-transparent",
+      )}
+    >
       <motion.nav
         aria-label="Navigasi utama"
-        initial={{ y: -80, opacity: 0 }}
+        initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: base, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className={cn(
-          "mx-auto flex max-w-6xl items-center justify-between rounded-full px-4 py-2.5 transition-all duration-500 sm:px-5",
-          scrolled
-            ? "glass-strong shadow-lg shadow-slate-900/5"
-            : "bg-transparent",
-        )}
+        className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6"
       >
         <Logo height={32} href="/" />
 
@@ -51,10 +53,10 @@ export function Navbar() {
             <li key={link.href}>
               <a
                 href={link.href}
-                className="group relative rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-primary"
+                className="group relative px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-primary"
               >
                 {link.label}
-                <span className="absolute inset-x-4 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full bg-primary transition-transform duration-300 group-hover:scale-x-100" />
+                <span className="absolute inset-x-3.5 bottom-1 h-0.5 origin-left scale-x-0 rounded-full bg-primary transition-transform duration-300 group-hover:scale-x-100" />
               </a>
             </li>
           ))}
@@ -76,7 +78,7 @@ export function Navbar() {
             aria-label={open ? "Tutup menu navigasi" : "Buka menu navigasi"}
             aria-expanded={open}
             aria-controls="menu-mobile"
-            className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white/70 text-secondary lg:hidden"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary lg:hidden"
           >
             {open ? (
               <X className="h-5 w-5" aria-hidden="true" />
@@ -96,16 +98,16 @@ export function Navbar() {
           opacity: open ? 1 : 0,
         }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="mx-auto mt-2 max-w-6xl overflow-hidden lg:hidden"
+        className="overflow-hidden border-t border-slate-100 bg-white lg:hidden"
       >
-        <div className="glass-strong rounded-3xl p-3 shadow-lg">
+        <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
           <ul className="flex flex-col">
             {links.map((link) => (
               <li key={link.href}>
                 <a
                   href={link.href}
                   onClick={() => setOpen(false)}
-                  className="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-primary-50 hover:text-primary"
+                  className="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-primary-50 hover:text-primary"
                 >
                   {link.label}
                 </a>

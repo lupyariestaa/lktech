@@ -6,8 +6,12 @@ import { useSyncExternalStore } from "react";
  * Durasi intro loader (ms) — sumber tunggal kebenaran.
  * Dipakai oleh <IntroLoader /> dan oleh animasi konten (hero, navbar)
  * agar kemunculan konten tepat setelah loader menghilang, tanpa jeda kosong.
+ *
+ * Timeline <IntroLoader /> (lihat komponen):
+ *   close 500 + content-in 200 + hold 950 + content-out 300 + open 650 = 2650ms.
+ * `INTRO_DURATION + INTRO_EXIT` harus sama dengan total tersebut.
  */
-export const INTRO_DURATION = 1900;
+export const INTRO_DURATION = 2350;
 /** Jeda singkat agar exit-animation loader terlihat halus sebelum konten masuk. */
 export const INTRO_EXIT = 300;
 
