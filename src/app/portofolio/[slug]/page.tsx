@@ -16,7 +16,7 @@ import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/icon";
 import { ButtonAnchor } from "@/components/ui/button";
 import { CtaContact } from "@/components/sections/cta-contact";
-import { SERVICES } from "@/lib/content";
+import { getSiteContent } from "@/lib/site-content";
 import {
   getProjectBySlug,
   getProjectSlugs,
@@ -69,13 +69,14 @@ export default async function ProjectDetailPage({
   const project = await getProjectBySlug(slug);
   if (!project) notFound();
 
-  const [allProjects, mediaMap, settings] = await Promise.all([
+  const [allProjects, mediaMap, settings, { services }] = await Promise.all([
     getProjects(),
     getPortfolioMediaMap(),
     getSiteSettings(),
+    getSiteContent(),
   ]);
 
-  const service = SERVICES.find((s) => s.slug === project.serviceSlug);
+  const service = services.find((s) => s.slug === project.serviceSlug);
   const others = allProjects.filter((p) => p.slug !== slug).slice(0, 3);
 
   const projectMedia = mediaMap[slug];
@@ -355,7 +356,7 @@ export default async function ProjectDetailPage({
                 >
                   <Icon
                     name={
-                      SERVICES.find((s) => s.slug === p.serviceSlug)?.icon ??
+                      services.find((s) => s.slug === p.serviceSlug)?.icon ??
                       "sparkles"
                     }
                     className="h-5 w-5"

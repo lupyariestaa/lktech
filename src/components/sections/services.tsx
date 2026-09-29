@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { SERVICES } from "@/lib/content";
 import { SectionHeading } from "@/components/section-heading";
 import { Reveal } from "@/components/motion";
 import { ServiceCard } from "@/components/service-card";
+import { useContent } from "@/components/content-provider";
 
 export function Services() {
+  const { services } = useContent();
   return (
     <section id="layanan" className="relative bg-surface py-24">
       <div className="mx-auto max-w-6xl px-6">
@@ -23,7 +24,7 @@ export function Services() {
         />
 
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((service, i) => (
+          {services.map((service, i) => (
             <Reveal key={service.slug} delay={i * 0.06}>
               <ServiceCard service={service} />
             </Reveal>

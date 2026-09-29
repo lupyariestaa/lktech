@@ -18,7 +18,7 @@ import {
   saveProject,
 } from "@/lib/admin-api";
 import type { Project, StoredProject } from "@/lib/project-types";
-import { SERVICES } from "@/lib/content";
+import { useSiteContent } from "@/components/admin/use-site-content";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
@@ -49,6 +49,8 @@ export function ProjectsManager() {
   const [editing, setEditing] = useState<Project | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { content } = useSiteContent();
+  const services = content.services;
 
   const load = useCallback(async () => {
     try {
@@ -131,6 +133,7 @@ export function ProjectsManager() {
         project={editing}
         isNew={isNew}
         saving={saving}
+        services={services}
         onChange={setEditing}
         onSave={onSave}
         onCancel={() => setEditing(null)}
@@ -235,6 +238,7 @@ function ProjectForm({
   project,
   isNew,
   saving,
+  services,
   onChange,
   onSave,
   onCancel,
@@ -243,6 +247,7 @@ function ProjectForm({
   project: Project;
   isNew: boolean;
   saving: boolean;
+  services: { slug: string; title: string }[];
   onChange: (p: Project) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -336,7 +341,7 @@ function ProjectForm({
               onChange={(e) => set("serviceSlug", e.target.value)}
               className={fieldBase}
             >
-              {SERVICES.map((s) => (
+              {services.map((s) => (
                 <option key={s.slug} value={s.slug}>
                   {s.title}
                 </option>

@@ -54,6 +54,56 @@ export async function deleteLead(id: string) {
   return handle<{ ok: boolean }>(res);
 }
 
+/** Bungkus nilai agar aman sebagai sel CSV (quote + escape). */
+function csvCell(value: unknown): string {
+  const s = value === null || value === undefined ? "" : String(value);
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Mengubah daftar lead menjadi teks CSV dan mengunduhnya di browser.
+ * Kolom mengikuti data yang tampil di dashboard.
+ */
+export function exportLeadsToCsv(leads: StoredLead[], filename?: string) {
+  const headers = [
+    "Nama",
+    "Email",
+    "Telepon",
+    "Layanan",
+    "Pesan",
+    "Status",
+    "Tanggal",
+    "Sumber",
+  ];
+  const rows = leads.map((l) =>
+    [
+      l.name,
+      l.email,
+      l.phone,
+      l.service,
+      l.message,
+      l.status,
+      l.createdAt ?? "",
+      l.source ?? "",
+    ]
+      .map(csvCell)
+      .join(","),
+  );
+  // BOM agar Excel membaca UTF-8 dengan benar.
+  const csv = "\uFEFF" + [headers.map(csvCell).join(","), ...rows].join("\r\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = filename ?? `lead-lktech-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export async function fetchMedia(): Promise<MediaItem[]> {
   const res = await fetch("/api/admin/media", {
     headers: await authHeaders(),

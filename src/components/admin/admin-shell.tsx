@@ -14,6 +14,9 @@ import {
   Image as ImageIcon,
   Settings,
   X,
+  LayoutGrid,
+  HelpCircle,
+  Tags,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { signOutUser } from "@/lib/auth";
@@ -22,6 +25,9 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { label: "Ringkasan", href: "/admin", icon: LayoutDashboard },
   { label: "Lead", href: "/admin/leads", icon: Inbox },
+  { label: "Layanan", href: "/admin/services", icon: LayoutGrid },
+  { label: "Harga", href: "/admin/pricing", icon: Tags },
+  { label: "FAQ", href: "/admin/faq", icon: HelpCircle },
   { label: "Portofolio", href: "/admin/projects", icon: FolderKanban },
   { label: "Blog", href: "/admin/blog", icon: Newspaper },
   { label: "Media", href: "/admin/media", icon: ImageIcon },

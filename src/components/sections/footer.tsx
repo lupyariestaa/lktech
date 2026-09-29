@@ -1,14 +1,16 @@
 "use client";
 
 import { Mail, MapPin, MessageCircle } from "lucide-react";
-import { COMPANY, PAGE_NAV_LINKS, SERVICES } from "@/lib/content";
+import { COMPANY, PAGE_NAV_LINKS } from "@/lib/content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { Icon } from "@/components/icon";
 import { Logo } from "@/components/logo";
 import { useSettings } from "@/components/settings-provider";
+import { useContent } from "@/components/content-provider";
 
 export function Footer() {
   const settings = useSettings();
+  const { services } = useContent();
 
   return (
     <footer className="relative overflow-hidden border-t border-slate-200 bg-surface">
@@ -59,8 +61,8 @@ export function Footer() {
           <div>
             <h2 className="text-sm font-semibold text-secondary">Layanan</h2>
             <ul className="mt-4 flex flex-col gap-2.5">
-              {SERVICES.slice(0, 5).map((s) => (
-                <li key={s.title}>
+              {services.slice(0, 5).map((s) => (
+                <li key={s.slug}>
                   <a
                     href={`/layanan/${s.slug}`}
                     className="text-sm text-muted transition-colors hover:text-primary"

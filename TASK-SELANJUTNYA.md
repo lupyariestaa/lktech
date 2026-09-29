@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi Blog/Artikel.
+> Terakhir diperbarui: sesi Dashboard Konten (kelola Layanan, FAQ, Harga) + Vercel Analytics.
 
 ---
 
@@ -21,6 +21,13 @@
 | 10 | CRUD Portofolio dari dashboard | ✅ |
 | 11 | Notifikasi email saat lead masuk (Resend) | ✅ |
 | 12 | Blog/Artikel + CRUD dari dashboard | ✅ |
+| 13 | Upload gambar sampul langsung di editor blog (`/admin/blog`) | ✅ |
+| 14 | Ekspor CSV lead (menghormati pencarian & filter) | ✅ |
+| 15 | Grafik tren lead 14 hari terakhir di dashboard | ✅ |
+| 16 | Vercel Analytics (`@vercel/analytics`) terpasang di layout | ✅ |
+| 17 | Kelola **Layanan** dari dashboard (CRUD penuh termasuk detail, fitur, paket, FAQ) | ✅ |
+| 18 | Kelola **FAQ** beranda dari dashboard | ✅ |
+| 19 | Kelola **Harga/Paket** beranda dari dashboard | ✅ |
 
 ---
 
@@ -29,11 +36,11 @@
 ### Prioritas Menengah
 
 #### 1. Analytics & Monitoring
-- [ ] Pasang **Vercel Analytics** (atau Google Analytics 4) untuk memantau pengunjung.
+- [x] Pasang **Vercel Analytics** (`@vercel/analytics` + `<Analytics />` di `layout.tsx`). ⚠️ **Aktifkan di dashboard Vercel** (Project → Analytics) agar data mulai terkumpul.
 - [ ] Pasang **error tracking** (Sentry atau sejenis) untuk mendeteksi bug di produksi.
 - [ ] (Opsional) Event tracking untuk konversi (klik WhatsApp, submit form).
 
-#### 2. Domain Sendiri
+#### 2. Domain Sendiri — SKIP (diputuskan belum beli domain)
 - [ ] Beli domain (mis. `lktech.id` / `lktech.com`).
 - [ ] Sambungkan domain ke Vercel.
 - [ ] Update `SITE_URL` di env Vercel ke domain baru.
@@ -43,26 +50,30 @@
 ### Prioritas Lanjutan (Nice to Have)
 
 #### 3. Upload Gambar Sampul Langsung di Editor Blog
-- [ ] Integrasikan `ImageUploader` ke form artikel (`/admin/blog`) agar sampul bisa diunggah langsung, bukan hanya tempel URL.
+- [x] Integrasikan `ImageUploader` ke form artikel (`/admin/blog`) agar sampul bisa diunggah langsung, bukan hanya tempel URL. (URL tempel tetap tersedia sebagai cadangan.)
 
-#### 4. Isi Data Asli
+#### 4. Isi Data Asli — SKIP (diisi manual nanti via dashboard)
 - [ ] Ganti konten **portofolio** placeholder dengan proyek nyata (via `/admin/projects`).
 - [ ] Ganti **testimoni** placeholder dengan yang asli.
 - [ ] Isi **logo klien** asli (bagian "Trusted By").
 - [ ] Lengkapi `identitas-perusahaan.md` (kontak, sosmed, tagline resmi).
 - [ ] Update `identitas-perusahaan.md` & `tech-stack.md` bila ada perubahan.
 
-#### 5. Verifikasi Domain Email (Resend)
-- [ ] Verifikasi domain di Resend agar email notifikasi bisa dikirim ke alamat mana pun (saat ini hanya ke email terdaftar Resend).
+> Catatan: layanan, FAQ, dan harga kini dapat diubah dari dashboard (`/admin/services`, `/admin/faq`, `/admin/pricing`).
+
+#### 5. Verifikasi Domain Email (Resend) — SKIP (diputuskan tanpa domain sendiri)
+- [ ] Verifikasi domain di Resend agar email notifikasi bisa dikirim ke alamat mana pun.
 - [ ] Ganti `EMAIL_FROM` ke `LKTech <notifikasi@domain-anda>`.
 
-#### 6. Peningkatan Dashboard (opsional)
-- [ ] Filter/pencarian lead lebih lanjut + ekspor CSV.
-- [ ] Statistik lead (grafik tren).
-- [ ] Kelola layanan (services) dari dashboard (saat ini masih di kode).
-- [ ] Kelola FAQ & harga dari dashboard.
+> Kondisi saat ini: `EMAIL_FROM=LKTech <onboarding@resend.dev>`, notifikasi hanya bisa ke email terdaftar Resend (`lupyariestaa@gmail.com`).
 
-#### 7. Peningkatan SEO (lanjutan)
+#### 6. Peningkatan Dashboard (opsional)
+- [x] Filter/pencarian lead lebih lanjut + ekspor CSV.
+- [x] Statistik lead (grafik tren).
+- [x] Kelola layanan (services) dari dashboard — termasuk detail tiap layanan.
+- [x] Kelola FAQ & harga dari dashboard.
+
+#### 7. Peningkatan SEO (lanjutan) — SKIP sementara (tunggu proper dulu)
 - [ ] Daftarkan ke **Google Search Console** + submit sitemap.
 - [ ] Daftarkan **Google Business Profile**.
 - [ ] (Opsional) Halaman kategori/tag blog.
@@ -108,8 +119,8 @@ LEAD_NOTIFY_EMAILS=lupyariestaa@gmail.com
 
 ### Firestore Security Rules
 - File: `firestore.rules`
-- **PENTING:** setiap ada koleksi baru (`settings`, `projects`, `articles`), rules harus di-**Publish ulang** di Firebase Console → Firestore → Rules.
-- Koleksi: `leads`, `media`, `settings`, `projects`, `articles`.
+- **PENTING:** setiap ada koleksi baru (`settings`, `projects`, `articles`, `content`), rules harus di-**Publish ulang** di Firebase Console → Firestore → Rules.
+- Koleksi: `leads`, `media`, `settings`, `projects`, `articles`, `content`.
 
 ### Deploy
 - Repo GitHub: `https://github.com/lupyariestaa/lktech`

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  Download,
   Loader2,
   Mail,
   MessageCircle,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import {
   deleteLead,
+  exportLeadsToCsv,
   fetchLeads,
   updateLeadStatus,
 } from "@/lib/admin-api";
@@ -97,6 +99,14 @@ export function LeadsManager() {
     }
   };
 
+  const onExport = () => {
+    if (filtered.length === 0) {
+      setError("Tidak ada lead untuk diekspor.");
+      return;
+    }
+    exportLeadsToCsv(filtered);
+  };
+
   const onDelete = async (id: string, name: string) => {
     if (!confirm(`Hapus lead dari "${name}"? Tindakan ini permanen.`)) return;
     const prev = leads;
@@ -136,6 +146,16 @@ export function LeadsManager() {
         </select>
 
         <button
+          onClick={onExport}
+          disabled={loading || leads.length === 0}
+          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
+          title="Ekspor hasil yang tampil ke CSV"
+        >
+          <Download className="h-4 w-4" />
+          Ekspor CSV
+        </button>
+
+        <button
           onClick={refresh}
           disabled={loading}
           className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
@@ -144,6 +164,10 @@ export function LeadsManager() {
           Muat ulang
         </button>
       </div>
+
+      <p className="mt-3 text-xs text-muted">
+        Menampilkan {filtered.length} dari {leads.length} lead.
+      </p>
 
       {error && (
         <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">

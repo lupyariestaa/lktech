@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SITE } from "@/lib/site";
 import { getSiteSettings } from "@/lib/settings";
+import { getSiteContent } from "@/lib/site-content";
 import { SkipLink } from "@/components/skip-link";
 import { StructuredData } from "@/components/structured-data";
 import { SettingsProvider } from "@/components/settings-provider";
+import { ContentProvider } from "@/components/content-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -89,6 +92,7 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const settings = await getSiteSettings();
+  const content = await getSiteContent();
 
   return (
     <html lang="id" className={`${inter.variable} ${spaceGrotesk.variable}`}>
@@ -99,9 +103,12 @@ export default async function RootLayout({
       <body>
         <SkipLink />
         <SettingsProvider initial={settings}>
-          {children}
-          <StructuredData settings={settings} />
+          <ContentProvider initial={content}>
+            {children}
+            <StructuredData settings={settings} />
+          </ContentProvider>
         </SettingsProvider>
+        <Analytics />
       </body>
     </html>
   );

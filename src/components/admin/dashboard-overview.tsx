@@ -144,6 +144,111 @@ export function DashboardOverview() {
           </ul>
         )}
       </div>
+
+      <LeadTrendChart leads={leads} />
+    </div>
+  );
+}
+
+/** Jumlah hari yang ditampilkan pada grafik tren. */
+const TREND_DAYS = 14;
+
+type TrendPoint = { key: string; label: string; full: string; count: number };
+
+/** Susun data tren lead harian untuk `TREND_DAYS` hari terakhir. */
+function buildTrend(leads: StoredLead[]): TrendPoint[] {
+  const days: TrendPoint[] = [];
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const byDay = new Map<string, number>();
+  for (const l of leads) {
+    if (!l.createdAt) continue;
+    const d = new Date(l.createdAt);
+    if (Number.isNaN(d.getTime())) continue;
+    const key = dayKey(d);
+    byDay.set(key, (byDay.get(key) ?? 0) + 1);
+  }
+
+  for (let i = TREND_DAYS - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const key = dayKey(d);
+    days.push({
+      key,
+      label: d.toLocaleDateString("id-ID", { day: "numeric" }),
+      full: d.toLocaleDateString("id-ID", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      }),
+      count: byDay.get(key) ?? 0,
+    });
+  }
+  return days;
+}
+
+function dayKey(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+function LeadTrendChart({ leads }: { leads: StoredLead[] }) {
+  const data = buildTrend(leads);
+  const total = data.reduce((sum, d) => sum + d.count, 0);
+  const max = Math.max(1, ...data.map((d) => d.count));
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-bold text-secondary">
+            Tren Lead ({TREND_DAYS} hari terakhir)
+          </h2>
+          <p className="mt-0.5 text-xs text-muted">
+            {total} lead masuk dalam periode ini.
+          </p>
+        </div>
+        <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary">
+          Total {total}
+        </span>
+      </div>
+
+      {total === 0 ? (
+        <p className="mt-6 py-8 text-center text-sm text-muted">
+          Belum ada lead pada {TREND_DAYS} hari terakhir.
+        </p>
+      ) : (
+        <div className="mt-6 flex items-end gap-1.5 sm:gap-2">
+          {data.map((d) => {
+            const height = d.count === 0 ? 4 : Math.round((d.count / max) * 100);
+            return (
+              <div
+                key={d.key}
+                className="group relative flex flex-1 flex-col items-center gap-1.5"
+                title={`${d.full}: ${d.count} lead`}
+              >
+                <span className="text-[10px] font-semibold text-secondary opacity-0 transition-opacity group-hover:opacity-100">
+                  {d.count}
+                </span>
+                <div className="flex h-32 w-full items-end">
+                  <div
+                    className={cn(
+                      "w-full rounded-t-md transition-colors",
+                      d.count === 0
+                        ? "bg-slate-100"
+                        : "bg-gradient-to-t from-primary to-primary-light group-hover:from-primary-dark",
+                    )}
+                    style={{ height: `${height}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-muted">{d.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

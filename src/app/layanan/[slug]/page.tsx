@@ -7,7 +7,8 @@ import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/icon";
 import { ButtonAnchor, ButtonLink } from "@/components/ui/button";
 import { CtaContact } from "@/components/sections/cta-contact";
-import { getServiceBySlug, getServiceSlugs, SERVICES } from "@/lib/content";
+import { getSiteContent } from "@/lib/site-content";
+import { getServiceSlugs } from "@/lib/content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { getSiteSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,8 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const service = getServiceBySlug(slug);
+  const { services } = await getSiteContent();
+  const service = services.find((s) => s.slug === slug);
   if (!service) return { title: "Layanan tidak ditemukan — LKTech" };
 
   return {
@@ -49,12 +51,13 @@ export default async function LayananDetailPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const service = getServiceBySlug(slug);
+  const { services } = await getSiteContent();
+  const service = services.find((s) => s.slug === slug);
   if (!service) notFound();
 
   const settings = await getSiteSettings();
   const { detail } = service;
-  const others = SERVICES.filter((s) => s.slug !== slug);
+  const others = services.filter((s) => s.slug !== slug);
 
   return (
     <>

@@ -4,7 +4,8 @@ import { PageHero } from "@/components/page-hero";
 import { ServiceCard } from "@/components/service-card";
 import { Reveal } from "@/components/motion";
 import { ButtonAnchor } from "@/components/ui/button";
-import { PROCESS, SERVICES } from "@/lib/content";
+import { PROCESS } from "@/lib/content";
+import { getSiteContent } from "@/lib/site-content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { getSiteSettings } from "@/lib/settings";
 
@@ -25,6 +26,7 @@ export const revalidate = 300;
 
 export default async function LayananPage() {
   const settings = await getSiteSettings();
+  const { services } = await getSiteContent();
   return (
     <>
       <PageHero
@@ -59,7 +61,7 @@ export default async function LayananPage() {
       <section className="relative bg-surface py-20">
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {SERVICES.map((service, i) => (
+            {services.map((service, i) => (
               <Reveal key={service.slug} delay={i * 0.06}>
                 <ServiceCard service={service} />
               </Reveal>

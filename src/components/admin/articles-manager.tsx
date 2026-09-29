@@ -18,6 +18,8 @@ import {
   saveArticle,
 } from "@/lib/admin-api";
 import { ARTICLE_CATEGORIES, type Article, type StoredArticle } from "@/lib/article-types";
+import { ImageUploader } from "@/components/admin/image-uploader";
+import { deleteImage, type CloudinaryAsset } from "@/lib/cloudinary-client";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
@@ -358,14 +360,23 @@ function ArticleForm({
           />
         </Field>
 
-        <Field label="Gambar sampul (URL Cloudinary, opsional)">
-          <input
+        <div className="grid gap-5 lg:grid-cols-2">
+          <CoverUploader
             value={article.coverImage ?? ""}
-            onChange={(e) => set("coverImage", e.target.value)}
-            placeholder="https://res.cloudinary.com/..."
-            className={fieldBase}
+            onChange={(url) => set("coverImage", url)}
           />
-        </Field>
+          <Field label="…atau tempel URL gambar (opsional)">
+            <input
+              value={article.coverImage ?? ""}
+              onChange={(e) => set("coverImage", e.target.value)}
+              placeholder="https://res.cloudinary.com/..."
+              className={fieldBase}
+            />
+            <span className="text-xs text-muted">
+              Bisa unggah langsung di samping, atau tempel URL gambar di sini.
+            </span>
+          </Field>
+        </div>
 
         <Field label="Isi artikel (Markdown)">
           <textarea
@@ -432,5 +443,84 @@ function Field({
       <span className="text-sm font-medium text-secondary">{label}</span>
       {children}
     </label>
+  );
+}
+
+/**
+ * Ekstrak `publicId` Cloudinary dari URL secure.
+ * Mengembalikan "" bila URL bukan dari Cloudinary (mis. URL eksternal).
+ */
+function publicIdFromUrl(url: string): string {
+  const marker = "/image/upload/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return "";
+  let path = url.slice(idx + marker.length);
+  // Buang segmen transformasi (mis. "f_auto,q_auto/" atau "c_fill,w_800/").
+  path = path.replace(/^(?:[^/]*,)?[a-z]+_[^/]*\//, "");
+  path = path.replace(/^v\d+\//, "");
+  return path.replace(/\.[a-z0-9]+$/i, "");
+}
+
+/**
+ * Pembungkus `ImageUploader` yang menyimpan hasil unggah sebagai string URL
+ * pada field `coverImage` artikel (bukan objek CloudinaryAsset).
+ */
+function CoverUploader({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const asset: CloudinaryAsset | null = value
+    ? {
+        publicId: publicIdFromUrl(value),
+        secureUrl: value,
+        width: 0,
+        height: 0,
+        format: "",
+        bytes: 0,
+        createdAt: "",
+      }
+    : null;
+
+  const handleChange = async (next: CloudinaryAsset | null) => {
+    // Saat gambar diganti/dihapus, hapus aset lama dari Cloudinary bila ada.
+    if (value && next?.secureUrl !== value) {
+      const oldId = publicIdFromUrl(value);
+      if (oldId && oldId !== next?.publicId) {
+        try {
+          await deleteImage(oldId);
+        } catch {
+          /* abaikan: aset mungkin sudah tidak ada */
+        }
+      }
+    }
+    onChange(next?.secureUrl ?? "");
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-secondary">
+        Gambar sampul (unggah)
+      </span>
+      <ImageUploader
+        value={asset}
+        onChange={handleChange}
+        folder="lktech/blog"
+        label="Pilih gambar sampul"
+      />
+      {value && !publicIdFromUrl(value) && (
+        <span className="text-xs text-amber-600">
+          Sampul memakai URL eksternal — hapus tidak akan menghapus berkas di
+          Cloudinary.
+        </span>
+      )}
+      {!value && (
+        <span className="text-xs text-muted">
+          Rasio disarankan 16:9 (mis. 1600×900).
+        </span>
+      )}
+    </div>
   );
 }
