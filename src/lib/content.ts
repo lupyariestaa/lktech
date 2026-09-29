@@ -1115,6 +1115,10 @@ export const TECH_STACK: TechItem[] = [
   { name: "Firebase", logo: "/tech/firebase.svg", color: "#FFCA28", wordmark: true },
   { name: "PostgreSQL", logo: "/tech/postgresql-elephant.svg", color: "#4169E1" },
   { name: "Cloudinary", logo: "/tech/cloudinary.svg", color: "#3448C5", wordmark: true },
+  { name: "Supabase", logo: "/tech/supabase.svg", color: "#3ECF8E", wordmark: true },
+  { name: "Railway", logo: "/tech/railway.svg", color: "#100F13" },
+  { name: "Vercel", logo: "/tech/vercel.svg", color: "#0A0F1E", wordmark: true },
+  { name: "GitHub", logo: "/tech/github.svg", color: "#1B1F23" },
   { name: "Figma", logo: "/tech/figma.svg", color: "#F24E1E" },
 ];
 
