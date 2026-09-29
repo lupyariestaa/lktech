@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ArrowRight, MessageCircle, Sparkles, Star } from "lucide-react";
+import { ArrowRight, Braces, Code2, MessageCircle, Star } from "lucide-react";
 import { ButtonAnchor } from "@/components/ui/button";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { COMPANY } from "@/lib/content";
@@ -116,7 +116,7 @@ function DeviceMockups() {
           transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
         >
           <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary-50 text-primary">
-            <Sparkles className="h-4 w-4" />
+            <Braces className="h-4 w-4" />
           </span>
           <p className="text-xs font-semibold text-secondary">Clean Code</p>
         </motion.div>
@@ -149,7 +149,7 @@ export function Hero() {
             transition={{ delay: base, duration: 0.6 }}
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-600 shadow-sm"
           >
-            <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+            <Code2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
             Solusi Digital untuk Bisnis Anda
           </motion.div>
 

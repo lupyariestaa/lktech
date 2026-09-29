@@ -1096,18 +1096,21 @@ export type TechItem = {
 };
 
 export const TECH_STACK: TechItem[] = [
-  { name: "React", logo: "", color: "#61DAFB" },
-  { name: "Next.js", logo: "", color: "#0A0F1E" },
-  { name: "TypeScript", logo: "", color: "#3178C6" },
-  { name: "Tailwind CSS", logo: "", color: "#06B6D4" },
-  { name: "Vue", logo: "", color: "#41B883" },
-  { name: "Laravel", logo: "", color: "#FF2D20" },
-  { name: "Python", logo: "", color: "#3776AB" },
-  { name: "Node.js", logo: "", color: "#5FA04E" },
-  { name: "Firebase", logo: "", color: "#FFCA28" },
-  { name: "Flutter", logo: "", color: "#02569B" },
-  { name: "Figma", logo: "", color: "#F24E1E" },
-  { name: "PostgreSQL", logo: "", color: "#4169E1" },
+  { name: "React", logo: "/tech/react.svg", color: "#61DAFB" },
+  { name: "Next.js", logo: "/tech/nextjs.svg", color: "#0A0F1E" },
+  { name: "TypeScript", logo: "/tech/typescript.svg", color: "#3178C6" },
+  { name: "JavaScript", logo: "/tech/javascript.svg", color: "#F7DF1E" },
+  { name: "Tailwind CSS", logo: "/tech/tailwind-css.svg", color: "#06B6D4" },
+  { name: "Bootstrap", logo: "/tech/bootstrap.svg", color: "#7952B3" },
+  { name: "Vue", logo: "/tech/vuejs.svg", color: "#41B883" },
+  { name: "Laravel", logo: "/tech/laravel.svg", color: "#FF2D20" },
+  { name: "Node.js", logo: "/tech/nodejs.svg", color: "#5FA04E" },
+  { name: "Python", logo: "/tech/python.svg", color: "#3776AB" },
+  { name: "Flutter", logo: "/tech/flutter.svg", color: "#02569B" },
+  { name: "Firebase", logo: "/tech/firebase.svg", color: "#FFCA28" },
+  { name: "PostgreSQL", logo: "/tech/postgresql-elephant.svg", color: "#4169E1" },
+  { name: "Cloudinary", logo: "/tech/cloudinary.svg", color: "#3448C5" },
+  { name: "Figma", logo: "/tech/figma.svg", color: "#F24E1E" },
 ];
 
 export const TESTIMONIALS = [

@@ -103,14 +103,21 @@ Vercel akan otomatis men-deploy setelah push ke `main`.
 | React          | `react.svg`            | simpleicons.org/react  |
 | Next.js        | `nextjs.svg`           | simpleicons.org/nextdotjs |
 | TypeScript     | `typescript.svg`       | simpleicons.org/typescript |
-| Tailwind CSS   | `tailwindcss.svg`      | simpleicons.org/tailwindcss |
-| Vue            | `vue.svg`              | simpleicons.org/vuedotjs |
+| JavaScript     | `javascript.svg`       | simpleicons.org/javascript |
+| Tailwind CSS   | `tailwind-css.svg`     | simpleicons.org/tailwindcss |
+| Bootstrap      | `bootstrap.svg`        | simpleicons.org/bootstrap |
+| Vue            | `vuejs.svg`            | simpleicons.org/vuedotjs |
 | Laravel        | `laravel.svg`          | simpleicons.org/laravel |
-| Python         | `python.svg`           | simpleicons.org/python |
 | Node.js        | `nodejs.svg`           | simpleicons.org/nodedotjs |
-| Firebase       | `firebase.svg`         | simpleicons.org/firebase |
+| Python         | `python.svg`           | simpleicons.org/python |
 | Flutter        | `flutter.svg`          | simpleicons.org/flutter |
+| Firebase       | `firebase.svg`         | simpleicons.org/firebase |
+| PostgreSQL     | `postgresql-elephant.svg` | postgresql.org (logo gajah) |
+| Cloudinary     | `cloudinary.svg`       | cloudinary.com / simpleicons.org/cloudinary |
 | Figma          | `figma.svg`            | simpleicons.org/figma |
-| PostgreSQL     | `postgresql.svg`       | simpleicons.org/postgresql |
 
 Setelah file ada di `public/tech/`, isi `logo` di `TECH_STACK` sesuai nama file.
+
+> **Status saat ini:** seluruh logo di atas SUDAH terpasang di `public/tech/` dan
+> sudah terdaftar di `TECH_STACK`. Panduan ini tersedia bila ingin menambah/mengganti
+> teknologi di kemudian hari.
