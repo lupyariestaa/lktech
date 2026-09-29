@@ -64,11 +64,17 @@ export const TECH_STACK: TechItem[] = [
 ```
 
 Keterangan field:
-| Field   | Arti                                                                          |
-| ------- | ----------------------------------------------------------------------------- |
-| `name`  | Nama teknologi yang tampil di sebelah logo.                                   |
-| `logo`  | Path file di public, mis. `"/tech/react.svg"`. **Kosong = placeholder.**      |
-| `color` | Warna brand. Dipakai untuk placeholder & aksen. Biarkan seakurat mungkin.     |
+| Field      | Arti                                                                         |
+| ---------- | ---------------------------------------------------------------------------- |
+| `name`     | Nama teknologi yang tampil di sebelah logo.                                   |
+| `logo`     | Path file di public, mis. `"/tech/react.svg"`. **Kosong = placeholder.**      |
+| `color`    | Warna brand. Dipakai untuk placeholder & aksen. Biarkan seakurat mungkin.     |
+| `wordmark` | (opsional) Set `true` bila SVG **sudah memuat nama brand di dalamnya**, agar label nama di kanan disembunyikan (hanya logo yang tampil). |
+
+Contoh entri wordmark (logo sudah berisi teks):
+```ts
+{ name: "Node.js", logo: "/tech/nodejs.svg", color: "#5FA04E", wordmark: true },
+```
 
 ### 4. Menambah / menghapus teknologi
 - **Tambah:** salin satu baris entri, ubah `name`, `logo`, `color`.

@@ -17,37 +17,65 @@ function initials(name: string) {
 /**
  * Kartu logo satu teknologi.
  * - Bila `item.logo` diisi & file tersedia, tampilkan logo asli.
- * - Bila kosong / gagal dimuat, tampilkan placeholder inisial + warna brand.
+ * - Bila `item.wordmark` true, SVG sudah memuat nama brand → sembunyikan label teks
+ *   dan tampilkan logo lebih besar (mengisi kartu).
+ * - Bila logo kosong / gagal dimuat, tampilkan placeholder inisial + warna brand.
  */
 export function TechnologyLogo({ item }: { item: TechItem }) {
   const [failed, setFailed] = useState(false);
   const useImage = Boolean(item.logo) && !failed;
+  // Tampilkan hanya logo untuk SVG wordmark (yang sudah berisi nama brand).
+  const showLabel = !item.wordmark;
 
   return (
-    <div className="group flex h-16 items-center gap-3 rounded-2xl border border-slate-100 bg-surface px-5 whitespace-nowrap transition-colors hover:border-primary/20 hover:bg-white">
-      <span
-        className={cn(
-          "grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl",
-          !useImage && "text-xs font-bold text-white",
-        )}
-        style={!useImage ? { backgroundColor: item.color } : undefined}
-      >
-        {useImage ? (
+    <div className="group flex h-16 items-center justify-center gap-3 rounded-2xl border border-slate-100 bg-surface px-5 whitespace-nowrap transition-colors hover:border-primary/20 hover:bg-white">
+      {useImage ? (
+        item.wordmark ? (
+          // Wordmark: tampilkan logo lebar (sudah memuat teks) mengisi kartu.
           <Image
             src={item.logo}
             alt={item.name}
-            width={36}
+            width={140}
             height={36}
-            className="h-7 w-7 object-contain"
+            className="h-8 w-auto max-w-[150px] object-contain"
             onError={() => setFailed(true)}
           />
         ) : (
-          initials(item.name)
-        )}
-      </span>
-      <span className="text-sm font-semibold text-slate-500 transition-colors group-hover:text-secondary">
-        {item.name}
-      </span>
+          <>
+            <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl">
+              <Image
+                src={item.logo}
+                alt={item.name}
+                width={36}
+                height={36}
+                className="h-7 w-7 object-contain"
+                onError={() => setFailed(true)}
+              />
+            </span>
+            {showLabel && (
+              <span className="text-sm font-semibold text-slate-500 transition-colors group-hover:text-secondary">
+                {item.name}
+              </span>
+            )}
+          </>
+        )
+      ) : (
+        <>
+          <span
+            className={cn(
+              "grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl text-xs font-bold text-white",
+            )}
+            style={{ backgroundColor: item.color }}
+          >
+            {initials(item.name)}
+          </span>
+          {showLabel && (
+            <span className="text-sm font-semibold text-slate-500 transition-colors group-hover:text-secondary">
+              {item.name}
+            </span>
+          )}
+        </>
+      )}
     </div>
   );
 }
