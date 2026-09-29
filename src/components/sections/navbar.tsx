@@ -20,9 +20,8 @@ export function Navbar() {
   const settings = useSettings();
   const isLanding = pathname === "/";
   const links = isLanding ? NAV_LINKS : PAGE_NAV_LINKS;
-  // Intro loader tampil di semua halaman publik (lihat <IntroLoader />),
-  // jadi navbar (dan konten) muncul setelah loader selesai.
-  const base = introDelay(reduced);
+  // Intro loader hanya ada di landing; halaman dalam tampil langsung.
+  const base = isLanding ? introDelay(reduced) : 0;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);

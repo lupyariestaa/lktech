@@ -43,12 +43,3 @@ export function introDelay(reduced: boolean) {
   if (reduced) return 0;
   return (INTRO_DURATION + INTRO_EXIT) / 1000;
 }
-
-/**
- * Menentukan apakah intro loader ditampilkan untuk suatu path.
- * Loader tampil di semua halaman publik, tetapi TIDAK di area admin
- * (agar bekerja di dashboard tetap cepat).
- */
-export function shouldShowIntro(pathname: string) {
-  return !pathname.startsWith("/admin");
-}

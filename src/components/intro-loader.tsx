@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
-import { shouldShowIntro, useReducedMotionPreference } from "@/lib/intro";
+import { useReducedMotionPreference } from "@/lib/intro";
 
 /**
  * Intro / loading screen dengan animasi dua panel:
@@ -13,8 +12,7 @@ import { shouldShowIntro, useReducedMotionPreference } from "@/lib/intro";
  * 3. Konten menghilang lebih dulu (smooth).
  * 4. Panel membuka kembali — atas naik, bawah turun.
  *
- * Muncul di setiap navigasi halaman publik (bukan hanya beranda),
- * kecuali di area admin.
+ * Ditampilkan hanya di beranda (lihat `app/page.tsx`).
  */
 
 const EASE = [0.76, 0, 0.24, 1] as const;
@@ -38,19 +36,7 @@ const panelBottom: Variants = {
   open: { y: "100%", transition: { duration: OPEN_DURATION / 1000, ease: EASE } },
 };
 
-/**
- * Loader yang sadar-route: menampilkan animasi intro di setiap perubahan
- * halaman publik. Dikey berdasarkan pathname sehingga urutannya diputar ulang
- * setiap navigasi.
- */
 export function IntroLoader() {
-  const pathname = usePathname();
-  if (!shouldShowIntro(pathname)) return null;
-  // `key` membuat komponen diputar ulang (remount) tiap navigasi.
-  return <LoaderSequence key={pathname} />;
-}
-
-function LoaderSequence() {
   const reduced = useReducedMotionPreference();
   // phase: "enter" → "hold" → "content-out" → "open" → selesai (unmount)
   const [phase, setPhase] = useState<"enter" | "hold" | "content-out" | "open" | "done">(
