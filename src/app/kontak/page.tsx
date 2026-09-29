@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
-import { Clock, Mail, MapPin, MessageCircle } from "lucide-react";
+import { ArrowUpRight, Clock, Mail, MapPin, MessageCircle } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { ContactForm } from "@/components/contact-form";
 import { ButtonAnchor } from "@/components/ui/button";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+
+// Koordinat lokasi kantor (untuk peta Google Maps).
+const MAP_LAT = "-7.304071167612529";
+const MAP_LNG = "108.12106012781747";
 
 export const metadata: Metadata = {
   title: "Kontak — LKTech",
@@ -150,6 +154,44 @@ export default async function KontakPage() {
               </ButtonAnchor>
             </div>
           </aside>
+        </div>
+      </section>
+
+      {/* Peta lokasi */}
+      <section className="relative bg-white pb-16">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary">
+                  <MapPin className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-bold text-secondary">
+                    Lokasi Kami
+                  </h2>
+                  <p className="text-xs text-muted">{settings.location}</p>
+                </div>
+              </div>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${MAP_LAT},${MAP_LNG}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
+              >
+                Buka di Google Maps
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
+            <iframe
+              title="Peta lokasi LKTech"
+              src={`https://www.google.com/maps?q=${MAP_LAT},${MAP_LNG}&z=16&output=embed`}
+              className="h-[360px] w-full border-0 sm:h-[420px]"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
+          </div>
         </div>
       </section>
     </>

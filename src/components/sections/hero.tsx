@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowRight, MessageCircle, Sparkles, Star } from "lucide-react";
 import { ButtonAnchor } from "@/components/ui/button";
@@ -146,12 +147,9 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: base, duration: 0.6 }}
-            className="glass inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-slate-600 shadow-sm"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-600 shadow-sm"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-            </span>
+            <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
             Solusi Digital untuk Bisnis Anda
           </motion.div>
 
@@ -206,11 +204,19 @@ export function Hero() {
             className="mt-10 flex items-center gap-6"
           >
             <div className="flex -space-x-2.5">
-              {["#004EDF", "#4D82EC", "#003BB3", "#0A0F1E"].map((c) => (
-                <span
-                  key={c}
-                  className="h-8 w-8 rounded-full border-2 border-white"
-                  style={{ background: c }}
+              {[
+                "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&h=96&q=80",
+                "https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=96&h=96&q=80",
+                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=96&h=96&q=80",
+                "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=96&h=96&q=80",
+              ].map((src, i) => (
+                <Image
+                  key={src}
+                  src={src}
+                  alt={`Klien LKTech ${i + 1}`}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-full border-2 border-white object-cover"
                 />
               ))}
             </div>

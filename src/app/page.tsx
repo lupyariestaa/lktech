@@ -2,7 +2,7 @@ import { IntroLoader } from "@/components/intro-loader";
 import { CustomCursor } from "@/components/custom-cursor";
 import { Navbar } from "@/components/sections/navbar";
 import { Hero } from "@/components/sections/hero";
-import { TrustedBy } from "@/components/sections/trusted-by";
+import { Technologies } from "@/components/sections/technologies";
 import { Services } from "@/components/sections/services";
 import { WhyUs } from "@/components/sections/why-us";
 import { Process } from "@/components/sections/process";
@@ -22,7 +22,7 @@ export default function Home() {
       <Navbar />
       <main id="konten">
         <Hero />
-        <TrustedBy />
+        <Technologies />
         <Services />
         <WhyUs />
         <Process />

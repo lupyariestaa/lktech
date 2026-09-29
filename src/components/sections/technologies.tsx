@@ -1,18 +1,19 @@
-import { CLIENTS } from "@/lib/content";
+import { TECH_STACK } from "@/lib/content";
 import { Reveal } from "@/components/motion";
+import { TechnologyLogo } from "@/components/technology-logo";
 
-export function TrustedBy() {
+export function Technologies() {
   // Konten digandakan agar animasi marquee mulus; set kedua disembunyikan
   // dari screen reader supaya tidak dibaca dua kali.
-  const items = [...CLIENTS, ...CLIENTS];
+  const items = [...TECH_STACK, ...TECH_STACK];
   return (
     <section
       className="relative border-y border-slate-100 bg-white py-12"
-      aria-label="Klien yang mempercayai kami"
+      aria-label="Teknologi yang kami gunakan"
     >
       <Reveal className="mx-auto max-w-6xl px-6">
         <p className="text-center text-xs font-medium tracking-widest text-muted uppercase">
-          Dipercaya oleh bisnis &amp; institusi
+          Teknologi yang kami gunakan
         </p>
       </Reveal>
 
@@ -20,16 +21,12 @@ export function TrustedBy() {
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-white to-transparent sm:w-24" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-white to-transparent sm:w-24" />
         <div className="group flex w-max animate-marquee gap-4 [will-change:transform] hover:[animation-play-state:paused]">
-          {items.map((name, i) => (
+          {items.map((item, i) => (
             <div
-              key={`${name}-${i}`}
-              aria-hidden={i >= CLIENTS.length ? true : undefined}
-              className="flex h-14 items-center gap-2 rounded-2xl border border-slate-100 bg-surface px-6 text-sm font-semibold whitespace-nowrap text-slate-400 transition-colors hover:text-primary"
+              key={`${item.name}-${i}`}
+              aria-hidden={i >= TECH_STACK.length ? true : undefined}
             >
-              <span className="grid h-6 w-6 place-items-center rounded-md bg-primary/10 text-[10px] font-bold text-primary">
-                {name.charAt(0)}
-              </span>
-              {name}
+              <TechnologyLogo item={item} />
             </div>
           ))}
         </div>

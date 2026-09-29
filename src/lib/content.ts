@@ -1079,6 +1079,37 @@ export const CLIENTS = [
   "Medika Sehat",
 ];
 
+/**
+ * Teknologi yang kami gunakan — tampil sebagai marquee di beranda.
+ *
+ * Cara menambahkan logo asli (lihat `SETUP-LOGO-TEKNOLOGI.md`):
+ * 1. Simpan file logo di `public/tech/<nama-file>.svg` (atau .png).
+ * 2. Isi field `logo` dengan path-nya, mis. "/tech/react.svg".
+ *    Selama `logo` kosong, kartu memakai placeholder inisial + warna brand.
+ */
+export type TechItem = {
+  name: string;
+  /** Path logo di public/, mis. "/tech/react.svg". Kosong = pakai placeholder. */
+  logo: string;
+  /** Warna brand untuk placeholder & aksen saat logo belum dipasang. */
+  color: string;
+};
+
+export const TECH_STACK: TechItem[] = [
+  { name: "React", logo: "", color: "#61DAFB" },
+  { name: "Next.js", logo: "", color: "#0A0F1E" },
+  { name: "TypeScript", logo: "", color: "#3178C6" },
+  { name: "Tailwind CSS", logo: "", color: "#06B6D4" },
+  { name: "Vue", logo: "", color: "#41B883" },
+  { name: "Laravel", logo: "", color: "#FF2D20" },
+  { name: "Python", logo: "", color: "#3776AB" },
+  { name: "Node.js", logo: "", color: "#5FA04E" },
+  { name: "Firebase", logo: "", color: "#FFCA28" },
+  { name: "Flutter", logo: "", color: "#02569B" },
+  { name: "Figma", logo: "", color: "#F24E1E" },
+  { name: "PostgreSQL", logo: "", color: "#4169E1" },
+];
+
 export const TESTIMONIALS = [
   {
     name: "Andi Pratama",
