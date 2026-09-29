@@ -1110,6 +1110,7 @@ export const TECH_STACK: TechItem[] = [
   { name: "Vue", logo: "/tech/vuejs.svg", color: "#41B883" },
   { name: "Laravel", logo: "/tech/laravel.svg", color: "#FF2D20" },
   { name: "Node.js", logo: "/tech/nodejs.svg", color: "#5FA04E", wordmark: true },
+  { name: "NestJS", logo: "/tech/nestjs.svg", color: "#E0234E" },
   { name: "Python", logo: "/tech/python.svg", color: "#3776AB" },
   { name: "Flutter", logo: "/tech/flutter.svg", color: "#02569B" },
   { name: "Firebase", logo: "/tech/firebase.svg", color: "#FFCA28", wordmark: true },
