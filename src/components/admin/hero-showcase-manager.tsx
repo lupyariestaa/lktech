@@ -1,20 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
+  ImagePlus,
   Loader2,
   RefreshCw,
   Trash2,
 } from "lucide-react";
 import { useSiteContent } from "@/components/admin/use-site-content";
-import {
-  deleteImage,
-  type CloudinaryAsset,
-} from "@/lib/cloudinary-client";
+import { MediaPickerDialog } from "@/components/admin/media-picker-dialog";
+import type { MediaItem } from "@/lib/media-types";
 import type {
   HeroShowcase,
   HeroShowcaseEffect,
@@ -37,19 +36,26 @@ export function HeroShowcaseManager() {
   const view = draft ?? hero;
   const dirty = draft !== null;
 
-  const patch = (p: Partial<HeroShowcase>) =>
-    setDraft({ ...view, ...p });
+  // Kolom mana yang sedang membuka popup picker media.
+  const [pickerFor, setPickerFor] = useState<ColumnKey | null>(null);
+
+  const patch = (p: Partial<HeroShowcase>) => setDraft({ ...view, ...p });
 
   const setImages = (key: ColumnKey, images: HeroShowcaseImage[]) =>
     patch({ [key]: images } as Partial<HeroShowcase>);
 
-  const addImage = (key: ColumnKey, asset: CloudinaryAsset, alt: string) => {
-    const next: HeroShowcaseImage = {
-      url: asset.secureUrl,
-      publicId: asset.publicId,
-      alt,
-    };
-    setImages(key, [...view[key], next]);
+  // Tambah gambar hasil pilih dari Media (hindari duplikat url).
+  const addFromMedia = (key: ColumnKey, picked: MediaItem[]) => {
+    const existing = new Set(view[key].map((img) => img.url));
+    const additions: HeroShowcaseImage[] = picked
+      .filter((m) => !existing.has(m.secureUrl))
+      .map((m) => ({
+        url: m.secureUrl,
+        publicId: m.publicId,
+        alt: m.title || "Pratinjau LKTech",
+      }));
+    if (additions.length === 0) return;
+    setImages(key, [...view[key], ...additions]);
   };
 
   const updateAlt = (key: ColumnKey, i: number, alt: string) =>
@@ -66,22 +72,9 @@ export function HeroShowcaseManager() {
     setImages(key, arr);
   };
 
-  const removeImage = async (key: ColumnKey, i: number) => {
-    const img = view[key][i];
-    if (!confirm("Hapus gambar ini dari daftar?")) return;
-    // Opsi: hapus aset Cloudinary sekalian.
-    if (
-      img.publicId &&
-      confirm(
-        "Hapus juga berkas gambar di Cloudinary?\n\nOK = hapus berkas (permanen)\nBatal = hapus dari daftar saja",
-      )
-    ) {
-      try {
-        await deleteImage(img.publicId);
-      } catch {
-        /* abaikan bila aset sudah tidak ada */
-      }
-    }
+  const removeImage = (key: ColumnKey, i: number) => {
+    if (!confirm("Hapus gambar ini dari daftar carousel?")) return;
+    // Catatan: berkas tetap ada di galeri Media (tidak dihapus).
     setImages(
       key,
       view[key].filter((_, j) => j !== i),
@@ -213,24 +206,20 @@ export function HeroShowcaseManager() {
         <ShowcaseColumn
           title="Mockup Browser (desktop)"
           hint="Disarankan rasio 16:10 (mis. 1600×1000)."
-          folder="lktech/hero/browser"
           images={view.browser}
-          onAdd={(asset, alt) => addImage("browser", asset, alt)}
+          onAdd={() => setPickerFor("browser")}
           onAlt={(i, alt) => updateAlt("browser", i, alt)}
           onMove={(i, dir) => move("browser", i, dir)}
           onRemove={(i) => removeImage("browser", i)}
-          onError={setError}
         />
         <ShowcaseColumn
           title="Mockup Ponsel"
           hint="Disarankan rasio 9:16 (mis. 720×1280)."
-          folder="lktech/hero/mobile"
           images={view.mobile}
-          onAdd={(asset, alt) => addImage("mobile", asset, alt)}
+          onAdd={() => setPickerFor("mobile")}
           onAlt={(i, alt) => updateAlt("mobile", i, alt)}
           onMove={(i, dir) => move("mobile", i, dir)}
           onRemove={(i) => removeImage("mobile", i)}
-          onError={setError}
         />
       </div>
 
@@ -239,6 +228,19 @@ export function HeroShowcaseManager() {
           Ada perubahan yang belum disimpan.
         </p>
       )}
+
+      {/* Popup pemilih media (reusable) */}
+      <MediaPickerDialog
+        open={pickerFor !== null}
+        onOpenChange={(o) => {
+          if (!o) setPickerFor(null);
+        }}
+        mode="multiple"
+        title="Pilih gambar dari Media"
+        onSelect={(items) => {
+          if (pickerFor) addFromMedia(pickerFor, items);
+        }}
+      />
     </div>
   );
 }
@@ -246,91 +248,46 @@ export function HeroShowcaseManager() {
 function ShowcaseColumn({
   title,
   hint,
-  folder,
   images,
   onAdd,
   onAlt,
   onMove,
   onRemove,
-  onError,
 }: {
   title: string;
   hint: string;
-  folder: string;
   images: HeroShowcaseImage[];
-  onAdd: (asset: CloudinaryAsset, alt: string) => void;
+  onAdd: () => void;
   onAlt: (i: number, alt: string) => void;
   onMove: (i: number, dir: -1 | 1) => void;
   onRemove: (i: number) => void;
-  onError: (msg: string) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState(0);
-
-  const handleFile = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      onError("File harus berupa gambar.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      onError("Ukuran maksimal 5MB.");
-      return;
-    }
-    setBusy(true);
-    setProgress(0);
-    try {
-      const { uploadImage } = await import("@/lib/cloudinary-client");
-      const asset = await uploadImage(file, {
-        folder,
-        onProgress: setProgress,
-      });
-      onAdd(asset, file.name.replace(/\.[^.]+$/, ""));
-    } catch (err) {
-      onError(err instanceof Error ? err.message : "Upload gagal.");
-    } finally {
-      setBusy(false);
-      setProgress(0);
-    }
-  };
-
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6">
-      <h2 className="text-sm font-bold text-secondary">{title}</h2>
-      <p className="mt-1 text-xs text-muted">{hint}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-bold text-secondary">{title}</h2>
+          <p className="mt-1 text-xs text-muted">{hint}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-surface px-3 py-1 text-xs font-semibold text-slate-500">
+          {images.length} gambar
+        </span>
+      </div>
 
-      {/* Tombol upload */}
       <button
         type="button"
-        onClick={() => fileRef.current?.click()}
-        disabled={busy}
-        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-surface px-4 py-4 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-60"
+        onClick={onAdd}
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-surface px-4 py-4 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/40 hover:text-primary"
       >
-        {busy ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Mengunggah… {progress}%
-          </>
-        ) : (
-          <>+ Unggah gambar</>
-        )}
+        <ImagePlus className="h-4 w-4" />
+        Tambah dari Media
       </button>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handleFile(f);
-          e.target.value = "";
-        }}
-        className="hidden"
-      />
 
-      {/* Daftar gambar */}
       {images.length === 0 ? (
         <p className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-surface px-4 py-6 text-center text-xs text-muted">
-          Belum ada gambar. Unggah minimal satu.
+          Belum ada gambar. Klik &quot;Tambah dari Media&quot; — unggah gambar
+          dulu di menu <span className="font-semibold">Media</span> bila belum
+          ada.
         </p>
       ) : (
         <ul className="mt-4 flex flex-col gap-3">

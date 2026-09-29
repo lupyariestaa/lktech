@@ -1,9 +1,34 @@
 # Implementation Flow — Carousel Gambar pada Mockup Hero (Beranda)
 
-> **Status:** 🟡 Rencana (belum dieksekusi)
+> **Status:** 🟢 Sebagian dieksekusi + revisi alur (Media Picker)
 > **Dibuat:** sesi "Hero Showcase Carousel"
 > **Tujuan:** Mengganti isi dekoratif mockup browser & ponsel di section Hero beranda
 > menjadi **carousel gambar** yang berganti otomatis, dan bisa **dikelola dari dashboard**.
+
+---
+
+## 0. REVISI (sesi lanjutan) — Alur pemilihan gambar via Media Picker
+
+**Perubahan dari rencana awal:**
+1. ❌ **Upload langsung di halaman Hero dihapus.** Gambar dikelola di menu **Media**.
+2. ✅ Halaman Hero memakai tombol **"Tambah dari Media"** yang membuka **popup Media Picker**.
+3. ✅ Dibuat komponen **`MediaPickerDialog`** yang **generik & reusable** (untuk Hero, dan
+   sistem lain nanti) dengan fitur: **search judul**, **filter kategori**, **urutkan**
+   (terbaru/terlama/judul), **pilih single atau multiple**, dan **unggah gambar baru**
+   dari dalam dialog.
+4. ✅ Hapus gambar dari carousel **tidak** menghapus berkas di Media (hanya melepas
+   referensi).
+
+**File baru pada revisi ini:**
+- `src/components/admin/media-picker-dialog.tsx` — dialog picker reusable.
+
+**File diubah:**
+- `src/components/admin/hero-showcase-manager.tsx` — hapus upload; tombol buka popup.
+
+> ⚠️ Catatan bug: sebelumnya muncul keluhan "data tidak tersimpan". Hasil investigasi
+> (cek langsung `/api/content`) menunjukkan **penyimpanan sebenarnya bekerja** —
+> `hero.mobile` tersimpan di Firestore. Keluhan kemungkinan berasal dari alur upload
+> lama yang membingungkan. Alur baru (Media + popup) memperjelas dan mengurangi risiko.
 
 ---
 
