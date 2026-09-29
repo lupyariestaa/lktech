@@ -39,7 +39,10 @@ export function FaqManager() {
       setError("Minimal satu FAQ harus memiliki pertanyaan.");
       return;
     }
-    const ok = await commit({ faqs: cleaned });
+    const ok = await commit(
+      { faqs: cleaned },
+      { successMessage: "FAQ berhasil disimpan." },
+    );
     if (ok) setDraft(null);
   };
 

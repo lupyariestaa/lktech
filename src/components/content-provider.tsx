@@ -15,8 +15,12 @@ import {
 const ContentContext = createContext<SiteContent>(defaultSiteContent());
 
 /**
- * Menyediakan konten situs (layanan, FAQ, harga) ke komponen client.
- * Nilai awal dari server (layout) lalu disinkronkan dari /api/content.
+ * Menyediakan konten situs (layanan, FAQ, harga, hero) ke komponen client.
+ *
+ * Konten awal diberikan dari server (root layout via `getSiteContent()`) sehingga
+ * sudah SEGAR per-request. Refetch dari `/api/content` hanya dilakukan bila server
+ * tidak menyediakan `initial` (mis. saat dipakai di luar layout). Endpoint tersebut
+ * kini `no-store`, jadi tidak ada lagi masalah data basi yang menimpa data segar.
  */
 export function ContentProvider({
   initial,
@@ -30,10 +34,16 @@ export function ContentProvider({
   );
 
   useEffect(() => {
+    // Bila server sudah mengirim konten, jangan timpa dengan fetch (SSR lebih segar
+    // & menghindari flicker). Hanya fetch bila tidak ada initial.
+    if (initial) {
+      setContent(initial);
+      return;
+    }
     let active = true;
     (async () => {
       try {
-        const res = await fetch("/api/content");
+        const res = await fetch("/api/content", { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
         if (active && data?.content) setContent(data.content);
@@ -44,7 +54,7 @@ export function ContentProvider({
     return () => {
       active = false;
     };
-  }, []);
+  }, [initial]);
 
   return (
     <ContentContext.Provider value={content}>{children}</ContentContext.Provider>

@@ -73,7 +73,7 @@ export function HeroShowcaseCarousel({
     <div className={cn("relative h-full w-full overflow-hidden", className)}>
       <AnimatePresence initial={false}>
         <motion.div
-          key={current.url}
+          key={`${current.url}-${safeIndex}`}
           initial={
             effect === "slide"
               ? { opacity: 0, x: 40 }
@@ -104,7 +104,7 @@ export function HeroShowcaseCarousel({
         <div className="absolute inset-x-0 bottom-2.5 flex justify-center gap-1.5">
           {images.map((img, i) => (
             <span
-              key={img.url}
+              key={`${img.url}-${i}`}
               className={cn(
                 "h-1.5 rounded-full transition-all",
                 i === safeIndex ? "w-4 bg-white" : "w-1.5 bg-white/50",

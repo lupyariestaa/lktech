@@ -83,7 +83,10 @@ export function HeroShowcaseManager() {
 
   const save = async () => {
     if (!draft) return;
-    const ok = await commit({ hero: draft });
+    const ok = await commit(
+      { hero: draft },
+      { successMessage: "Pengaturan hero berhasil disimpan." },
+    );
     if (ok) setDraft(null);
   };
 

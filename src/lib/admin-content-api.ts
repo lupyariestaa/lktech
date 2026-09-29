@@ -24,9 +24,12 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** Mengambil konten situs terbaru (server) untuk dashboard. */
+/** Mengambil konten situs terbaru (SEGAR, admin) untuk dashboard. */
 export async function fetchSiteContent(): Promise<SiteContent> {
-  const res = await fetch("/api/content", { cache: "no-store" });
+  const res = await fetch("/api/admin/content", {
+    headers: await authHeaders(),
+    cache: "no-store",
+  });
   const data = await handle<{ content: SiteContent }>(res);
   return data.content;
 }

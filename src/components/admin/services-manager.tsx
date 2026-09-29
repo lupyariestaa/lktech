@@ -88,13 +88,19 @@ export function ServicesManager() {
       return;
     }
 
-    const ok = await commit({ services: [...others, nextService] });
+    const ok = await commit(
+      { services: [...others, nextService] },
+      { successMessage: "Layanan berhasil disimpan." },
+    );
     if (ok) setEditing(null);
   };
 
   const onDelete = async (slug: string, title: string) => {
     if (!confirm(`Hapus layanan "${title}"? Tindakan ini permanen.`)) return;
-    await commit({ services: services.filter((s) => s.slug !== slug) });
+    await commit(
+      { services: services.filter((s) => s.slug !== slug) },
+      { successMessage: `Layanan "${title}" dihapus.` },
+    );
   };
 
   if (loading) {

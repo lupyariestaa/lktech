@@ -49,7 +49,10 @@ export function PricingManager() {
       ...p,
       highlight: firstHighlight >= 0 ? i === firstHighlight : false,
     }));
-    const ok = await commit({ pricing: normalized });
+    const ok = await commit(
+      { pricing: normalized },
+      { successMessage: "Paket harga berhasil disimpan." },
+    );
     if (ok) setDraft(null);
   };
 
