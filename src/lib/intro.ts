@@ -8,10 +8,10 @@ import { useSyncExternalStore } from "react";
  * agar kemunculan konten tepat setelah loader menghilang, tanpa jeda kosong.
  *
  * Timeline <IntroLoader /> (lihat komponen):
- *   close 500 + content-in 200 + hold 950 + content-out 300 + open 650 = 2650ms.
+ *   close 450 + content-in 180 + hold 720 + content-out 260 + open 520 = 2130ms.
  * `INTRO_DURATION + INTRO_EXIT` harus sama dengan total tersebut.
  */
-export const INTRO_DURATION = 2350;
+export const INTRO_DURATION = 1830;
 /** Jeda singkat agar exit-animation loader terlihat halus sebelum konten masuk. */
 export const INTRO_EXIT = 300;
 
@@ -42,4 +42,13 @@ export function useReducedMotionPreference() {
 export function introDelay(reduced: boolean) {
   if (reduced) return 0;
   return (INTRO_DURATION + INTRO_EXIT) / 1000;
+}
+
+/**
+ * Menentukan apakah intro loader ditampilkan untuk suatu path.
+ * Loader tampil di semua halaman publik, tetapi TIDAK di area admin
+ * (agar bekerja di dashboard tetap cepat).
+ */
+export function shouldShowIntro(pathname: string) {
+  return !pathname.startsWith("/admin");
 }

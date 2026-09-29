@@ -9,6 +9,7 @@ import { SkipLink } from "@/components/skip-link";
 import { StructuredData } from "@/components/structured-data";
 import { SettingsProvider } from "@/components/settings-provider";
 import { ContentProvider } from "@/components/content-provider";
+import { IntroLoader } from "@/components/intro-loader";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -102,6 +103,7 @@ export default async function RootLayout({
       </head>
       <body>
         <SkipLink />
+        <IntroLoader />
         <SettingsProvider initial={settings}>
           <ContentProvider initial={content}>
             {children}
