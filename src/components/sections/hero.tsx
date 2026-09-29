@@ -7,10 +7,13 @@ import { ArrowRight, Braces, Code2, MessageCircle, Star } from "lucide-react";
 import { ButtonAnchor } from "@/components/ui/button";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { COMPANY } from "@/lib/content";
+import type { HeroShowcase } from "@/lib/content-types";
 import { useSettings } from "@/components/settings-provider";
+import { useContent } from "@/components/content-provider";
+import { HeroShowcaseCarousel } from "@/components/hero-showcase-carousel";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 
-function DeviceMockups() {
+function DeviceMockups({ showcase }: { showcase: HeroShowcase }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
@@ -52,24 +55,15 @@ function DeviceMockups() {
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
             <div className="ml-3 h-5 flex-1 rounded-full bg-slate-100" />
           </div>
-          <div className="space-y-4 p-5">
-            <div className="flex items-center justify-between">
-              <div className="h-3 w-24 rounded-full bg-primary/80" />
-              <div className="flex gap-2">
-                <div className="h-2.5 w-10 rounded-full bg-slate-200" />
-                <div className="h-2.5 w-10 rounded-full bg-slate-200" />
-              </div>
-            </div>
-            <div className="h-24 rounded-2xl bg-gradient-to-br from-primary to-primary-light" />
-            <div className="grid grid-cols-3 gap-3">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="rounded-xl border border-slate-100 bg-white p-3">
-                  <div className="mb-2 h-6 w-6 rounded-lg bg-primary-50" />
-                  <div className="h-2 w-full rounded-full bg-slate-100" />
-                  <div className="mt-1.5 h-2 w-2/3 rounded-full bg-slate-100" />
-                </div>
-              ))}
-            </div>
+          <div className="relative aspect-[16/10] w-full">
+            <HeroShowcaseCarousel
+              images={showcase.browser}
+              enabled={showcase.enabled}
+              interval={showcase.interval}
+              effect={showcase.effect}
+              sizes="(max-width: 1024px) 90vw, 512px"
+              priority
+            />
           </div>
         </div>
 
@@ -81,13 +75,16 @@ function DeviceMockups() {
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
         >
           <div className="glass-strong overflow-hidden rounded-[2rem] p-2 shadow-2xl shadow-primary/20">
-            <div className="rounded-[1.6rem] bg-white p-3">
+            <div className="overflow-hidden rounded-[1.6rem] bg-white p-3">
               <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200" />
-              <div className="h-16 rounded-xl bg-gradient-to-br from-primary-light to-primary" />
-              <div className="mt-3 space-y-2">
-                <div className="h-2 w-full rounded-full bg-slate-100" />
-                <div className="h-2 w-3/4 rounded-full bg-slate-100" />
-                <div className="h-6 rounded-lg bg-primary/90" />
+              <div className="relative aspect-[9/16] overflow-hidden rounded-xl">
+                <HeroShowcaseCarousel
+                  images={showcase.mobile}
+                  enabled={showcase.enabled}
+                  interval={showcase.interval}
+                  effect={showcase.effect}
+                  sizes="180px"
+                />
               </div>
             </div>
           </div>
@@ -128,6 +125,7 @@ function DeviceMockups() {
 export function Hero() {
   const reduced = useReducedMotionPreference();
   const settings = useSettings();
+  const { hero } = useContent();
   const base = introDelay(reduced);
 
   return (
@@ -232,7 +230,7 @@ export function Hero() {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ delay: base + 0.3, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
-          <DeviceMockups />
+          <DeviceMockups showcase={hero} />
         </motion.div>
       </div>
     </section>

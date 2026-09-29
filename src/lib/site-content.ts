@@ -1,5 +1,9 @@
 import {
   defaultSiteContent,
+  DEFAULT_HERO_SHOWCASE,
+  type HeroShowcase,
+  type HeroShowcaseEffect,
+  type HeroShowcaseImage,
   type ManagedFaq,
   type ManagedPricing,
   type ManagedService,
@@ -111,6 +115,49 @@ function normalizePricing(raw: unknown): ManagedPricing | null {
   };
 }
 
+function normalizeHeroImage(raw: unknown): HeroShowcaseImage | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const url = str(d.url).trim();
+  if (!url) return null;
+  return {
+    url,
+    publicId: str(d.publicId),
+    alt: str(d.alt),
+  };
+}
+
+/** Menormalkan bagian `hero` (carousel mockup) dengan default yang aman. */
+export function normalizeHeroShowcase(raw: unknown): HeroShowcase {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_HERO_SHOWCASE };
+  const d = raw as Record<string, unknown>;
+
+  const intervalRaw =
+    typeof d.interval === "number" ? d.interval : Number(d.interval);
+  const interval = Number.isFinite(intervalRaw)
+    ? Math.min(15, Math.max(2, Math.round(intervalRaw)))
+    : DEFAULT_HERO_SHOWCASE.interval;
+
+  const effect: HeroShowcaseEffect =
+    d.effect === "slide" ? "slide" : "fade";
+
+  const browser = Array.isArray(d.browser)
+    ? d.browser.map(normalizeHeroImage).filter((x): x is HeroShowcaseImage => !!x)
+    : [];
+  const mobile = Array.isArray(d.mobile)
+    ? d.mobile.map(normalizeHeroImage).filter((x): x is HeroShowcaseImage => !!x)
+    : [];
+
+  return {
+    // `enabled` default true bila belum pernah diatur.
+    enabled: typeof d.enabled === "boolean" ? d.enabled : DEFAULT_HERO_SHOWCASE.enabled,
+    interval,
+    effect,
+    browser,
+    mobile,
+  };
+}
+
 /** Menormalkan data mentah Firestore menjadi `SiteContent` yang valid. */
 export function normalizeSiteContent(raw: Record<string, unknown>): SiteContent {
   const services = Array.isArray(raw.services)
@@ -128,6 +175,7 @@ export function normalizeSiteContent(raw: Record<string, unknown>): SiteContent 
     services: services.length > 0 ? services : defaults.services,
     faqs: faqs.length > 0 ? faqs : defaults.faqs,
     pricing: pricing.length > 0 ? pricing : defaults.pricing,
+    hero: normalizeHeroShowcase(raw.hero),
   };
 }
 
@@ -168,6 +216,7 @@ export async function saveSiteContent(
         services: content.services,
         faqs: content.faqs,
         pricing: content.pricing,
+        hero: content.hero,
         updatedAtISO: new Date().toISOString(),
         updatedBy,
       },
