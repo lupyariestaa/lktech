@@ -10,11 +10,13 @@ import {
   Trash2,
 } from "lucide-react";
 import { useSiteContent } from "@/components/admin/use-site-content";
-import type {
-  ManagedProcess,
-  ManagedStat,
-  ManagedTestimonial,
-  ManagedWhyUs,
+import {
+  isDefaultStats,
+  isDefaultTestimonials,
+  type ManagedProcess,
+  type ManagedStat,
+  type ManagedTestimonial,
+  type ManagedWhyUs,
 } from "@/lib/content-types";
 import { cn } from "@/lib/utils";
 
@@ -97,6 +99,26 @@ export function ContentExtraManager() {
       )}
 
       <p className="text-xs text-muted">{activeTab.hint}</p>
+
+      {tab === "testimonials" && isDefaultTestimonials(content.testimonials) && (
+        <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Testimoni di bawah masih <strong>contoh</strong>. Ganti dengan
+            testimoni klien asli agar tidak menyesatkan calon klien.
+          </span>
+        </div>
+      )}
+
+      {tab === "stats" && isDefaultStats(content.stats) && (
+        <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Angka statistik di bawah masih <strong>contoh</strong>. Sesuaikan
+            dengan pencapaian nyata bisnis Anda.
+          </span>
+        </div>
+      )}
 
       {tab === "whyUs" && (
         <ListEditor

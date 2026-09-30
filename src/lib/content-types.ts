@@ -151,3 +151,18 @@ export function defaultSiteContent(): SiteContent {
     testimonials: structuredClone(DEFAULT_TESTIMONIALS),
   };
 }
+
+/**
+ * Apakah daftar testimoni masih sama dengan nilai contoh bawaan (placeholder)?
+ * Dipakai dashboard untuk menampilkan peringatan agar diganti data asli.
+ */
+export function isDefaultTestimonials(list: ManagedTestimonial[]): boolean {
+  return (
+    JSON.stringify(list) === JSON.stringify(structuredClone(DEFAULT_TESTIMONIALS))
+  );
+}
+
+/** Apakah daftar statistik masih sama dengan nilai contoh bawaan. */
+export function isDefaultStats(list: ManagedStat[]): boolean {
+  return JSON.stringify(list) === JSON.stringify(structuredClone(DEFAULT_STATS));
+}

@@ -1070,6 +1070,10 @@ export const STATS = [
   { value: 100, suffix: "%", label: "Komitmen" },
 ];
 
+/**
+ * Klien untuk marquee "Trusted By".
+ * ⚠️ CONTOH — ganti dengan klien asli (atau kosongkan) sebelum dipromosikan.
+ */
 export const CLIENTS = [
   "Nusantara Co.",
   "Bina Karya",
@@ -1123,6 +1127,11 @@ export const TECH_STACK: TechItem[] = [
   { name: "Figma", logo: "/tech/figma.svg", color: "#F24E1E" },
 ];
 
+/**
+ * Testimoni klien untuk beranda.
+ * ⚠️ CONTOH — ganti dengan testimoni asli via dashboard (menu “Konten”)
+ * sebelum situs dipromosikan agar tidak menyesatkan calon klien.
+ */
 export const TESTIMONIALS = [
   {
     name: "Andi Pratama",
@@ -1142,7 +1151,7 @@ export const TESTIMONIALS = [
     name: "Bayu Nugraha",
     role: "Founder, Ritel Jaya",
     quote:
-      "Harga masuk akal untuk kualitas sekelas agensi besar. Aplikasi mobile kami berjalan lancar.",
+      "Harga masuk akal untuk kualitas sekelas agensi besar. Sistem toko online kami berjalan lancar.",
     rating: 5,
   },
 ];
