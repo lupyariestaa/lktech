@@ -2,6 +2,7 @@ import { adminFetch } from "@/lib/admin-fetch";
 import type { StoredLead, LeadStatus } from "@/lib/lead-types";
 import type { MediaItem } from "@/lib/media-types";
 import type { Project, StoredProject } from "@/lib/project-types";
+import type { Product, StoredProduct } from "@/lib/product-types";
 import type { Article, StoredArticle } from "@/lib/article-types";
 import type { SiteSettings } from "@/lib/settings-types";
 
@@ -128,6 +129,27 @@ export async function saveProject(project: Project) {
 export async function deleteProject(slug: string) {
   return adminFetch<{ ok: boolean }>(
     `/api/admin/projects?slug=${encodeURIComponent(slug)}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function fetchProducts(): Promise<StoredProduct[]> {
+  const data = await adminFetch<{ products: StoredProduct[] }>(
+    "/api/admin/products",
+  );
+  return data.products;
+}
+
+export async function saveProduct(product: Product) {
+  return adminFetch<{ ok: boolean; product: Product }>("/api/admin/products", {
+    method: "POST",
+    body: JSON.stringify(product),
+  });
+}
+
+export async function deleteProduct(slug: string) {
+  return adminFetch<{ ok: boolean }>(
+    `/api/admin/products?slug=${encodeURIComponent(slug)}`,
     { method: "DELETE" },
   );
 }

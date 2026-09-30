@@ -6,11 +6,83 @@ export type AdminCheck =
   | { ok: true; uid: string; email: string }
   | { ok: false; response: NextResponse };
 
+/** Sama bentuknya dengan `AdminCheck`, dipakai untuk user biasa (bukan admin). */
+export type UserCheck = AdminCheck;
+
 function getAdminEmails(): string[] {
   return (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
+}
+
+/** Mengekstrak token `Bearer` dari header Authorization. */
+function bearerToken(req: Request): string | null {
+  const authHeader = req.headers.get("authorization") ?? "";
+  return authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+}
+
+/**
+ * Satu langkah verifikasi ID token Firebase (dipakai `requireAdmin` &
+ * `requireUser`). Mengembalikan `{ uid, email }` bila valid, atau `null`.
+ */
+async function verifyToken(req: Request): Promise<{
+  uid: string;
+  email: string;
+} | null> {
+  const token = bearerToken(req);
+  if (!token) return null;
+  const adminAuth = getAdminAuth();
+  if (!adminAuth) return null;
+  try {
+    const decoded = await adminAuth.verifyIdToken(token, true);
+    return { uid: decoded.uid, email: (decoded.email ?? "").toLowerCase() };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Memverifikasi bahwa permintaan datang dari user yang sudah login
+ * (akun Google mana pun). Tidak memeriksa whitelist admin.
+ */
+export async function requireUser(req: Request): Promise<UserCheck> {
+  if (!isAdminConfigured) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error:
+            "Admin SDK belum dikonfigurasi. Isi FIREBASE_ADMIN_* di .env.local.",
+        },
+        { status: 503 },
+      ),
+    };
+  }
+
+  const token = bearerToken(req);
+  if (!token) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Tidak terautentikasi." },
+        { status: 401 },
+      ),
+    };
+  }
+
+  const verified = await verifyToken(req);
+  if (!verified) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Token tidak valid atau kedaluwarsa." },
+        { status: 401 },
+      ),
+    };
+  }
+
+  return { ok: true, uid: verified.uid, email: verified.email };
 }
 
 /**
@@ -33,11 +105,7 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
     };
   }
 
-  const authHeader = req.headers.get("authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
-
+  const token = bearerToken(req);
   if (!token) {
     return {
       ok: false,
@@ -48,36 +116,8 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
     };
   }
 
-  const adminAuth = getAdminAuth();
-  if (!adminAuth) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Admin SDK tidak tersedia." },
-        { status: 503 },
-      ),
-    };
-  }
-
-  try {
-    // `checkRevoked: true` memastikan token yang sudah dicabut/di-logout
-    // tidak bisa dipakai lagi.
-    const decoded = await adminAuth.verifyIdToken(token, true);
-    const email = (decoded.email ?? "").toLowerCase();
-    const allowed = getAdminEmails();
-
-    if (!email || !allowed.includes(email)) {
-      return {
-        ok: false,
-        response: NextResponse.json(
-          { error: "Akun ini tidak memiliki akses admin." },
-          { status: 403 },
-        ),
-      };
-    }
-
-    return { ok: true, uid: decoded.uid, email };
-  } catch {
+  const verified = await verifyToken(req);
+  if (!verified) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -86,4 +126,19 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
       ),
     };
   }
+
+  const email = verified.email;
+  const allowed = getAdminEmails();
+
+  if (!email || !allowed.includes(email)) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Akun ini tidak memiliki akses admin." },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return { ok: true, uid: verified.uid, email };
 }

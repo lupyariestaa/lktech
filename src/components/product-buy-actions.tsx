@@ -1,0 +1,118 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Check, Loader2, ShoppingBag, ShoppingCart, Zap } from "lucide-react";
+import type { Product } from "@/lib/product-types";
+import { toCartItem } from "@/lib/cart";
+import { useCart } from "@/components/cart-provider";
+import { useAuth } from "@/components/auth-provider";
+import { cn } from "@/lib/utils";
+
+/**
+ * Aksi pembelian produk: "Tambah ke Keranjang" & "Beli Sekarang".
+ *
+ * Keduanya mengharuskan user login (akun Google). Bila belum login, user
+ * diarahkan ke `/masuk` dengan `next` kembali ke halaman produk.
+ */
+export function ProductBuyActions({
+  product,
+  className,
+  compact = false,
+}: {
+  product: Product;
+  className?: string;
+  compact?: boolean;
+}) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { add, has } = useCart();
+  const [added, setAdded] = useState(false);
+
+  const soldOut = product.soldOut;
+
+  const requireLogin = (): boolean => {
+    if (!user) {
+      router.push(
+        `/masuk?next=${encodeURIComponent(`/produk/${product.slug}`)}`,
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const onAdd = () => {
+    if (soldOut) return;
+    if (!requireLogin()) return;
+    add(toCartItem(product, 1));
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1800);
+  };
+
+  const onBuyNow = () => {
+    if (soldOut) return;
+    if (!requireLogin()) return;
+    // Siapkan keranjang berisi 1 produk ini lalu lanjut checkout.
+    add(toCartItem(product, 1));
+    router.push("/keranjang");
+  };
+
+  return (
+    <div className={cn("flex gap-3", compact ? "flex-col" : "flex-wrap", className)}>
+      <button
+        onClick={onAdd}
+        disabled={soldOut}
+        className={cn(
+          "inline-flex items-center justify-center gap-2 rounded-full border font-semibold transition-all",
+          compact ? "px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
+          soldOut
+            ? "cursor-not-allowed border-slate-200 text-slate-400"
+            : added
+              ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+              : "border-slate-200 bg-white text-secondary hover:border-primary/40 hover:text-primary",
+        )}
+        aria-label="Tambah ke keranjang"
+      >
+        {added ? (
+          <>
+            <Check className="h-4 w-4" /> Ditambahkan
+          </>
+        ) : (
+          <>
+            <ShoppingCart className="h-4 w-4" />
+            {compact ? "Keranjang" : has(product.slug) ? "Tambah lagi" : "Tambah ke Keranjang"}
+          </>
+        )}
+      </button>
+
+      <button
+        onClick={onBuyNow}
+        disabled={soldOut}
+        className={cn(
+          "inline-flex items-center justify-center gap-2 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/30 transition-all",
+          compact ? "px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
+          soldOut
+            ? "cursor-not-allowed opacity-60"
+            : "hover:-translate-y-0.5 hover:bg-primary-dark",
+        )}
+        aria-label="Beli sekarang"
+      >
+        {soldOut ? (
+          <>
+            <ShoppingBag className="h-4 w-4" /> Stok habis
+          </>
+        ) : (
+          <>
+            <Zap className="h-4 w-4" />
+            Beli Sekarang
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/** Ikon loader kecil untuk fallback (dipakai jika perlu). */
+export function BuySpinner() {
+  return <Loader2 className="h-4 w-4 animate-spin" />;
+}

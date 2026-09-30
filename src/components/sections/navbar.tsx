@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Menu, X, MessageCircle } from "lucide-react";
+import { Menu, X, MessageCircle, ShoppingCart, UserRound } from "lucide-react";
 import { NAV_LINKS, PAGE_NAV_LINKS } from "@/lib/content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import { ButtonAnchor } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { useSettings } from "@/components/settings-provider";
+import { useCart } from "@/components/cart-provider";
+import { useAuth } from "@/components/auth-provider";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 
 export function Navbar() {
@@ -18,6 +21,8 @@ export function Navbar() {
   const reduced = useReducedMotionPreference();
   const pathname = usePathname();
   const settings = useSettings();
+  const { count, ready } = useCart();
+  const { user } = useAuth();
   const isLanding = pathname === "/";
   const links = isLanding ? NAV_LINKS : PAGE_NAV_LINKS;
   // Intro loader hanya ada di landing; halaman dalam tampil langsung.
@@ -63,11 +68,32 @@ export function Navbar() {
         </ul>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/keranjang"
+            className="relative grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+            aria-label={`Keranjang belanja${count > 0 ? `, ${count} item` : ""}`}
+          >
+            <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+            {ready && count > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+                {count > 99 ? "99+" : count}
+              </span>
+            )}
+          </Link>
+
+          <Link
+            href={user ? "/akun" : "/masuk"}
+            className="hidden h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:grid"
+            aria-label={user ? "Akun saya" : "Masuk akun"}
+          >
+            <UserRound className="h-5 w-5" aria-hidden="true" />
+          </Link>
+
           <ButtonAnchor
             href="/kontak"
             size="sm"
             variant="primary"
-            className="hidden sm:inline-flex"
+            className="hidden lg:inline-flex"
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
             Konsultasi
@@ -114,6 +140,24 @@ export function Navbar() {
               </li>
             ))}
           </ul>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Link
+              href={user ? "/akun" : "/masuk"}
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              <UserRound className="h-4 w-4" />
+              {user ? "Akun Saya" : "Masuk"}
+            </Link>
+            <Link
+              href="/keranjang"
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Keranjang{count > 0 ? ` (${count})` : ""}
+            </Link>
+          </div>
           <ButtonAnchor
             href={waLink(WA_MESSAGES.general, settings.whatsapp)}
             target="_blank"

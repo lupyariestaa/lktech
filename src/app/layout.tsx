@@ -9,6 +9,8 @@ import { SkipLink } from "@/components/skip-link";
 import { StructuredData } from "@/components/structured-data";
 import { SettingsProvider } from "@/components/settings-provider";
 import { ContentProvider } from "@/components/content-provider";
+import { AuthProvider } from "@/components/auth-provider";
+import { CartProvider } from "@/components/cart-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -102,12 +104,16 @@ export default async function RootLayout({
       </head>
       <body>
         <SkipLink />
-        <SettingsProvider initial={settings}>
-          <ContentProvider initial={content}>
-            {children}
-            <StructuredData settings={settings} />
-          </ContentProvider>
-        </SettingsProvider>
+        <AuthProvider>
+          <SettingsProvider initial={settings}>
+            <ContentProvider initial={content}>
+              <CartProvider>
+                {children}
+                <StructuredData settings={settings} />
+              </CartProvider>
+            </ContentProvider>
+          </SettingsProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

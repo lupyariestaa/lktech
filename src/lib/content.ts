@@ -11,6 +11,7 @@ export const COMPANY = {
 export const NAV_LINKS = [
   { label: "Beranda", href: "/#beranda" },
   { label: "Layanan", href: "/#layanan" },
+  { label: "Produk", href: "/produk" },
   { label: "Portofolio", href: "/portofolio" },
   { label: "Blog", href: "/blog" },
   { label: "Harga", href: "/#harga" },
@@ -21,6 +22,7 @@ export const NAV_LINKS = [
 export const PAGE_NAV_LINKS = [
   { label: "Beranda", href: "/" },
   { label: "Layanan", href: "/layanan" },
+  { label: "Produk", href: "/produk" },
   { label: "Portofolio", href: "/portofolio" },
   { label: "Blog", href: "/blog" },
   { label: "Kontak", href: "/kontak" },

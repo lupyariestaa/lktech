@@ -19,6 +19,7 @@ import {
   Tags,
   PanelsTopLeft,
   Files,
+  Package,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { signOutUser } from "@/lib/auth";
@@ -30,6 +31,7 @@ const NAV = [
   { label: "Hero", href: "/admin/hero", icon: PanelsTopLeft },
   { label: "Konten", href: "/admin/content", icon: Files },
   { label: "Layanan", href: "/admin/services", icon: LayoutGrid },
+  { label: "Produk", href: "/admin/products", icon: Package },
   { label: "Harga", href: "/admin/pricing", icon: Tags },
   { label: "FAQ", href: "/admin/faq", icon: HelpCircle },
   { label: "Portofolio", href: "/admin/projects", icon: FolderKanban },

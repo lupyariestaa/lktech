@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AuthProvider } from "@/components/auth-provider";
 
 export const metadata: Metadata = {
   title: "Admin — LKTech",
@@ -9,5 +8,6 @@ export const metadata: Metadata = {
 export default function AdminRootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <AuthProvider>{children}</AuthProvider>;
+  // AuthProvider sudah disediakan di root layout (dipakai bersama area user).
+  return <>{children}</>;
 }
