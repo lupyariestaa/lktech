@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { sendTestEmail } from "@/lib/admin-api";
+import { useToast } from "@/components/admin/toast";
 
 /**
  * Panel untuk menguji notifikasi email lead.
  */
 export function EmailNotifier() {
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,8 +21,11 @@ export function EmailNotifier() {
     try {
       const res = await sendTestEmail();
       setResult(`Email percobaan terkirim ke ${res.to}`);
+      toast.success(`Email percobaan terkirim ke ${res.to}.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengirim.");
+      const msg = err instanceof Error ? err.message : "Gagal mengirim.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

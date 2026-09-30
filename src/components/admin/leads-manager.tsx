@@ -26,9 +26,11 @@ import {
   type StoredLead,
 } from "@/lib/lead-types";
 import { waLink } from "@/lib/whatsapp";
+import { useToast } from "@/components/admin/toast";
 import { cn } from "@/lib/utils";
 
 export function LeadsManager() {
+  const toast = useToast();
   const [leads, setLeads] = useState<StoredLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,9 +95,12 @@ export function LeadsManager() {
     setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, status } : l)));
     try {
       await updateLeadStatus(id, status);
+      toast.success("Status lead diperbarui.");
     } catch (err) {
       setLeads(prev); // rollback
-      setError(err instanceof Error ? err.message : "Gagal memperbarui.");
+      const msg = err instanceof Error ? err.message : "Gagal memperbarui.";
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -113,9 +118,12 @@ export function LeadsManager() {
     setLeads((ls) => ls.filter((l) => l.id !== id));
     try {
       await deleteLead(id);
+      toast.success(`Lead "${name}" dihapus.`);
     } catch (err) {
       setLeads(prev);
-      setError(err instanceof Error ? err.message : "Gagal menghapus.");
+      const msg = err instanceof Error ? err.message : "Gagal menghapus.";
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -128,6 +136,7 @@ export function LeadsManager() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari nama, email, layanan..."
+            aria-label="Cari lead"
             className="w-full rounded-full border border-slate-200 bg-white py-2.5 pr-4 pl-10 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none"
           />
         </div>
@@ -135,6 +144,7 @@ export function LeadsManager() {
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as LeadStatus | "semua")}
+          aria-label="Filter status lead"
           className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none"
         >
           <option value="semua">Semua status</option>

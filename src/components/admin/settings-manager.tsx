@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { fetchSettings, saveSettings } from "@/lib/admin-api";
+import { useToast } from "@/components/admin/toast";
 import {
   DEFAULT_SETTINGS,
   type SiteSettings,
@@ -20,10 +21,12 @@ const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
 
 export function SettingsManager() {
+  const toast = useToast();
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -33,8 +36,10 @@ export function SettingsManager() {
         const data = await fetchSettings();
         if (active) setSettings(data);
       } catch (err) {
-        if (active)
+        if (active) {
           setError(err instanceof Error ? err.message : "Gagal memuat.");
+          setLoadFailed(true);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -84,8 +89,11 @@ export function SettingsManager() {
       const res = await saveSettings(settings);
       setSettings(res.settings);
       setSaved(true);
+      toast.success("Pengaturan tersimpan.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan.");
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -105,7 +113,15 @@ export function SettingsManager() {
       {error && (
         <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          {error}
+          <span>
+            {error}
+            {loadFailed && (
+              <span className="mt-1 block text-xs text-rose-500">
+                Muat ulang halaman sebelum menyimpan agar tidak menimpa data
+                yang ada.
+              </span>
+            )}
+          </span>
         </div>
       )}
 
@@ -222,7 +238,7 @@ export function SettingsManager() {
       <div className="flex items-center gap-4">
         <button
           onClick={onSave}
-          disabled={saving}
+          disabled={saving || loadFailed}
           className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-70"
         >
           {saving ? (

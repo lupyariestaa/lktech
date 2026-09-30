@@ -1,11 +1,29 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { mergeSettings, SETTINGS_DOC_ID } from "@/lib/settings";
+import { getSiteSettings, mergeSettings, SETTINGS_DOC_ID } from "@/lib/settings";
 import type { SiteSettings } from "@/lib/settings-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * GET /api/admin/settings — pengaturan segar untuk dashboard (dilindungi admin).
+ *
+ * Dashboard TIDAK boleh membaca `/api/settings` publik karena risiko cache;
+ * endpoint ini selalu `no-store` sehingga form selalu menampilkan data terbaru.
+ */
+export async function GET(req: Request) {
+  const check = await requireAdmin(req);
+  if (!check.ok) return check.response;
+
+  const settings = await getSiteSettings();
+  return NextResponse.json(
+    { settings },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
+}
 
 /**
  * PUT /api/admin/settings — simpan pengaturan situs (dilindungi admin).
@@ -43,6 +61,12 @@ export async function PUT(req: Request) {
         },
         { merge: true },
       );
+
+    // Pastikan halaman publik yang menampilkan kontak langsung segar
+    // (kontak dipakai di footer/beranda & halaman kontak).
+    revalidatePath("/", "layout");
+    revalidatePath("/");
+    revalidatePath("/kontak");
 
     return NextResponse.json({ ok: true, settings });
   } catch (err) {

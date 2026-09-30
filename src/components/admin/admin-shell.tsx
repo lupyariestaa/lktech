@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -36,28 +36,57 @@ const NAV = [
   { label: "Pengaturan", href: "/admin/settings", icon: Settings },
 ];
 
+/** Judul halaman berdasarkan pathname saat ini (header full-width). */
+function titleForPath(pathname: string): string {
+  const match = [...NAV]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((n) => pathname === n.href || pathname.startsWith(`${n.href}/`));
+  return match?.label ?? "Dashboard";
+}
+
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
+  // Tutup drawer otomatis saat route berubah (mobile). Dibandingkan saat render
+  // (bukan di effect) agar tidak memicu cascading render — pola yang disarankan
+  // React untuk menyesuaikan state berdasarkan perubahan nilai sebelumnya.
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
+    if (open) setOpen(false);
+  }
+
+  // Tutup drawer dengan tombol Escape (aksesibilitas).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   const onLogout = async () => {
     await signOutUser();
     router.replace("/admin/login");
   };
 
+  const title = titleForPath(pathname);
+
   return (
     <div className="min-h-screen bg-surface">
-      <div className="mx-auto flex max-w-7xl">
+      <div className="flex w-full">
         {/* Sidebar */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-40 w-64 border-r border-slate-200 bg-white p-4 transition-transform lg:static lg:translate-x-0",
+            "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform lg:static lg:translate-x-0",
             open ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4">
             <Link href="/admin" className="flex items-center gap-2.5">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-sm font-bold text-white">
                 LK
@@ -75,7 +104,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          <nav className="mt-8 flex flex-col gap-1">
+          <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 pb-4">
             {NAV.map((item) => {
               const Icon = item.icon;
               const active =
@@ -101,7 +130,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <div className="absolute inset-x-4 bottom-4">
+          <div className="border-t border-slate-200 p-4">
             <Link
               href="/"
               target="_blank"
@@ -123,17 +152,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         {/* Main */}
         <div className="flex min-h-screen w-full flex-col">
-          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/80 px-5 py-3 backdrop-blur">
-            <button
-              onClick={() => setOpen(true)}
-              className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-secondary lg:hidden"
-              aria-label="Buka menu"
-            >
-              <Menu className="h-4 w-4" />
-            </button>
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setOpen(true)}
+                className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-secondary lg:hidden"
+                aria-label="Buka menu"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
 
-            <div className="hidden text-sm font-semibold text-secondary lg:block">
-              Dashboard
+              <h1 className="text-sm font-semibold text-secondary">{title}</h1>
             </div>
 
             <div className="ml-auto flex items-center gap-3">
@@ -156,7 +185,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 px-5 py-6 lg:px-8">{children}</main>
+          <main className="w-full flex-1 px-4 py-6 sm:px-6 lg:px-8">
+            {children}
+          </main>
         </div>
       </div>
     </div>

@@ -7,6 +7,10 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/settings — pengaturan publik (kontak) untuk komponen client.
  * Data tidak sensitif (hanya info kontak yang memang ditampilkan di website).
+ *
+ * `no-store`: pengaturan dikelola dari dashboard dan harus SELALU segar —
+ * cache sebelumnya (`s-maxage=300`) menyebabkan bug "data basi" (perubahan
+ * kontak baru tampil setelah 5 menit). Sama seperti `/api/content`.
  */
 export async function GET() {
   const settings = await getSiteSettings();
@@ -14,7 +18,7 @@ export async function GET() {
     { settings },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        "Cache-Control": "no-store, max-age=0",
       },
     },
   );

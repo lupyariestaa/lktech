@@ -17,9 +17,11 @@ import {
   type MediaItem,
 } from "@/lib/media-types";
 import type { Project } from "@/lib/project-types";
+import { useToast } from "@/components/admin/toast";
 import { cn } from "@/lib/utils";
 
 export function MediaManager() {
+  const toast = useToast();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,8 +109,11 @@ export function MediaManager() {
       setPending(null);
       setTitle("");
       await load();
+      toast.success("Media disimpan ke galeri.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan media.");
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan media.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -121,9 +126,12 @@ export function MediaManager() {
     setItems((ls) => ls.filter((l) => l.id !== item.id));
     try {
       await deleteMedia(item.id, item.publicId);
+      toast.success("Media dihapus.");
     } catch (err) {
       setItems(prev);
-      setError(err instanceof Error ? err.message : "Gagal menghapus.");
+      const msg = err instanceof Error ? err.message : "Gagal menghapus.";
+      setError(msg);
+      toast.error(msg);
     }
   };
 

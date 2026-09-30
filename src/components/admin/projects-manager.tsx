@@ -19,6 +19,7 @@ import {
 } from "@/lib/admin-api";
 import type { Project, StoredProject } from "@/lib/project-types";
 import { useSiteContent } from "@/components/admin/use-site-content";
+import { useToast } from "@/components/admin/toast";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
@@ -43,6 +44,7 @@ const emptyProject: Project = {
 };
 
 export function ProjectsManager() {
+  const toast = useToast();
   const [items, setItems] = useState<StoredProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,9 +104,12 @@ export function ProjectsManager() {
     setItems((ls) => ls.filter((l) => l.slug !== slug));
     try {
       await deleteProject(slug);
+      toast.success(`Proyek "${title}" dihapus.`);
     } catch (err) {
       setItems(prev);
-      setError(err instanceof Error ? err.message : "Gagal menghapus.");
+      const msg = err instanceof Error ? err.message : "Gagal menghapus.";
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -120,8 +125,11 @@ export function ProjectsManager() {
       await saveProject(editing);
       setEditing(null);
       await load();
+      toast.success(isNew ? "Proyek dibuat." : "Proyek diperbarui.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan.");
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

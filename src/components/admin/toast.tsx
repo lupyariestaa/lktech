@@ -4,6 +4,8 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -38,18 +40,37 @@ let counter = 0;
 /** Provider toast untuk dashboard admin (pojok kanan bawah). */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Bersihkan timer yang belum sempat berjalan saat provider unmount.
+  useEffect(() => {
+    const map = timers.current;
+    return () => {
+      map.forEach((t) => clearTimeout(t));
+      map.clear();
+    };
+  }, []);
 
   const remove = useCallback((id: number) => {
     setToasts((ls) => ls.filter((t) => t.id !== id));
+    const t = timers.current.get(id);
+    if (t) {
+      clearTimeout(t);
+      timers.current.delete(id);
+    }
   }, []);
 
   const toast = useCallback(
     (message: string, variant: ToastVariant = "info") => {
       const id = ++counter;
       setToasts((ls) => [...ls, { id, variant, message }]);
-      setTimeout(() => remove(id), 3500);
+      const timer = setTimeout(() => {
+        setToasts((ls) => ls.filter((t) => t.id !== id));
+        timers.current.delete(id);
+      }, 3500);
+      timers.current.set(id, timer);
     },
-    [remove],
+    [],
   );
 
   const success = useCallback((m: string) => toast(m, "success"), [toast]);
@@ -74,7 +95,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   "pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-lg shadow-slate-900/5",
                   cls,
                 )}
-                role="status"
+                role={t.variant === "error" ? "alert" : "status"}
               >
                 <Icon className="mt-0.5 h-4 w-4 shrink-0" />
                 <p className="flex-1 text-sm font-medium">{t.message}</p>

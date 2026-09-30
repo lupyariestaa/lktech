@@ -133,7 +133,12 @@ export async function deleteMedia(id: string, publicId: string) {
 }
 
 export async function fetchSettings(): Promise<SiteSettings> {
-  const res = await fetch("/api/settings", { cache: "no-store" });
+  // Baca endpoint ADMIN (dilindungi & `no-store`) agar form dashboard tidak
+  // pernah menampilkan data basi dari cache endpoint publik.
+  const res = await fetch("/api/admin/settings", {
+    headers: await authHeaders(),
+    cache: "no-store",
+  });
   const data = await handle<{ settings: SiteSettings }>(res);
   return data.settings;
 }

@@ -19,6 +19,7 @@ import {
 } from "@/lib/admin-api";
 import { ARTICLE_CATEGORIES, type Article, type StoredArticle } from "@/lib/article-types";
 import { ImageUploader } from "@/components/admin/image-uploader";
+import { useToast } from "@/components/admin/toast";
 import { deleteImage, type CloudinaryAsset } from "@/lib/cloudinary-client";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ const emptyArticle: Article = {
 };
 
 export function ArticlesManager() {
+  const toast = useToast();
   const [items, setItems] = useState<StoredArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,9 +98,12 @@ export function ArticlesManager() {
     setItems((ls) => ls.filter((l) => l.slug !== slug));
     try {
       await deleteArticle(slug);
+      toast.success(`Artikel "${title}" dihapus.`);
     } catch (err) {
       setItems(prev);
-      setError(err instanceof Error ? err.message : "Gagal menghapus.");
+      const msg = err instanceof Error ? err.message : "Gagal menghapus.";
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -114,8 +119,11 @@ export function ArticlesManager() {
       await saveArticle(editing);
       setEditing(null);
       await load();
+      toast.success(isNew ? "Artikel dibuat." : "Artikel diperbarui.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan.");
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
