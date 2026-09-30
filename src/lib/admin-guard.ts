@@ -60,7 +60,9 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
   }
 
   try {
-    const decoded = await adminAuth.verifyIdToken(token);
+    // `checkRevoked: true` memastikan token yang sudah dicabut/di-logout
+    // tidak bisa dipakai lagi.
+    const decoded = await adminAuth.verifyIdToken(token, true);
     const email = (decoded.email ?? "").toLowerCase();
     const allowed = getAdminEmails();
 

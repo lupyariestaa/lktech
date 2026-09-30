@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/site";
-import { getServiceSlugs } from "@/lib/content";
+import { getSiteContent } from "@/lib/site-content";
 import { getProjectSlugs } from "@/lib/projects";
 import { getArticleSlugs } from "@/lib/articles";
 
@@ -17,17 +17,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE.url}/kontak`, lastModified: now, changeFrequency: "yearly", priority: 0.7 },
   ];
 
-  const serviceRoutes: MetadataRoute.Sitemap = getServiceSlugs().map((slug) => ({
-    url: `${SITE.url}/layanan/${slug}`,
+  const [content, projectSlugs, articleSlugs] = await Promise.all([
+    getSiteContent(),
+    getProjectSlugs(),
+    getArticleSlugs(),
+  ]);
+
+  // Slug layanan dibaca dari konten dinamis agar layanan yang ditambah dari
+  // dashboard ikut masuk sitemap.
+  const serviceRoutes: MetadataRoute.Sitemap = content.services.map((s) => ({
+    url: `${SITE.url}/layanan/${s.slug}`,
     lastModified: now,
     changeFrequency: "monthly",
     priority: 0.8,
   }));
-
-  const [projectSlugs, articleSlugs] = await Promise.all([
-    getProjectSlugs(),
-    getArticleSlugs(),
-  ]);
 
   const projectRoutes: MetadataRoute.Sitemap = projectSlugs.map((slug) => ({
     url: `${SITE.url}/portofolio/${slug}`,

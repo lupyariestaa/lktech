@@ -45,14 +45,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const project = await getProjectBySlug(slug);
-  if (!project) return { title: "Proyek tidak ditemukan — LKTech" };
+  if (!project) return { title: "Proyek tidak ditemukan" };
 
   return {
-    title: `${project.title} — Portofolio LKTech`,
+    title: `${project.title} — Portofolio`,
     description: project.summary,
     alternates: { canonical: `/portofolio/${slug}` },
     openGraph: {
-      title: `${project.title} — Portofolio LKTech`,
+      title: `${project.title} — Portofolio`,
       description: project.summary,
       type: "article",
       url: `/portofolio/${slug}`,

@@ -37,6 +37,11 @@ export const leadSchema = z.object({
     .trim()
     .min(10, "Ceritakan kebutuhan Anda minimal 10 karakter")
     .max(1000, "Pesan terlalu panjang (maks 1000 karakter)"),
+  /**
+   * Honeypot anti-bot: field tersembunyi yang seharusnya tetap KOSONG.
+   * Bot yang mengisi semua field akan terdeteksi & ditolak (tidak disimpan).
+   */
+  website: z.string().optional(),
 });
 
 export type LeadInput = z.infer<typeof leadSchema>;

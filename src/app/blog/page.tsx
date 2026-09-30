@@ -6,12 +6,12 @@ import { getArticleCategories, getArticles } from "@/lib/articles";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Blog — LKTech",
+    title: "Blog",
   description:
     "Artikel & tips seputar website, aplikasi, bisnis digital, dan teknologi untuk membantu bisnis Anda tumbuh.",
   alternates: { canonical: "/blog" },
   openGraph: {
-    title: "Blog — LKTech",
+  title: "Blog",
     description:
       "Artikel & tips seputar website, aplikasi, bisnis digital, dan teknologi.",
     url: "/blog",

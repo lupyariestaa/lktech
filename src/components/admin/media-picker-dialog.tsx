@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   AlertCircle,
@@ -76,6 +76,9 @@ export function MediaPickerDialog({
   const [selected, setSelected] = useState<Record<string, MediaItem>>({});
   const [showUpload, setShowUpload] = useState(false);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -129,6 +132,47 @@ export function MediaPickerDialog({
       document.body.style.overflow = prev;
     };
   }, [open, onOpenChange]);
+
+  // Focus trap: simpan fokus sebelumnya, fokuskan panel saat dibuka, dan
+  // kembalikan fokus saat ditutup; jaga Tab tetap di dalam dialog.
+  useEffect(() => {
+    if (!open) return;
+    triggerRef.current = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    // Fokuskan kontrol pertama yang bisa difokus di dalam dialog.
+    const focusFirst = () => {
+      const focusables = panel?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      focusables?.[0]?.focus();
+    };
+    const id = window.setTimeout(focusFirst, 0);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !panel) return;
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.clearTimeout(id);
+      document.removeEventListener("keydown", onKeyDown);
+      triggerRef.current?.focus?.();
+    };
+  }, [open]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -209,7 +253,10 @@ export function MediaPickerDialog({
       />
 
       {/* Panel */}
-      <div className="relative flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+      <div
+        ref={panelRef}
+        className="relative flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div className="flex items-center gap-2.5">
@@ -242,6 +289,7 @@ export function MediaPickerDialog({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Cari nama file atau judul…"
+              aria-label="Cari media"
               className="w-full rounded-full border border-slate-200 bg-white py-2.5 pr-4 pl-10 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none"
             />
           </div>
@@ -251,6 +299,7 @@ export function MediaPickerDialog({
             onChange={(e) =>
               setCategory(e.target.value as MediaCategory | "semua")
             }
+            aria-label="Filter kategori media"
             className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none"
           >
             <option value="semua">Semua kategori</option>
@@ -264,6 +313,7 @@ export function MediaPickerDialog({
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
+            aria-label="Urutkan media"
             className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none"
           >
             <option value="newest">Terbaru</option>
@@ -463,11 +513,13 @@ function UploadInline({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Judul (opsional)"
+          aria-label="Judul gambar"
           className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none"
         />
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as MediaCategory)}
+          aria-label="Kategori gambar"
           className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none"
         >
           {MEDIA_CATEGORIES.map((c) => (

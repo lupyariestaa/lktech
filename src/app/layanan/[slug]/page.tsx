@@ -30,14 +30,14 @@ export async function generateMetadata({
   const { slug } = await params;
   const { services } = await getSiteContent();
   const service = services.find((s) => s.slug === slug);
-  if (!service) return { title: "Layanan tidak ditemukan — LKTech" };
+  if (!service) return { title: "Layanan tidak ditemukan" };
 
   return {
-    title: `${service.title} — LKTech`,
+      title: service.title,
     description: service.detail.heroDescription,
     alternates: { canonical: `/layanan/${slug}` },
     openGraph: {
-      title: `${service.title} — LKTech`,
+    title: service.title,
       description: service.description,
       type: "website",
       url: `/layanan/${slug}`,

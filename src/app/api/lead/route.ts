@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { leadSchema } from "@/lib/lead-schema";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { sendLeadNotification } from "@/lib/email";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { waLink } from "@/lib/whatsapp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Batas pengiriman form per IP dalam satu jendela waktu. */
+const RATE_LIMIT = 5;
+const RATE_WINDOW_MS = 10 * 60 * 1000; // 10 menit
 
 function fallbackWhatsApp(lead: {
   name: string;
@@ -36,6 +41,22 @@ function fallbackWhatsApp(lead: {
  * 4. Fallback WhatsApp bila penyimpanan gagal.
  */
 export async function POST(req: Request) {
+  // Anti-spam: batasi jumlah kiriman per IP.
+  const ip = clientIp(req);
+  const rl = rateLimit(`lead:${ip}`, RATE_LIMIT, RATE_WINDOW_MS);
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error:
+          "Terlalu banyak pengiriman. Silakan coba lagi beberapa saat lagi atau hubungi kami via WhatsApp.",
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfter) },
+      },
+    );
+  }
+
   let json: unknown;
   try {
     json = await req.json();
@@ -51,7 +72,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const lead = parsed.data;
+  const { website, ...lead } = parsed.data;
+
+  // Honeypot terisi → kemungkinan besar bot. Balas "sukses" palsu tanpa
+  // menyimpan/mengirim apa pun supaya bot tidak mencoba lagi.
+  if (website && website.trim() !== "") {
+    return NextResponse.json({ status: "saved", id: "ignored", emailed: false });
+  }
+
   const db = getAdminDb();
 
   // Bila Admin SDK tidak tersedia, arahkan ke WhatsApp agar lead tak hilang.

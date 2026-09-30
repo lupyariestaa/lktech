@@ -34,14 +34,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const article = await getArticleBySlug(slug);
-  if (!article) return { title: "Artikel tidak ditemukan — LKTech" };
+  if (!article) return { title: "Artikel tidak ditemukan" };
 
   return {
-    title: `${article.title} — Blog LKTech`,
+    title: `${article.title} — Blog`,
     description: article.excerpt,
     alternates: { canonical: `/blog/${slug}` },
     openGraph: {
-      title: `${article.title} — Blog LKTech`,
+      title: `${article.title} — Blog`,
       description: article.excerpt,
       type: "article",
       url: `/blog/${slug}`,

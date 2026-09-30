@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { AlertCircle, Loader2, LogIn, Mail } from "lucide-react";
 import { getClientAuth, signInWithGoogle } from "@/lib/auth";
 import { useAuth } from "@/components/auth-provider";
@@ -17,7 +14,6 @@ const fieldBase =
 export function LoginForm() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -50,11 +46,9 @@ export function LoginForm() {
     try {
       const auth = getClientAuth();
       if (!auth) throw new Error("Firebase belum dikonfigurasi.");
-      if (mode === "login") {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-      }
+      // Hanya login — pendaftaran mandiri dinonaktifkan (akun admin dibuat
+      // manual lewat Firebase Console).
+      await signInWithEmailAndPassword(auth, email, password);
       router.replace("/admin/leads");
     } catch (err) {
       setError(normalizeError(err));
@@ -114,7 +108,7 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            autoComplete="current-password"
             className={fieldBase}
           />
         </label>
@@ -136,22 +130,9 @@ export function LoginForm() {
           ) : (
             <LogIn className="h-4 w-4" />
           )}
-          {mode === "login" ? "Masuk" : "Daftar"}
+          Masuk
         </button>
       </form>
-
-      <p className="mt-6 text-center text-sm text-muted">
-        {mode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
-        <button
-          onClick={() => {
-            setMode(mode === "login" ? "register" : "login");
-            setError(null);
-          }}
-          className="font-semibold text-primary hover:underline"
-        >
-          {mode === "login" ? "Daftar" : "Masuk"}
-        </button>
-      </p>
 
       <p className="mt-5 flex items-start gap-2 rounded-2xl bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
         <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />

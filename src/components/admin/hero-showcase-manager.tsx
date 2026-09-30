@@ -136,10 +136,18 @@ export function HeroShowcaseManager() {
       <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <h2 className="text-sm font-bold text-secondary">Pengaturan umum</h2>
         <div className="mt-5 grid gap-5 sm:grid-cols-3">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-secondary">Status</span>
+          <div className="flex flex-col gap-1.5">
+            <span
+              id="hero-status-label"
+              className="text-sm font-medium text-secondary"
+            >
+              Status
+            </span>
             <button
               type="button"
+              role="switch"
+              aria-checked={view.enabled}
+              aria-labelledby="hero-status-label"
               onClick={() => patch({ enabled: !view.enabled })}
               className={cn(
                 "inline-flex items-center justify-between gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors",
@@ -150,6 +158,7 @@ export function HeroShowcaseManager() {
             >
               {view.enabled ? "Carousel aktif" : "Carousel nonaktif"}
               <span
+                aria-hidden="true"
                 className={cn(
                   "relative h-5 w-9 rounded-full transition-colors",
                   view.enabled ? "bg-emerald-500" : "bg-slate-300",
@@ -163,7 +172,7 @@ export function HeroShowcaseManager() {
                 />
               </span>
             </button>
-          </label>
+          </div>
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-secondary">

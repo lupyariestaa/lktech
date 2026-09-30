@@ -16,6 +16,8 @@ export function FaqAccordion({ items }: { items: ServiceFaq[] }) {
     <div className="flex flex-col gap-3">
       {items.map((faq, i) => {
         const isOpen = open === i;
+        const panelId = `faq-panel-${i}`;
+        const buttonId = `faq-button-${i}`;
         return (
           <div
             key={faq.question}
@@ -27,8 +29,10 @@ export function FaqAccordion({ items }: { items: ServiceFaq[] }) {
             )}
           >
             <button
+              id={buttonId}
               onClick={() => setOpen(isOpen ? null : i)}
               aria-expanded={isOpen}
+              aria-controls={panelId}
               className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
             >
               <span
@@ -55,6 +59,9 @@ export function FaqAccordion({ items }: { items: ServiceFaq[] }) {
             <AnimatePresence initial={false}>
               {isOpen && (
                 <motion.div
+                  id={panelId}
+                  role="region"
+                  aria-labelledby={buttonId}
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}

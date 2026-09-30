@@ -37,6 +37,7 @@ export function ContactForm() {
       phone: "",
       service: "Pembuatan Website",
       message: "",
+      website: "",
     },
   });
 
@@ -207,6 +208,19 @@ export function ContactForm() {
                 {...register("message")}
               />
             </Field>
+
+            {/* Honeypot anti-bot: tersembunyi dari pengguna & screen reader. */}
+            <div className="hidden" aria-hidden="true">
+              <label>
+                Jangan diisi
+                <input
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  {...register("website")}
+                />
+              </label>
+            </div>
 
             {status === "error" && (
               <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">

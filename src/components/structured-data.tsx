@@ -7,6 +7,13 @@ import type { SiteSettings } from "@/lib/settings-types";
  * Membantu mesin pencari memahami identitas & layanan LKTech.
  */
 export function StructuredData({ settings }: { settings: SiteSettings }) {
+  // Alamat diturunkan dari pengaturan (dikelola dashboard). Format lokasi
+  // bebas, jadi kita kirim sebagai `addressLocality` bila tidak terurai.
+  const locationParts = settings.location
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   const data = {
     "@context": "https://schema.org",
     "@type": "ProfessionalService",
@@ -17,11 +24,12 @@ export function StructuredData({ settings }: { settings: SiteSettings }) {
     image: `${SITE.url}${SITE.ogImage}`,
     email: settings.email,
     telephone: `+${settings.whatsapp}`,
-    foundingDate: String(COMPANY.year),
+    // Format ISO 8601 (YYYY-MM-DD) agar valid menurut schema.org.
+    foundingDate: `${COMPANY.year}-01-01`,
     address: {
       "@type": "PostalAddress",
-      addressLocality: "Padakembang",
-      addressRegion: "Jawa Barat",
+      addressLocality: locationParts[0] ?? settings.location,
+      addressRegion: locationParts[1],
       addressCountry: "ID",
     },
     areaServed: {

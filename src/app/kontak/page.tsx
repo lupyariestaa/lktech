@@ -11,12 +11,12 @@ const MAP_LAT = "-7.304071167612529";
 const MAP_LNG = "108.12106012781747";
 
 export const metadata: Metadata = {
-  title: "Kontak — LKTech",
+    title: "Kontak",
   description:
     "Hubungi LKTech untuk konsultasi gratis pembuatan website, aplikasi mobile, dan konsultasi teknologi. Kirim pesan lewat form atau WhatsApp.",
   alternates: { canonical: "/kontak" },
   openGraph: {
-    title: "Kontak — LKTech",
+  title: "Kontak",
     description:
       "Konsultasi gratis pembuatan website, aplikasi mobile, dan konsultasi teknologi.",
     url: "/kontak",

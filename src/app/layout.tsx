@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
     default: SITE.title,
-    template: "%s",
+    template: "%s | LKTech",
   },
   description: SITE.description,
   keywords: [

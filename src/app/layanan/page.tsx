@@ -9,12 +9,12 @@ import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { getSiteSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
-  title: "Layanan — LKTech",
+    title: "Layanan",
   description:
     "Layanan LKTech: pembuatan website, aplikasi mobile, konsultasi teknologi, desain & branding, serta digital marketing untuk bisnis Anda.",
   alternates: { canonical: "/layanan" },
   openGraph: {
-    title: "Layanan — LKTech",
+  title: "Layanan",
     description:
       "Pembuatan website, aplikasi mobile, konsultasi teknologi, desain & branding, dan digital marketing.",
     url: "/layanan",

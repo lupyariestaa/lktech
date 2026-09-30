@@ -13,12 +13,12 @@ import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Portofolio — LKTech",
+    title: "Portofolio",
   description:
     "Kumpulan proyek LKTech: website, aplikasi mobile, e-commerce, branding, dan web app untuk berbagai bisnis dan institusi.",
   alternates: { canonical: "/portofolio" },
   openGraph: {
-    title: "Portofolio — LKTech",
+  title: "Portofolio",
     description:
       "Kumpulan proyek website, aplikasi mobile, e-commerce, branding, dan web app.",
     url: "/portofolio",
