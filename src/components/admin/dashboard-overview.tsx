@@ -1,40 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Inbox, Loader2, Clock, CheckCircle2, Sparkles } from "lucide-react";
 import { fetchLeads } from "@/lib/admin-api";
 import { LEAD_STATUS_LABEL, type StoredLead } from "@/lib/lead-types";
+import { useAsyncList } from "@/components/admin/use-async-list";
 import { cn } from "@/lib/utils";
 
 export function DashboardOverview() {
-  const [leads, setLeads] = useState<StoredLead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await fetchLeads();
-        if (active) setLeads(data);
-      } catch (err) {
-        if (active)
-          setError(err instanceof Error ? err.message : "Gagal memuat.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { data: leads, loading, error } = useAsyncList<StoredLead>(
+    fetchLeads,
+    "Gagal memuat ringkasan.",
+  );
 
   if (loading) {
     return (
       <div className="flex items-center gap-3 text-muted">
         <Loader2 className="h-5 w-5 animate-spin text-primary" />
         <span className="text-sm">Memuat ringkasan...</span>
+      </div>
+    );
+  }
+
+  // Saat gagal memuat, tampilkan pesan jelas alih-alih angka 0 yang menyesatkan.
+  if (error) {
+    return (
+      <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
+        {error}
       </div>
     );
   }
@@ -71,12 +63,6 @@ export function DashboardOverview() {
 
   return (
     <div className="flex flex-col gap-8">
-      {error && (
-        <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
-          {error}
-        </div>
-      )}
-
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => {
           const Icon = s.icon;
@@ -220,7 +206,11 @@ function LeadTrendChart({ leads }: { leads: StoredLead[] }) {
           Belum ada lead pada {TREND_DAYS} hari terakhir.
         </p>
       ) : (
-        <div className="mt-6 flex items-end gap-1.5 sm:gap-2">
+        <div
+          className="mt-6 flex items-end gap-1.5 sm:gap-2"
+          role="img"
+          aria-label={`Grafik tren lead ${TREND_DAYS} hari terakhir, total ${total} lead.`}
+        >
           {data.map((d) => {
             const height = d.count === 0 ? 4 : Math.round((d.count / max) * 100);
             return (

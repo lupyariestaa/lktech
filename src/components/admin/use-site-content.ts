@@ -32,6 +32,9 @@ export function useSiteContent() {
     }
   }, []);
 
+  // Fetch awal saat mount. `setLoading(false)` / `setContent` hanya dipanggil
+  // setelah `await`, jadi tidak memicu cascading render sinkron. `loading` sudah
+  // bernilai `true` sebagai state awal, jadi tidak perlu di-set lagi di sini.
   useEffect(() => {
     let active = true;
     (async () => {

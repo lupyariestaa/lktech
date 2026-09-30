@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -18,7 +18,8 @@ import {
   saveProject,
 } from "@/lib/admin-api";
 import type { Project, StoredProject } from "@/lib/project-types";
-import { useSiteContent } from "@/components/admin/use-site-content";
+import { useAsyncList } from "@/components/admin/use-async-list";
+import { useServices } from "@/components/admin/use-services";
 import { useToast } from "@/components/admin/toast";
 import { cn } from "@/lib/utils";
 
@@ -45,46 +46,22 @@ const emptyProject: Project = {
 
 export function ProjectsManager() {
   const toast = useToast();
-  const [items, setItems] = useState<StoredProject[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: items,
+    setData: setItems,
+    loading,
+    error,
+    setError,
+    reload: load,
+  } = useAsyncList<StoredProject>(fetchProjects, "Gagal memuat proyek.");
   const [editing, setEditing] = useState<Project | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
-  const { content } = useSiteContent();
-  const services = content.services;
+  const { services } = useServices();
 
-  const load = useCallback(async () => {
-    try {
-      const data = await fetchProjects();
-      setItems(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat proyek.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await fetchProjects();
-        if (!active) return;
-        setItems(data);
-        setError(null);
-      } catch (err) {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : "Gagal memuat proyek.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const refresh = async () => {
+    await load();
+  };
 
   const onNew = () => {
     setEditing({ ...emptyProject });
@@ -156,7 +133,7 @@ export function ProjectsManager() {
         <p className="text-sm text-muted">{items.length} proyek</p>
         <div className="flex items-center gap-2">
           <button
-            onClick={load}
+            onClick={refresh}
             disabled={loading}
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
           >

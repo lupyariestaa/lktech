@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/admin/email/test — kirim email percobaan (dilindungi admin).
- * Body opsional: { to?: string }
+ *
+ * Tujuan email SELALU alamat admin yang login (`check.email`) — tidak menerima
+ * alamat dari body agar endpoint tidak disalahgunakan untuk mengirim ke
+ * alamat sembarangan.
  */
 export async function POST(req: Request) {
   const check = await requireAdmin(req);
@@ -20,13 +23,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let to = check.email;
-  try {
-    const body = await req.json();
-    if (typeof body?.to === "string" && body.to.trim()) to = body.to.trim();
-  } catch {
-    /* body opsional */
-  }
+  const to = check.email;
 
   const result = await sendTestEmail(to);
   if (!result.ok) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertCircle,
   Download,
@@ -26,53 +26,24 @@ import {
   type StoredLead,
 } from "@/lib/lead-types";
 import { waLink } from "@/lib/whatsapp";
+import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
 import { cn } from "@/lib/utils";
 
 export function LeadsManager() {
   const toast = useToast();
-  const [leads, setLeads] = useState<StoredLead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: leads,
+    setData: setLeads,
+    loading,
+    error,
+    setError,
+    reload: load,
+  } = useAsyncList<StoredLead>(fetchLeads, "Gagal memuat lead.");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<LeadStatus | "semua">("semua");
 
-  const load = useCallback(async () => {
-    try {
-      const data = await fetchLeads();
-      setLeads(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat lead.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Fetch awal. setState hanya dipanggil setelah `await` di dalam `load`,
-  // sehingga tidak memicu cascading render sinkron (aturan React 19).
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await fetchLeads();
-        if (!active) return;
-        setLeads(data);
-        setError(null);
-      } catch (err) {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : "Gagal memuat lead.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const refresh = async () => {
-    setLoading(true);
     await load();
   };
 

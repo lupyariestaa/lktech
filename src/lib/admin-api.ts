@@ -1,57 +1,27 @@
-import { getIdToken } from "@/lib/auth";
+import { adminFetch } from "@/lib/admin-fetch";
 import type { StoredLead, LeadStatus } from "@/lib/lead-types";
 import type { MediaItem } from "@/lib/media-types";
 import type { Project, StoredProject } from "@/lib/project-types";
 import type { Article, StoredArticle } from "@/lib/article-types";
 import type { SiteSettings } from "@/lib/settings-types";
 
-async function authHeaders() {
-  const token = await getIdToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
-
-async function handle<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    let message = "Terjadi kesalahan.";
-    try {
-      const data = await res.json();
-      if (data?.error) message = data.error;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(message);
-  }
-  return res.json() as Promise<T>;
-}
-
 export async function fetchLeads(): Promise<StoredLead[]> {
-  const res = await fetch("/api/admin/leads", {
-    headers: await authHeaders(),
-    cache: "no-store",
-  });
-  const data = await handle<{ leads: StoredLead[] }>(res);
+  const data = await adminFetch<{ leads: StoredLead[] }>("/api/admin/leads");
   return data.leads;
 }
 
 export async function updateLeadStatus(id: string, status: LeadStatus) {
-  const res = await fetch("/api/admin/leads", {
+  return adminFetch<{ ok: boolean }>("/api/admin/leads", {
     method: "PATCH",
-    headers: await authHeaders(),
     body: JSON.stringify({ id, status }),
   });
-  return handle<{ ok: boolean }>(res);
 }
 
 export async function deleteLead(id: string) {
-  const res = await fetch(`/api/admin/leads?id=${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    headers: await authHeaders(),
-  });
-  return handle<{ ok: boolean }>(res);
+  return adminFetch<{ ok: boolean }>(
+    `/api/admin/leads?id=${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
 }
 
 /** Bungkus nilai agar aman sebagai sel CSV (quote + escape). */
@@ -105,110 +75,92 @@ export function exportLeadsToCsv(leads: StoredLead[], filename?: string) {
 }
 
 export async function fetchMedia(): Promise<MediaItem[]> {
-  const res = await fetch("/api/admin/media", {
-    headers: await authHeaders(),
-    cache: "no-store",
-  });
-  const data = await handle<{ items: MediaItem[] }>(res);
+  const data = await adminFetch<{ items: MediaItem[] }>("/api/admin/media");
   return data.items;
 }
 
 export async function saveMedia(
   item: Omit<MediaItem, "id" | "createdAt">,
 ) {
-  const res = await fetch("/api/admin/media", {
+  return adminFetch<{ ok: boolean; id: string }>("/api/admin/media", {
     method: "POST",
-    headers: await authHeaders(),
     body: JSON.stringify(item),
   });
-  return handle<{ ok: boolean; id: string }>(res);
 }
 
 export async function deleteMedia(id: string, publicId: string) {
-  const res = await fetch(
+  return adminFetch<{ ok: boolean }>(
     `/api/admin/media?id=${encodeURIComponent(id)}&publicId=${encodeURIComponent(publicId)}`,
-    { method: "DELETE", headers: await authHeaders() },
+    { method: "DELETE" },
   );
-  return handle<{ ok: boolean }>(res);
 }
 
 export async function fetchSettings(): Promise<SiteSettings> {
   // Baca endpoint ADMIN (dilindungi & `no-store`) agar form dashboard tidak
   // pernah menampilkan data basi dari cache endpoint publik.
-  const res = await fetch("/api/admin/settings", {
-    headers: await authHeaders(),
-    cache: "no-store",
-  });
-  const data = await handle<{ settings: SiteSettings }>(res);
+  const data = await adminFetch<{ settings: SiteSettings }>(
+    "/api/admin/settings",
+  );
   return data.settings;
 }
 
 export async function saveSettings(settings: SiteSettings) {
-  const res = await fetch("/api/admin/settings", {
-    method: "PUT",
-    headers: await authHeaders(),
-    body: JSON.stringify(settings),
-  });
-  return handle<{ ok: boolean; settings: SiteSettings }>(res);
+  return adminFetch<{ ok: boolean; settings: SiteSettings }>(
+    "/api/admin/settings",
+    { method: "PUT", body: JSON.stringify(settings) },
+  );
 }
 
 export async function fetchProjects(): Promise<StoredProject[]> {
-  const res = await fetch("/api/admin/projects", {
-    headers: await authHeaders(),
-    cache: "no-store",
-  });
-  const data = await handle<{ projects: StoredProject[] }>(res);
+  const data = await adminFetch<{ projects: StoredProject[] }>(
+    "/api/admin/projects",
+  );
   return data.projects;
 }
 
 export async function saveProject(project: Project) {
-  const res = await fetch("/api/admin/projects", {
+  return adminFetch<{ ok: boolean; project: Project }>("/api/admin/projects", {
     method: "POST",
-    headers: await authHeaders(),
     body: JSON.stringify(project),
   });
-  return handle<{ ok: boolean; project: Project }>(res);
 }
 
 export async function deleteProject(slug: string) {
-  const res = await fetch(
+  return adminFetch<{ ok: boolean }>(
     `/api/admin/projects?slug=${encodeURIComponent(slug)}`,
-    { method: "DELETE", headers: await authHeaders() },
+    { method: "DELETE" },
   );
-  return handle<{ ok: boolean }>(res);
 }
 
-export async function sendTestEmail(to?: string) {
-  const res = await fetch("/api/admin/email/test", {
+/**
+ * Kirim email percobaan (notifikasi lead) ke alamat notifikasi DEFAULT.
+ * Tidak menerima parameter `to` agar tidak bisa dipakai mengirim ke alamat
+ * sembarangan (lihat pembatasan di route terkait).
+ */
+export async function sendTestEmail() {
+  return adminFetch<{ ok: boolean; to: string }>("/api/admin/email/test", {
     method: "POST",
-    headers: await authHeaders(),
-    body: JSON.stringify({ to }),
+    body: JSON.stringify({}),
   });
-  return handle<{ ok: boolean; to: string }>(res);
 }
 
 export async function fetchArticles(): Promise<StoredArticle[]> {
-  const res = await fetch("/api/admin/articles", {
-    headers: await authHeaders(),
-    cache: "no-store",
-  });
-  const data = await handle<{ articles: StoredArticle[] }>(res);
+  const data = await adminFetch<{ articles: StoredArticle[] }>(
+    "/api/admin/articles",
+  );
   return data.articles;
 }
 
 export async function saveArticle(article: Article) {
-  const res = await fetch("/api/admin/articles", {
+  return adminFetch<{ ok: boolean; article: Article }>("/api/admin/articles", {
     method: "POST",
-    headers: await authHeaders(),
     body: JSON.stringify(article),
   });
-  return handle<{ ok: boolean; article: Article }>(res);
 }
 
 export async function deleteArticle(slug: string) {
-  const res = await fetch(
+  return adminFetch<{ ok: boolean }>(
     `/api/admin/articles?slug=${encodeURIComponent(slug)}`,
-    { method: "DELETE", headers: await authHeaders() },
+    { method: "DELETE" },
   );
-  return handle<{ ok: boolean }>(res);
 }

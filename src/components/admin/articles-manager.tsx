@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -19,6 +19,7 @@ import {
 } from "@/lib/admin-api";
 import { ARTICLE_CATEGORIES, type Article, type StoredArticle } from "@/lib/article-types";
 import { ImageUploader } from "@/components/admin/image-uploader";
+import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
 import { deleteImage, type CloudinaryAsset } from "@/lib/cloudinary-client";
 import { cn } from "@/lib/utils";
@@ -41,44 +42,21 @@ const emptyArticle: Article = {
 
 export function ArticlesManager() {
   const toast = useToast();
-  const [items, setItems] = useState<StoredArticle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: items,
+    setData: setItems,
+    loading,
+    error,
+    setError,
+    reload: load,
+  } = useAsyncList<StoredArticle>(fetchArticles, "Gagal memuat artikel.");
   const [editing, setEditing] = useState<Article | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await fetchArticles();
-      setItems(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat artikel.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await fetchArticles();
-        if (!active) return;
-        setItems(data);
-        setError(null);
-      } catch (err) {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : "Gagal memuat artikel.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const refresh = async () => {
+    await load();
+  };
 
   const onNew = () => {
     setEditing({ ...emptyArticle });
@@ -149,7 +127,7 @@ export function ArticlesManager() {
         <p className="text-sm text-muted">{items.length} artikel</p>
         <div className="flex items-center gap-2">
           <button
-            onClick={load}
+            onClick={refresh}
             disabled={loading}
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
           >

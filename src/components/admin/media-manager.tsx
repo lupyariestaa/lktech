@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { AlertCircle, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { ImageUploader } from "@/components/admin/image-uploader";
@@ -17,14 +17,20 @@ import {
   type MediaItem,
 } from "@/lib/media-types";
 import type { Project } from "@/lib/project-types";
+import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
 import { cn } from "@/lib/utils";
 
 export function MediaManager() {
   const toast = useToast();
-  const [items, setItems] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: items,
+    setData: setItems,
+    loading,
+    error,
+    setError,
+    reload: load,
+  } = useAsyncList<MediaItem>(fetchMedia, "Gagal memuat media.");
   const [projects, setProjects] = useState<Project[]>([]);
 
   const [pending, setPending] = useState<CloudinaryAsset | null>(null);
@@ -33,18 +39,7 @@ export function MediaManager() {
   const [projectSlug, setProjectSlug] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await fetchMedia();
-      setItems(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat media.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Daftar proyek untuk pilihan (endpoint publik ringan, no-store).
   useEffect(() => {
     let active = true;
     (async () => {
@@ -65,28 +60,7 @@ export function MediaManager() {
     };
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await fetchMedia();
-        if (!active) return;
-        setItems(data);
-        setError(null);
-      } catch (err) {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : "Gagal memuat media.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const refresh = async () => {
-    setLoading(true);
     await load();
   };
 
