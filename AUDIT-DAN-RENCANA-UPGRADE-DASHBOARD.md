@@ -1,6 +1,6 @@
 # AUDIT SISTEM & RENCANA UPGRADE UI/UX DASHBOARD — LKTech
 
-> **Status dokumen:** 📝 Temuan audit + Rencana kerja (belum dieksekusi)
+> **Status dokumen:** ✅ Dieksekusi (FASE 1–6 selesai; FASE 7 = QA & deploy manual)
 > **Disusun:** sesi "Audit Menyeluruh"
 > **Cakupan:** Dashboard admin, landing page, seluruh API, data layer, security, SEO, a11y, UI/UX.
 > **Tujuan:** (1) Daftar lengkap gap/masalah/sistem yang belum benar. (2) Rencana upgrade UI/UX dashboard (full-width, lebih proper) siap dikerjakan sesi berikutnya.
@@ -431,6 +431,34 @@ Status keterhubungan konten ke dashboard:
 3. Push → Vercel → verifikasi produksi.
 
 **Estimasi kasar:** FASE 1–3 (inti bug + UX dasar) selesai dalam 1 sesi; FASE 4–7 bertahap sesuai waktu.
+
+---
+
+## 7b. STATUS EKSEKUSI (diperbarui)
+
+Semua fase inti **sudah dikerjakan** (commit terpisah per fase):
+
+| Fase | Isi | Status |
+|---|---|---|
+| FASE 1 | Perbaikan data freshness settings (KR-2, HI-5) | ✅ (tergabung commit FASE 2) |
+| FASE 2 | Full-width shell, header judul dinamis, tutup drawer, toast konsisten (HI-6, UX-1..4, ME-13, ME-11, LO-4, LO-17) | ✅ |
+| FASE 3 | `admin-fetch.ts`, `use-async-list.ts`, `useServices()`, batasi email test (HI-7, HI-8, ME-17, ME-18, LO-3, LO-18) | ✅ |
+| FASE 4 | Konten dinamis WHY_US/PROCESS/STATS/TESTIMONIALS + hero klien dinamis (HI-1..4, ME-1, ME-3, KR-1 avatar) | ✅ |
+| FASE 5 | SEO (ME-5..7), A11y (ME-8..12), Security (KR-3, LO-1, LO-2, LO-14, HI-9) | ✅ |
+| FASE 6 | Tandai data contoh + peringatan dashboard + sinkron testimoni (KR-1) | ✅ |
+| FASE 7 | QA statis (`tsc` bersih, `build` sukses, lint = baseline). Uji end-to-end di server & deploy = **manual oleh pemilik** | ⚠️ Sebagian (QA manual & deploy tersisa) |
+
+**Catatan penting:**
+- **Publish ulang `firestore.rules`** tidak diperlukan (tidak ada koleksi baru; `content`
+  & `settings` sudah ada). Bila ragu, publish ulang.
+- **Data asli** (testimoni/klien/proyek) tetap diisi manual via dashboard
+  (`/admin/content`, `/admin/projects`) — kini dashboard menampilkan peringatan
+  bila masih memakai data contoh.
+- **Deploy**: `git push` ke `main` → Vercel build otomatis.
+- **Utang lint pra-ada** (4 error `react-hooks/set-state-in-effect` di
+  `media-picker-dialog`, `content-provider`, `hero-showcase-carousel`,
+  `intro-loader`) belum dibereskan karena di luar cakupan audit ini;
+  jadwalkan pembersihan terpisah.
 
 ---
 

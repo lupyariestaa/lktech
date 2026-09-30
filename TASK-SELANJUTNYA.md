@@ -1,7 +1,30 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi Dashboard Konten (kelola Layanan, FAQ, Harga) + Vercel Analytics.
+> Terakhir diperbarui: sesi **Upgrade Dashboard (FASE 1–6 audit)** + Vercel Analytics.
+
+---
+
+## 🎉 Sesi Terakhir — Upgrade Dashboard (Audit FASE 1–6)
+
+Semua fase inti dari `AUDIT-DAN-RENCANA-UPGRADE-DASHBOARD.md` **sudah dikerjakan**:
+
+| Fase | Hasil |
+| --- | --- |
+| 1 | Settings **anti data-basi**: `/api/settings` → `no-store`, `SettingsProvider` pakai `initial`, `GET /api/admin/settings`, `revalidatePath` saat simpan |
+| 2 | Dashboard **full-width**, header judul dinamis, drawer tutup saat pindah halaman + Escape, **toast konsisten** di semua manager |
+| 3 | Refactor: `admin-fetch.ts`, `use-async-list.ts`, `useServices()`, batasi email test |
+| 4 | **Konten dinamis baru**: Keunggulan, Alur Kerja, Statistik, Testimoni (menu `/admin/content`) + hero klien dinamis (avatar stok dihapus) |
+| 5 | SEO (`title.template`, sitemap dinamis, structured-data ISO), A11y (aria-pressed, FAQ aria-controls, focus trap media picker, switch hero), Security (rate limit lead + honeypot, guard admin `/api/admin/me`, self-registration dimatikan) |
+| 6 | Data contoh ditandai + peringatan di dashboard; testimoni Ritel Jaya disinkronkan |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npm run build` sukses ✅ · lint = baseline (4 error pra-ada).
+
+**Sisa manual (belum otomatis):**
+- [ ] Uji end-to-end di server lokal & **deploy** (`git push` → Vercel).
+- [ ] Isi **data asli** (testimoni/klien/proyek) via dashboard.
+- [ ] (Opsional) Bereskan 4 error lint pra-ada `react-hooks/set-state-in-effect`
+      (`media-picker-dialog`, `content-provider`, `hero-showcase-carousel`, `intro-loader`).
 
 ---
 
@@ -28,6 +51,8 @@
 | 17 | Kelola **Layanan** dari dashboard (CRUD penuh termasuk detail, fitur, paket, FAQ) | ✅ |
 | 18 | Kelola **FAQ** beranda dari dashboard | ✅ |
 | 19 | Kelola **Harga/Paket** beranda dari dashboard | ✅ |
+| 20 | Kelola **Konten Beranda** (Keunggulan, Alur Kerja, Statistik, Testimoni) dari dashboard | ✅ |
+| 21 | Upgrade dashboard: full-width, header dinamis, toast konsisten, rate limit lead, guard akses admin | ✅ |
 
 ---
 
