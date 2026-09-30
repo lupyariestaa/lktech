@@ -34,12 +34,10 @@ export function ContentProvider({
   );
 
   useEffect(() => {
-    // Bila server sudah mengirim konten, jangan timpa dengan fetch (SSR lebih segar
-    // & menghindari flicker). Hanya fetch bila tidak ada initial.
-    if (initial) {
-      setContent(initial);
-      return;
-    }
+    // Bila server sudah mengirim konten (`initial`), jangan refetch — state
+    // sudah diinisialisasi dari `initial` saat mount, dan SSR lebih segar
+    // (menghindari flicker & data basi). Hanya fetch bila tidak ada `initial`.
+    if (initial) return;
     let active = true;
     (async () => {
       try {

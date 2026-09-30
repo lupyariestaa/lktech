@@ -79,6 +79,20 @@ export function MediaPickerDialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
 
+  // Reset state saat dialog DIBUKA (transisi false→true), dilakukan saat render
+  // agar tidak memicu cascading render (aturan React 19). Lihat:
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setQuery("");
+      setSelected({});
+      setShowUpload(false);
+      setCategory(defaultCategory ?? "semua");
+    }
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -92,14 +106,11 @@ export function MediaPickerDialog({
     }
   }, []);
 
-  // Muat saat dialog dibuka; reset pilihan & pencarian tiap kali dibuka.
+  // Muat daftar media saat dialog dibuka. `setState` hanya setelah `await`,
+  // jadi tidak memicu cascading render sinkron.
   useEffect(() => {
     if (!open) return;
     let active = true;
-    setQuery("");
-    setSelected({});
-    setShowUpload(false);
-    setCategory(defaultCategory ?? "semua");
     (async () => {
       try {
         const data = await fetchMedia();

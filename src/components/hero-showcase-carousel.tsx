@@ -38,10 +38,10 @@ export function HeroShowcaseCarousel({
   const active = enabled && count > 0;
   const autoRotate = active && count > 1 && !reduced;
 
-  // Auto-rotate. Index dibatasi agar tetap valid saat daftar berubah.
+  // Auto-rotate. `safeIndex` (di bawah) sudah membatasi index agar tetap valid
+  // saat daftar berubah, jadi effect ini tidak perlu setState sinkron.
   useEffect(() => {
     if (!autoRotate) return;
-    setIndex((i) => (i >= count ? 0 : i));
     const id = setInterval(() => {
       setIndex((i) => (i + 1) % count);
     }, Math.max(2, interval) * 1000);

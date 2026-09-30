@@ -27,7 +27,7 @@ const fieldBase =
 type ColumnKey = "browser" | "mobile";
 
 export function HeroShowcaseManager() {
-  const { content, loading, saving, error, setError, reload, commit } =
+  const { content, loading, saving, error, reload, commit } =
     useSiteContent();
   const hero = content.hero;
 

@@ -56,12 +56,10 @@ export function IntroLoader() {
     };
   }, [phase]);
 
-  // Timeline fase.
+  // Timeline fase. Saat `reduced`, `phase` sudah diinisialisasi ke "done"
+  // (lihat useState), jadi tidak perlu setState di sini.
   useEffect(() => {
-    if (reduced) {
-      setPhase("done");
-      return;
-    }
+    if (reduced) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     timers.push(setTimeout(() => setPhase("hold"), CLOSE_DURATION));
     timers.push(
