@@ -4,7 +4,6 @@ import { PageHero } from "@/components/page-hero";
 import { ServiceCard } from "@/components/service-card";
 import { Reveal } from "@/components/motion";
 import { ButtonAnchor } from "@/components/ui/button";
-import { PROCESS } from "@/lib/content";
 import { getSiteContent } from "@/lib/site-content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { getSiteSettings } from "@/lib/settings";
@@ -26,7 +25,7 @@ export const revalidate = 300;
 
 export default async function LayananPage() {
   const settings = await getSiteSettings();
-  const { services } = await getSiteContent();
+  const { services, process } = await getSiteContent();
   return (
     <>
       <PageHero
@@ -71,35 +70,37 @@ export default async function LayananPage() {
       </section>
 
       {/* Alur kerja ringkas */}
-      <section className="relative bg-white py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <h2 className="text-center text-2xl font-bold text-secondary sm:text-3xl">
-            Bagaimana <span className="text-gradient">kami bekerja?</span>
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-relaxed text-muted">
-            Setiap layanan dikerjakan dengan alur yang jelas dan transparan, dari
-            konsultasi hingga dukungan pasca-rilis.
-          </p>
+      {process.length > 0 && (
+        <section className="relative bg-white py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <h2 className="text-center text-2xl font-bold text-secondary sm:text-3xl">
+              Bagaimana <span className="text-gradient">kami bekerja?</span>
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-relaxed text-muted">
+              Setiap layanan dikerjakan dengan alur yang jelas dan transparan,
+              dari konsultasi hingga dukungan pasca-rilis.
+            </p>
 
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {PROCESS.map((item, i) => (
-              <Reveal key={item.step} delay={i * 0.08}>
-                <div className="relative h-full rounded-3xl border border-slate-100 bg-surface p-6">
-                  <span className="text-3xl font-bold text-primary/20">
-                    {item.step}
-                  </span>
-                  <h3 className="mt-3 text-base font-bold text-secondary">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">
-                    {item.description}
-                  </p>
-                </div>
-              </Reveal>
-            ))}
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {process.map((item, i) => (
+                <Reveal key={item.step} delay={i * 0.08}>
+                  <div className="relative h-full rounded-3xl border border-slate-100 bg-surface p-6">
+                    <span className="text-3xl font-bold text-primary/20">
+                      {item.step}
+                    </span>
+                    <h3 className="mt-3 text-base font-bold text-secondary">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted">
+                      {item.description}
+                    </p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </>
   );
 }

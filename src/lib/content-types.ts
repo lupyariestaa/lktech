@@ -1,8 +1,12 @@
 import {
   FAQS,
   PRICING,
+  PROCESS as DEFAULT_PROCESS,
   SERVICES,
   SERVICES_DETAIL,
+  STATS as DEFAULT_STATS,
+  TESTIMONIALS as DEFAULT_TESTIMONIALS,
+  WHY_US as DEFAULT_WHY_US,
   type Service,
   type ServiceDetail,
 } from "@/lib/content";
@@ -63,12 +67,45 @@ export const DEFAULT_HERO_SHOWCASE: HeroShowcase = {
   mobile: [],
 };
 
+/** Keunggulan ("Kenapa memilih kami") di beranda. */
+export type ManagedWhyUs = {
+  title: string;
+  description: string;
+  icon: string;
+};
+
+/** Satu langkah pada alur kerja (beranda & halaman layanan). */
+export type ManagedProcess = {
+  step: string;
+  title: string;
+  description: string;
+};
+
+/** Satu statistik marketing pada beranda. */
+export type ManagedStat = {
+  value: number;
+  suffix: string;
+  label: string;
+};
+
+/** Satu testimoni klien pada beranda. */
+export type ManagedTestimonial = {
+  name: string;
+  role: string;
+  quote: string;
+  rating: number;
+};
+
 /** Seluruh konten yang dapat dikelola dari dashboard. */
 export type SiteContent = {
   services: ManagedService[];
   faqs: ManagedFaq[];
   pricing: ManagedPricing[];
   hero: HeroShowcase;
+  whyUs: ManagedWhyUs[];
+  process: ManagedProcess[];
+  stats: ManagedStat[];
+  testimonials: ManagedTestimonial[];
 };
 
 /**
@@ -106,5 +143,11 @@ export function defaultSiteContent(): SiteContent {
     faqs: FAQS.map((f) => ({ ...f })),
     pricing: PRICING.map((p) => ({ ...p, features: [...p.features] })),
     hero: { ...DEFAULT_HERO_SHOWCASE, browser: [], mobile: [] },
+    // `structuredClone` agar detail bersarang tidak berbagi referensi dengan
+    // konstanta statis (menghindari mutasi tak sengaja pada nilai default).
+    whyUs: structuredClone(DEFAULT_WHY_US),
+    process: structuredClone(DEFAULT_PROCESS),
+    stats: structuredClone(DEFAULT_STATS),
+    testimonials: structuredClone(DEFAULT_TESTIMONIALS),
   };
 }

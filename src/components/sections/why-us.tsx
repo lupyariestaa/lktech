@@ -1,12 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { WHY_US } from "@/lib/content";
 import { Icon } from "@/components/icon";
 import { SectionHeading } from "@/components/section-heading";
 import { staggerContainer, staggerItem } from "@/components/motion";
+import { useContent } from "@/components/content-provider";
 
 export function WhyUs() {
+  const { whyUs } = useContent();
+
+  if (whyUs.length === 0) return null;
+
   return (
     <section id="keunggulan" className="relative overflow-hidden bg-white py-24">
       <div className="pointer-events-none absolute top-0 right-0 h-80 w-80 rounded-full bg-primary/5 blur-[100px]" />
@@ -30,7 +34,7 @@ export function WhyUs() {
           viewport={{ once: true, margin: "-80px" }}
           className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {WHY_US.map((item) => (
+          {whyUs.map((item) => (
             <motion.div
               key={item.title}
               variants={staggerItem}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
-import { STATS } from "@/lib/content";
+import { useContent } from "@/components/content-provider";
 
 function Counter({ value, suffix }: { value: number; suffix: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -33,6 +33,10 @@ function Counter({ value, suffix }: { value: number; suffix: string }) {
 }
 
 export function Stats() {
+  const { stats } = useContent();
+
+  if (stats.length === 0) return null;
+
   return (
     <section className="relative overflow-hidden bg-secondary py-20">
       <div className="grid-lines absolute inset-0 opacity-[0.06]" />
@@ -41,7 +45,7 @@ export function Stats() {
 
       <div className="relative mx-auto max-w-6xl px-6">
         <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
-          {STATS.map((stat, i) => (
+          {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 24 }}

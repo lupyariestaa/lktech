@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowRight, Braces, Code2, MessageCircle, Star } from "lucide-react";
 import { ButtonAnchor } from "@/components/ui/button";
@@ -125,8 +124,13 @@ function DeviceMockups({ showcase }: { showcase: HeroShowcase }) {
 export function Hero() {
   const reduced = useReducedMotionPreference();
   const settings = useSettings();
-  const { hero } = useContent();
+  const { hero, testimonials, stats } = useContent();
   const base = introDelay(reduced);
+
+  // Klaim sosial di bawah CTA diturunkan dari konten terkelola (bukan angka
+  // hardcoded / foto stok). Bila belum ada data, blok tidak ditampilkan.
+  const clientStat = stats.find((s) => /klien/i.test(s.label));
+  const avatars = testimonials.slice(0, 4);
 
   return (
     <section
@@ -201,27 +205,28 @@ export function Hero() {
             transition={{ delay: base + 0.6, duration: 0.7 }}
             className="mt-10 flex items-center gap-6"
           >
-            <div className="flex -space-x-2.5">
-              {[
-                "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&h=96&q=80",
-                "https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=96&h=96&q=80",
-                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=96&h=96&q=80",
-                "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=96&h=96&q=80",
-              ].map((src, i) => (
-                <Image
-                  key={src}
-                  src={src}
-                  alt={`Klien LKTech ${i + 1}`}
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded-full border-2 border-white object-cover"
-                />
-              ))}
-            </div>
-            <p className="text-sm text-muted">
-              <span className="font-semibold text-secondary">15+ klien</span>{" "}
-              telah mempercayai kami
-            </p>
+            {avatars.length > 0 && (
+              <div className="flex -space-x-2.5">
+                {avatars.map((t) => (
+                  <span
+                    key={t.name}
+                    className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-gradient-to-br from-primary to-primary-light text-[11px] font-bold text-white"
+                    aria-hidden="true"
+                  >
+                    {t.name.charAt(0).toUpperCase()}
+                  </span>
+                ))}
+              </div>
+            )}
+            {clientStat && (
+              <p className="text-sm text-muted">
+                <span className="font-semibold text-secondary">
+                  {clientStat.value}
+                  {clientStat.suffix}
+                </span>{" "}
+                klien telah mempercayai kami
+              </p>
+            )}
           </motion.div>
         </div>
 

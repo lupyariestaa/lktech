@@ -18,6 +18,7 @@ import {
   HelpCircle,
   Tags,
   PanelsTopLeft,
+  Files,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { signOutUser } from "@/lib/auth";
@@ -27,6 +28,7 @@ const NAV = [
   { label: "Ringkasan", href: "/admin", icon: LayoutDashboard },
   { label: "Lead", href: "/admin/leads", icon: Inbox },
   { label: "Hero", href: "/admin/hero", icon: PanelsTopLeft },
+  { label: "Konten", href: "/admin/content", icon: Files },
   { label: "Layanan", href: "/admin/services", icon: LayoutGrid },
   { label: "Harga", href: "/admin/pricing", icon: Tags },
   { label: "FAQ", href: "/admin/faq", icon: HelpCircle },

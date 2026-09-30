@@ -2,11 +2,15 @@
 
 import { motion } from "framer-motion";
 import { Quote, Star } from "lucide-react";
-import { TESTIMONIALS } from "@/lib/content";
 import { SectionHeading } from "@/components/section-heading";
 import { staggerContainer, staggerItem } from "@/components/motion";
+import { useContent } from "@/components/content-provider";
 
 export function Testimonials() {
+  const { testimonials } = useContent();
+
+  if (testimonials.length === 0) return null;
+
   return (
     <section className="relative bg-white py-24">
       <div className="mx-auto max-w-6xl px-6">
@@ -27,7 +31,7 @@ export function Testimonials() {
           viewport={{ once: true, margin: "-80px" }}
           className="mt-14 grid gap-6 md:grid-cols-3"
         >
-          {TESTIMONIALS.map((t) => (
+          {testimonials.map((t) => (
             <motion.figure
               key={t.name}
               variants={staggerItem}

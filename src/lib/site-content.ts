@@ -6,7 +6,11 @@ import {
   type HeroShowcaseImage,
   type ManagedFaq,
   type ManagedPricing,
+  type ManagedProcess,
   type ManagedService,
+  type ManagedStat,
+  type ManagedTestimonial,
+  type ManagedWhyUs,
   type SiteContent,
 } from "@/lib/content-types";
 
@@ -158,23 +162,92 @@ export function normalizeHeroShowcase(raw: unknown): HeroShowcase {
   };
 }
 
+function normalizeWhyUs(raw: unknown): ManagedWhyUs | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const title = str(d.title).trim();
+  if (!title) return null;
+  return {
+    title,
+    description: str(d.description),
+    icon: str(d.icon, "sparkles"),
+  };
+}
+
+function normalizeProcess(raw: unknown): ManagedProcess | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const title = str(d.title).trim();
+  if (!title) return null;
+  return {
+    step: str(d.step),
+    title,
+    description: str(d.description),
+  };
+}
+
+function normalizeStat(raw: unknown): ManagedStat | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const label = str(d.label).trim();
+  if (!label) return null;
+  const valueRaw = typeof d.value === "number" ? d.value : Number(d.value);
+  return {
+    value: Number.isFinite(valueRaw) ? valueRaw : 0,
+    suffix: str(d.suffix),
+    label,
+  };
+}
+
+function normalizeTestimonial(raw: unknown): ManagedTestimonial | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const name = str(d.name).trim();
+  if (!name) return null;
+  const ratingRaw = typeof d.rating === "number" ? d.rating : Number(d.rating);
+  const rating = Number.isFinite(ratingRaw)
+    ? Math.min(5, Math.max(1, Math.round(ratingRaw)))
+    : 5;
+  return {
+    name,
+    role: str(d.role),
+    quote: str(d.quote),
+    rating,
+  };
+}
+
+/**
+ * Menormalkan daftar: bila `raw` bukan array → pakai default (belum diatur).
+ * Bila array (termasuk kosong) → hormati isinya, sehingga admin bisa
+ * mengosongkan daftar dengan sengaja (undefined vs `[]`).
+ */
+function normalizeList<T>(
+  raw: unknown,
+  map: (x: unknown) => T | null,
+  fallback: T[],
+): T[] {
+  if (!Array.isArray(raw)) return fallback;
+  return raw.map(map).filter((x): x is T => !!x);
+}
+
 /** Menormalkan data mentah Firestore menjadi `SiteContent` yang valid. */
 export function normalizeSiteContent(raw: Record<string, unknown>): SiteContent {
-  const services = Array.isArray(raw.services)
-    ? raw.services.map(normalizeService).filter((x): x is ManagedService => !!x)
-    : [];
-  const faqs = Array.isArray(raw.faqs)
-    ? raw.faqs.map(normalizeFaq).filter((x): x is ManagedFaq => !!x)
-    : [];
-  const pricing = Array.isArray(raw.pricing)
-    ? raw.pricing.map(normalizePricing).filter((x): x is ManagedPricing => !!x)
-    : [];
-
   const defaults = defaultSiteContent();
+
   return {
-    services: services.length > 0 ? services : defaults.services,
-    faqs: faqs.length > 0 ? faqs : defaults.faqs,
-    pricing: pricing.length > 0 ? pricing : defaults.pricing,
+    // Daftar: `undefined` → pakai default (belum diatur); array (termasuk `[]`)
+    // → hormati isinya (admin bisa sengaja mengosongkan).
+    services: normalizeList(raw.services, normalizeService, defaults.services),
+    faqs: normalizeList(raw.faqs, normalizeFaq, defaults.faqs),
+    pricing: normalizeList(raw.pricing, normalizePricing, defaults.pricing),
+    whyUs: normalizeList(raw.whyUs, normalizeWhyUs, defaults.whyUs),
+    process: normalizeList(raw.process, normalizeProcess, defaults.process),
+    stats: normalizeList(raw.stats, normalizeStat, defaults.stats),
+    testimonials: normalizeList(
+      raw.testimonials,
+      normalizeTestimonial,
+      defaults.testimonials,
+    ),
     hero: normalizeHeroShowcase(raw.hero),
   };
 }
@@ -217,6 +290,10 @@ export async function saveSiteContent(
         faqs: content.faqs,
         pricing: content.pricing,
         hero: content.hero,
+        whyUs: content.whyUs,
+        process: content.process,
+        stats: content.stats,
+        testimonials: content.testimonials,
         updatedAtISO: new Date().toISOString(),
         updatedBy,
       },
