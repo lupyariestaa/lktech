@@ -1,8 +1,10 @@
 import { z } from "zod";
 
-/** Satu item yang dikirim klien saat checkout (hanya slug + qty yang dipercaya). */
+/** Satu item yang dikirim klien saat checkout (hanya slug/varians/qty yang dipercaya). */
 export const checkoutItemSchema = z.object({
   slug: z.string().trim().min(1).max(200),
+  /** Slug varian terpilih (produk multi-varian). Opsional untuk produk tunggal. */
+  variantSlug: z.string().trim().min(1).max(200).optional(),
   qty: z.number().int().min(1).max(999),
 });
 

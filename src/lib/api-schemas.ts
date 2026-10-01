@@ -102,6 +102,39 @@ export const projectSchema = z.object({
 });
 
 // ===== Produk =====
+export const productFeatureSchema = z.object({
+  title: z.string().trim().max(120),
+  description: z.string().trim().max(1000),
+});
+
+export const productSpecSchema = z.object({
+  label: z.string().trim().max(80),
+  value: z.string().trim().max(200),
+});
+
+export const productProcessStepSchema = z.object({
+  step: z.string().trim().max(20),
+  title: z.string().trim().max(200),
+  description: z.string().trim().max(1000),
+});
+
+export const productVariantSchema = z.object({
+  slug: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
+  tagline: z.string().trim().max(300).optional(),
+  price: z.number().finite().min(0).max(1_000_000_000),
+  originalPrice: z.number().finite().min(0).max(1_000_000_000).optional(),
+  badge: z.string().trim().max(40).optional(),
+  highlight: z.boolean().optional(),
+  soldOut: z.boolean().optional(),
+  features: z.array(productFeatureSchema).max(30).optional(),
+  specs: z.array(productSpecSchema).max(40).optional(),
+  includes: z.array(z.string().trim().max(200)).max(30).optional(),
+  limits: z.array(z.string().trim().max(300)).max(30).optional(),
+  delivery: z.string().trim().max(120).optional(),
+  waMessage: z.string().trim().max(1000).optional(),
+});
+
 export const productSchema = z.object({
   slug: z.string().trim().max(200).optional(),
   name: z.string().trim().min(1, "Nama produk wajib diisi").max(200),
@@ -114,27 +147,14 @@ export const productSchema = z.object({
   coverPublicId: z.string().trim().max(500).optional(),
   gallery: z.array(z.string().trim().max(1000)).max(20).optional(),
   badge: z.string().trim().max(40).optional(),
-  features: z
-    .array(
-      z.object({
-        title: z.string().trim().max(120),
-        description: z.string().trim().max(1000),
-      }),
-    )
-    .max(20)
-    .optional(),
-  specs: z
-    .array(
-      z.object({
-        label: z.string().trim().max(80),
-        value: z.string().trim().max(200),
-      }),
-    )
-    .max(30)
-    .optional(),
+  features: z.array(productFeatureSchema).max(20).optional(),
+  specs: z.array(productSpecSchema).max(30).optional(),
   tools: z.array(z.string().trim().max(60)).max(30).optional(),
   includes: z.array(z.string().trim().max(200)).max(30).optional(),
   delivery: z.string().trim().max(120).optional(),
+  process: z.array(productProcessStepSchema).max(20).optional(),
+  notes: z.array(z.string().trim().max(300)).max(20).optional(),
+  variants: z.array(productVariantSchema).max(12).optional(),
   soldOut: z.boolean().optional(),
   featured: z.boolean().optional(),
   active: z.boolean().optional(),

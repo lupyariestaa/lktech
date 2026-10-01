@@ -1,11 +1,22 @@
-/** Satu baris spesifikasi produk (mis. "RAM" → "8 GB"). */
+/** Satu baris spesifikasi (mis. "Hosting" → "Gratis 1 bulan"). */
 export type ProductSpec = {
   label: string;
   value: string;
 };
 
-/** Satu fitur/keunggulan produk yang ditampilkan sebagai poin. */
+/** Satu fitur/keunggulan yang ditampilkan sebagai poin. */
 export type ProductFeature = {
+  title: string;
+  description: string;
+};
+
+/**
+ * Satu langkah pada "Alur Pembuatan" produk (mis. cara memesan & menerima
+ * hasil). Ditampilkan di halaman detail produk.
+ */
+export type ProductProcessStep = {
+  /** Nomor/penanda langkah, mis. "1" atau "01". */
+  step: string;
   title: string;
   description: string;
 };
@@ -30,10 +41,58 @@ export const PRODUCT_CATEGORY_LABEL: Record<ProductCategory, string> = {
 };
 
 /**
- * Produk yang dijual (berbeda dari Layanan/Service).
+ * Satu VARIAN/PAKET dari sebuah produk (mis. "Portfolio Basic",
+ * "Portfolio Profesional", "Portfolio Custom").
  *
- * Produk bersifat "siap beli": harga transparan, spesifikasi, dan bisa
- * langsung dipesan (checkout ke WhatsApp).
+ * Setiap varian punya harga, harga coret, fitur, spesifikasi, isi paket, dan
+ * BATASAN tersendiri. Varian inilah yang dipilih pembeli saat checkout.
+ */
+export type ProductVariant = {
+  /** Slug unik GLOBAL per varian (jadi kunci di keranjang/order). */
+  slug: string;
+  /** Nama paket, mis. "Portfolio Profesional". */
+  name: string;
+  /** Ringkasan singkat paket (opsional). */
+  tagline?: string;
+  /** Harga jual (Rupiah). 0 = "Hubungi kami". */
+  price: number;
+  /** Harga sebelum diskon (opsional, untuk menampilkan coret). */
+  originalPrice?: number;
+  /** Badge kecil, mis. "Paling Populer". */
+  badge?: string;
+  /**
+   * Tandai paket unggulan/rekomendasi. Idealnya hanya satu varian `true`
+   * per produk. UI akan menyorot varian ini.
+   */
+  highlight: boolean;
+  /** Tidak tersedia bila true. */
+  soldOut: boolean;
+  /** Keunggulan paket (poin). */
+  features: ProductFeature[];
+  /** Spesifikasi teknis (label → nilai). */
+  specs: ProductSpec[];
+  /** Isi paket / yang didapat pembeli. */
+  includes: string[];
+  /**
+   * Batasan paket (sering "batasan tidak tertulis" yang penting dikomunikasikan
+   * ke pembeli, mis. "Tidak termasuk penulisan konten").
+   */
+  limits: string[];
+  /** Estimasi pengerjaan, mis. "1–3 hari kerja". */
+  delivery?: string;
+  /** Pesan WhatsApp khusus paket (bila kosong, sistem menyusun otomatis). */
+  waMessage?: string;
+};
+
+/**
+ * Produk yang dijual.
+ *
+ * Produk mendukung DUA mode:
+ * - **Multi-varian** (mis. "Paket Website Portfolio" dengan Basic/Profesional/
+ *   Custom): isi `variants[]`. `price`/`originalPrice` pada level produk
+ *   diabaikan (dianggap "mulai dari" harga varian termurah).
+ * - **Tunggal** (produk lama: template/software): `variants` kosong, memakai
+ *   `price`/`originalPrice`/`features`/`specs` di level produk seperti biasa.
  */
 export type Product = {
   slug: string;
@@ -41,9 +100,12 @@ export type Product = {
   tagline: string;
   description: string;
   category: ProductCategory;
-  /** Harga dalam Rupiah. 0 berarti "Hubungi kami". */
+  /**
+   * Harga produk (mode tunggal). Untuk produk multi-varian, ini boleh 0 —
+   * harga sebenarnya berasal dari `variants[]`.
+   */
   price: number;
-  /** Harga sebelum diskon (opsional, untuk menampilkan coret). */
+  /** Harga sebelum diskon (mode tunggal). */
   originalPrice?: number;
   /** URL cover Cloudinary (atau "default"). */
   cover: string;
@@ -53,17 +115,23 @@ export type Product = {
   gallery: string[];
   /** Badge kecil, mis. "Terlaris". */
   badge?: string;
-  /** Fitur/keunggulan utama. */
+  /** Fitur/keunggulan utama (mode tunggal / info umum). */
   features: ProductFeature[];
-  /** Spesifikasi teknis (label → nilai). */
+  /** Spesifikasi teknis (mode tunggal / info umum). */
   specs: ProductSpec[];
   /** Tools / teknologi yang dipakai. */
   tools: string[];
-  /** Isi paket / yang didapat pembeli. */
+  /** Isi paket / yang didapat pembeli (mode tunggal). */
   includes: string[];
-  /** Estimasi pengiriman/pengerjaan, mis. "Instan (download)". */
+  /** Estimasi pengiriman/pengerjaan default, mis. "Instan (download)". */
   delivery?: string;
-  /** Tampilkan sebagai "tidak tersedia" bila true. */
+  /** Alur/langkah pembuatan atau pembelian (opsional). */
+  process: ProductProcessStep[];
+  /** Catatan penting (mis. cara pengiriman data, kebijakan revisi). */
+  notes: string[];
+  /** Varian/paket produk. Kosong = produk tunggal. */
+  variants: ProductVariant[];
+  /** Tampilkan sebagai "tidak tersedia" bila true (produk tunggal). */
   soldOut: boolean;
   /** Tampilkan sebagai produk unggulan di daftar. */
   featured: boolean;

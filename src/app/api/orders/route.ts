@@ -92,6 +92,69 @@ export async function POST(req: Request) {
           { status: 409 },
         );
       }
+
+      // ===== Produk MULTI-VARIAN =====
+      if (product.variants.length > 0) {
+        const variantSlug = reqItem.variantSlug?.trim();
+        if (!variantSlug) {
+          return NextResponse.json(
+            {
+              error: `Pilih paket untuk "${product.name}" sebelum checkout.`,
+              code: "variant_required",
+              slug: product.slug,
+            },
+            { status: 409 },
+          );
+        }
+        const variant = product.variants.find((v) => v.slug === variantSlug);
+        if (!variant) {
+          return NextResponse.json(
+            {
+              error: `Paket yang dipilih tidak ditemukan. Muat ulang halaman.`,
+              code: "variant_not_found",
+              slug: product.slug,
+              variantSlug,
+            },
+            { status: 409 },
+          );
+        }
+        if (variant.soldOut || product.soldOut) {
+          return NextResponse.json(
+            {
+              error: `Paket "${variant.name}" sedang tidak tersedia.`,
+              code: "variant_soldout",
+              slug: product.slug,
+              variantSlug,
+            },
+            { status: 409 },
+          );
+        }
+        if (variant.price <= 0) {
+          return NextResponse.json(
+            {
+              error: `Paket "${variant.name}" belum bisa dipesan online.`,
+              code: "variant_no_price",
+              slug: product.slug,
+              variantSlug,
+            },
+            { status: 409 },
+          );
+        }
+
+        const qty = reqItem.qty;
+        items.push({
+          slug: product.slug,
+          name: `${product.name} — ${variant.name}`,
+          price: variant.price,
+          qty,
+          subtotal: variant.price * qty,
+          variantSlug: variant.slug,
+          variantName: variant.name,
+        });
+        continue;
+      }
+
+      // ===== Produk TUNGGAL (tanpa varian) =====
       if (product.soldOut) {
         return NextResponse.json(
           {

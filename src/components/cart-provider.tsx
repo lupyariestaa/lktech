@@ -9,7 +9,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import type { CartItem } from "@/lib/cart";
+import { cartItemKey, type CartItem } from "@/lib/cart";
 import { useAuth } from "@/components/auth-provider";
 
 /**
@@ -165,10 +165,11 @@ type CartState = {
   /** true setelah store ter-hidrasi dari localStorage. */
   ready: boolean;
   add: (item: CartItem) => void;
-  remove: (slug: string) => void;
-  setQty: (slug: string, qty: number) => void;
+  /** `key` = `cartItemKey(item)` (slug + varian). */
+  remove: (key: string) => void;
+  setQty: (key: string, qty: number) => void;
   clear: () => void;
-  has: (slug: string) => boolean;
+  has: (key: string) => boolean;
 };
 
 const CartContext = createContext<CartState | null>(null);
@@ -187,7 +188,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const add = useCallback((item: CartItem) => {
     const prev = cache;
-    const idx = prev.findIndex((it) => it.slug === item.slug);
+    const key = cartItemKey(item);
+    const idx = prev.findIndex((it) => cartItemKey(it) === key);
     if (idx === -1) {
       setItems([...prev, item]);
       return;
@@ -197,14 +199,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems(next);
   }, []);
 
-  const remove = useCallback((slug: string) => {
-    setItems(cache.filter((it) => it.slug !== slug));
+  const remove = useCallback((key: string) => {
+    setItems(cache.filter((it) => cartItemKey(it) !== key));
   }, []);
 
-  const setQty = useCallback((slug: string, qty: number) => {
+  const setQty = useCallback((key: string, qty: number) => {
     setItems(
       cache
-        .map((it) => (it.slug === slug ? { ...it, qty: Math.max(1, qty) } : it))
+        .map((it) => (cartItemKey(it) === key ? { ...it, qty: Math.max(1, qty) } : it))
         .filter((it) => it.qty > 0),
     );
   }, []);
@@ -220,7 +222,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [items],
   );
   const has = useCallback(
-    (slug: string) => items.some((it) => it.slug === slug),
+    (key: string) => items.some((it) => cartItemKey(it) === key),
     [items],
   );
 

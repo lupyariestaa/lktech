@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, Package, Tag } from "lucide-react";
+import { ArrowUpRight, Layers, Package, Tag } from "lucide-react";
 import type { Product } from "@/lib/product-types";
 import { PRODUCT_CATEGORY_LABEL } from "@/lib/product-types";
-import { formatPrice } from "@/lib/product-format";
+import { formatPrice, hasVariants, productPriceLabel } from "@/lib/product-format";
 import { ProductBuyActions } from "@/components/product-buy-actions";
 import { cn } from "@/lib/utils";
 
 /** Kartu produk untuk daftar `/produk`. */
 export function ProductCard({ product }: { product: Product }) {
+  const multi = hasVariants(product);
   const hasDiscount =
-    product.originalPrice != null && product.originalPrice > product.price;
+    !multi &&
+    product.originalPrice != null &&
+    product.originalPrice > product.price;
 
   return (
     <div className="group flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5">
@@ -39,6 +42,12 @@ export function ProductCard({ product }: { product: Product }) {
           {product.badge && (
             <span className="rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-white shadow">
               {product.badge}
+            </span>
+          )}
+          {multi && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-white shadow">
+              <Layers className="h-3 w-3" />
+              {product.variants.length} paket
             </span>
           )}
           {product.soldOut && (
@@ -77,23 +86,34 @@ export function ProductCard({ product }: { product: Product }) {
             <span
               className={cn(
                 "text-lg font-bold",
-                product.price ? "text-secondary" : "text-primary",
+                multi || product.price ? "text-secondary" : "text-primary",
               )}
             >
-              {formatPrice(product.price)}
+              {productPriceLabel(product)}
             </span>
           </div>
           <Link
             href={`/produk/${product.slug}`}
             className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
           >
-            Detail
+            {multi ? "Pilih paket" : "Detail"}
             <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        <ProductBuyActions product={product} className="mt-4" />
+        {multi ? (
+          <Link
+            href={`/produk/${product.slug}`}
+            className="mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+          >
+            <Layers className="h-4 w-4" />
+            Lihat {product.variants.length} Paket
+          </Link>
+        ) : (
+          <ProductBuyActions product={product} className="mt-4" />
+        )}
       </div>
     </div>
   );
 }
+

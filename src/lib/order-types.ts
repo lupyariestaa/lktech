@@ -16,6 +16,10 @@ export type OrderItem = {
   qty: number;
   /** Subtotal = price * qty. */
   subtotal: number;
+  /** Slug varian terpilih (kosong untuk produk tunggal). */
+  variantSlug?: string;
+  /** Nama varian terpilih (kosong untuk produk tunggal). */
+  variantName?: string;
 };
 
 /** Pesanan tersimpan di Firestore (`orders/{id}`). */
@@ -56,6 +60,8 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
         price,
         qty,
         subtotal: num(it.subtotal) || price * qty,
+        variantSlug: str(it.variantSlug) || undefined,
+        variantName: str(it.variantName) || undefined,
       };
     });
 

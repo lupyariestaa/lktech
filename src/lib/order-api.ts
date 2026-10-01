@@ -15,6 +15,8 @@ export type CheckoutResult = {
 
 export type CheckoutRequestItem = {
   slug: string;
+  /** Slug varian terpilih (produk multi-varian). */
+  variantSlug?: string;
   qty: number;
 };
 

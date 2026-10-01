@@ -17,6 +17,7 @@ import {
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
 import { createOrderRequest } from "@/lib/order-api";
+import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
@@ -43,7 +44,11 @@ export function CartView() {
     try {
       // Server memverifikasi harga/stok & menyusun pesan kanonik.
       const { order } = await createOrderRequest(
-        items.map((it) => ({ slug: it.slug, qty: it.qty })),
+        items.map((it) => ({
+          slug: it.slug,
+          variantSlug: it.variantSlug,
+          qty: it.qty,
+        })),
         user.displayName ?? "",
       );
 
@@ -141,7 +146,7 @@ export function CartView() {
         <ul className="flex flex-col gap-4">
           {items.map((it) => (
             <li
-              key={it.slug}
+              key={cartItemKey(it)}
               className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center"
             >
               <div className="flex-1">
@@ -159,7 +164,7 @@ export function CartView() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center rounded-full border border-slate-200">
                   <button
-                    onClick={() => setQty(it.slug, it.qty - 1)}
+                    onClick={() => setQty(cartItemKey(it), it.qty - 1)}
                     className="grid h-9 w-9 place-items-center rounded-l-full text-slate-500 transition-colors hover:text-primary"
                     aria-label="Kurangi jumlah"
                   >
@@ -169,7 +174,7 @@ export function CartView() {
                     {it.qty}
                   </span>
                   <button
-                    onClick={() => setQty(it.slug, it.qty + 1)}
+                    onClick={() => setQty(cartItemKey(it), it.qty + 1)}
                     className="grid h-9 w-9 place-items-center rounded-r-full text-slate-500 transition-colors hover:text-primary"
                     aria-label="Tambah jumlah"
                   >
@@ -182,7 +187,7 @@ export function CartView() {
                 </span>
 
                 <button
-                  onClick={() => remove(it.slug)}
+                  onClick={() => remove(cartItemKey(it))}
                   className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-rose-200 hover:text-rose-500"
                   aria-label="Hapus item"
                 >

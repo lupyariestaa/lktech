@@ -2,11 +2,21 @@ import type {
   Product,
   ProductCategory,
   ProductFeature,
+  ProductProcessStep,
   ProductSpec,
+  ProductVariant,
   StoredProduct,
 } from "@/lib/product-types";
 
-export type { Product, ProductCategory, ProductFeature, ProductSpec, StoredProduct };
+export type {
+  Product,
+  ProductCategory,
+  ProductFeature,
+  ProductProcessStep,
+  ProductSpec,
+  ProductVariant,
+  StoredProduct,
+};
 
 const COLLECTION = "products";
 
@@ -56,6 +66,9 @@ export const DEFAULT_PRODUCTS: Product[] = [
       "Update gratis 3 bulan",
     ],
     delivery: "Instan (download)",
+    process: [],
+    notes: [],
+    variants: [],
     soldOut: false,
     featured: true,
     active: true,
@@ -97,6 +110,9 @@ export const DEFAULT_PRODUCTS: Product[] = [
       "Setup & pendampingan awal",
     ],
     delivery: "Instalasi jarak jauh (1-2 hari)",
+    process: [],
+    notes: [],
+    variants: [],
     soldOut: false,
     featured: true,
     active: true,
@@ -111,16 +127,81 @@ function strArr(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
 }
 
-function normalizeProduct(data: Record<string, unknown>): Product {
-  const features = Array.isArray(data.features)
-    ? (data.features as ProductFeature[]).filter(
-        (f) => f && typeof f.title === "string",
-      )
+function num(v: unknown, fallback = 0): number {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/** Normalisasi daftar fitur `{ title, description }`. */
+function normalizeFeatures(v: unknown): ProductFeature[] {
+  return Array.isArray(v)
+    ? v
+        .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+        .map((x) => ({
+          title: str(x.title),
+          description: str(x.description),
+        }))
+        .filter((f) => f.title || f.description)
     : [];
-  const specs = Array.isArray(data.specs)
-    ? (data.specs as ProductSpec[]).filter(
-        (s) => s && typeof s.label === "string",
-      )
+}
+
+/** Normalisasi daftar spesifikasi `{ label, value }`. */
+function normalizeSpecs(v: unknown): ProductSpec[] {
+  return Array.isArray(v)
+    ? v
+        .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+        .map((x) => ({ label: str(x.label), value: str(x.value) }))
+        .filter((s) => s.label || s.value)
+    : [];
+}
+
+/** Normalisasi daftar langkah alur `{ step, title, description }`. */
+function normalizeProcess(v: unknown): ProductProcessStep[] {
+  return Array.isArray(v)
+    ? v
+        .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+        .map((x) => ({
+          step: str(x.step),
+          title: str(x.title),
+          description: str(x.description),
+        }))
+        .filter((s) => s.title || s.description)
+    : [];
+}
+
+/** Normalisasi satu varian/paket produk. Mengembalikan null bila tak berguna. */
+function normalizeVariant(raw: unknown): ProductVariant | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const slug = str(d.slug).trim();
+  const name = str(d.name).trim();
+  if (!slug || !name) return null;
+
+  const original = num(d.originalPrice, 0);
+  return {
+    slug,
+    name,
+    tagline: str(d.tagline) || undefined,
+    price: num(d.price, 0),
+    originalPrice: original > 0 ? original : undefined,
+    badge: str(d.badge) || undefined,
+    highlight: Boolean(d.highlight),
+    soldOut: Boolean(d.soldOut),
+    features: normalizeFeatures(d.features),
+    specs: normalizeSpecs(d.specs),
+    includes: strArr(d.includes),
+    limits: strArr(d.limits),
+    delivery: str(d.delivery) || undefined,
+    waMessage: str(d.waMessage) || undefined,
+  };
+}
+
+function normalizeProduct(data: Record<string, unknown>): Product {
+  const variants = Array.isArray(data.variants)
+    ? data.variants
+        .map(normalizeVariant)
+        .filter((v): v is ProductVariant => !!v)
     : [];
 
   return {
@@ -129,20 +210,20 @@ function normalizeProduct(data: Record<string, unknown>): Product {
     tagline: str(data.tagline),
     description: str(data.description),
     category: (str(data.category, "lainnya") as ProductCategory) || "lainnya",
-    price: typeof data.price === "number" ? data.price : Number(data.price) || 0,
-    originalPrice:
-      typeof data.originalPrice === "number"
-        ? data.originalPrice
-        : Number(data.originalPrice) || undefined,
+    price: num(data.price, 0),
+    originalPrice: num(data.originalPrice, 0) || undefined,
     cover: str(data.cover, "default"),
     coverPublicId: str(data.coverPublicId) || undefined,
     gallery: strArr(data.gallery),
     badge: str(data.badge) || undefined,
-    features,
-    specs,
+    features: normalizeFeatures(data.features),
+    specs: normalizeSpecs(data.specs),
     tools: strArr(data.tools),
     includes: strArr(data.includes),
     delivery: str(data.delivery) || undefined,
+    process: normalizeProcess(data.process),
+    notes: strArr(data.notes),
+    variants,
     soldOut: Boolean(data.soldOut),
     featured: Boolean(data.featured),
     active: data.active === undefined ? true : Boolean(data.active),
@@ -216,8 +297,18 @@ export async function saveProduct(
   if (!db) throw new Error("Admin SDK tidak tersedia.");
 
   // Firestore menolak nilai `undefined` → bersihkan field opsional kosong.
+  // Varian juga perlu dibersihkan (field opsional bertingkat).
+  const cleanVariants = product.variants.map((v) => {
+    const vv: Record<string, unknown> = { ...v };
+    for (const key of ["tagline", "originalPrice", "badge", "delivery", "waMessage"]) {
+      if (vv[key] === undefined) delete vv[key];
+    }
+    return vv;
+  });
+
   const payload: Record<string, unknown> = {
     ...product,
+    variants: cleanVariants,
     updatedAtISO: new Date().toISOString(),
     updatedBy,
   };

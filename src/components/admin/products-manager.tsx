@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   AlertCircle,
+  ArrowDown,
+  ArrowUp,
   ExternalLink,
   ImageIcon,
   Loader2,
@@ -23,8 +25,13 @@ import type { Product, StoredProduct } from "@/lib/product-types";
 import {
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_LABEL,
+  type ProductProcessStep,
+  type ProductVariant,
 } from "@/lib/product-types";
-import { formatPrice } from "@/lib/product-format";
+import {
+  hasVariants,
+  productPriceLabel,
+} from "@/lib/product-format";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
@@ -52,6 +59,9 @@ const emptyProduct: Product = {
   tools: [],
   includes: [],
   delivery: "",
+  process: [],
+  notes: [],
+  variants: [],
   soldOut: false,
   featured: false,
   active: true,
@@ -122,22 +132,77 @@ export function ProductsManager() {
       toast.error(msg);
       return;
     }
-    if (!Number.isFinite(editing.price) || editing.price < 0) {
-      const msg = "Harga tidak boleh negatif.";
-      setError(msg);
-      toast.error(msg);
-      return;
+
+    const multi = hasVariants(editing);
+
+    if (multi) {
+      // ===== Validasi produk multi-varian =====
+      const slugs = new Set<string>();
+      let highlightCount = 0;
+      for (const v of editing.variants) {
+        if (!v.name.trim()) {
+          const msg = "Setiap paket wajib punya nama.";
+          setError(msg);
+          toast.error(msg);
+          return;
+        }
+        if (!v.slug.trim()) {
+          const msg = `Slug paket "${v.name}" kosong.`;
+          setError(msg);
+          toast.error(msg);
+          return;
+        }
+        if (slugs.has(v.slug)) {
+          const msg = `Slug paket "${v.slug}" duplikat.`;
+          setError(msg);
+          toast.error(msg);
+          return;
+        }
+        slugs.add(v.slug);
+        if (!Number.isFinite(v.price) || v.price < 0) {
+          const msg = `Harga paket "${v.name}" tidak valid.`;
+          setError(msg);
+          toast.error(msg);
+          return;
+        }
+        if (
+          v.originalPrice != null &&
+          v.originalPrice !== 0 &&
+          v.originalPrice < v.price
+        ) {
+          const msg = `Harga coret paket "${v.name}" harus lebih besar dari harga jual.`;
+          setError(msg);
+          toast.error(msg);
+          return;
+        }
+        if (v.highlight) highlightCount += 1;
+      }
+      if (highlightCount > 1) {
+        const msg = "Hanya boleh satu paket ditandai 'Paling Populer'.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+    } else {
+      // ===== Validasi produk tunggal (seperti sebelumnya) =====
+      if (!Number.isFinite(editing.price) || editing.price < 0) {
+        const msg = "Harga tidak boleh negatif.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      if (
+        editing.originalPrice != null &&
+        editing.originalPrice !== 0 &&
+        editing.originalPrice < editing.price
+      ) {
+        const msg = "Harga sebelum diskon harus lebih besar dari harga jual.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
     }
-    if (
-      editing.originalPrice != null &&
-      editing.originalPrice !== 0 &&
-      editing.originalPrice < editing.price
-    ) {
-      const msg = "Harga sebelum diskon harus lebih besar dari harga jual.";
-      setError(msg);
-      toast.error(msg);
-      return;
-    }
+
     setSaving(true);
     setError(null);
     try {
@@ -236,7 +301,15 @@ export function ProductsManager() {
                     {PRODUCT_CATEGORY_LABEL[p.category]}
                   </span>
                   <span className="text-slate-300">•</span>
-                  <span>{formatPrice(p.price)}</span>
+                  <span>{productPriceLabel(p)}</span>
+                  {hasVariants(p) && (
+                    <>
+                      <span className="text-slate-300">•</span>
+                      <span className="font-semibold text-primary">
+                        {p.variants.length} paket
+                      </span>
+                    </>
+                  )}
                   {!p.active && (
                     <>
                       <span className="text-slate-300">•</span>
@@ -332,7 +405,10 @@ function ProductForm({
   const set = <K extends keyof Product>(key: K, value: Product[K]) =>
     onChange({ ...product, [key]: value });
 
-  const setList = (key: "tools" | "includes" | "gallery", value: string) =>
+  const setList = (
+    key: "tools" | "includes" | "gallery" | "notes",
+    value: string,
+  ) =>
     set(
       key,
       value
@@ -578,6 +654,31 @@ function ProductForm({
           </Field>
         </div>
 
+        {/* ===== Paket / Varian ===== */}
+        <VariantsEditor
+          variants={product.variants}
+          onChange={(variants) => set("variants", variants)}
+        />
+
+        {/* ===== Alur Pembuatan ===== */}
+        <ProcessEditor
+          steps={product.process}
+          onChange={(process) => set("process", process)}
+        />
+
+        {/* ===== Catatan Penting ===== */}
+        <Field label="Catatan penting (1 per baris)">
+          <textarea
+            rows={4}
+            value={product.notes.join("\n")}
+            onChange={(e) => setList("notes", e.target.value)}
+            placeholder={
+              "Data identitas & referensi ditagih via WhatsApp.\nHasil akhir bersifat terima jadi."
+            }
+            className={cn(fieldBase, "resize-none")}
+          />
+        </Field>
+
         <Field label="Pesan WhatsApp khusus (opsional)">
           <textarea
             rows={2}
@@ -662,6 +763,400 @@ function Toggle({
       />
       <span className="text-sm font-medium text-secondary">{label}</span>
     </label>
+  );
+}
+
+/* ================= Editor Varian / Paket ================= */
+
+const emptyVariant: ProductVariant = {
+  slug: "",
+  name: "",
+  tagline: "",
+  price: 0,
+  originalPrice: undefined,
+  badge: undefined,
+  highlight: false,
+  soldOut: false,
+  features: [],
+  specs: [],
+  includes: [],
+  limits: [],
+  delivery: "",
+  waMessage: undefined,
+};
+
+function VariantsEditor({
+  variants,
+  onChange,
+}: {
+  variants: ProductVariant[];
+  onChange: (v: ProductVariant[]) => void;
+}) {
+  const update = (i: number, patch: Partial<ProductVariant>) =>
+    onChange(variants.map((v, j) => (j === i ? { ...v, ...patch } : v)));
+
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= variants.length) return;
+    const next = [...variants];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-surface p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-secondary">
+            Paket / Varian ({variants.length})
+          </p>
+          <p className="mt-0.5 text-xs text-muted">
+            Isi bila produk punya beberapa paket dengan harga berbeda (mis.
+            Basic, Profesional, Custom). Bila kosong, produk memakai harga
+            tunggal di atas.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange([...variants, structuredClone(emptyVariant)])}
+          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-slate-300 px-4 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-primary/40 hover:text-primary"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Tambah Paket
+        </button>
+      </div>
+
+      {variants.length > 0 && (
+        <div className="mt-4 flex flex-col gap-4">
+          {variants.map((v, i) => (
+            <VariantCard
+              key={i}
+              index={i}
+              total={variants.length}
+              variant={v}
+              onChange={(patch) => update(i, patch)}
+              onRemove={() => onChange(variants.filter((_, j) => j !== i))}
+              onMove={(dir) => move(i, dir)}
+              onSetHighlight={() =>
+                onChange(
+                  variants.map((x, j) => ({ ...x, highlight: j === i })),
+                )
+              }
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VariantCard({
+  index,
+  total,
+  variant,
+  onChange,
+  onRemove,
+  onMove,
+  onSetHighlight,
+}: {
+  index: number;
+  total: number;
+  variant: ProductVariant;
+  onChange: (patch: Partial<ProductVariant>) => void;
+  onRemove: () => void;
+  onMove: (dir: -1 | 1) => void;
+  onSetHighlight: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-muted">
+          Paket #{index + 1}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onMove(-1)}
+            disabled={index === 0}
+            aria-label="Naikkan"
+            className="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-40"
+          >
+            <ArrowUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onMove(1)}
+            disabled={index === total - 1}
+            aria-label="Turunkan"
+            className="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-40"
+          >
+            <ArrowDown className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Hapus paket"
+            className="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Field label="Nama paket">
+          <input
+            value={variant.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            placeholder="mis. Portfolio Profesional"
+            className={fieldBase}
+          />
+        </Field>
+        <Field label="Slug paket (unik)">
+          <input
+            value={variant.slug}
+            onChange={(e) => onChange({ slug: e.target.value })}
+            placeholder="portfolio-profesional"
+            className={fieldBase}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-3">
+        <Field label="Tagline paket (opsional)">
+          <input
+            value={variant.tagline ?? ""}
+            onChange={(e) => onChange({ tagline: e.target.value || undefined })}
+            className={fieldBase}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <Field label="Harga (Rp)">
+          <input
+            type="number"
+            value={variant.price}
+            onChange={(e) => onChange({ price: Number(e.target.value) })}
+            className={fieldBase}
+          />
+        </Field>
+        <Field label="Harga coret (opsional)">
+          <input
+            type="number"
+            value={variant.originalPrice ?? ""}
+            onChange={(e) =>
+              onChange({
+                originalPrice: e.target.value ? Number(e.target.value) : undefined,
+              })
+            }
+            className={fieldBase}
+          />
+        </Field>
+        <Field label="Estimasi pengerjaan (opsional)">
+          <input
+            value={variant.delivery ?? ""}
+            onChange={(e) => onChange({ delivery: e.target.value || undefined })}
+            placeholder="mis. 1-3 hari kerja"
+            className={fieldBase}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Field label="Fitur paket (Judul | Deskripsi, 1 per baris)">
+          <textarea
+            rows={4}
+            value={variant.features
+              .map((f) => `${f.title} | ${f.description}`)
+              .join("\n")}
+            onChange={(e) =>
+              onChange({
+                features: e.target.value
+                  .split("\n")
+                  .map((line) => {
+                    const [title, description] = line.split("|");
+                    return {
+                      title: (title ?? "").trim(),
+                      description: (description ?? "").trim(),
+                    };
+                  })
+                  .filter((f) => f.title),
+              })
+            }
+            placeholder={"Domain gratis 1 tahun | Sudah termasuk\nResponsive | Optimal di semua perangkat"}
+            className={cn(fieldBase, "resize-none")}
+          />
+        </Field>
+        <Field label="Spesifikasi paket (Label = Nilai, 1 per baris)">
+          <textarea
+            rows={4}
+            value={variant.specs.map((s) => `${s.label} = ${s.value}`).join("\n")}
+            onChange={(e) =>
+              onChange({
+                specs: e.target.value
+                  .split("\n")
+                  .map((line) => {
+                    const [label, value] = line.split("=");
+                    return {
+                      label: (label ?? "").trim(),
+                      value: (value ?? "").trim(),
+                    };
+                  })
+                  .filter((s) => s.label && s.value),
+              })
+            }
+            placeholder={"Hosting = Gratis 1 bulan\nHalaman = 1 halaman"}
+            className={cn(fieldBase, "resize-none")}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Field label="Yang didapat (1 per baris)">
+          <textarea
+            rows={3}
+            value={variant.includes.join("\n")}
+            onChange={(e) =>
+              onChange({
+                includes: e.target.value
+                  .split("\n")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              })
+            }
+            className={cn(fieldBase, "resize-none")}
+          />
+        </Field>
+        <Field label="Batasan paket (1 per baris)">
+          <textarea
+            rows={3}
+            value={variant.limits.join("\n")}
+            onChange={(e) =>
+              onChange({
+                limits: e.target.value
+                  .split("\n")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              })
+            }
+            placeholder={"Tidak termasuk penulisan konten\nMaks 1x revisi major"}
+            className={cn(fieldBase, "resize-none")}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Field label="Badge (opsional)">
+          <input
+            value={variant.badge ?? ""}
+            onChange={(e) => onChange({ badge: e.target.value || undefined })}
+            placeholder="mis. Paling Populer"
+            className={fieldBase}
+          />
+        </Field>
+        <Field label="Pesan WhatsApp khusus (opsional)">
+          <input
+            value={variant.waMessage ?? ""}
+            onChange={(e) => onChange({ waMessage: e.target.value || undefined })}
+            className={fieldBase}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-5">
+        <Toggle
+          label="Paling Populer (highlight)"
+          checked={variant.highlight}
+          onChange={onSetHighlight}
+        />
+        <Toggle
+          label="Stok habis"
+          checked={variant.soldOut}
+          onChange={(v) => onChange({ soldOut: v })}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ================= Editor Alur Pembuatan ================= */
+
+function ProcessEditor({
+  steps,
+  onChange,
+}: {
+  steps: ProductProcessStep[];
+  onChange: (s: ProductProcessStep[]) => void;
+}) {
+  const update = (i: number, patch: Partial<ProductProcessStep>) =>
+    onChange(steps.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-surface p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-secondary">
+            Alur Pembuatan ({steps.length})
+          </p>
+          <p className="mt-0.5 text-xs text-muted">
+            Langkah-langkah cara memesan & menerima hasil produk.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            onChange([...steps, { step: String(steps.length + 1), title: "", description: "" }])
+          }
+          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-slate-300 px-4 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-primary/40 hover:text-primary"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Tambah Langkah
+        </button>
+      </div>
+
+      {steps.length > 0 && (
+        <div className="mt-4 flex flex-col gap-3">
+          {steps.map((s, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-slate-200 bg-white p-4"
+            >
+              <div className="grid gap-3 sm:grid-cols-[90px_1fr_auto]">
+                <input
+                  value={s.step}
+                  onChange={(e) => update(i, { step: e.target.value })}
+                  placeholder="1"
+                  className={fieldBase}
+                  aria-label="Nomor langkah"
+                />
+                <input
+                  value={s.title}
+                  onChange={(e) => update(i, { title: e.target.value })}
+                  placeholder="Judul langkah"
+                  className={fieldBase}
+                />
+                <button
+                  type="button"
+                  onClick={() => onChange(steps.filter((_, j) => j !== i))}
+                  aria-label="Hapus langkah"
+                  className="grid h-11 w-11 shrink-0 place-items-center self-center rounded-2xl border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <textarea
+                rows={2}
+                value={s.description}
+                onChange={(e) => update(i, { description: e.target.value })}
+                placeholder="Deskripsi langkah"
+                className={cn(fieldBase, "mt-2 resize-none")}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

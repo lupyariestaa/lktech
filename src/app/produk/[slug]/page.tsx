@@ -2,9 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Check, Package, ShieldCheck, Sparkles, Truck, Wrench } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Layers,
+  Package,
+  ShieldCheck,
+  Sparkles,
+  Truck,
+  Wrench,
+} from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { ProductBuyActions } from "@/components/product-buy-actions";
+import { ProductVariantPicker } from "@/components/product-variant-picker";
 import { ProductCard } from "@/components/product-card";
 import { Reveal } from "@/components/motion";
 import {
@@ -12,7 +22,11 @@ import {
   getProducts,
   getProductSlugs,
 } from "@/lib/products";
-import { formatPrice } from "@/lib/product-format";
+import {
+  formatPrice,
+  hasVariants,
+  productPriceLabel,
+} from "@/lib/product-format";
 import { PRODUCT_CATEGORY_LABEL } from "@/lib/product-types";
 import { SITE } from "@/lib/site";
 
@@ -60,20 +74,16 @@ export default async function ProdukDetailPage({
   const all = await getProducts();
   const others = all.filter((p) => p.slug !== slug).slice(0, 3);
 
+  const multi = hasVariants(product);
   const hasDiscount =
-    product.originalPrice != null && product.originalPrice > product.price;
+    !multi &&
+    product.originalPrice != null &&
+    product.originalPrice > product.price;
   const gallery = [product.cover, ...product.gallery].filter(
     (url) => url && url !== "default",
   );
 
-  // Produk tanpa harga ("Hubungi kami") tidak punya Offer yang valid.
-  const hasPrice = product.price > 0;
-  const availability = product.soldOut
-    ? "https://schema.org/OutOfStock"
-    : hasPrice
-      ? "https://schema.org/InStock"
-      : "https://schema.org/PreOrder";
-
+  // JSON-LD: produk tunggal → satu Offer; multi-varian → beberapa Offer.
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -82,14 +92,31 @@ export default async function ProdukDetailPage({
     image: gallery.length ? gallery : undefined,
     category: PRODUCT_CATEGORY_LABEL[product.category],
     brand: { "@type": "Brand", name: "LKTech" },
-    offers: {
-      "@type": "Offer",
-      // schema.org/Google mengharapkan `price` sebagai string.
-      price: hasPrice ? String(product.price) : undefined,
-      priceCurrency: "IDR",
-      availability,
-      url: `${SITE.url}/produk/${product.slug}`,
-    },
+    offers: multi
+      ? product.variants.map((v) => ({
+          "@type": "Offer",
+          name: v.name,
+          price: v.price > 0 ? String(v.price) : undefined,
+          priceCurrency: "IDR",
+          availability:
+            v.soldOut || product.soldOut
+              ? "https://schema.org/OutOfStock"
+              : v.price > 0
+                ? "https://schema.org/InStock"
+                : "https://schema.org/PreOrder",
+          url: `${SITE.url}/produk/${product.slug}`,
+        }))
+      : {
+          "@type": "Offer",
+          price: product.price > 0 ? String(product.price) : undefined,
+          priceCurrency: "IDR",
+          availability: product.soldOut
+            ? "https://schema.org/OutOfStock"
+            : product.price > 0
+              ? "https://schema.org/InStock"
+              : "https://schema.org/PreOrder",
+          url: `${SITE.url}/produk/${product.slug}`,
+        },
   };
 
   return (
@@ -112,11 +139,17 @@ export default async function ProdukDetailPage({
       >
         <div className="flex flex-wrap items-center gap-4">
           <span className="text-2xl font-bold text-secondary">
-            {formatPrice(product.price)}
+            {multi ? productPriceLabel(product) : formatPrice(product.price)}
           </span>
           {hasDiscount && (
             <span className="text-sm text-muted line-through">
               {formatPrice(product.originalPrice!)}
+            </span>
+          )}
+          {multi && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary">
+              <Layers className="h-3.5 w-3.5" />
+              {product.variants.length} paket
             </span>
           )}
           {product.soldOut && (
@@ -178,7 +211,21 @@ export default async function ProdukDetailPage({
               </p>
             </section>
 
-            {/* Fitur */}
+            {/* ===== Paket (multi-varian) ===== */}
+            {multi && (
+              <section id="paket" className="scroll-mt-28">
+                <SectionTitle eyebrow="Paket" title="Pilih paket sesuai kebutuhan" />
+                <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
+                  Setiap paket punya cakupan yang berbeda. Anda bisa memulai dari
+                  paket dasar dan upgrade kapan saja.
+                </p>
+                <div className="mt-8">
+                  <ProductVariantPicker product={product} variants={product.variants} />
+                </div>
+              </section>
+            )}
+
+            {/* Fitur (produk tunggal / fitur umum) */}
             {product.features.length > 0 && (
               <section>
                 <SectionTitle eyebrow="Keunggulan" title="Fitur utama" />
@@ -204,8 +251,8 @@ export default async function ProdukDetailPage({
               </section>
             )}
 
-            {/* Spesifikasi */}
-            {product.specs.length > 0 && (
+            {/* Spesifikasi (produk tunggal) */}
+            {!multi && product.specs.length > 0 && (
               <section>
                 <SectionTitle eyebrow="Spesifikasi" title="Detail teknis" />
                 <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200">
@@ -233,8 +280,8 @@ export default async function ProdukDetailPage({
               </section>
             )}
 
-            {/* Yang didapat */}
-            {product.includes.length > 0 && (
+            {/* Yang didapat (produk tunggal) */}
+            {!multi && product.includes.length > 0 && (
               <section>
                 <SectionTitle eyebrow="Paket" title="Yang Anda dapatkan" />
                 <ul className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -252,16 +299,69 @@ export default async function ProdukDetailPage({
                 </ul>
               </section>
             )}
+
+            {/* Alur pembuatan */}
+            {product.process.length > 0 && (
+              <section>
+                <SectionTitle eyebrow="Alur" title="Cara memesan & prosesnya" />
+                <ol className="mt-8 grid gap-4 sm:grid-cols-2">
+                  {product.process.map((s, i) => (
+                    <Reveal key={`${s.step}-${i}`} delay={i * 0.05}>
+                      <li className="flex h-full gap-4 rounded-2xl border border-slate-100 bg-surface p-5">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-white">
+                          {s.step || i + 1}
+                        </span>
+                        <div>
+                          <h3 className="text-sm font-bold text-secondary">
+                            {s.title}
+                          </h3>
+                          {s.description && (
+                            <p className="mt-1.5 text-sm leading-relaxed text-muted">
+                              {s.description}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    </Reveal>
+                  ))}
+                </ol>
+              </section>
+            )}
+
+            {/* Catatan penting */}
+            {product.notes.length > 0 && (
+              <section>
+                <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6">
+                  <h2 className="flex items-center gap-2 text-sm font-bold text-amber-800">
+                    <AlertTriangle className="h-4 w-4" />
+                    Catatan penting
+                  </h2>
+                  <ul className="mt-3 flex flex-col gap-2">
+                    {product.notes.map((n) => (
+                      <li
+                        key={n}
+                        className="flex items-start gap-2 text-sm leading-relaxed text-amber-800"
+                      >
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                        {n}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+            )}
           </div>
 
           {/* ===== Sidebar pembelian ===== */}
           <aside className="lg:sticky lg:top-28 lg:h-fit">
             <div className="flex flex-col gap-5">
               <div className="rounded-3xl border border-slate-200 bg-surface p-6">
-                <p className="text-xs font-medium text-muted">Harga</p>
+                <p className="text-xs font-medium text-muted">
+                  {multi ? "Mulai dari" : "Harga"}
+                </p>
                 <div className="mt-1 flex items-end gap-2">
                   <span className="text-2xl font-bold text-secondary">
-                    {formatPrice(product.price)}
+                    {multi ? productPriceLabel(product) : formatPrice(product.price)}
                   </span>
                   {hasDiscount && (
                     <span className="text-sm text-muted line-through">
@@ -270,17 +370,31 @@ export default async function ProdukDetailPage({
                   )}
                 </div>
 
-                <ProductBuyActions
-                  product={product}
-                  compact
-                  className="mt-5"
-                />
-
-                <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
-                  <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                  Pembelian memerlukan login akun Google. Checkout & konfirmasi
-                  dilakukan via WhatsApp.
-                </p>
+                {multi ? (
+                  <>
+                    <a
+                      href="#paket"
+                      className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark"
+                    >
+                      <Layers className="h-4 w-4" />
+                      Lihat {product.variants.length} Paket
+                    </a>
+                    <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
+                      <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                      Pilih paket di atas. Pembelian memerlukan login akun Google.
+                      Checkout & konfirmasi via WhatsApp.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <ProductBuyActions product={product} compact className="mt-5" />
+                    <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
+                      <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                      Pembelian memerlukan login akun Google. Checkout & konfirmasi
+                      dilakukan via WhatsApp.
+                    </p>
+                  </>
+                )}
               </div>
 
               {product.delivery && (
@@ -289,7 +403,9 @@ export default async function ProdukDetailPage({
                     <Truck className="h-5 w-5" />
                   </span>
                   <div>
-                    <p className="text-xs text-muted">Pengiriman</p>
+                    <p className="text-xs text-muted">
+                      {multi ? "Estimasi umum" : "Pengiriman"}
+                    </p>
                     <p className="text-sm font-semibold text-secondary">
                       {product.delivery}
                     </p>

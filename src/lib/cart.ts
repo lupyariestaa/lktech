@@ -1,18 +1,57 @@
-import type { Product } from "@/lib/product-types";
+import type { Product, ProductVariant } from "@/lib/product-types";
 import type { OrderItem } from "@/lib/order-types";
 import { formatPrice } from "@/lib/product-format";
 
-/** Satu item di keranjang (data minimal produk, disimpan di localStorage). */
+/**
+ * Satu item di keranjang (data minimal, disimpan di localStorage).
+ *
+ * Untuk produk multi-varian, `variantSlug` & `variantName` diisi agar Basic dan
+ * Custom tampil sebagai baris terpisah (dan checkout mengirim varian yang tepat).
+ */
 export type CartItem = {
+  /** Slug produk induk. */
   slug: string;
+  /** Nama tampilan: "Produk" atau "Produk — Nama Varian". */
   name: string;
+  /** Harga satuan (Rupiah). Untuk varian = harga varian. */
   price: number;
   cover: string;
   qty: number;
+  /** Slug varian terpilih (kosong untuk produk tunggal). */
+  variantSlug?: string;
+  /** Nama varian terpilih (kosong untuk produk tunggal). */
+  variantName?: string;
 };
 
-/** Mengubah produk menjadi item keranjang. */
-export function toCartItem(product: Product, qty = 1): CartItem {
+/**
+ * Kunci unik sebuah item keranjang (produk + varian). Dipakai agar varian
+ * berbeda tidak saling menimpa di keranjang.
+ */
+export function cartItemKey(item: Pick<CartItem, "slug" | "variantSlug">): string {
+  return item.variantSlug ? `${item.slug}::${item.variantSlug}` : item.slug;
+}
+
+/**
+ * Mengubah produk (dan opsional varian) menjadi item keranjang.
+ * - Tanpa `variant` → memakai harga produk (produk tunggal).
+ * - Dengan `variant` → memakai harga & nama varian.
+ */
+export function toCartItem(
+  product: Product,
+  variant?: ProductVariant | null,
+  qty = 1,
+): CartItem {
+  if (variant) {
+    return {
+      slug: product.slug,
+      name: `${product.name} — ${variant.name}`,
+      price: variant.price,
+      cover: product.cover,
+      qty,
+      variantSlug: variant.slug,
+      variantName: variant.name,
+    };
+  }
   return {
     slug: product.slug,
     name: product.name,
@@ -20,6 +59,15 @@ export function toCartItem(product: Product, qty = 1): CartItem {
     cover: product.cover,
     qty,
   };
+}
+
+/** Mengubah varian produk menjadi item keranjang (harga & nama dari varian). */
+export function cardItemForVariant(
+  product: Product,
+  variant: ProductVariant,
+  qty = 1,
+): CartItem {
+  return toCartItem(product, variant, qty);
 }
 
 export function cartSubtotal(items: CartItem[]): number {
@@ -73,7 +121,9 @@ export function buildOrderMessage(
   lines.push(`- Nama: ${sanitizeMessageText(buyer.name) || "-"}`);
   lines.push(`- Email: ${sanitizeMessageText(buyer.email) || "-"}`);
   lines.push("");
-  lines.push("Mohon info langkah pembayaran selanjutnya. Terima kasih!");
+  lines.push(
+    "Selanjutnya saya akan mengirim data & referensi desain yang dibutuhkan. Terima kasih!",
+  );
   return lines.join("\n");
 }
 
@@ -91,6 +141,8 @@ export function buildCheckoutMessage(
     price: it.price,
     qty: it.qty,
     subtotal: it.price * it.qty,
+    variantSlug: it.variantSlug,
+    variantName: it.variantName,
   }));
   return buildOrderMessage(orderItems, buyer);
 }

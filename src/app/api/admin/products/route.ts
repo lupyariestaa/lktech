@@ -94,6 +94,43 @@ export async function POST(req: Request) {
     featured: Boolean(body.featured),
     active: body.active === undefined ? true : Boolean(body.active),
     waMessage: body.waMessage?.trim() || undefined,
+    process: Array.isArray(body.process)
+      ? body.process
+          .filter((s) => s && (s.title || s.description))
+          .map((s) => ({
+            step: (s.step ?? "").toString().trim(),
+            title: (s.title ?? "").trim(),
+            description: (s.description ?? "").trim(),
+          }))
+      : [],
+    notes: Array.isArray(body.notes) ? body.notes.filter(Boolean) : [],
+    variants: Array.isArray(body.variants)
+      ? body.variants
+          .filter((v) => v && v.slug?.trim() && v.name?.trim())
+          .map((v) => ({
+            slug: sanitizeSlug(v.slug),
+            name: v.name.trim(),
+            tagline: v.tagline?.trim() || undefined,
+            price: Number(v.price) || 0,
+            originalPrice:
+              v.originalPrice && Number(v.originalPrice) > 0
+                ? Number(v.originalPrice)
+                : undefined,
+            badge: v.badge?.trim() || undefined,
+            highlight: Boolean(v.highlight),
+            soldOut: Boolean(v.soldOut),
+            features: Array.isArray(v.features)
+              ? v.features.filter((f) => f && f.title?.trim())
+              : [],
+            specs: Array.isArray(v.specs)
+              ? v.specs.filter((s) => s && s.label?.trim())
+              : [],
+            includes: Array.isArray(v.includes) ? v.includes.filter(Boolean) : [],
+            limits: Array.isArray(v.limits) ? v.limits.filter(Boolean) : [],
+            delivery: v.delivery?.trim() || undefined,
+            waMessage: v.waMessage?.trim() || undefined,
+          }))
+      : [],
   };
 
   try {
