@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 /**
  * Grid portofolio dengan filter kategori (client-side).
  * `projects` & `categories` dikirim dari server (Firestore).
- * `mediaMap` memetakan slug proyek → URL cover dari Cloudinary (opsional).
+ * `mediaMap` memetakan slug proyek → { url, alt } cover dari Cloudinary.
  */
 export function PortfolioGrid({
   projects,
@@ -18,7 +18,7 @@ export function PortfolioGrid({
 }: {
   projects: Project[];
   categories: string[];
-  mediaMap?: Record<string, string>;
+  mediaMap?: Record<string, { url: string; alt?: string }>;
 }) {
   const [active, setActive] = useState("Semua");
 
@@ -67,7 +67,11 @@ export function PortfolioGrid({
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}
           >
-            <ProjectCard project={project} coverImage={mediaMap[project.slug]} />
+            <ProjectCard
+              project={project}
+              coverImage={mediaMap[project.slug]?.url}
+              coverAlt={mediaMap[project.slug]?.alt}
+            />
           </motion.div>
         ))}
       </div>

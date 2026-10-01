@@ -43,20 +43,41 @@ export async function authHeaders(): Promise<Record<string, string>> {
 }
 
 /**
- * Membaca body response JSON; melempar `Error` dengan pesan dari server
+ * Error dari API admin yang membawa konteks tambahan (mis. daftar `usedIn`
+ * saat hapus permanen ditolak karena aset masih dipakai).
+ */
+export class ApiError extends Error {
+  usedIn?: Array<{ type: string; refId: string; label: string; field: string }>;
+  status: number;
+  constructor(
+    message: string,
+    status: number,
+    usedIn?: ApiError["usedIn"],
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.usedIn = usedIn;
+  }
+}
+
+/**
+ * Membaca body response JSON; melempar `ApiError` dengan pesan dari server
  * (`{ error }`) bila status tidak OK. Dipakai bersama oleh `admin-api` &
  * `admin-content-api` agar penanganan error konsisten.
  */
 export async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let message = "Terjadi kesalahan.";
+    let usedIn: ApiError["usedIn"];
     try {
       const data = await res.json();
       if (data?.error) message = data.error;
+      if (Array.isArray(data?.usedIn)) usedIn = data.usedIn;
     } catch {
       /* ignore */
     }
-    throw new Error(message);
+    throw new ApiError(message, res.status, usedIn);
   }
   return res.json() as Promise<T>;
 }

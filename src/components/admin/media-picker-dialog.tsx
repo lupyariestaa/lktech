@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   AlertCircle,
   Check,
+  Crop,
   Image as ImageIcon,
   Loader2,
   Plus,
@@ -13,25 +14,68 @@ import {
   X,
 } from "lucide-react";
 import { ImageUploader } from "@/components/admin/image-uploader";
-import { fetchMedia, saveMedia } from "@/lib/admin-api";
-import type { CloudinaryAsset } from "@/lib/cloudinary-client";
+import { listMedia, saveMedia } from "@/lib/admin-api";
+import { imgUrl, type CloudinaryAsset } from "@/lib/cloudinary-client";
 import {
   MEDIA_CATEGORIES,
   MEDIA_CATEGORY_LABEL,
   type MediaCategory,
   type MediaItem,
+  type MediaSortKey,
 } from "@/lib/media-types";
 import { cn } from "@/lib/utils";
 
 export type MediaPickerMode = "single" | "multiple";
 
-type SortKey = "newest" | "oldest" | "title";
+/** Rasio crop yang bisa dipilih (untuk URL transformasi Cloudinary). */
+export type CropRatio = "original" | "16:10" | "1:1" | "9:16" | "4:3";
+
+const CROP_OPTIONS: Array<{ key: CropRatio; label: string; w?: number; h?: number }> = [
+  { key: "original", label: "Asli" },
+  { key: "16:10", label: "16:10", w: 1600, h: 1000 },
+  { key: "1:1", label: "1:1", w: 1200, h: 1200 },
+  { key: "4:3", label: "4:3", w: 1200, h: 900 },
+  { key: "9:16", label: "9:16", w: 900, h: 1600 },
+];
+
+const SORT_LABEL: Record<MediaSortKey, string> = {
+  newest: "Terbaru",
+  oldest: "Terlama",
+  title: "Judul A–Z",
+  size: "Terbesar",
+};
+
+const PAGE_LIMIT = 24;
+const SEARCH_DEBOUNCE_MS = 350;
+
+/** Terapkan transformasi rasio ke item (mengganti secureUrl dgn URL crop). */
+function applyCrop(item: MediaItem, ratio: CropRatio): MediaItem {
+  if (ratio === "original" || !item.publicId) return item;
+  const opt = CROP_OPTIONS.find((o) => o.key === ratio);
+  if (!opt?.w || !opt?.h) return item;
+  const cropped = imgUrl(item.publicId, {
+    w: opt.w,
+    h: opt.h,
+    crop: "fill",
+  });
+  return { ...item, secureUrl: cropped || item.secureUrl };
+}
+
+/** URL thumbnail ringan via transformasi Cloudinary (fallback secureUrl). */
+function thumb(item: MediaItem, w = 320, h = 240): string {
+  if (!item.publicId) return item.secureUrl;
+  return imgUrl(item.publicId, { w, h, crop: "fill" }) || item.secureUrl;
+}
 
 /**
  * Dialog pemilih media yang reusable (dipakai banyak sistem).
  *
- * Fitur: pencarian judul, filter kategori, urutkan, pilih single/multiple,
- * dan unggah gambar baru langsung dari dalam dialog.
+ * Fitur: pencarian **server-side** (debounce), filter kategori, urutkan,
+ * paginasi (muat lebih banyak), pilih single/multiple, crop/rasio opsional
+ * (transformasi Cloudinary on-the-fly), dan unggah gambar baru dari dialog.
+ *
+ * A11y: `aria-live` jumlah hasil, label item deskriptif, navigasi keyboard
+ * ringan (Esc, Tab terjebak), fokus kembali ke pemicu saat ditutup.
  *
  * @example
  * <MediaPickerDialog
@@ -50,6 +94,7 @@ export function MediaPickerDialog({
   acceptedCategories,
   title = "Pilih dari Media",
   folder = "lktech",
+  cropEnabled = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,6 +104,8 @@ export function MediaPickerDialog({
   acceptedCategories?: MediaCategory[];
   title?: string;
   folder?: string;
+  /** Tampilkan pilihan rasio crop (transformasi Cloudinary). */
+  cropEnabled?: boolean;
 }) {
   const categories = useMemo<readonly MediaCategory[]>(
     () => acceptedCategories ?? MEDIA_CATEGORIES,
@@ -66,13 +113,17 @@ export function MediaPickerDialog({
   );
 
   const [items, setItems] = useState<MediaItem[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [category, setCategory] = useState<MediaCategory | "semua">(
     defaultCategory ?? "semua",
   );
-  const [sort, setSort] = useState<SortKey>("newest");
+  const [sort, setSort] = useState<MediaSortKey>("newest");
+  const [crop, setCrop] = useState<CropRatio>("original");
   const [selected, setSelected] = useState<Record<string, MediaItem>>({});
   const [showUpload, setShowUpload] = useState(false);
 
@@ -87,35 +138,43 @@ export function MediaPickerDialog({
     setPrevOpen(open);
     if (open) {
       setQuery("");
+      setDebouncedQuery("");
       setSelected({});
       setShowUpload(false);
+      setCrop("original");
       setCategory(defaultCategory ?? "semua");
     }
   }
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchMedia();
-      setItems(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat media.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Debounce pencarian → server-side.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [query]);
 
-  // Muat daftar media saat dialog dibuka. `setState` hanya setelah `await`,
-  // jadi tidak memicu cascading render sinkron.
+  const buildQuery = useCallback(
+    (cursor?: string) => ({
+      q: debouncedQuery || undefined,
+      category: category === "semua" ? undefined : category,
+      sort,
+      status: "active" as const,
+      cursor,
+      limit: PAGE_LIMIT,
+    }),
+    [debouncedQuery, category, sort],
+  );
+
+  // Muat daftar media saat dialog dibuka / filter berubah. `setState` hanya
+  // setelah `await`, jadi tidak memicu cascading render sinkron.
   useEffect(() => {
     if (!open) return;
     let active = true;
     (async () => {
       try {
-        const data = await fetchMedia();
+        const data = await listMedia(buildQuery());
         if (!active) return;
-        setItems(data);
+        setItems(data.items);
+        setNextCursor(data.nextCursor);
         setError(null);
       } catch (err) {
         if (!active) return;
@@ -127,7 +186,21 @@ export function MediaPickerDialog({
     return () => {
       active = false;
     };
-  }, [open, defaultCategory]);
+  }, [open, buildQuery]);
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const data = await listMedia(buildQuery(nextCursor));
+      setItems((prev) => [...prev, ...data.items]);
+      setNextCursor(data.nextCursor);
+    } catch {
+      /* abaikan */
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [nextCursor, loadingMore, buildQuery]);
 
   // Tutup dengan tombol Escape & kunci scroll body.
   useEffect(() => {
@@ -150,7 +223,6 @@ export function MediaPickerDialog({
     if (!open) return;
     triggerRef.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
-    // Fokuskan kontrol pertama yang bisa difokus di dalam dialog.
     const focusFirst = () => {
       const focusables = panel?.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -185,27 +257,6 @@ export function MediaPickerDialog({
     };
   }, [open]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const list = items
-      .filter((m) => (category === "semua" ? true : m.category === category))
-      .filter(
-        (m) =>
-          !q ||
-          m.title.toLowerCase().includes(q) ||
-          m.publicId.toLowerCase().includes(q),
-      );
-    const sorted = [...list];
-    if (sort === "newest") {
-      sorted.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-    } else if (sort === "oldest") {
-      sorted.sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
-    } else {
-      sorted.sort((a, b) => a.title.localeCompare(b.title));
-    }
-    return sorted;
-  }, [items, query, category, sort]);
-
   const selectedList = useMemo(() => Object.values(selected), [selected]);
   const selectedCount = selectedList.length;
 
@@ -225,15 +276,33 @@ export function MediaPickerDialog({
 
   const confirm = () => {
     if (selectedCount === 0) return;
-    onSelect(selectedList);
+    // Terapkan crop pada item terpilih (bila diaktifkan).
+    const out = selectedList.map((it) =>
+      cropEnabled ? applyCrop(it, crop) : it,
+    );
+    onSelect(out);
     onOpenChange(false);
   };
 
   // Setelah unggah gambar baru dari dalam dialog → simpan ke Media & muat ulang.
-  const onUploaded = async (asset: CloudinaryAsset, meta: {
-    title: string;
-    category: MediaCategory;
-  }) => {
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const data = await listMedia(buildQuery());
+      setItems(data.items);
+      setNextCursor(data.nextCursor);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat media.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onUploaded = async (
+    asset: CloudinaryAsset,
+    meta: { title: string; category: MediaCategory },
+  ) => {
     await saveMedia({
       publicId: asset.publicId,
       secureUrl: asset.secureUrl,
@@ -245,10 +314,14 @@ export function MediaPickerDialog({
       title: meta.title,
       projectSlug: "",
     });
-    await load();
+    await reload();
   };
 
   if (!open) return null;
+
+  const resultLabel = loading
+    ? "Memuat media…"
+    : `${items.length} media ditampilkan${nextCursor ? ", masih ada lagi" : ""}`;
 
   return (
     <div
@@ -299,10 +372,21 @@ export function MediaPickerDialog({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari nama file atau judul…"
+              placeholder="Cari judul, alt, tag, atau nama file…"
               aria-label="Cari media"
-              className="w-full rounded-full border border-slate-200 bg-white py-2.5 pr-4 pl-10 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none"
+              type="search"
+              className="w-full rounded-full border border-slate-200 bg-white py-2.5 pr-10 pl-10 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Bersihkan pencarian"
+                className="absolute top-1/2 right-3 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 hover:text-secondary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <select
@@ -323,17 +407,37 @@ export function MediaPickerDialog({
 
           <select
             value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
+            onChange={(e) => setSort(e.target.value as MediaSortKey)}
             aria-label="Urutkan media"
             className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none"
           >
-            <option value="newest">Terbaru</option>
-            <option value="oldest">Terlama</option>
-            <option value="title">Judul A–Z</option>
+            {(Object.keys(SORT_LABEL) as MediaSortKey[]).map((s) => (
+              <option key={s} value={s}>
+                {SORT_LABEL[s]}
+              </option>
+            ))}
           </select>
 
+          {cropEnabled && (
+            <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1">
+              <Crop className="ml-1.5 h-4 w-4 text-slate-400" aria-hidden="true" />
+              <select
+                value={crop}
+                onChange={(e) => setCrop(e.target.value as CropRatio)}
+                aria-label="Rasio crop gambar"
+                className="bg-transparent py-1 pr-1 text-sm text-secondary focus:outline-none"
+              >
+                {CROP_OPTIONS.map((o) => (
+                  <option key={o.key} value={o.key}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button
-            onClick={load}
+            onClick={reload}
             disabled={loading}
             className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
             aria-label="Muat ulang"
@@ -371,69 +475,101 @@ export function MediaPickerDialog({
             </div>
           )}
 
+          {/* Live region (a11y) */}
+          <p className="sr-only" aria-live="polite">
+            {resultLabel}
+          </p>
+
           {loading ? (
             <div className="flex flex-col items-center gap-3 py-20 text-muted">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
               <span className="text-sm">Memuat media…</span>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : items.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 py-16 text-center">
               <p className="text-sm font-medium text-secondary">
-                {items.length === 0
-                  ? "Belum ada media."
-                  : "Tidak ada media yang cocok."}
+                {debouncedQuery || category !== "semua"
+                  ? "Tidak ada media yang cocok."
+                  : "Belum ada media."}
               </p>
               <p className="mt-1 text-xs text-muted">
-                {items.length === 0
-                  ? "Unggah gambar baru lewat tombol “Unggah” di atas."
-                  : "Coba ubah kata kunci atau filter."}
+                {debouncedQuery || category !== "semua"
+                  ? "Coba ubah kata kunci atau filter."
+                  : "Unggah gambar baru lewat tombol “Unggah” di atas."}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {filtered.map((item) => {
-                const isSel = Boolean(selected[item.id]);
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => toggle(item)}
-                    className={cn(
-                      "group relative overflow-hidden rounded-2xl border bg-white text-left transition-all",
-                      isSel
-                        ? "border-primary ring-2 ring-primary/40"
-                        : "border-slate-200 hover:border-primary/40",
-                    )}
-                  >
-                    <div className="relative aspect-[4/3] bg-surface">
-                      <Image
-                        src={item.secureUrl}
-                        alt={item.title || item.publicId}
-                        fill
-                        sizes="(max-width: 640px) 45vw, 220px"
-                        className="object-cover"
-                      />
-                      {isSel && (
-                        <span className="absolute top-2 right-2 grid h-6 w-6 place-items-center rounded-full bg-primary text-white shadow">
-                          <Check className="h-3.5 w-3.5" />
-                        </span>
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {items.map((item) => {
+                  const isSel = Boolean(selected[item.id]);
+                  const label = item.title || item.alt || item.publicId;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => toggle(item)}
+                      aria-pressed={isSel}
+                      aria-label={`${isSel ? "Batalkan pilih" : "Pilih"} ${label}`}
+                      className={cn(
+                        "group relative overflow-hidden rounded-2xl border bg-white text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                        isSel
+                          ? "border-primary ring-2 ring-primary/40"
+                          : "border-slate-200 hover:border-primary/40",
                       )}
-                      <span className="absolute top-2 left-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-secondary backdrop-blur">
-                        {MEDIA_CATEGORY_LABEL[item.category]}
-                      </span>
-                    </div>
-                    <div className="px-3 py-2">
-                      <p className="truncate text-xs font-semibold text-secondary">
-                        {item.title || "Tanpa judul"}
-                      </p>
-                      <p className="truncate text-[10px] text-muted">
-                        {item.width}×{item.height}
-                      </p>
-                    </div>
+                    >
+                      <div className="relative aspect-[4/3] bg-surface">
+                        <Image
+                          src={thumb(item)}
+                          alt={item.alt || label}
+                          fill
+                          sizes="(max-width: 640px) 45vw, 220px"
+                          className="object-cover"
+                        />
+                        {isSel && (
+                          <span className="absolute top-2 right-2 grid h-6 w-6 place-items-center rounded-full bg-primary text-white shadow">
+                            <Check className="h-3.5 w-3.5" />
+                          </span>
+                        )}
+                        <span className="absolute top-2 left-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-secondary backdrop-blur">
+                          {MEDIA_CATEGORY_LABEL[item.category]}
+                        </span>
+                        {item.favorite && (
+                          <span
+                            className="absolute bottom-2 left-2 rounded-full bg-amber-400/95 px-2 py-0.5 text-[10px] font-semibold text-white"
+                            aria-hidden="true"
+                          >
+                            ★
+                          </span>
+                        )}
+                      </div>
+                      <div className="px-3 py-2">
+                        <p className="truncate text-xs font-semibold text-secondary">
+                          {item.title || "Tanpa judul"}
+                        </p>
+                        <p className="truncate text-[10px] text-muted">
+                          {item.width}×{item.height}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {nextCursor && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
+                  >
+                    {loadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Muat lebih banyak
                   </button>
-                );
-              })}
-            </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -487,9 +623,7 @@ function UploadInline({
 }) {
   const [asset, setAsset] = useState<CloudinaryAsset | null>(null);
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<MediaCategory>(
-    MEDIA_CATEGORIES[0],
-  );
+  const [category, setCategory] = useState<MediaCategory>(MEDIA_CATEGORIES[0]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -548,9 +682,7 @@ function UploadInline({
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             Simpan ke Media
           </button>
-          {error && (
-            <span className="text-xs text-rose-500">{error}</span>
-          )}
+          {error && <span className="text-xs text-rose-500">{error}</span>}
         </div>
         <p className="text-xs text-muted">
           Gambar tersimpan ke galeri Media, lalu muncul di daftar di atas.

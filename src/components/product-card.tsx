@@ -27,7 +27,7 @@ export function ProductCard({ product }: { product: Product }) {
         {product.cover && product.cover !== "default" ? (
           <Image
             src={product.cover}
-            alt={product.name}
+            alt={product.coverAlt || product.name}
             fill
             sizes="(max-width: 768px) 100vw, 360px"
             className="object-cover transition-transform duration-500 group-hover:scale-105"

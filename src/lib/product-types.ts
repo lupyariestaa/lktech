@@ -111,6 +111,8 @@ export type Product = {
   cover: string;
   /** publicId Cloudinary cover — untuk hapus aset (opsional). */
   coverPublicId?: string;
+  /** Teks alternatif cover (a11y/SEO, diisi dari media `alt`). */
+  coverAlt?: string;
   /** Galeri gambar tambahan. */
   gallery: string[];
   /** Badge kecil, mis. "Terlaris". */

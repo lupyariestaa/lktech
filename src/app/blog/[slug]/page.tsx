@@ -123,7 +123,7 @@ export default async function ArticleDetailPage({
           {article.coverImage && (
             <Image
               src={article.coverImage}
-              alt={article.title}
+              alt={article.coverAlt || article.title}
               width={1200}
               height={630}
               priority

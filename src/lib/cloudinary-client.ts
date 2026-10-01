@@ -22,6 +22,37 @@ export function cldUrl(publicId: string, transforms = "f_auto,q_auto") {
 }
 
 /**
+ * URL gambar dari publicId dengan transformasi on-the-fly.
+ *
+ * @example imgUrl(publicId, { w: 400, h: 250, crop: "fill" })
+ *   → .../image/upload/c_fill,w_400,h_250,f_auto,q_auto/<publicId>
+ */
+export function imgUrl(
+  publicId: string,
+  opts: {
+    w?: number;
+    h?: number;
+    crop?: string;
+    format?: string;
+    quality?: string;
+    extra?: string;
+  } = {},
+) {
+  const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  if (!cloud || !publicId) return "";
+  const parts: string[] = [];
+  if (opts.crop) parts.push(`c_${opts.crop}`);
+  if (opts.w) parts.push(`w_${Math.round(opts.w)}`);
+  if (opts.h) parts.push(`h_${Math.round(opts.h)}`);
+  parts.push(`f_${opts.format ?? "auto"}`);
+  parts.push(`q_${opts.quality ?? "auto"}`);
+  if (opts.extra) parts.push(opts.extra);
+  return `https://res.cloudinary.com/${cloud}/image/upload/${parts.join(
+    ",",
+  )}/${publicId}`;
+}
+
+/**
  * Mengunggah file gambar via signed upload.
  * Langkah: minta signature ke API (admin) → unggah langsung ke Cloudinary.
  */

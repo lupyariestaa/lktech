@@ -137,6 +137,7 @@ function normalizeArticle(data: Record<string, unknown>): Article {
       : [],
     cover: str(data.cover, "default"),
     coverImage: typeof data.coverImage === "string" ? data.coverImage : undefined,
+    coverAlt: typeof data.coverAlt === "string" ? data.coverAlt : undefined,
     author: str(data.author, "LKTech"),
     status: data.status === "draft" ? "draft" : "published",
     publishedAt: str(data.publishedAt, new Date().toISOString()),

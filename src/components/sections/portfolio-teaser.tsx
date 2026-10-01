@@ -33,6 +33,7 @@ export async function PortfolioTeaser() {
               <ProjectCard
                 project={project}
                 coverImage={mediaMap[project.slug]?.cover.secureUrl}
+                coverAlt={mediaMap[project.slug]?.cover.alt}
               />
             </Reveal>
           ))}

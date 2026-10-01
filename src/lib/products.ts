@@ -214,6 +214,7 @@ function normalizeProduct(data: Record<string, unknown>): Product {
     originalPrice: num(data.originalPrice, 0) || undefined,
     cover: str(data.cover, "default"),
     coverPublicId: str(data.coverPublicId) || undefined,
+    coverAlt: str(data.coverAlt) || undefined,
     gallery: strArr(data.gallery),
     badge: str(data.badge) || undefined,
     features: normalizeFeatures(data.features),

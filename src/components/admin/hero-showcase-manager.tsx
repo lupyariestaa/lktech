@@ -54,7 +54,8 @@ export function HeroShowcaseManager() {
       .map((m) => ({
         url: m.secureUrl,
         publicId: m.publicId,
-        alt: m.title || "Pratinjau LKTech",
+        // Adopsi `alt` terkelola dari media (fallback ke judul).
+        alt: m.alt || m.title || "Pratinjau LKTech",
       }));
     if (additions.length === 0) return;
     setImages(key, [...view[key], ...additions]);
@@ -259,6 +260,7 @@ export function HeroShowcaseManager() {
         }}
         mode="multiple"
         title="Pilih gambar dari Media"
+        cropEnabled
         onSelect={(items) => {
           if (pickerFor) addFromMedia(pickerFor, items);
         }}

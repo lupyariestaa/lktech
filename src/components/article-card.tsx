@@ -29,7 +29,7 @@ export function ArticleCard({ article }: { article: Article }) {
         {article.coverImage ? (
           <Image
             src={article.coverImage}
-            alt={article.title}
+            alt={article.coverAlt || article.title}
             fill
             sizes="(max-width: 640px) 100vw, 400px"
             className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"

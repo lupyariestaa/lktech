@@ -544,7 +544,7 @@ function ProductForm({
               {product.cover && product.cover !== "default" ? (
                 <Image
                   src={product.cover}
-                  alt="Cover"
+                  alt={product.coverAlt || "Cover produk"}
                   fill
                   sizes="112px"
                   className="object-cover"
@@ -572,6 +572,16 @@ function ProductForm({
                 </button>
               )}
             </div>
+          </div>
+          <div className="mt-4">
+            <Field label="Teks alternatif cover (alt)">
+              <input
+                value={product.coverAlt ?? ""}
+                onChange={(e) => set("coverAlt", e.target.value)}
+                placeholder="Deskripsi gambar untuk a11y/SEO"
+                className={fieldBase}
+              />
+            </Field>
           </div>
         </div>
 
@@ -740,6 +750,8 @@ function ProductForm({
               ...product,
               cover: sel[0].secureUrl,
               coverPublicId: sel[0].publicId,
+              // Adopsi `alt` terkelola dari media (fallback ke judul).
+              coverAlt: sel[0].alt || sel[0].title || product.coverAlt || "",
             });
           }
           setPickerOpen(false);

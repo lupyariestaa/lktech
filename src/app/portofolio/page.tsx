@@ -32,9 +32,9 @@ export default async function PortofolioPage() {
     getPortfolioMediaMap(),
     getSiteSettings(),
   ]);
-  const coverMap: Record<string, string> = {};
+  const coverMap: Record<string, { url: string; alt?: string }> = {};
   for (const [slug, media] of Object.entries(mediaMap)) {
-    coverMap[slug] = media.cover.secureUrl;
+    coverMap[slug] = { url: media.cover.secureUrl, alt: media.cover.alt };
   }
 
   return (

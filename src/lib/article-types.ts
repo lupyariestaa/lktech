@@ -11,6 +11,8 @@ export type Article = {
   tags: string[];
   cover: string;
   coverImage?: string;
+  /** Teks alternatif gambar sampul (a11y/SEO). */
+  coverAlt?: string;
   author: string;
   status: ArticleStatus;
   /** ISO date. */

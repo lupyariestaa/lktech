@@ -40,6 +40,22 @@ export const settingsSchema = z.object({
 });
 
 // ===== Media =====
+/** Daftar kategori media yang valid (harus sinkron dengan media-types). */
+export const mediaCategoryEnum = z.enum([
+  "portofolio",
+  "banner",
+  "produk",
+  "blog",
+  "hero",
+  "icon",
+  "lainnya",
+]);
+
+/** Tag: array string pendek, dibatasi jumlahnya. */
+export const mediaTagsSchema = z
+  .array(z.string().trim().min(1).max(40))
+  .max(20);
+
 export const mediaCreateSchema = z.object({
   publicId: z.string().trim().min(1).max(500),
   secureUrl: z.string().trim().min(1).max(1000),
@@ -47,9 +63,41 @@ export const mediaCreateSchema = z.object({
   height: z.number().finite().nonnegative().max(100000).optional(),
   format: z.string().trim().max(20).optional(),
   bytes: z.number().finite().nonnegative().max(1_000_000_000).optional(),
-  category: z.enum(["portofolio", "banner", "lainnya"]).optional(),
+  category: mediaCategoryEnum.optional(),
   title: z.string().trim().max(200).optional(),
+  alt: z.string().trim().max(200).optional(),
+  description: z.string().trim().max(500).optional(),
+  tags: mediaTagsSchema.optional(),
   projectSlug: z.string().trim().max(200).optional(),
+  productSlug: z.string().trim().max(200).optional(),
+  articleSlug: z.string().trim().max(200).optional(),
+});
+
+/** Update metadata media (partial) via PATCH. */
+export const mediaUpdateSchema = z.object({
+  title: z.string().trim().max(200).optional(),
+  alt: z.string().trim().max(200).optional(),
+  description: z.string().trim().max(500).optional(),
+  tags: mediaTagsSchema.optional(),
+  category: mediaCategoryEnum.optional(),
+  collectionId: z.string().trim().max(200).optional(),
+  projectSlug: z.string().trim().max(200).optional(),
+  productSlug: z.string().trim().max(200).optional(),
+  articleSlug: z.string().trim().max(200).optional(),
+  favorite: z.boolean().optional(),
+  order: z.number().finite().optional(),
+});
+
+// ===== Koleksi media =====
+export const mediaCollectionCreateSchema = z.object({
+  name: z.string().trim().min(1, "Nama koleksi wajib diisi").max(120),
+  description: z.string().trim().max(300).optional(),
+});
+
+export const mediaCollectionUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  description: z.string().trim().max(300).optional(),
+  coverMediaId: z.string().trim().max(200).optional(),
 });
 
 // ===== Artikel =====
@@ -62,6 +110,7 @@ export const articleSchema = z.object({
   tags: z.array(z.string().trim().max(60)).max(30).optional(),
   cover: imageUrlSchema.optional(),
   coverImage: z.string().trim().max(1000).optional(),
+  coverAlt: z.string().trim().max(200).optional(),
   author: z.string().trim().max(80).optional(),
   status: z.enum(["draft", "published"]).optional(),
   publishedAt: z.string().trim().max(40).optional(),
@@ -145,6 +194,7 @@ export const productSchema = z.object({
   originalPrice: z.number().finite().min(0).max(1_000_000_000).optional(),
   cover: imageUrlSchema.optional(),
   coverPublicId: z.string().trim().max(500).optional(),
+  coverAlt: z.string().trim().max(200).optional(),
   gallery: z.array(z.string().trim().max(1000)).max(20).optional(),
   badge: z.string().trim().max(40).optional(),
   features: z.array(productFeatureSchema).max(20).optional(),

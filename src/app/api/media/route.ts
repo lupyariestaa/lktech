@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import type { Query } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { normalizeMediaItem, toPublicMediaItem } from "@/lib/media-normalize";
 import type { MediaItem } from "@/lib/media-types";
 
 export const runtime = "nodejs";
 export const revalidate = 60;
 
+/** Batas jumlah item yang dikembalikan endpoint publik. */
+const PUBLIC_LIMIT = 60;
+
 /**
  * GET /api/media?category=portofolio
  * Endpoint PUBLIK: mengembalikan daftar gambar (non-sensitif) untuk
- * ditampilkan di website. Hanya mengembalikan aset yang aman dipublikasikan.
+ * ditampilkan di website. Hanya aset `status=active` yang aman dipublikasikan.
  */
 export async function GET(req: Request) {
   const category = new URL(req.url).searchParams.get("category");
@@ -20,33 +23,21 @@ export async function GET(req: Request) {
   }
 
   try {
-    let query: Query = db.collection("media");
+    const snap = await db.collection("media").get();
+
+    let items: MediaItem[] = snap.docs
+      .map((doc) => normalizeMediaItem(doc.id, doc.data()))
+      .filter((it) => it.status === "active")
+      // Sembunyikan field internal + publicId.
+      .map((it) => toPublicMediaItem(it));
+
     if (category) {
-      query = query.where("category", "==", category);
+      items = items.filter((it) => it.category === category);
     }
 
-    const snap = await query.get();
-
-    const items: MediaItem[] = snap.docs.map((doc) => {
-      const d = doc.data();
-      return {
-        id: doc.id,
-        // `publicId` TIDAK diungkap ke publik (hanya dipakai server/dashboard).
-        publicId: "",
-        secureUrl: d.secureUrl,
-        width: d.width ?? 0,
-        height: d.height ?? 0,
-        format: d.format ?? "",
-        bytes: d.bytes ?? 0,
-        category: d.category ?? "lainnya",
-        title: d.title ?? "",
-        projectSlug: d.projectSlug || undefined,
-        createdAt: d.createdAtISO ?? null,
-      };
-    });
-
-    // Urutkan terbaru lebih dulu (tanpa index Firestore tambahan).
+    // Urutkan terbaru lebih dulu + batasi jumlah (MED-11).
     items.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+    items = items.slice(0, PUBLIC_LIMIT);
 
     return NextResponse.json(
       { items },

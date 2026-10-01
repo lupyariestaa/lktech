@@ -9,9 +9,11 @@ import { ProjectCover } from "@/components/project-cover";
 export function ProjectCard({
   project,
   coverImage,
+  coverAlt,
 }: {
   project: Project;
   coverImage?: string;
+  coverAlt?: string;
 }) {
   return (
     <Link
@@ -24,6 +26,7 @@ export function ProjectCard({
           accent={project.accent}
           label={project.category}
           image={coverImage}
+          alt={coverAlt}
         />
       </div>
 

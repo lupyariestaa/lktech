@@ -81,6 +81,7 @@ export default async function ProjectDetailPage({
 
   const projectMedia = mediaMap[slug];
   const coverImage = projectMedia?.cover.secureUrl;
+  const coverAlt = projectMedia?.cover.alt;
   const gallery = projectMedia?.gallery ?? [];
 
   return (
@@ -155,6 +156,7 @@ export default async function ProjectDetailPage({
                 accent={project.accent}
                 label={project.category}
                 image={coverImage}
+                alt={coverAlt}
                 priority
               />
             </div>
@@ -170,6 +172,7 @@ export default async function ProjectDetailPage({
                       name={`${project.cover}-${i}`}
                       accent={project.accent}
                       image={g.secureUrl}
+                      alt={g.alt}
                     />
                   </div>
                 </Reveal>

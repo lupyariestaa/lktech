@@ -11,6 +11,7 @@ export function ProjectCover({
   accent,
   label,
   image,
+  alt,
   className,
   priority = false,
 }: {
@@ -22,6 +23,8 @@ export function ProjectCover({
   label?: string;
   /** URL gambar Cloudinary (opsional). */
   image?: string;
+  /** Teks alternatif khusus (dari media `alt`). */
+  alt?: string;
   className?: string;
   /** Set true untuk gambar above-the-fold (LCP). */
   priority?: boolean;
@@ -44,7 +47,7 @@ export function ProjectCover({
         <>
           <Image
             src={image}
-            alt={label ? `Pratinjau ${label}` : "Pratinjau proyek"}
+            alt={alt || (label ? `Pratinjau ${label}` : "Pratinjau proyek")}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
             priority={priority}

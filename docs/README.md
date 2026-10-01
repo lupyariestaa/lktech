@@ -29,3 +29,4 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | Tanggal    | Dokumen                                                                 | Status      |
 | ---------- | ----------------------------------------------------------------------- | ----------- |
 | 2026-02-14 | [Auth split (admin/user) + Sistem Produk](2026-02-14-auth-split-dan-produk.md) | In Progress |
+| 2026-10-02 | [Rencana Upgrade Sistem Media (M1–M6)](2026-10-02-media-system-upgrade.md) | Rencana |

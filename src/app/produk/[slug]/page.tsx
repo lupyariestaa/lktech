@@ -170,7 +170,7 @@ export default async function ProdukDetailPage({
                 {gallery.length ? (
                   <Image
                     src={gallery[0]}
-                    alt={product.name}
+                    alt={product.coverAlt || product.name}
                     fill
                     sizes="(max-width: 1024px) 100vw, 720px"
                     priority

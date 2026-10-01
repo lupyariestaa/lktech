@@ -393,6 +393,15 @@ function ArticleForm({
           </Field>
         </div>
 
+        <Field label="Teks alternatif sampul (alt)">
+          <input
+            value={article.coverAlt ?? ""}
+            onChange={(e) => set("coverAlt", e.target.value)}
+            placeholder="Deskripsi gambar untuk a11y/SEO (opsional)"
+            className={fieldBase}
+          />
+        </Field>
+
         <Field label="Isi artikel (Markdown)">
           <textarea
             rows={16}

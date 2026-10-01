@@ -12,8 +12,9 @@ rules_version = '2';
 // Ini sekaligus menutup celah lama di mana "user yang login" (akun Google mana pun)
 // diperlakukan sebagai admin oleh rules.
 //
-// Koleksi yang dipakai aplikasi (semua via Admin SDK): leads, media, settings,
-// projects, articles, content, users, products, orders.
+// Koleksi yang dipakai aplikasi (semua via Admin SDK): leads, media,
+// media_collections, media_audit, settings, projects, articles, content, users,
+// products, orders.
 //
 // Bila di masa depan ada fitur yang memang butuh akses Firestore dari klien,
 // tambahkan rule eksplisit dengan validasi ketat (hasOnly + batas panjang) dan
