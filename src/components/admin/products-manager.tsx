@@ -734,8 +734,13 @@ function ProductForm({
         title="Pilih cover produk"
         onSelect={(sel) => {
           if (sel[0]) {
-            set("cover", sel[0].secureUrl);
-            set("coverPublicId", sel[0].publicId);
+            // PENTING: gunakan SATU onChange (bukan dua `set` berurutan) agar
+            // perubahan tidak saling menimpa karena closure `product` yang basi.
+            onChange({
+              ...product,
+              cover: sel[0].secureUrl,
+              coverPublicId: sel[0].publicId,
+            });
           }
           setPickerOpen(false);
         }}
