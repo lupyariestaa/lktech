@@ -17,7 +17,7 @@ function getAdminEmails(): string[] {
 }
 
 /** Mengekstrak token `Bearer` dari header Authorization. */
-function bearerToken(req: Request): string | null {
+export function bearerToken(req: Request): string | null {
   const authHeader = req.headers.get("authorization") ?? "";
   return authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 }
@@ -53,7 +53,7 @@ export async function requireUser(req: Request): Promise<UserCheck> {
       response: NextResponse.json(
         {
           error:
-            "Admin SDK belum dikonfigurasi. Isi FIREBASE_ADMIN_* di .env.local.",
+            "Layanan belum dikonfigurasi di server.",
         },
         { status: 503 },
       ),
@@ -98,7 +98,7 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
       response: NextResponse.json(
         {
           error:
-            "Admin SDK belum dikonfigurasi. Isi FIREBASE_ADMIN_* di .env.local.",
+            "Layanan belum dikonfigurasi di server.",
         },
         { status: 503 },
       ),

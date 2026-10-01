@@ -41,17 +41,16 @@ function normalizeProject(data: Record<string, unknown>): Project {
 
 /**
  * Mengambil semua proyek dari Firestore (server-side).
- * Fallback ke data default di content.ts bila kosong / belum dikonfigurasi.
+ * Fallback ke data default di content.ts HANYA bila Admin SDK belum dikonfigurasi
+ * (mode demo). Saat SDK aktif namun koleksi dikosongkan sengaja, kembalikan [].
  */
 export async function getProjects(): Promise<Project[]> {
+  const { getAdminDb } = await import("@/lib/firebase-admin");
+  const db = getAdminDb();
+  if (!db) return DEFAULT_PROJECTS;
+
   try {
-    const { getAdminDb } = await import("@/lib/firebase-admin");
-    const db = getAdminDb();
-    if (!db) return DEFAULT_PROJECTS;
-
     const snap = await db.collection(COLLECTION).get();
-    if (snap.empty) return DEFAULT_PROJECTS;
-
     const projects = snap.docs.map((doc) => normalizeProject(doc.data()));
     // Urutkan: tahun terbaru dulu, lalu judul.
     return projects.sort(
@@ -59,7 +58,7 @@ export async function getProjects(): Promise<Project[]> {
     );
   } catch (err) {
     console.error("[projects] gagal memuat:", err);
-    return DEFAULT_PROJECTS;
+    return [];
   }
 }
 
@@ -85,8 +84,6 @@ export async function getStoredProjects(): Promise<StoredProject[]> {
   if (!db) return DEFAULT_PROJECTS.map((p) => ({ ...p, id: p.slug }));
 
   const snap = await db.collection(COLLECTION).get();
-  if (snap.empty) return DEFAULT_PROJECTS.map((p) => ({ ...p, id: p.slug }));
-
   return snap.docs
     .map((doc) => ({ id: doc.id, ...normalizeProject(doc.data()) }))
     .sort((a, b) => b.year - a.year || a.title.localeCompare(b.title));

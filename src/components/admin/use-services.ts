@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchSiteContent } from "@/lib/admin-content-api";
+import { adminFetch } from "@/lib/admin-fetch";
 
 export type ServiceOption = { slug: string; title: string };
 
 /**
  * Hook ringan untuk mengambil daftar layanan (slug + judul) saja.
  *
- * Dipakai mis. oleh `projects-manager` yang hanya butuh daftar layanan untuk
- * pilihan, tanpa perlu memuat & mengelola seluruh `SiteContent` (menghindari
- * over-fetch state). Fetch dilakukan sekali saat mount; `setState` hanya
- * setelah `await` sehingga tidak memicu cascading render sinkron.
+ * Memakai endpoint khusus `/api/admin/services` yang hanya mengembalikan daftar
+ * ringkas — TIDAK memuat seluruh `SiteContent` (menghindari over-fetch).
+ * Fetch dilakukan sekali saat mount; `setState` hanya setelah `await`.
  */
 export function useServices() {
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -21,11 +20,11 @@ export function useServices() {
     let active = true;
     (async () => {
       try {
-        const content = await fetchSiteContent();
-        if (!active) return;
-        setServices(
-          content.services.map((s) => ({ slug: s.slug, title: s.title })),
+        const data = await adminFetch<{ services: ServiceOption[] }>(
+          "/api/admin/services",
         );
+        if (!active) return;
+        setServices(data.services);
       } catch {
         /* biarkan kosong; field layanan bersifat opsional */
       } finally {

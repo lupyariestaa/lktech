@@ -15,14 +15,32 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { getIdToken, signOutUser } from "@/lib/auth";
+import { fetchMyOrders } from "@/lib/order-api";
+import { formatPrice } from "@/lib/product-format";
+import type { Order, OrderStatus } from "@/lib/order-types";
 import type { UserProfile } from "@/lib/user-types";
 import { cn } from "@/lib/utils";
 
-/** Halaman akun user: profil, statistik, dan aksi keluar. */
+const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  baru: "Baru",
+  diproses: "Diproses",
+  selesai: "Selesai",
+  dibatalkan: "Dibatalkan",
+};
+
+const ORDER_STATUS_CLASS: Record<OrderStatus, string> = {
+  baru: "bg-blue-50 text-blue-600",
+  diproses: "bg-amber-50 text-amber-600",
+  selesai: "bg-emerald-50 text-emerald-600",
+  dibatalkan: "bg-rose-50 text-rose-600",
+};
+
+/** Halaman akun user: profil, statistik, riwayat pesanan, dan aksi keluar. */
 export function UserAccount() {
   const { user } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +56,14 @@ export function UserAccount() {
         if (!res.ok) throw new Error("Gagal memuat profil.");
         const data = await res.json();
         if (active) setProfile(data.profile ?? null);
+
+        // Riwayat pesanan (best-effort — kegagalan tidak memblokir profil).
+        try {
+          const list = await fetchMyOrders();
+          if (active) setOrders(list);
+        } catch {
+          /* abaikan: riwayat kosong bila gagal */
+        }
       } catch (err) {
         if (active)
           setError(err instanceof Error ? err.message : "Gagal memuat profil.");
@@ -108,7 +134,11 @@ export function UserAccount() {
           <StatCard
             icon={ShoppingBag}
             label="Total Pembelian"
-            value={loading ? "…" : `${profile?.orderCount ?? 0}`}
+            value={
+              loading
+                ? "…"
+                : `${Math.max(profile?.orderCount ?? 0, orders.length)}`
+            }
           />
           <StatCard icon={UserRound} label="Bergabung Sejak" value={createdAt} />
         </div>
@@ -130,6 +160,74 @@ export function UserAccount() {
           </button>
         </div>
       </div>
+
+      {/* Riwayat pesanan */}
+      <section className="mt-8">
+        <h2 className="text-lg font-bold text-secondary">Riwayat Pesanan</h2>
+        {orders.length === 0 ? (
+          <div className="mt-4 rounded-3xl border border-dashed border-slate-200 bg-white py-12 text-center">
+            <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-surface text-muted">
+              <ShoppingBag className="h-6 w-6" />
+            </span>
+            <p className="mt-4 text-sm font-medium text-secondary">
+              Belum ada pesanan.
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              Pesanan yang Anda checkout akan muncul di sini.
+            </p>
+          </div>
+        ) : (
+          <ul className="mt-4 flex flex-col gap-3">
+            {orders.map((order) => (
+              <li
+                key={order.id}
+                className="rounded-3xl border border-slate-200 bg-white p-5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-muted">
+                      {new Date(order.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                    <p className="mt-0.5 text-sm font-bold text-secondary">
+                      {formatPrice(order.total)}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-semibold",
+                      ORDER_STATUS_CLASS[order.status],
+                    )}
+                  >
+                    {ORDER_STATUS_LABEL[order.status]}
+                  </span>
+                </div>
+                <ul className="mt-3 flex flex-col gap-1 border-t border-slate-100 pt-3">
+                  {order.items.map((it) => (
+                    <li
+                      key={it.slug}
+                      className="flex items-center justify-between text-xs text-muted"
+                    >
+                      <span className="truncate pr-3">
+                        {it.name}
+                        {it.qty > 1 ? ` ×${it.qty}` : ""}
+                      </span>
+                      <span className="shrink-0 font-medium text-secondary">
+                        {formatPrice(it.subtotal)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {loading && (
         <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted">

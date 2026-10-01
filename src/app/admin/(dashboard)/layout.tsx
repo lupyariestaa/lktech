@@ -1,6 +1,7 @@
 import { AuthGuard } from "@/components/admin/auth-guard";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { ToastProvider } from "@/components/admin/toast";
+import { UnsavedChangesProvider } from "@/components/admin/unsaved-changes";
 
 export default function DashboardLayout({
   children,
@@ -8,7 +9,9 @@ export default function DashboardLayout({
   return (
     <AuthGuard>
       <ToastProvider>
-        <AdminShell>{children}</AdminShell>
+        <UnsavedChangesProvider>
+          <AdminShell>{children}</AdminShell>
+        </UnsavedChangesProvider>
       </ToastProvider>
     </AuthGuard>
   );

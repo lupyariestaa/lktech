@@ -22,7 +22,9 @@ import {
   Package,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { useUnsavedNavigation } from "@/components/admin/unsaved-changes";
 import { signOutUser } from "@/lib/auth";
+import { clearAdminSession } from "@/lib/admin-fetch";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -52,6 +54,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const navigate = useUnsavedNavigation();
   const [open, setOpen] = useState(false);
 
   // Tutup drawer otomatis saat route berubah (mobile). Dibandingkan saat render
@@ -74,6 +77,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }, [open]);
 
   const onLogout = async () => {
+    await clearAdminSession();
     await signOutUser();
     router.replace("/admin/login");
   };
@@ -108,7 +112,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 pb-4">
+          <nav
+            aria-label="Menu dashboard"
+            className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 pb-4"
+          >
             {NAV.map((item) => {
               const Icon = item.icon;
               const active =
@@ -119,7 +126,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  onClick={(e) => {
+                    setOpen(false);
+                    // Intersep: bila ada perubahan belum disimpan, minta konfirmasi
+                    // dulu sebelum pindah halaman.
+                    if (!active) {
+                      e.preventDefault();
+                      navigate(item.href);
+                    }
+                  }}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors",
                     active

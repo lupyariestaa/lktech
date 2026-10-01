@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/admin-guard";
 import { getUserProfile, upsertUserProfile } from "@/lib/user-profile";
+import { userProfileSchema } from "@/lib/api-schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,12 +39,17 @@ export async function POST(req: Request) {
     body = {};
   }
 
+  const parsed = userProfileSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Data profil tidak valid." }, { status: 400 });
+  }
+
   try {
     const profile = await upsertUserProfile({
       uid: check.uid,
       email: check.email,
-      displayName: body.displayName,
-      photoURL: body.photoURL,
+      displayName: parsed.data.displayName,
+      photoURL: parsed.data.photoURL,
     });
     return NextResponse.json({ ok: true, profile });
   } catch (err) {

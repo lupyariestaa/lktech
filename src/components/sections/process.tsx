@@ -20,7 +20,7 @@ export function Process() {
               Proses yang <span className="text-gradient">jelas &amp; transparan</span>
             </>
           }
-          description="Empat langkah sederhana dari ide hingga produk digital Anda siap digunakan."
+          description="Langkah sederhana dari ide hingga produk digital Anda siap digunakan."
         />
 
         <div className="relative mt-16">

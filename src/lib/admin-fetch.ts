@@ -1,5 +1,34 @@
 import { getIdToken } from "@/lib/auth";
 
+/** Menghapus session cookie admin (dipanggil saat logout). Best-effort. */
+export async function clearAdminSession(): Promise<void> {
+  try {
+    await fetch("/api/admin/session", { method: "DELETE" });
+  } catch {
+    /* abaikan */
+  }
+}
+
+/**
+ * Memverifikasi keanggotaan admin lalu membuat session cookie (HttpOnly).
+ * Mengembalikan `true` bila berhasil (pemanggil boleh lanjut ke dashboard).
+ */
+export async function startAdminSession(): Promise<boolean> {
+  const token = await getIdToken();
+  if (!token) return false;
+  try {
+    const res = await fetch("/api/admin/session", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+
+
 /**
  * Header otorisasi untuk request ke API admin.
  * Menyertakan token Firebase bila user sedang login.

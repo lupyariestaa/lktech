@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useSiteContent } from "@/components/admin/use-site-content";
+import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import { MediaPickerDialog } from "@/components/admin/media-picker-dialog";
 import type { MediaItem } from "@/lib/media-types";
 import type {
@@ -27,7 +28,7 @@ const fieldBase =
 type ColumnKey = "browser" | "mobile";
 
 export function HeroShowcaseManager() {
-  const { content, loading, saving, error, reload, commit } =
+  const { content, loading, saving, error, loadFailed, reload, commit } =
     useSiteContent();
   const hero = content.hero;
 
@@ -35,6 +36,7 @@ export function HeroShowcaseManager() {
   const [draft, setDraft] = useState<HeroShowcase | null>(null);
   const view = draft ?? hero;
   const dirty = draft !== null;
+  useRegisterDirty(dirty);
 
   // Kolom mana yang sedang membuka popup picker media.
   const [pickerFor, setPickerFor] = useState<ColumnKey | null>(null);
@@ -117,7 +119,7 @@ export function HeroShowcaseManager() {
         </button>
         <button
           onClick={save}
-          disabled={!dirty || saving}
+          disabled={!dirty || saving || loadFailed}
           className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -128,7 +130,15 @@ export function HeroShowcaseManager() {
       {error && (
         <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          {error}
+          <span>
+            {error}
+            {loadFailed && (
+              <span className="mt-1 block text-xs text-rose-500">
+                Klik &quot;Muat ulang&quot; sebelum menyimpan agar tidak menimpa
+                data yang ada.
+              </span>
+            )}
+          </span>
         </div>
       )}
 

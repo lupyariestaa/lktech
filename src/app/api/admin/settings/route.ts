@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { getSiteSettings, mergeSettings, SETTINGS_DOC_ID } from "@/lib/settings";
+import { settingsSchema } from "@/lib/api-schemas";
 import type { SiteSettings } from "@/lib/settings-types";
 
 export const runtime = "nodejs";
@@ -47,7 +48,15 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const settings = mergeSettings(body);
+  const parsed = settingsSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Data pengaturan tidak valid." },
+      { status: 400 },
+    );
+  }
+
+  const settings = mergeSettings(parsed.data);
 
   try {
     await db

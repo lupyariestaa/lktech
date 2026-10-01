@@ -5,6 +5,7 @@ import {
   SERVICES,
   SERVICES_DETAIL,
   STATS as DEFAULT_STATS,
+  TECH_STACK as DEFAULT_TECH_STACK,
   TESTIMONIALS as DEFAULT_TESTIMONIALS,
   WHY_US as DEFAULT_WHY_US,
   type Service,
@@ -96,6 +97,17 @@ export type ManagedTestimonial = {
   rating: number;
 };
 
+/** Satu teknologi pada marquee "Teknologi yang kami gunakan". */
+export type ManagedTechnology = {
+  name: string;
+  /** Path logo di public/ (mis. "/tech/react.svg"). Kosong = placeholder inisial. */
+  logo: string;
+  /** Warna brand (hex) untuk placeholder & aksen. */
+  color: string;
+  /** `true` bila SVG sudah memuat nama brand (sembunyikan label teks). */
+  wordmark: boolean;
+};
+
 /** Seluruh konten yang dapat dikelola dari dashboard. */
 export type SiteContent = {
   services: ManagedService[];
@@ -106,6 +118,7 @@ export type SiteContent = {
   process: ManagedProcess[];
   stats: ManagedStat[];
   testimonials: ManagedTestimonial[];
+  technologies: ManagedTechnology[];
 };
 
 /**
@@ -149,6 +162,7 @@ export function defaultSiteContent(): SiteContent {
     process: structuredClone(DEFAULT_PROCESS),
     stats: structuredClone(DEFAULT_STATS),
     testimonials: structuredClone(DEFAULT_TESTIMONIALS),
+    technologies: DEFAULT_TECH_STACK.map((t) => ({ ...t, wordmark: t.wordmark ?? false })),
   };
 }
 

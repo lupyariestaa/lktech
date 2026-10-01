@@ -1,69 +1,30 @@
 rules_version = '2';
 
 // ===== Firestore Security Rules — LKTech =====
-// Prinsip:
-// - Publik hanya boleh MEMBUAT lead (form kontak), tidak boleh membaca/mengubah.
-// - Admin yang login (Firebase Auth) boleh membaca & mengelola lead.
-// - Operasi server (Admin SDK) melewati rules ini untuk verifikasi kelayakan.
+//
+// PENTING — arsitektur data:
+// Seluruh akses data (baca & tulis) dilakukan dari SERVER melalui Firebase Admin
+// SDK (API route / server component). Admin SDK MELEWATI rules ini.
+// Klien (browser) HANYA memakai Firebase Authentication — TIDAK pernah membaca
+// atau menulis Firestore secara langsung (tidak ada pemakaian client Firestore SDK).
+//
+// Karena itu postur paling aman: TOLAK SEMUA akses langsung dari klien.
+// Ini sekaligus menutup celah lama di mana "user yang login" (akun Google mana pun)
+// diperlakukan sebagai admin oleh rules.
+//
+// Koleksi yang dipakai aplikasi (semua via Admin SDK): leads, media, settings,
+// projects, articles, content, users, products, orders.
+//
+// Bila di masa depan ada fitur yang memang butuh akses Firestore dari klien,
+// tambahkan rule eksplisit dengan validasi ketat (hasOnly + batas panjang) dan
+// JANGAN pakai `request.auth != null` sebagai pengganti whitelist admin.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Koleksi lead dari form kontak website.
-    match /leads/{leadId} {
-      // Publik boleh membuat lead baru dengan validasi field minimal.
-      allow create: if isValidLead(request.resource.data);
-
-      // Hanya pengguna terautentikasi (admin) yang boleh membaca & mengelola.
-      allow read, update, delete: if request.auth != null;
-    }
-
-    // Koleksi media (gambar Cloudinary). Hanya admin terautentikasi.
-    // Upload/hapus sebenarnya lewat Admin SDK (bypass rules) dari API route.
-    match /media/{mediaId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Pengaturan situs (kontak). Publik boleh membaca (ditampilkan di website),
-    // hanya admin terautentikasi yang boleh mengubah.
-    match /settings/{docId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Proyek portofolio. Publik boleh membaca, hanya admin yang boleh mengubah.
-    match /projects/{projectId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Artikel blog. Publik boleh membaca, hanya admin yang boleh mengubah.
-    match /articles/{articleId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Konten situs (layanan, FAQ, harga). Publik boleh membaca, hanya admin
-    // yang boleh mengubah. Penulisan sebenarnya lewat Admin SDK dari API route.
-    match /content/{docId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Blokir akses lain secara default.
+    // Default: semua akses langsung dari klien ditolak.
+    // Operasi data yang sah tetap berjalan karena lewat Admin SDK di server.
     match /{document=**} {
       allow read, write: if false;
     }
-  }
-
-  // Validasi struktur data lead yang diizinkan masuk.
-  // Catatan: Firestore Rules tidak punya operator `is`. Pengecekan panjang
-  // & pola dilakukan dengan fungsi bawaan (size(), matches()) yang otomatis
-  // gagal bila nilai yang diterima bukan tipe yang diharapkan.
-  function isValidLead(data) {
-    return data.keys().hasAll(['name', 'email', 'phone', 'service', 'message'])
-      && data.name.size() >= 2 && data.name.size() <= 80
-      && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')
-      && data.phone.size() >= 8 && data.phone.size() <= 20
-      && data.message.size() >= 10 && data.message.size() <= 1000;
   }
 }

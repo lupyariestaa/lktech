@@ -1,11 +1,18 @@
-import { TECH_STACK } from "@/lib/content";
+"use client";
+
 import { Reveal } from "@/components/motion";
 import { TechnologyLogo } from "@/components/technology-logo";
+import { useContent } from "@/components/content-provider";
 
 export function Technologies() {
+  const { technologies } = useContent();
+
+  // Tidak ada teknologi → jangan tampilkan section sama sekali.
+  if (technologies.length === 0) return null;
+
   // Konten digandakan agar animasi marquee mulus; set kedua disembunyikan
   // dari screen reader supaya tidak dibaca dua kali.
-  const items = [...TECH_STACK, ...TECH_STACK];
+  const items = [...technologies, ...technologies];
   return (
     <section
       className="relative border-y border-slate-100 bg-white py-12"
@@ -24,7 +31,7 @@ export function Technologies() {
           {items.map((item, i) => (
             <div
               key={`${item.name}-${i}`}
-              aria-hidden={i >= TECH_STACK.length ? true : undefined}
+              aria-hidden={i >= technologies.length ? true : undefined}
             >
               <TechnologyLogo item={item} />
             </div>

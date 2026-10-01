@@ -1,0 +1,79 @@
+/** Status pesanan (dikelola manual oleh admin via WhatsApp). */
+export const ORDER_STATUSES = [
+  "baru",
+  "diproses",
+  "selesai",
+  "dibatalkan",
+] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+/** Satu item pesanan dengan harga yang SUDAH diverifikasi server. */
+export type OrderItem = {
+  slug: string;
+  name: string;
+  /** Harga satuan (Rupiah) saat order dibuat — dari server, bukan klien. */
+  price: number;
+  qty: number;
+  /** Subtotal = price * qty. */
+  subtotal: number;
+};
+
+/** Pesanan tersimpan di Firestore (`orders/{id}`). */
+export type Order = {
+  id: string;
+  uid: string;
+  buyerName: string;
+  buyerEmail: string;
+  items: OrderItem[];
+  total: number;
+  status: OrderStatus;
+  /** Nomor WhatsApp tujuan checkout (dari settings situs). */
+  whatsapp: string;
+  /** Pesan WhatsApp kanonik yang dikirim ke admin (untuk audit/ulang kirim). */
+  message: string;
+  createdAt: string;
+};
+
+function str(v: unknown, fallback = ""): string {
+  return typeof v === "string" ? v : fallback;
+}
+
+function num(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : Number(v) || 0;
+}
+
+/** Menormalkan data order mentah (dari Firestore) menjadi `Order`. */
+export function normalizeOrder(data: Record<string, unknown>): Order {
+  const rawItems = Array.isArray(data.items) ? data.items : [];
+  const items: OrderItem[] = rawItems
+    .filter((it): it is Record<string, unknown> => Boolean(it && typeof it === "object"))
+    .map((it) => {
+      const price = num(it.price);
+      const qty = Math.max(1, Math.floor(num(it.qty)));
+      return {
+        slug: str(it.slug),
+        name: str(it.name),
+        price,
+        qty,
+        subtotal: num(it.subtotal) || price * qty,
+      };
+    });
+
+  const status = (ORDER_STATUSES as readonly string[]).includes(str(data.status))
+    ? (data.status as OrderStatus)
+    : "baru";
+
+  return {
+    id: str(data.id),
+    uid: str(data.uid),
+    buyerName: str(data.buyerName),
+    buyerEmail: str(data.buyerEmail),
+    items,
+    total: num(data.total),
+    status,
+    whatsapp: str(data.whatsapp),
+    message: str(data.message),
+    createdAt: str(data.createdAtISO) || str(data.createdAt),
+  };
+}
+

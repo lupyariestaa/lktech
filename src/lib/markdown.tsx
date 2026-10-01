@@ -6,6 +6,18 @@ import type { ReactNode } from "react";
  * tautan ([teks](url)), dan garis pemisah (---).
  */
 
+/**
+ * Mengizinkan hanya skema aman untuk tautan (`http`, `https`, `mailto`, atau
+ * path relatif). Mencegah `javascript:` dan skema berbahaya lain (anti-XSS).
+ */
+function safeHref(url: string): string | null {
+  const v = url.trim();
+  if (!v) return null;
+  if (v.startsWith("/") || v.startsWith("#")) return v; // relatif internal
+  if (/^(https?:|mailto:)/i.test(v)) return v;
+  return null;
+}
+
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   // Pola: **bold**, *italic*, [text](url)
@@ -31,14 +43,23 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
         </em>,
       );
     } else if (match[6] && match[7]) {
+      const href = safeHref(match[7]);
+      const isExternal = href ? /^https?:/i.test(href) : false;
       nodes.push(
-        <a
-          key={`${keyPrefix}-a-${i}`}
-          href={match[7]}
-          className="text-primary underline underline-offset-2 hover:text-primary-dark"
-        >
-          {match[6]}
-        </a>,
+        href ? (
+          <a
+            key={`${keyPrefix}-a-${i}`}
+            href={href}
+            target={isExternal ? "_blank" : undefined}
+            rel={isExternal ? "noopener noreferrer" : undefined}
+            className="text-primary underline underline-offset-2 hover:text-primary-dark"
+          >
+            {match[6]}
+          </a>
+        ) : (
+          // Skema tidak diizinkan → tampilkan sebagai teks biasa (tanpa tautan).
+          <span key={`${keyPrefix}-a-${i}`}>{match[6]}</span>
+        ),
       );
     }
     lastIndex = regex.lastIndex;

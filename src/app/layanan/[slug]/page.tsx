@@ -8,7 +8,6 @@ import { Icon } from "@/components/icon";
 import { ButtonAnchor, ButtonLink } from "@/components/ui/button";
 import { CtaContact } from "@/components/sections/cta-contact";
 import { getSiteContent } from "@/lib/site-content";
-import { getServiceSlugs } from "@/lib/content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { getSiteSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
@@ -18,8 +17,11 @@ type Params = { slug: string };
 // Refresh berkala agar perubahan pengaturan (kontak) ikut ter-update.
 export const revalidate = 300;
 
-export function generateStaticParams(): Params[] {
-  return getServiceSlugs().map((slug) => ({ slug }));
+// Layanan dikelola dari dashboard → slug diambil dari konten dinamis agar
+// layanan yang ditambah dari dashboard ikut di-prerender.
+export async function generateStaticParams(): Promise<Params[]> {
+  const { services } = await getSiteContent();
+  return services.map((s) => ({ slug: s.slug }));
 }
 
 export async function generateMetadata({

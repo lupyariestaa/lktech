@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   let publicId: string | undefined;
   try {
     const body = await req.json();
-    publicId = typeof body?.publicId === "string" ? body.publicId : undefined;
+    publicId = typeof body?.publicId === "string" ? body.publicId.trim() : undefined;
   } catch {
     /* */
   }
@@ -32,6 +32,14 @@ export async function POST(req: Request) {
   if (!publicId) {
     return NextResponse.json(
       { error: "publicId wajib diisi." },
+      { status: 400 },
+    );
+  }
+
+  // Hanya boleh menghapus aset di folder aplikasi (lktech/...).
+  if (!publicId.startsWith("lktech/") || publicId.includes("..")) {
+    return NextResponse.json(
+      { error: "publicId tidak diizinkan." },
       { status: 400 },
     );
   }

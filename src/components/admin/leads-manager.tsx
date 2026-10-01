@@ -28,6 +28,7 @@ import {
 import { waLink } from "@/lib/whatsapp";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 export function LeadsManager() {
@@ -42,6 +43,10 @@ export function LeadsManager() {
   } = useAsyncList<StoredLead>(fetchLeads, "Gagal memuat lead.");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<LeadStatus | "semua">("semua");
+  // ID lead yang statusnya sedang disinkronkan (cegah double-submit/race).
+  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+  const [toDelete, setToDelete] = useState<StoredLead | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const refresh = async () => {
     await load();
@@ -62,7 +67,11 @@ export function LeadsManager() {
   }, [leads, query, filter]);
 
   const onStatus = async (id: string, status: LeadStatus) => {
+    // Abaikan bila lead ini masih dalam proses update (hindari request ganda).
+    if (busyIds.has(id)) return;
+
     const prev = leads;
+    setBusyIds((s) => new Set(s).add(id));
     setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, status } : l)));
     try {
       await updateLeadStatus(id, status);
@@ -72,6 +81,12 @@ export function LeadsManager() {
       const msg = err instanceof Error ? err.message : "Gagal memperbarui.";
       setError(msg);
       toast.error(msg);
+    } finally {
+      setBusyIds((s) => {
+        const next = new Set(s);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -83,18 +98,23 @@ export function LeadsManager() {
     exportLeadsToCsv(filtered);
   };
 
-  const onDelete = async (id: string, name: string) => {
-    if (!confirm(`Hapus lead dari "${name}"? Tindakan ini permanen.`)) return;
+  const confirmDelete = async () => {
+    const target = toDelete;
+    if (!target) return;
+    setDeleting(true);
     const prev = leads;
-    setLeads((ls) => ls.filter((l) => l.id !== id));
+    setLeads((ls) => ls.filter((l) => l.id !== target.id));
     try {
-      await deleteLead(id);
-      toast.success(`Lead "${name}" dihapus.`);
+      await deleteLead(target.id);
+      setToDelete(null);
+      toast.success(`Lead "${target.name}" dihapus.`);
     } catch (err) {
       setLeads(prev);
       const msg = err instanceof Error ? err.message : "Gagal menghapus.";
       setError(msg);
       toast.error(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -232,10 +252,11 @@ export function LeadsManager() {
               <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
                 <select
                   value={lead.status}
+                  disabled={busyIds.has(lead.id)}
                   onChange={(e) =>
                     onStatus(lead.id, e.target.value as LeadStatus)
                   }
-                  className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none"
+                  className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none disabled:opacity-60"
                 >
                   {LEAD_STATUSES.map((s) => (
                     <option key={s} value={s}>
@@ -258,7 +279,7 @@ export function LeadsManager() {
                 </a>
 
                 <button
-                  onClick={() => onDelete(lead.id, lead.name)}
+                  onClick={() => setToDelete(lead)}
                   className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -269,6 +290,16 @@ export function LeadsManager() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Hapus lead ini?"
+        description={`Lead dari "${toDelete?.name}" akan dihapus permanen.`}
+        confirmLabel="Hapus"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }

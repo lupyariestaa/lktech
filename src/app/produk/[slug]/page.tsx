@@ -66,23 +66,28 @@ export default async function ProdukDetailPage({
     (url) => url && url !== "default",
   );
 
-  const jsonLd = {
+  // Produk tanpa harga ("Hubungi kami") tidak punya Offer yang valid.
+  const hasPrice = product.price > 0;
+  const availability = product.soldOut
+    ? "https://schema.org/OutOfStock"
+    : hasPrice
+      ? "https://schema.org/InStock"
+      : "https://schema.org/PreOrder";
+
+  const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
     description: product.description,
-    image: gallery.length
-      ? gallery.map((g) => g)
-      : [`${SITE.url}${SITE.ogImage}`],
+    image: gallery.length ? gallery : undefined,
     category: PRODUCT_CATEGORY_LABEL[product.category],
     brand: { "@type": "Brand", name: "LKTech" },
     offers: {
       "@type": "Offer",
-      price: product.price,
+      // schema.org/Google mengharapkan `price` sebagai string.
+      price: hasPrice ? String(product.price) : undefined,
       priceCurrency: "IDR",
-      availability: product.soldOut
-        ? "https://schema.org/OutOfStock"
-        : "https://schema.org/InStock",
+      availability,
       url: `${SITE.url}/produk/${product.slug}`,
     },
   };

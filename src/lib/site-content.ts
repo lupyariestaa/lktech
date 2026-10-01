@@ -9,6 +9,7 @@ import {
   type ManagedProcess,
   type ManagedService,
   type ManagedStat,
+  type ManagedTechnology,
   type ManagedTestimonial,
   type ManagedWhyUs,
   type SiteContent,
@@ -216,6 +217,19 @@ function normalizeTestimonial(raw: unknown): ManagedTestimonial | null {
   };
 }
 
+function normalizeTechnology(raw: unknown): ManagedTechnology | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const name = str(d.name).trim();
+  if (!name) return null;
+  return {
+    name,
+    logo: str(d.logo).trim(),
+    color: str(d.color, "#64748B"),
+    wordmark: bool(d.wordmark),
+  };
+}
+
 /**
  * Menormalkan daftar: bila `raw` bukan array → pakai default (belum diatur).
  * Bila array (termasuk kosong) → hormati isinya, sehingga admin bisa
@@ -247,6 +261,11 @@ export function normalizeSiteContent(raw: Record<string, unknown>): SiteContent 
       raw.testimonials,
       normalizeTestimonial,
       defaults.testimonials,
+    ),
+    technologies: normalizeList(
+      raw.technologies,
+      normalizeTechnology,
+      defaults.technologies,
     ),
     hero: normalizeHeroShowcase(raw.hero),
   };
@@ -294,6 +313,7 @@ export async function saveSiteContent(
         process: content.process,
         stats: content.stats,
         testimonials: content.testimonials,
+        technologies: content.technologies,
         updatedAtISO: new Date().toISOString(),
         updatedBy,
       },

@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useSiteContent } from "@/components/admin/use-site-content";
+import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import type { ManagedFaq } from "@/lib/content-types";
 import { cn } from "@/lib/utils";
 
@@ -16,13 +17,14 @@ const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
 
 export function FaqManager() {
-  const { content, loading, saving, error, setError, reload, commit } =
+  const { content, loading, saving, error, loadFailed, reject, reload, commit } =
     useSiteContent();
   // Draft lokal agar mengetik terasa mulus; disimpan saat tombol ditekan.
   const [draft, setDraft] = useState<ManagedFaq[] | null>(null);
 
   const list = draft ?? content.faqs;
   const dirty = draft !== null;
+  useRegisterDirty(dirty);
 
   const addDraft = () => setDraft([...list, { question: "", answer: "" }]);
 
@@ -36,7 +38,7 @@ export function FaqManager() {
     if (!draft) return;
     const cleaned = draft.filter((f) => f.question.trim());
     if (cleaned.length === 0) {
-      setError("Minimal satu FAQ harus memiliki pertanyaan.");
+      reject("Minimal satu FAQ harus memiliki pertanyaan.");
       return;
     }
     const ok = await commit(
@@ -82,7 +84,7 @@ export function FaqManager() {
           </button>
           <button
             onClick={saveAll}
-            disabled={!dirty || saving}
+            disabled={!dirty || saving || loadFailed}
             className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -94,7 +96,15 @@ export function FaqManager() {
       {error && (
         <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          {error}
+          <span>
+            {error}
+            {loadFailed && (
+              <span className="mt-1 block text-xs text-rose-500">
+                Klik &quot;Muat ulang&quot; sebelum menyimpan agar tidak menimpa
+                data yang ada.
+              </span>
+            )}
+          </span>
         </div>
       )}
 

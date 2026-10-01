@@ -11,8 +11,10 @@ import {
   X,
 } from "lucide-react";
 import { useSiteContent } from "@/components/admin/use-site-content";
+import { useRegisterDirty } from "@/components/admin/unsaved-changes";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import type { ManagedService } from "@/lib/content-types";
-import { cn } from "@/lib/utils";
+import { cn, slugify } from "@/lib/utils";
 
 const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
@@ -37,23 +39,19 @@ const emptyService: ManagedService = {
   },
 };
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 export function ServicesManager() {
-  const { content, loading, saving, error, setError, reload, commit } =
+  const { content, loading, saving, error, loadFailed, reject, reload, commit } =
     useSiteContent();
   const [editing, setEditing] = useState<ManagedService | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [toDelete, setToDelete] = useState<{ slug: string; title: string } | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState(false);
 
   const services = content.services;
+  // Ada form yang sedang terbuka → anggap ada perubahan belum disimpan.
+  useRegisterDirty(editing !== null);
 
   const onNew = () => {
     setEditing(structuredClone(emptyService));
@@ -69,12 +67,12 @@ export function ServicesManager() {
     if (!editing) return;
     const title = editing.title.trim();
     if (!title) {
-      setError("Judul layanan wajib diisi.");
+      reject("Judul layanan wajib diisi.");
       return;
     }
     const slug = (editing.slug.trim() || slugify(title)).trim();
     if (!slug) {
-      setError("Slug tidak valid.");
+      reject("Slug tidak valid.");
       return;
     }
     const nextService: ManagedService = { ...editing, title, slug };
@@ -84,7 +82,7 @@ export function ServicesManager() {
     const others = services.filter((s) => s.slug !== originalSlug);
     const exists = others.some((s) => s.slug === nextService.slug);
     if (exists) {
-      setError(`Slug "${nextService.slug}" sudah dipakai layanan lain.`);
+      reject(`Slug "${nextService.slug}" sudah dipakai layanan lain.`);
       return;
     }
 
@@ -96,11 +94,19 @@ export function ServicesManager() {
   };
 
   const onDelete = async (slug: string, title: string) => {
-    if (!confirm(`Hapus layanan "${title}"? Tindakan ini permanen.`)) return;
-    await commit(
-      { services: services.filter((s) => s.slug !== slug) },
-      { successMessage: `Layanan "${title}" dihapus.` },
+    setToDelete({ slug, title });
+  };
+
+  const confirmDelete = async () => {
+    const target = toDelete;
+    if (!target) return;
+    setDeleting(true);
+    const ok = await commit(
+      { services: services.filter((s) => s.slug !== target.slug) },
+      { successMessage: `Layanan "${target.title}" dihapus.` },
     );
+    if (ok) setToDelete(null);
+    setDeleting(false);
   };
 
   if (loading) {
@@ -118,6 +124,7 @@ export function ServicesManager() {
         service={editing}
         isNew={isNew}
         saving={saving}
+        loadFailed={loadFailed}
         error={error}
         onChange={setEditing}
         onSave={onSave}
@@ -152,7 +159,15 @@ export function ServicesManager() {
       {error && (
         <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          {error}
+          <span>
+            {error}
+            {loadFailed && (
+              <span className="mt-1 block text-xs text-rose-500">
+                Klik &quot;Muat ulang&quot; sebelum menyimpan agar tidak menimpa
+                data yang ada.
+              </span>
+            )}
+          </span>
         </div>
       )}
 
@@ -196,6 +211,16 @@ export function ServicesManager() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Hapus layanan ini?"
+        description={`Layanan "${toDelete?.title}" akan dihapus permanen.`}
+        confirmLabel="Hapus"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }
@@ -204,6 +229,7 @@ function ServiceForm({
   service,
   isNew,
   saving,
+  loadFailed,
   error,
   onChange,
   onSave,
@@ -212,6 +238,7 @@ function ServiceForm({
   service: ManagedService;
   isNew: boolean;
   saving: boolean;
+  loadFailed: boolean;
   error: string | null;
   onChange: (s: ManagedService) => void;
   onSave: () => void;
@@ -245,7 +272,15 @@ function ServiceForm({
       {error && (
         <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          {error}
+          <span>
+            {error}
+            {loadFailed && (
+              <span className="mt-1 block text-xs text-rose-500">
+                Muat ulang halaman sebelum menyimpan agar tidak menimpa data
+                yang ada.
+              </span>
+            )}
+          </span>
         </div>
       )}
 
@@ -399,7 +434,7 @@ function ServiceForm({
       <div className="mt-6 flex items-center gap-3">
         <button
           onClick={onSave}
-          disabled={saving}
+          disabled={saving || loadFailed}
           className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-70"
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}

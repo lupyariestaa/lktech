@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import {
   deleteProjectBySlug,
@@ -7,19 +8,11 @@ import {
   saveProject,
 } from "@/lib/projects";
 import type { Project } from "@/lib/project-types";
+import { projectSchema } from "@/lib/api-schemas";
+import { sanitizeSlug } from "@/lib/utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 /** GET /api/admin/projects — daftar proyek (dengan id). */
 export async function GET(req: Request) {
@@ -46,19 +39,24 @@ export async function POST(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  let body: Partial<Project>;
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const title = (body.title ?? "").trim();
-  if (!title) {
-    return NextResponse.json({ error: "Judul wajib diisi." }, { status: 400 });
+  const parsed = projectSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Data proyek tidak valid." },
+      { status: 400 },
+    );
   }
+  const body = parsed.data;
 
-  const slug = (body.slug?.trim() || slugify(title)).trim();
+  const title = body.title.trim();
+  const slug = sanitizeSlug(body.slug?.trim() || title);
   if (!slug) {
     return NextResponse.json({ error: "Slug tidak valid." }, { status: 400 });
   }
@@ -94,6 +92,9 @@ export async function POST(req: Request) {
 
   try {
     await saveProject(project, check.email);
+    revalidatePath("/portofolio");
+    revalidatePath(`/portofolio/${slug}`);
+    revalidatePath("/");
     return NextResponse.json({ ok: true, project });
   } catch (err) {
     console.error("[api/admin/projects] POST gagal:", err);
@@ -116,6 +117,8 @@ export async function DELETE(req: Request) {
 
   try {
     await deleteProjectBySlug(slug);
+    revalidatePath("/portofolio");
+    revalidatePath("/");
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/projects] DELETE gagal:", err);

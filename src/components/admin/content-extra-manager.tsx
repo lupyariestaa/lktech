@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
   Loader2,
@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useSiteContent } from "@/components/admin/use-site-content";
+import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import {
   isDefaultStats,
   isDefaultTestimonials,
@@ -23,19 +24,28 @@ import { cn } from "@/lib/utils";
 const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
 
-type TabKey = "whyUs" | "process" | "stats" | "testimonials";
+type TabKey = "whyUs" | "process" | "stats" | "testimonials" | "technologies";
 
 const TABS: { key: TabKey; label: string; hint: string }[] = [
   { key: "whyUs", label: "Keunggulan", hint: "Kartu “Kenapa memilih LKTech?”" },
   { key: "process", label: "Alur Kerja", hint: "Langkah proses di beranda & halaman layanan." },
   { key: "stats", label: "Statistik", hint: "Angka pencapaian di beranda." },
   { key: "testimonials", label: "Testimoni", hint: "Kutipan dari klien." },
+  { key: "technologies", label: "Teknologi", hint: "Logo teknologi pada marquee beranda." },
 ];
 
 export function ContentExtraManager() {
-  const { content, loading, saving, error, setError, reload, commit } =
+  const { content, loading, saving, error, loadFailed, reject, reload, commit } =
     useSiteContent();
   const [tab, setTab] = useState<TabKey>("whyUs");
+  const [dirty, setDirty] = useState(false);
+  useRegisterDirty(dirty);
+
+  // Saat berpindah tab, editor lama unmount → reset status dirty.
+  const changeTab = (next: TabKey) => {
+    setDirty(false);
+    setTab(next);
+  };
 
   if (loading) {
     return (
@@ -68,7 +78,7 @@ export function ContentExtraManager() {
               key={t.key}
               role="tab"
               aria-selected={tab === t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => changeTab(t.key)}
               className={cn(
                 "rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
                 tab === t.key
@@ -94,7 +104,15 @@ export function ContentExtraManager() {
       {error && (
         <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          {error}
+          <span>
+            {error}
+            {loadFailed && (
+              <span className="mt-1 block text-xs text-rose-500">
+                Klik &quot;Muat ulang&quot; sebelum menyimpan agar tidak menimpa
+                data yang ada.
+              </span>
+            )}
+          </span>
         </div>
       )}
 
@@ -128,7 +146,9 @@ export function ContentExtraManager() {
             saveList("whyUs", items, "Keunggulan berhasil disimpan.")
           }
           saving={saving}
-          onError={setError}
+          disabled={loadFailed}
+          onDirtyChange={setDirty}
+          onError={reject}
           renderRow={(item, update) => (
             <div className="grid gap-3">
               <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
@@ -170,7 +190,9 @@ export function ContentExtraManager() {
             saveList("process", items, "Alur kerja berhasil disimpan.")
           }
           saving={saving}
-          onError={setError}
+          disabled={loadFailed}
+          onDirtyChange={setDirty}
+          onError={reject}
           renderRow={(item, update) => (
             <div className="grid gap-3">
               <div className="grid gap-3 sm:grid-cols-[120px_1fr]">
@@ -212,7 +234,9 @@ export function ContentExtraManager() {
             saveList("stats", items, "Statistik berhasil disimpan.")
           }
           saving={saving}
-          onError={setError}
+          disabled={loadFailed}
+          onDirtyChange={setDirty}
+          onError={reject}
           renderRow={(item, update) => (
             <div className="grid gap-3 sm:grid-cols-[120px_120px_1fr]">
               <label className="flex flex-col gap-1">
@@ -260,7 +284,9 @@ export function ContentExtraManager() {
             saveList("testimonials", items, "Testimoni berhasil disimpan.")
           }
           saving={saving}
-          onError={setError}
+          disabled={loadFailed}
+          onDirtyChange={setDirty}
+          onError={reject}
           renderRow={(item, update) => (
             <div className="grid gap-3">
               <div className="grid gap-3 sm:grid-cols-[1fr_1fr_100px]">
@@ -309,6 +335,59 @@ export function ContentExtraManager() {
           }
         />
       )}
+
+      {tab === "technologies" && (
+        <ListEditor
+          items={content.technologies}
+          empty={{ name: "", logo: "", color: "#64748B", wordmark: false }}
+          onSave={(items) =>
+            saveList("technologies", items, "Teknologi berhasil disimpan.")
+          }
+          saving={saving}
+          disabled={loadFailed}
+          onDirtyChange={setDirty}
+          onError={reject}
+          renderRow={(item, update) => (
+            <div className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-[1fr_1fr_120px]">
+                <input
+                  value={item.name}
+                  onChange={(e) => update({ name: e.target.value })}
+                  placeholder="Nama teknologi (mis. React)"
+                  className={fieldBase}
+                />
+                <input
+                  value={item.logo}
+                  onChange={(e) => update({ logo: e.target.value })}
+                  placeholder="Path logo (mis. /tech/react.svg)"
+                  className={fieldBase}
+                />
+                <input
+                  value={item.color}
+                  onChange={(e) => update({ color: e.target.value })}
+                  placeholder="#61DAFB"
+                  className={fieldBase}
+                  aria-label="Warna brand (hex)"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-secondary">
+                <input
+                  type="checkbox"
+                  checked={item.wordmark}
+                  onChange={(e) => update({ wordmark: e.target.checked })}
+                  className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/30"
+                />
+                Logo sudah memuat nama brand (sembunyikan label teks)
+              </label>
+            </div>
+          )}
+          validate={(items) =>
+            items.some((i) => !i.name.trim())
+              ? "Nama teknologi wajib diisi."
+              : null
+          }
+        />
+      )}
     </div>
   );
 }
@@ -324,6 +403,8 @@ function ListEditor<T extends { [k: string]: unknown }>({
   validate,
   saving,
   onError,
+  onDirtyChange,
+  disabled = false,
 }: {
   items: T[];
   empty: T;
@@ -332,6 +413,8 @@ function ListEditor<T extends { [k: string]: unknown }>({
   validate: (items: T[]) => string | null;
   saving: boolean;
   onError: (msg: string | null) => void;
+  onDirtyChange?: (dirty: boolean) => void;
+  disabled?: boolean;
 }) {
   const [draft, setDraft] = useState<T[]>(items);
 
@@ -342,6 +425,14 @@ function ListEditor<T extends { [k: string]: unknown }>({
     setSig(nextSig);
     setDraft(items);
   }
+
+  const dirty = JSON.stringify(draft) !== sig;
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+    // Bersihkan saat unmount agar status dirty tidak tertinggal.
+    return () => onDirtyChange?.(false);
+  }, [dirty, onDirtyChange]);
 
   const update = (i: number, patch: Partial<T>) =>
     setDraft((ls) => ls.map((x, j) => (j === i ? { ...x, ...patch } : x)));
@@ -405,7 +496,7 @@ function ListEditor<T extends { [k: string]: unknown }>({
         <button
           type="button"
           onClick={onSaveClick}
-          disabled={saving}
+          disabled={saving || disabled}
           className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-70"
         >
           {saving ? (

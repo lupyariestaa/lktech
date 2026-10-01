@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, ShoppingBag, ShoppingCart, Zap } from "lucide-react";
+import { Check, MessageCircle, ShoppingBag, ShoppingCart, Zap } from "lucide-react";
 import type { Product } from "@/lib/product-types";
 import { toCartItem } from "@/lib/cart";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
+import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
 /**
@@ -14,6 +15,9 @@ import { cn } from "@/lib/utils";
  *
  * Keduanya mengharuskan user login (akun Google). Bila belum login, user
  * diarahkan ke `/masuk` dengan `next` kembali ke halaman produk.
+ *
+ * Produk tanpa harga ("Hubungi kami") atau stok habis tidak bisa dibeli langsung
+ * → ditampilkan sebagai tombol konsultasi WhatsApp.
  */
 export function ProductBuyActions({
   product,
@@ -30,6 +34,30 @@ export function ProductBuyActions({
   const [added, setAdded] = useState(false);
 
   const soldOut = product.soldOut;
+  const needsConsultation = !soldOut && product.price <= 0;
+
+  // Produk tanpa harga → arahkan ke WhatsApp untuk konsultasi.
+  if (needsConsultation) {
+    const message =
+      product.waMessage?.trim() ||
+      `Halo LKTech! Saya tertarik dengan produk "${product.name}". Boleh dibantu info harga & cara pesan?`;
+    return (
+      <div className={cn("flex gap-3", className)}>
+        <a
+          href={waLink(message)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "inline-flex items-center justify-center gap-2 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark",
+            compact ? "w-full px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
+          )}
+        >
+          <MessageCircle className="h-4 w-4" />
+          Hubungi kami
+        </a>
+      </div>
+    );
+  }
 
   const requireLogin = (): boolean => {
     if (!user) {
@@ -110,9 +138,4 @@ export function ProductBuyActions({
       </button>
     </div>
   );
-}
-
-/** Ikon loader kecil untuk fallback (dipakai jika perlu). */
-export function BuySpinner() {
-  return <Loader2 className="h-4 w-4 animate-spin" />;
 }

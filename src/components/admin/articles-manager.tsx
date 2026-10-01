@@ -21,6 +21,9 @@ import { ARTICLE_CATEGORIES, type Article, type StoredArticle } from "@/lib/arti
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useRegisterDirty } from "@/components/admin/unsaved-changes";
+import { useUnsavedChanges } from "@/components/admin/use-unsaved-changes";
 import { deleteImage, type CloudinaryAsset } from "@/lib/cloudinary-client";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +56,11 @@ export function ArticlesManager() {
   const [editing, setEditing] = useState<Article | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<StoredArticle | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Form terbuka → tandai ada perubahan belum disimpan (guard navigasi sidebar).
+  useRegisterDirty(editing !== null);
 
   const refresh = async () => {
     await load();
@@ -70,25 +78,32 @@ export function ArticlesManager() {
     setIsNew(false);
   };
 
-  const onDelete = async (slug: string, title: string) => {
-    if (!confirm(`Hapus artikel "${title}"? Tindakan ini permanen.`)) return;
+  const confirmDelete = async () => {
+    const target = toDelete;
+    if (!target) return;
+    setDeleting(true);
     const prev = items;
-    setItems((ls) => ls.filter((l) => l.slug !== slug));
+    setItems((ls) => ls.filter((l) => l.slug !== target.slug));
     try {
-      await deleteArticle(slug);
-      toast.success(`Artikel "${title}" dihapus.`);
+      await deleteArticle(target.slug);
+      setToDelete(null);
+      toast.success(`Artikel "${target.title}" dihapus.`);
     } catch (err) {
       setItems(prev);
       const msg = err instanceof Error ? err.message : "Gagal menghapus.";
       setError(msg);
       toast.error(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
   const onSave = async () => {
     if (!editing) return;
     if (!editing.title.trim()) {
-      setError("Judul wajib diisi.");
+      const msg = "Judul wajib diisi.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setSaving(true);
@@ -96,7 +111,7 @@ export function ArticlesManager() {
     try {
       await saveArticle(editing);
       setEditing(null);
-      await load();
+      await load({ silent: true });
       toast.success(isNew ? "Artikel dibuat." : "Artikel diperbarui.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan.";
@@ -192,6 +207,7 @@ export function ArticlesManager() {
                 <Link
                   href={`/blog/${a.slug}`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/30 hover:text-primary"
                   aria-label="Lihat di website"
                 >
@@ -205,7 +221,7 @@ export function ArticlesManager() {
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => onDelete(a.slug, a.title)}
+                  onClick={() => setToDelete(a)}
                   className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
                   aria-label="Hapus"
                 >
@@ -216,6 +232,16 @@ export function ArticlesManager() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Hapus artikel ini?"
+        description={`"${toDelete?.title}" akan dihapus permanen.`}
+        confirmLabel="Hapus"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }
@@ -240,6 +266,9 @@ function ArticleForm({
   const set = <K extends keyof Article>(key: K, value: Article[K]) =>
     onChange({ ...article, [key]: value });
 
+  // Konfirmasi saat menutup form (mencegah kehilangan ketikan).
+  const { guard, dialogProps } = useUnsavedChanges(true);
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -247,7 +276,7 @@ function ArticleForm({
           {isNew ? "Artikel Baru" : "Edit Artikel"}
         </h2>
         <button
-          onClick={onCancel}
+          onClick={() => guard(onCancel)}
           className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:text-secondary"
           aria-label="Tutup"
         >
@@ -407,12 +436,14 @@ function ArticleForm({
           Simpan Artikel
         </button>
         <button
-          onClick={onCancel}
+          onClick={() => guard(onCancel)}
           className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
         >
           Batal
         </button>
       </div>
+
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

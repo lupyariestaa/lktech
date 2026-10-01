@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 
 /**
  * Melindungi halaman yang butuh login user.
- * Bila belum login → redirect ke /masuk (dengan `next` untuk kembali).
+ * Bila belum login → redirect ke `/masuk?next=<halaman>` agar kembali ke sini
+ * setelah login berhasil.
  */
 export function UserGuard({
   children,
@@ -18,12 +19,17 @@ export function UserGuard({
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace(redirectTo);
+      const target =
+        redirectTo === "/masuk" && pathname
+          ? `/masuk?next=${encodeURIComponent(pathname)}`
+          : redirectTo;
+      router.replace(target);
     }
-  }, [loading, user, router, redirectTo]);
+  }, [loading, user, router, redirectTo, pathname]);
 
   if (loading || !user) {
     return (

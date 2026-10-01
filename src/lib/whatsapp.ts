@@ -1,15 +1,26 @@
 const DEFAULT_NUMBER = "6283159688549";
 
 /**
+ * Menormalkan nomor telepon ke format internasional tanpa tanda `+`
+ * (mis. "0831..." → "62831..."). Mengembalikan string digit.
+ */
+export function normalizePhone(input: string | undefined | null): string {
+  let digits = (input ?? "").replace(/\D/g, "");
+  // Nomor lokal Indonesia (diawali 0) → awalan 62.
+  if (digits.startsWith("0")) digits = `62${digits.slice(1)}`;
+  return digits;
+}
+
+/**
  * Membuat link WhatsApp (deep link wa.me) dengan pesan otomatis.
  * @param message Pesan yang otomatis terisi di chat.
  * @param number Nomor tujuan (format internasional tanpa +, mis. 62812...).
  */
 export function waLink(message?: string, number?: string) {
-  const phone = (number ?? process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? DEFAULT_NUMBER).replace(
-    /\D/g,
-    "",
-  );
+  const phone =
+    normalizePhone(number) ||
+    normalizePhone(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER) ||
+    DEFAULT_NUMBER;
   const base = `https://wa.me/${phone}`;
   if (!message) return base;
   return `${base}?text=${encodeURIComponent(message)}`;

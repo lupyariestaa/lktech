@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import {
   deleteArticleBySlug,
@@ -6,19 +7,11 @@ import {
   saveArticle,
 } from "@/lib/articles";
 import type { Article } from "@/lib/article-types";
+import { articleSchema } from "@/lib/api-schemas";
+import { sanitizeSlug } from "@/lib/utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 /** GET /api/admin/articles — daftar artikel (termasuk draft). */
 export async function GET(req: Request) {
@@ -42,19 +35,24 @@ export async function POST(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  let body: Partial<Article>;
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const title = (body.title ?? "").trim();
-  if (!title) {
-    return NextResponse.json({ error: "Judul wajib diisi." }, { status: 400 });
+  const parsed = articleSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Data artikel tidak valid." },
+      { status: 400 },
+    );
   }
+  const body = parsed.data;
 
-  const slug = (body.slug?.trim() || slugify(title)).trim();
+  const title = body.title.trim();
+  const slug = sanitizeSlug(body.slug?.trim() || title);
   if (!slug) {
     return NextResponse.json({ error: "Slug tidak valid." }, { status: 400 });
   }
@@ -78,6 +76,8 @@ export async function POST(req: Request) {
 
   try {
     await saveArticle(article, check.email);
+    revalidatePath("/blog");
+    revalidatePath(`/blog/${article.slug}`);
     return NextResponse.json({ ok: true, article });
   } catch (err) {
     console.error("[api/admin/articles] POST gagal:", err);
@@ -100,6 +100,7 @@ export async function DELETE(req: Request) {
 
   try {
     await deleteArticleBySlug(slug);
+    revalidatePath("/blog");
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/articles] DELETE gagal:", err);

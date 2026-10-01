@@ -27,6 +27,9 @@ import {
 import { formatPrice } from "@/lib/product-format";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useRegisterDirty } from "@/components/admin/unsaved-changes";
+import { useUnsavedChanges } from "@/components/admin/use-unsaved-changes";
 import { MediaPickerDialog } from "@/components/admin/media-picker-dialog";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +71,10 @@ export function ProductsManager() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<StoredProduct | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useRegisterDirty(editing !== null);
 
   const refresh = async () => {
     await load();
@@ -87,25 +94,48 @@ export function ProductsManager() {
     setError(null);
   };
 
-  const onDelete = async (slug: string, name: string) => {
-    if (!confirm(`Hapus produk "${name}"? Tindakan ini permanen.`)) return;
+  const confirmDelete = async () => {
+    const target = toDelete;
+    if (!target) return;
+    setDeleting(true);
     const prev = items;
-    setItems((ls) => ls.filter((l) => l.slug !== slug));
+    setItems((ls) => ls.filter((l) => l.slug !== target.slug));
     try {
-      await deleteProduct(slug);
-      toast.success(`Produk "${name}" dihapus.`);
+      await deleteProduct(target.slug);
+      setToDelete(null);
+      toast.success(`Produk "${target.name}" dihapus.`);
     } catch (err) {
       setItems(prev);
       const msg = err instanceof Error ? err.message : "Gagal menghapus.";
       setError(msg);
       toast.error(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
   const onSave = async () => {
     if (!editing) return;
     if (!editing.name.trim()) {
-      setError("Nama produk wajib diisi.");
+      const msg = "Nama produk wajib diisi.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (!Number.isFinite(editing.price) || editing.price < 0) {
+      const msg = "Harga tidak boleh negatif.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (
+      editing.originalPrice != null &&
+      editing.originalPrice !== 0 &&
+      editing.originalPrice < editing.price
+    ) {
+      const msg = "Harga sebelum diskon harus lebih besar dari harga jual.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setSaving(true);
@@ -113,7 +143,7 @@ export function ProductsManager() {
     try {
       await saveProduct(editing);
       setEditing(null);
-      await load();
+      await load({ silent: true });
       toast.success(isNew ? "Produk dibuat." : "Produk diperbarui.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan.";
@@ -240,6 +270,7 @@ export function ProductsManager() {
                 <Link
                   href={`/produk/${p.slug}`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/30 hover:text-primary"
                   aria-label="Lihat di website"
                 >
@@ -253,7 +284,7 @@ export function ProductsManager() {
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => onDelete(p.slug, p.name)}
+                  onClick={() => setToDelete(p)}
                   className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
                   aria-label="Hapus"
                 >
@@ -264,6 +295,16 @@ export function ProductsManager() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Hapus produk ini?"
+        description={`"${toDelete?.name}" akan dihapus permanen.`}
+        confirmLabel="Hapus"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }
@@ -286,6 +327,7 @@ function ProductForm({
   error: string | null;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const { guard, dialogProps } = useUnsavedChanges(true);
 
   const set = <K extends keyof Product>(key: K, value: Product[K]) =>
     onChange({ ...product, [key]: value });
@@ -306,7 +348,7 @@ function ProductForm({
           {isNew ? "Produk Baru" : "Edit Produk"}
         </h2>
         <button
-          onClick={onCancel}
+          onClick={() => guard(onCancel)}
           className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:text-secondary"
           aria-label="Tutup"
         >
@@ -575,12 +617,14 @@ function ProductForm({
           Simpan Produk
         </button>
         <button
-          onClick={onCancel}
+          onClick={() => guard(onCancel)}
           className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
         >
           Batal
         </button>
       </div>
+
+      <ConfirmDialog {...dialogProps} />
 
       <MediaPickerDialog
         open={pickerOpen}

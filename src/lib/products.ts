@@ -152,14 +152,14 @@ function normalizeProduct(data: Record<string, unknown>): Product {
 
 /** Produk yang tampil di publik (aktif), urut: unggulan dulu lalu nama. */
 export async function getProducts(): Promise<Product[]> {
+  const { getAdminDb } = await import("@/lib/firebase-admin");
+  const db = getAdminDb();
+  // Fallback ke produk contoh HANYA saat Admin SDK belum dikonfigurasi (mode demo).
+  // Saat SDK aktif namun koleksi sengaja dikosongkan, kembalikan [] (bukan contoh).
+  if (!db) return DEFAULT_PRODUCTS;
+
   try {
-    const { getAdminDb } = await import("@/lib/firebase-admin");
-    const db = getAdminDb();
-    if (!db) return DEFAULT_PRODUCTS;
-
     const snap = await db.collection(COLLECTION).get();
-    if (snap.empty) return DEFAULT_PRODUCTS;
-
     return snap.docs
       .map((doc) => normalizeProduct(doc.data()))
       .filter((p) => p.active)
@@ -169,36 +169,29 @@ export async function getProducts(): Promise<Product[]> {
       );
   } catch (err) {
     console.error("[products] gagal memuat:", err);
-    return DEFAULT_PRODUCTS;
+    return [];
   }
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  try {
-    const { getAdminDb } = await import("@/lib/firebase-admin");
-    const db = getAdminDb();
-    if (!db) return DEFAULT_PRODUCTS.find((p) => p.slug === slug) ?? null;
+  const { getAdminDb } = await import("@/lib/firebase-admin");
+  const db = getAdminDb();
+  if (!db) return DEFAULT_PRODUCTS.find((p) => p.slug === slug) ?? null;
 
+  try {
     const doc = await db.collection(COLLECTION).doc(slug).get();
-    if (!doc.exists) {
-      return DEFAULT_PRODUCTS.find((p) => p.slug === slug) ?? null;
-    }
+    if (!doc.exists) return null;
     const product = normalizeProduct(doc.data() ?? {});
     return product.active ? product : null;
   } catch (err) {
     console.error("[products] gagal memuat slug:", err);
-    return DEFAULT_PRODUCTS.find((p) => p.slug === slug) ?? null;
+    return null;
   }
 }
 
 export async function getProductSlugs(): Promise<string[]> {
   const products = await getProducts();
   return products.map((p) => p.slug);
-}
-
-export async function getProductCategories(): Promise<ProductCategory[]> {
-  const products = await getProducts();
-  return Array.from(new Set(products.map((p) => p.category)));
 }
 
 /** Semua produk untuk dashboard (termasuk yang tidak aktif). */
@@ -208,8 +201,6 @@ export async function getStoredProducts(): Promise<StoredProduct[]> {
   if (!db) return DEFAULT_PRODUCTS.map((p) => ({ ...p, id: p.slug }));
 
   const snap = await db.collection(COLLECTION).get();
-  if (snap.empty) return DEFAULT_PRODUCTS.map((p) => ({ ...p, id: p.slug }));
-
   return snap.docs
     .map((doc) => ({ id: doc.id, ...normalizeProduct(doc.data()) }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -250,4 +241,45 @@ export async function isProductSlugTaken(slug: string): Promise<boolean> {
   if (!db) return false;
   const doc = await db.collection(COLLECTION).doc(slug).get();
   return doc.exists;
+}
+
+/**
+ * Mengambil produk berdasarkan sekumpulan slug untuk VERIFIKASI checkout.
+ *
+ * Berbeda dari `getProductBySlug`, fungsi ini:
+ * - TIDAK memakai fallback `DEFAULT_PRODUCTS` (agar order tak dibuat untuk
+ *   produk contoh saat koleksi kosong).
+ * - Mengembalikan Map slug → produk (tanpa filter `active`), supaya pemanggil
+ *   bisa membedakan "tidak ada" vs "nonaktif" dan melaporkan error yang tepat.
+ */
+export async function getProductsBySlugs(
+  slugs: string[],
+): Promise<Map<string, Product>> {
+  const unique = Array.from(new Set(slugs.filter(Boolean)));
+  const result = new Map<string, Product>();
+  if (unique.length === 0) return result;
+
+  const { getAdminDb } = await import("@/lib/firebase-admin");
+  const db = getAdminDb();
+  if (!db) return result;
+
+  // Firestore `in` dibatasi 30 nilai per query → pecah menjadi beberapa batch.
+  const chunks: string[][] = [];
+  for (let i = 0; i < unique.length; i += 30) {
+    chunks.push(unique.slice(i, i + 30));
+  }
+
+  for (const chunk of chunks) {
+    const snap = await db
+      .collection(COLLECTION)
+      .where("slug", "in", chunk)
+      .get();
+    for (const doc of snap.docs) {
+      const product = normalizeProduct(doc.data());
+      // Dokumen juga bisa ditemukan lewat id (slug); pastikan key-nya benar.
+      result.set(product.slug || doc.id, product);
+    }
+  }
+
+  return result;
 }

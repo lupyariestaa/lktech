@@ -18,6 +18,13 @@ export function useSiteContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * True bila pemuatan awal GAGAL. Selama true, `content` masih berisi
+   * `defaultSiteContent()` (data contoh) sehingga MENYIMPAN apa pun akan
+   * menimpa seluruh dokumen konten produksi dengan default → data-loss.
+   * Karena itu `commit` diblokir selama `loadFailed` true.
+   */
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,8 +32,10 @@ export function useSiteContent() {
       const data = await fetchSiteContent();
       setContent(data);
       setError(null);
+      setLoadFailed(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat konten.");
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -43,9 +52,11 @@ export function useSiteContent() {
         if (!active) return;
         setContent(data);
         setError(null);
+        setLoadFailed(false);
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Gagal memuat konten.");
+        setLoadFailed(true);
       } finally {
         if (active) setLoading(false);
       }
@@ -64,6 +75,16 @@ export function useSiteContent() {
       patch: Partial<SiteContent>,
       opts?: { rollback?: SiteContent; successMessage?: string },
     ) => {
+      // Cegah data-loss: bila pemuatan awal gagal, `content` masih default.
+      // Menyimpan sekarang akan menimpa seluruh konten produksi. Tolak & minta
+      // muat ulang dulu.
+      if (loadFailed) {
+        const msg =
+          "Konten belum berhasil dimuat. Muat ulang halaman sebelum menyimpan agar tidak menimpa data yang ada.";
+        setError(msg);
+        toast.error(msg);
+        return false;
+      }
       const previous = opts?.rollback ?? content;
       const next: SiteContent = { ...content, ...patch };
       setContent(next);
@@ -84,8 +105,30 @@ export function useSiteContent() {
         setSaving(false);
       }
     },
-    [content, toast],
+    [content, toast, loadFailed],
   );
 
-  return { content, loading, saving, error, setError, reload: load, commit };
+  /**
+   * Melaporkan error validasi: set banner inline + tampilkan toast, agar
+   * umpan balik konsisten di semua manager konten.
+   */
+  const reject = useCallback(
+    (message: string | null) => {
+      setError(message);
+      if (message) toast.error(message);
+    },
+    [toast],
+  );
+
+  return {
+    content,
+    loading,
+    saving,
+    error,
+    loadFailed,
+    setError,
+    reject,
+    reload: load,
+    commit,
+  };
 }

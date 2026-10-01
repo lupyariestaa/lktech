@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, ShieldX } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { getIdToken, signOutUser } from "@/lib/auth";
+import { clearAdminSession } from "@/lib/admin-fetch";
 
 type CheckState = "checking" | "allowed" | "denied";
 
@@ -26,7 +27,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [loading, user, router]);
 
   // Verifikasi keanggotaan admin via API (endpoint memvalidasi token ke
-  // Firebase & mencocokkan dengan whitelist ADMIN_EMAILS).
+  // Firebase & mencocokkan dengan whitelist ADMIN_EMAILS). Bila lolos, mint
+  // session cookie (HttpOnly) agar middleware `/admin/*` bisa menggate.
   useEffect(() => {
     if (loading || !user) return;
     let active = true;
@@ -38,7 +40,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           cache: "no-store",
         });
         if (!active) return;
-        setCheck(res.ok ? "allowed" : "denied");
+        if (res.ok) {
+          setCheck("allowed");
+          // Best-effort: buat session cookie untuk gate middleware.
+          if (token) {
+            await fetch("/api/admin/session", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            }).catch(() => {});
+          }
+        } else {
+          setCheck("denied");
+        }
       } catch {
         if (active) setCheck("denied");
       }
@@ -78,6 +91,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           </p>
           <button
             onClick={async () => {
+              await clearAdminSession();
               await signOutUser();
               router.replace("/admin/login");
             }}

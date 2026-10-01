@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, Pause, Play } from "lucide-react";
 import type { HeroShowcaseEffect, HeroShowcaseImage } from "@/lib/content-types";
 import { useReducedMotionPreference } from "@/lib/intro";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
  * - Efek transisi `fade` atau `slide`.
  * - Bila daftar kosong / nonaktif → tampilkan placeholder halus.
  * - `prefers-reduced-motion` → tanpa auto-rotate (hanya gambar pertama).
+ * - Aksesibel: tombol dot + kontrol pause (WCAG 2.2.2).
  */
 export function HeroShowcaseCarousel({
   images,
@@ -34,9 +35,10 @@ export function HeroShowcaseCarousel({
 }) {
   const reduced = useReducedMotionPreference();
   const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
   const count = images.length;
   const active = enabled && count > 0;
-  const autoRotate = active && count > 1 && !reduced;
+  const autoRotate = active && count > 1 && !reduced && !paused;
 
   // Auto-rotate. `safeIndex` (di bawah) sudah membatasi index agar tetap valid
   // saat daftar berubah, jadi effect ini tidak perlu setState sinkron.
@@ -99,18 +101,38 @@ export function HeroShowcaseCarousel({
         </motion.div>
       </AnimatePresence>
 
-      {/* Indikator titik */}
+      {/* Kontrol carousel (dot + pause) */}
       {count > 1 && (
-        <div className="absolute inset-x-0 bottom-2.5 flex justify-center gap-1.5">
-          {images.map((img, i) => (
-            <span
-              key={`${img.url}-${i}`}
-              className={cn(
-                "h-1.5 rounded-full transition-all",
-                i === safeIndex ? "w-4 bg-white" : "w-1.5 bg-white/50",
-              )}
-            />
-          ))}
+        <div className="absolute inset-x-0 bottom-2.5 flex items-center justify-center gap-1.5">
+          <div
+            role="group"
+            aria-label="Pilih pratinjau"
+            className="flex items-center gap-1.5"
+          >
+            {images.map((img, i) => (
+              <button
+                key={`${img.url}-${i}`}
+                type="button"
+                onClick={() => setIndex(i)}
+                aria-label={`Pratinjau ${i + 1} dari ${count}`}
+                aria-current={i === safeIndex}
+                className={cn(
+                  "h-1.5 rounded-full transition-all",
+                  i === safeIndex ? "w-4 bg-white" : "w-1.5 bg-white/50",
+                )}
+              />
+            ))}
+          </div>
+          {autoRotate || paused ? (
+            <button
+              type="button"
+              onClick={() => setPaused((p) => !p)}
+              aria-label={paused ? "Lanjutkan pratinjau otomatis" : "Jeda pratinjau otomatis"}
+              className="ml-1 grid h-5 w-5 place-items-center rounded-full bg-white/70 text-secondary transition-colors hover:bg-white"
+            >
+              {paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+            </button>
+          ) : null}
         </div>
       )}
     </div>

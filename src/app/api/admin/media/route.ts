@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { isCloudinaryConfigured, destroyAsset } from "@/lib/cloudinary";
@@ -7,6 +8,7 @@ import {
   type MediaCategory,
   type MediaItem,
 } from "@/lib/media-types";
+import { mediaCreateSchema } from "@/lib/api-schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,20 +76,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const { publicId, secureUrl, width, height, format, bytes, category, title, projectSlug } =
-    body;
-
-  if (
-    typeof publicId !== "string" ||
-    !publicId ||
-    typeof secureUrl !== "string" ||
-    !secureUrl
-  ) {
+  const parsed = mediaCreateSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json(
       { error: "publicId dan secureUrl wajib diisi." },
       { status: 400 },
     );
   }
+
+  const { publicId, secureUrl, width, height, format, bytes, category, title, projectSlug } =
+    parsed.data;
 
   const cat: MediaCategory = MEDIA_CATEGORIES.includes(
     category as MediaCategory,
@@ -114,6 +112,7 @@ export async function POST(req: Request) {
       uploadedBy: check.email,
     });
 
+    revalidatePath("/portofolio");
     return NextResponse.json({ ok: true, id: ref.id });
   } catch (err) {
     console.error("[api/admin/media] POST gagal:", err);
@@ -154,6 +153,7 @@ export async function DELETE(req: Request) {
       }
     }
 
+    revalidatePath("/portofolio");
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/media] DELETE gagal:", err);

@@ -6,6 +6,8 @@ import { useState } from "react";
 import {
   AlertCircle,
   ArrowRight,
+  CheckCircle2,
+  Loader2,
   Minus,
   Package,
   Plus,
@@ -14,8 +16,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
-import { useSettings } from "@/components/settings-provider";
-import { buildCheckoutMessage } from "@/lib/cart";
+import { createOrderRequest } from "@/lib/order-api";
 import { formatPrice } from "@/lib/product-format";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
@@ -23,13 +24,14 @@ import { cn } from "@/lib/utils";
 export function CartView() {
   const { items, subtotal, ready, setQty, remove, clear } = useCart();
   const { user } = useAuth();
-  const settings = useSettings();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
 
-  const onCheckout = () => {
+  const onCheckout = async () => {
     setError(null);
-    if (items.length === 0) return;
+    if (items.length === 0 || sending) return;
 
     // Wajib login sebelum checkout.
     if (!user) {
@@ -37,18 +39,67 @@ export function CartView() {
       return;
     }
 
-    const message = buildCheckoutMessage(items, {
-      name: user.displayName ?? "",
-      email: user.email ?? "",
-    });
-    const url = waLink(message, settings.whatsapp);
-    window.open(url, "_blank", "noopener,noreferrer");
+    setSending(true);
+    try {
+      // Server memverifikasi harga/stok & menyusun pesan kanonik.
+      const { order } = await createOrderRequest(
+        items.map((it) => ({ slug: it.slug, qty: it.qty })),
+        user.displayName ?? "",
+      );
+
+      // Buka WhatsApp dengan pesan kanonik dari server.
+      const url = waLink(order.message, order.whatsapp);
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        // Popup diblokir → arahkan di tab yang sama.
+        window.location.href = url;
+      }
+
+      clear();
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal membuat pesanan.");
+    } finally {
+      setSending(false);
+    }
   };
 
   if (!ready) {
     return (
       <div className="mx-auto max-w-4xl px-6 py-32 text-center text-sm text-muted">
         Memuat keranjang…
+      </div>
+    );
+  }
+
+  if (done && items.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl px-6 py-28 text-center">
+        <span className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-emerald-50 text-emerald-600">
+          <CheckCircle2 className="h-8 w-8" />
+        </span>
+        <h1 className="mt-6 text-2xl font-bold text-secondary">
+          Pesanan dikirim
+        </h1>
+        <p className="mt-2 text-sm text-muted">
+          Pesanan Anda sudah diteruskan ke WhatsApp kami. Lanjutkan percakapan di
+          WhatsApp untuk menyelesaikan pembayaran.
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/produk"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark"
+          >
+            <Package className="h-4 w-4" />
+            Belanja lagi
+          </Link>
+          <Link
+            href="/akun"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+          >
+            Lihat pesanan saya
+          </Link>
+        </div>
       </div>
     );
   }
@@ -188,12 +239,22 @@ export function CartView() {
 
             <button
               onClick={onCheckout}
+              disabled={sending}
               className={cn(
-                "mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark",
+                "mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70",
               )}
             >
-              {user ? "Checkout via WhatsApp" : "Masuk untuk Checkout"}
-              <ArrowRight className="h-4 w-4" />
+              {sending ? (
+                <>
+                  Memproses
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </>
+              ) : (
+                <>
+                  {user ? "Checkout via WhatsApp" : "Masuk untuk Checkout"}
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </button>
 
             <p className="mt-3 text-center text-[11px] leading-relaxed text-muted">

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { fetchSettings, saveSettings } from "@/lib/admin-api";
 import { useToast } from "@/components/admin/toast";
+import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import {
   DEFAULT_SETTINGS,
   type SiteSettings,
@@ -28,6 +29,8 @@ export function SettingsManager() {
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useRegisterDirty(dirty);
 
   useEffect(() => {
     let active = true;
@@ -55,6 +58,7 @@ export function SettingsManager() {
   ) => {
     setSettings((s) => ({ ...s, [key]: value }));
     setSaved(false);
+    setDirty(true);
   };
 
   const updateSocial = (i: number, patch: Partial<SocialLink>) => {
@@ -63,6 +67,7 @@ export function SettingsManager() {
       socials: s.socials.map((sl, idx) => (idx === i ? { ...sl, ...patch } : sl)),
     }));
     setSaved(false);
+    setDirty(true);
   };
 
   const addSocial = () => {
@@ -71,6 +76,7 @@ export function SettingsManager() {
       socials: [...s.socials, { label: "", href: "", icon: "instagram" }],
     }));
     setSaved(false);
+    setDirty(true);
   };
 
   const removeSocial = (i: number) => {
@@ -79,6 +85,7 @@ export function SettingsManager() {
       socials: s.socials.filter((_, idx) => idx !== i),
     }));
     setSaved(false);
+    setDirty(true);
   };
 
   const onSave = async () => {
@@ -89,6 +96,7 @@ export function SettingsManager() {
       const res = await saveSettings(settings);
       setSettings(res.settings);
       setSaved(true);
+      setDirty(false);
       toast.success("Pengaturan tersimpan.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan.";

@@ -46,8 +46,15 @@ export async function uploadImage(
     throw new Error(data?.error ?? "Gagal menyiapkan upload.");
   }
 
-  const { signature, timestamp, folder, apiKey, cloudName } =
+  const { signature, timestamp, folder, apiKey, cloudName, allowedFormats, maxBytes } =
     await signRes.json();
+
+  // Cek ukuran di klien untuk pesan cepat (server/Cloudinary tetap menolak bila
+  // melampaui batas yang ditandatangani).
+  if (typeof maxBytes === "number" && file.size > maxBytes) {
+    const mb = Math.round((maxBytes / (1024 * 1024)) * 10) / 10;
+    throw new Error(`Ukuran berkas terlalu besar (maks ${mb} MB).`);
+  }
 
   const form = new FormData();
   form.append("file", file);
@@ -55,6 +62,8 @@ export async function uploadImage(
   form.append("timestamp", String(timestamp));
   form.append("signature", signature);
   form.append("folder", folder);
+  // Harus cocok dengan parameter yang ditandatangani server.
+  if (allowedFormats) form.append("allowed_formats", allowedFormats);
 
   // Upload dengan XMLHttpRequest agar bisa memantau progres.
   return new Promise<CloudinaryAsset>((resolve, reject) => {

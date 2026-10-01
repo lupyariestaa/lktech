@@ -37,11 +37,11 @@ export async function generateMetadata({
   if (!article) return { title: "Artikel tidak ditemukan" };
 
   return {
-    title: `${article.title} — Blog`,
+    title: article.title,
     description: article.excerpt,
     alternates: { canonical: `/blog/${slug}` },
     openGraph: {
-      title: `${article.title} — Blog`,
+      title: article.title,
       description: article.excerpt,
       type: "article",
       url: `/blog/${slug}`,

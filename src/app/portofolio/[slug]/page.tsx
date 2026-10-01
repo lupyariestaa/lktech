@@ -48,11 +48,11 @@ export async function generateMetadata({
   if (!project) return { title: "Proyek tidak ditemukan" };
 
   return {
-    title: `${project.title} — Portofolio`,
+    title: project.title,
     description: project.summary,
     alternates: { canonical: `/portofolio/${slug}` },
     openGraph: {
-      title: `${project.title} — Portofolio`,
+      title: project.title,
       description: project.summary,
       type: "article",
       url: `/portofolio/${slug}`,

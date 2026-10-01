@@ -48,18 +48,24 @@ export async function upsertUserProfile(profile: {
   };
 
   if (!existing.exists) {
-    const created: UserProfile = {
+    // Simpan HANYA field skema kanonik (tanpa duplikat `createdAt`/`lastLoginAt`
+    // non-ISO) agar tidak ada data ganda.
+    await ref.set({
+      uid: base.uid,
+      email: base.email,
+      displayName: base.displayName,
+      photoURL: base.photoURL,
+      provider: "google",
+      createdAtISO: nowISO,
+      lastLoginAtISO: nowISO,
+      orderCount: 0,
+    });
+    return {
       ...base,
       createdAt: nowISO,
       lastLoginAt: nowISO,
       orderCount: 0,
     };
-    await ref.set({
-      ...created,
-      createdAtISO: created.createdAt,
-      lastLoginAtISO: created.lastLoginAt,
-    });
-    return created;
   }
 
   const prev = normalizeProfile(existing.data() ?? {});

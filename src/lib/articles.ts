@@ -144,16 +144,14 @@ function normalizeArticle(data: Record<string, unknown>): Article {
   };
 }
 
-/** Semua artikel (published saja) dari Firestore, fallback ke default. */
+/** Semua artikel (published saja) dari Firestore, fallback ke default (mode demo). */
 export async function getArticles(): Promise<Article[]> {
+  const { getAdminDb } = await import("@/lib/firebase-admin");
+  const db = getAdminDb();
+  if (!db) return DEFAULT_ARTICLES;
+
   try {
-    const { getAdminDb } = await import("@/lib/firebase-admin");
-    const db = getAdminDb();
-    if (!db) return DEFAULT_ARTICLES;
-
     const snap = await db.collection(COLLECTION).get();
-    if (snap.empty) return DEFAULT_ARTICLES;
-
     return snap.docs
       .map((doc) => normalizeArticle(doc.data()))
       .filter((a) => a.status === "published")
@@ -163,7 +161,7 @@ export async function getArticles(): Promise<Article[]> {
       );
   } catch (err) {
     console.error("[articles] gagal memuat:", err);
-    return DEFAULT_ARTICLES;
+    return [];
   }
 }
 
@@ -174,8 +172,6 @@ export async function getStoredArticles(): Promise<StoredArticle[]> {
   if (!db) return DEFAULT_ARTICLES.map((a) => ({ ...a, id: a.slug }));
 
   const snap = await db.collection(COLLECTION).get();
-  if (snap.empty) return DEFAULT_ARTICLES.map((a) => ({ ...a, id: a.slug }));
-
   return snap.docs
     .map((doc) => ({ id: doc.id, ...normalizeArticle(doc.data()) }))
     .sort(

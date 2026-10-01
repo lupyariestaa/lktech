@@ -21,7 +21,10 @@ import type { Project, StoredProject } from "@/lib/project-types";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { useServices } from "@/components/admin/use-services";
 import { useToast } from "@/components/admin/toast";
-import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useRegisterDirty } from "@/components/admin/unsaved-changes";
+import { useUnsavedChanges } from "@/components/admin/use-unsaved-changes";
+import { cn, slugify } from "@/lib/utils";
 
 const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
@@ -57,7 +60,11 @@ export function ProjectsManager() {
   const [editing, setEditing] = useState<Project | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<StoredProject | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { services } = useServices();
+
+  useRegisterDirty(editing !== null);
 
   const refresh = async () => {
     await load();
@@ -75,33 +82,68 @@ export function ProjectsManager() {
     setIsNew(false);
   };
 
-  const onDelete = async (slug: string, title: string) => {
-    if (!confirm(`Hapus proyek "${title}"? Tindakan ini permanen.`)) return;
+  const confirmDelete = async () => {
+    const target = toDelete;
+    if (!target) return;
+    setDeleting(true);
     const prev = items;
-    setItems((ls) => ls.filter((l) => l.slug !== slug));
+    setItems((ls) => ls.filter((l) => l.slug !== target.slug));
     try {
-      await deleteProject(slug);
-      toast.success(`Proyek "${title}" dihapus.`);
+      await deleteProject(target.slug);
+      setToDelete(null);
+      toast.success(`Proyek "${target.title}" dihapus.`);
     } catch (err) {
       setItems(prev);
       const msg = err instanceof Error ? err.message : "Gagal menghapus.";
       setError(msg);
       toast.error(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
   const onSave = async () => {
     if (!editing) return;
     if (!editing.title.trim()) {
-      setError("Judul wajib diisi.");
+      const msg = "Judul wajib diisi.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    // Slug: dari input atau otomatis dari judul.
+    const slug = (editing.slug.trim() || slugify(editing.title)).trim();
+    if (!slug) {
+      const msg = "Slug tidak valid.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    // Unik: cek terhadap proyek lain (kecuali slug lama saat edit).
+    const originalSlug = isNew ? null : editing.slug;
+    const duplicate = items.some(
+      (p) => p.slug === slug && p.slug !== originalSlug,
+    );
+    if (duplicate) {
+      const msg = `Slug "${slug}" sudah dipakai proyek lain.`;
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    // Tahun harus dalam rentang wajar.
+    const year = Number(editing.year);
+    const currentYear = new Date().getFullYear();
+    if (!Number.isInteger(year) || year < 2000 || year > currentYear + 1) {
+      const msg = `Tahun harus antara 2000 dan ${currentYear + 1}.`;
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      await saveProject(editing);
+      await saveProject({ ...editing, slug, year });
       setEditing(null);
-      await load();
+      await load({ silent: true });
       toast.success(isNew ? "Proyek dibuat." : "Proyek diperbarui.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan.";
@@ -191,6 +233,7 @@ export function ProjectsManager() {
                 <Link
                   href={`/portofolio/${p.slug}`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/30 hover:text-primary"
                   aria-label="Lihat di website"
                 >
@@ -204,7 +247,7 @@ export function ProjectsManager() {
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => onDelete(p.slug, p.title)}
+                  onClick={() => setToDelete(p)}
                   className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
                   aria-label="Hapus"
                 >
@@ -215,6 +258,16 @@ export function ProjectsManager() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Hapus proyek ini?"
+        description={`"${toDelete?.title}" akan dihapus permanen.`}
+        confirmLabel="Hapus"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }
@@ -238,6 +291,7 @@ function ProjectForm({
   onCancel: () => void;
   error: string | null;
 }) {
+  const { guard, dialogProps } = useUnsavedChanges(true);
   const set = <K extends keyof Project>(key: K, value: Project[K]) =>
     onChange({ ...project, [key]: value });
 
@@ -257,7 +311,7 @@ function ProjectForm({
           {isNew ? "Proyek Baru" : "Edit Proyek"}
         </h2>
         <button
-          onClick={onCancel}
+          onClick={() => guard(onCancel)}
           className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:text-secondary"
           aria-label="Tutup"
         >
@@ -488,12 +542,14 @@ function ProjectForm({
           Simpan Proyek
         </button>
         <button
-          onClick={onCancel}
+          onClick={() => guard(onCancel)}
           className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
         >
           Batal
         </button>
       </div>
+
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

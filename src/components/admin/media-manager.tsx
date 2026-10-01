@@ -7,6 +7,7 @@ import { ImageUploader } from "@/components/admin/image-uploader";
 import {
   deleteMedia,
   fetchMedia,
+  fetchProjects,
   saveMedia,
 } from "@/lib/admin-api";
 import type { CloudinaryAsset } from "@/lib/cloudinary-client";
@@ -19,6 +20,7 @@ import {
 import type { Project } from "@/lib/project-types";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 export function MediaManager() {
@@ -38,21 +40,18 @@ export function MediaManager() {
   const [category, setCategory] = useState<MediaCategory>("portofolio");
   const [projectSlug, setProjectSlug] = useState("");
   const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<MediaItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  // Daftar proyek untuk pilihan (endpoint publik ringan, no-store).
+  // Daftar proyek untuk pilihan (endpoint ADMIN, `no-store`, tidak basi).
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const res = await fetch("/api/projects", { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          if (active && Array.isArray(data?.projects)) {
-            setProjects(data.projects);
-          }
-        }
+        const list = await fetchProjects();
+        if (active) setProjects(list);
       } catch {
-        /* abaikan */
+        /* abaikan: dropdown kosong bila gagal */
       }
     })();
     return () => {
@@ -82,7 +81,8 @@ export function MediaManager() {
       });
       setPending(null);
       setTitle("");
-      await load();
+      // Muat ulang untuk rekonsiliasi dengan data server.
+      await load({ silent: true });
       toast.success("Media disimpan ke galeri.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan media.";
@@ -93,19 +93,23 @@ export function MediaManager() {
     }
   };
 
-  const onDelete = async (item: MediaItem) => {
-    if (!confirm(`Hapus "${item.title || item.publicId}"? Tindakan ini permanen.`))
-      return;
+  const confirmDelete = async () => {
+    const item = toDelete;
+    if (!item) return;
+    setDeleting(true);
     const prev = items;
     setItems((ls) => ls.filter((l) => l.id !== item.id));
     try {
       await deleteMedia(item.id, item.publicId);
+      setToDelete(null);
       toast.success("Media dihapus.");
     } catch (err) {
       setItems(prev);
       const msg = err instanceof Error ? err.message : "Gagal menghapus.";
       setError(msg);
       toast.error(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -264,7 +268,7 @@ export function MediaManager() {
                     </p>
                   </div>
                   <button
-                    onClick={() => onDelete(item)}
+                    onClick={() => setToDelete(item)}
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -276,6 +280,16 @@ export function MediaManager() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Hapus media ini?"
+        description={`"${toDelete?.title || toDelete?.publicId}" akan dihapus permanen dari galeri dan Cloudinary.`}
+        confirmLabel="Hapus"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }

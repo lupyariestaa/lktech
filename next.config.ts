@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
         pathname: "/**",
       },
+      {
+        // Avatar akun Google (photoURL dari Firebase Auth).
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
     ],
     formats: ["image/avif", "image/webp"],
   },

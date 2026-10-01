@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import {
   deleteProductBySlug,
@@ -11,19 +12,11 @@ import {
   type Product,
   type ProductCategory,
 } from "@/lib/product-types";
+import { productSchema } from "@/lib/api-schemas";
+import { sanitizeSlug } from "@/lib/utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 function toCategory(v: unknown): ProductCategory {
   const c = typeof v === "string" ? v : "";
@@ -51,19 +44,24 @@ export async function POST(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  let body: Partial<Product>;
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const name = (body.name ?? "").trim();
-  if (!name) {
-    return NextResponse.json({ error: "Nama produk wajib diisi." }, { status: 400 });
+  const parsed = productSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Data produk tidak valid." },
+      { status: 400 },
+    );
   }
+  const body = parsed.data;
 
-  const slug = (body.slug?.trim() || slugify(name)).trim();
+  const name = body.name.trim();
+  const slug = sanitizeSlug(body.slug?.trim() || name);
   if (!slug) {
     return NextResponse.json({ error: "Slug tidak valid." }, { status: 400 });
   }
@@ -100,6 +98,8 @@ export async function POST(req: Request) {
 
   try {
     await saveProduct(product, check.email);
+    revalidatePath("/produk");
+    revalidatePath(`/produk/${product.slug}`);
     return NextResponse.json({ ok: true, product });
   } catch (err) {
     console.error("[api/admin/products] POST gagal:", err);
@@ -119,6 +119,7 @@ export async function DELETE(req: Request) {
 
   try {
     await deleteProductBySlug(slug);
+    revalidatePath("/produk");
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/products] DELETE gagal:", err);

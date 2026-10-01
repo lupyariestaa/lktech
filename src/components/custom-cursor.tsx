@@ -75,7 +75,10 @@ export function CustomCursor() {
   if (!enabled) return null;
 
   return (
-    <div className="custom-cursor pointer-events-none fixed inset-0 z-[9999] hidden md:block">
+    <div
+      aria-hidden="true"
+      className="custom-cursor pointer-events-none fixed inset-0 z-[9999] hidden md:block"
+    >
       <div
         ref={dotRef}
         className="absolute h-1.5 w-1.5 rounded-full bg-primary"

@@ -801,13 +801,6 @@ export const SERVICES_DETAIL: ServiceDetail[] = [
   },
 ];
 
-export function getServiceBySlug(slug: string) {
-  const service = SERVICES.find((s) => s.slug === slug);
-  const detail = SERVICES_DETAIL.find((d) => d.slug === slug);
-  if (!service || !detail) return null;
-  return { ...service, detail };
-}
-
 export function getServiceSlugs() {
   return SERVICES.map((s) => s.slug);
 }
@@ -1073,19 +1066,6 @@ export const STATS = [
 ];
 
 /**
- * Klien untuk marquee "Trusted By".
- * ⚠️ CONTOH — ganti dengan klien asli (atau kosongkan) sebelum dipromosikan.
- */
-export const CLIENTS = [
-  "Nusantara Co.",
-  "Bina Karya",
-  "Kopi Lokal",
-  "EduMaju",
-  "Ritel Jaya",
-  "Medika Sehat",
-];
-
-/**
  * Teknologi yang kami gunakan — tampil sebagai marquee di beranda.
  *
  * Cara menambahkan logo asli (lihat `SETUP-LOGO-TEKNOLOGI.md`):
@@ -1222,6 +1202,3 @@ export const FAQS = [
       "Sangat bisa, dan kami sarankan. Konsultasi awal gratis untuk memahami kebutuhan Anda sebelum mengambil keputusan.",
   },
 ];
-
-// Sosial media default (kosong). Diisi dari pengaturan dashboard.
-export const SOCIALS: { label: string; href: string; icon: string }[] = [];

@@ -93,7 +93,12 @@ export async function sendTestEmail(
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
-      return { ok: false, error: `Resend ${res.status}: ${errText}` };
+      // Detail provider hanya di-log (server), TIDAK diteruskan ke klien.
+      console.error("[email] test Resend gagal:", res.status, errText);
+      return {
+        ok: false,
+        error: `Gagal mengirim (kode ${res.status}). Periksa konfigurasi Resend.`,
+      };
     }
     return { ok: true };
   } catch (err) {

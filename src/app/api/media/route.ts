@@ -31,7 +31,8 @@ export async function GET(req: Request) {
       const d = doc.data();
       return {
         id: doc.id,
-        publicId: d.publicId,
+        // `publicId` TIDAK diungkap ke publik (hanya dipakai server/dashboard).
+        publicId: "",
         secureUrl: d.secureUrl,
         width: d.width ?? 0,
         height: d.height ?? 0,

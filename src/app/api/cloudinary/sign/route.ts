@@ -3,19 +3,19 @@ import { requireAdmin } from "@/lib/admin-guard";
 import {
   createUploadSignature,
   isCloudinaryConfigured,
-  CLOUDINARY_FOLDERS,
+  ALLOWED_UPLOAD_FOLDERS,
 } from "@/lib/cloudinary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Folder yang diizinkan untuk upload (mencegah folder sembarangan). */
-const ALLOWED_FOLDERS: string[] = Object.values(CLOUDINARY_FOLDERS);
-
 /**
  * POST /api/cloudinary/sign
  * Mengembalikan parameter signed upload (dilindungi admin).
  * Body opsional: { folder?: string }
+ *
+ * Folder hanya boleh dari daftar `ALLOWED_UPLOAD_FOLDERS` (prefix `lktech/`).
+ * Signature juga mengikat `allowed_formats` sehingga tipe berkas dibatasi.
  */
 export async function POST(req: Request) {
   const check = await requireAdmin(req);
@@ -38,9 +38,12 @@ export async function POST(req: Request) {
     /* body opsional */
   }
 
-  // Hanya izinkan folder yang dikenal; selain itu pakai folder "lainnya".
-  if (folder && !ALLOWED_FOLDERS.includes(folder)) {
-    folder = CLOUDINARY_FOLDERS.lainnya;
+  // Tolak folder yang tidak dikenal (lebih aman dari sekadar mengganti diam-diam).
+  if (folder && !ALLOWED_UPLOAD_FOLDERS.includes(folder)) {
+    return NextResponse.json(
+      { error: `Folder "${folder}" tidak diizinkan.` },
+      { status: 400 },
+    );
   }
 
   try {

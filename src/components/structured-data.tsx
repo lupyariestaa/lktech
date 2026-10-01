@@ -21,7 +21,6 @@ export function StructuredData({ settings }: { settings: SiteSettings }) {
     description: SITE.description,
     url: SITE.url,
     logo: `${SITE.url}/logo/lktech-logo.svg`,
-    image: `${SITE.url}${SITE.ogImage}`,
     email: settings.email,
     telephone: `+${settings.whatsapp}`,
     // Format ISO 8601 (YYYY-MM-DD) agar valid menurut schema.org.

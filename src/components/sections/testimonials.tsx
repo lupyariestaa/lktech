@@ -42,14 +42,25 @@ export function Testimonials() {
                 “{t.quote}”
               </blockquote>
 
-              <div className="mt-5 flex items-center gap-1">
+              <div
+                className="mt-5 flex items-center gap-1"
+                role="img"
+                aria-label={`Penilaian ${t.rating} dari 5 bintang`}
+              >
                 {Array.from({ length: t.rating }).map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <Star
+                    key={i}
+                    aria-hidden="true"
+                    className="h-4 w-4 fill-amber-400 text-amber-400"
+                  />
                 ))}
               </div>
 
               <figcaption className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-5">
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-light text-sm font-bold text-white">
+                <span
+                  aria-hidden="true"
+                  className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-light text-sm font-bold text-white"
+                >
                   {t.name.charAt(0)}
                 </span>
                 <div>

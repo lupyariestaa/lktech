@@ -3,6 +3,7 @@ import {
   type SiteSettings,
   type SocialLink,
 } from "@/lib/settings-types";
+import { normalizePhone } from "@/lib/whatsapp";
 
 /** ID dokumen pengaturan di Firestore. */
 export const SETTINGS_DOC_ID = "site";
@@ -11,7 +12,8 @@ export const SETTINGS_DOC_ID = "site";
 export function mergeSettings(data: Partial<SiteSettings> | undefined): SiteSettings {
   return {
     email: data?.email?.trim() || DEFAULT_SETTINGS.email,
-    whatsapp: (data?.whatsapp ?? "").replace(/\D/g, "") || DEFAULT_SETTINGS.whatsapp,
+    // Normalisasi nomor lokal (08…) → internasional (628…).
+    whatsapp: normalizePhone(data?.whatsapp) || DEFAULT_SETTINGS.whatsapp,
     location: data?.location?.trim() || DEFAULT_SETTINGS.location,
     socials: Array.isArray(data?.socials)
       ? data!.socials.filter(

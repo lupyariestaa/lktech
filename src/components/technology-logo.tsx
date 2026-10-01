@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import type { TechItem } from "@/lib/content";
+import type { ManagedTechnology } from "@/lib/content-types";
 import { cn } from "@/lib/utils";
 
 /** Inisial dari nama teknologi (maks 2 huruf), mis. "Next.js" -> "NE". */
@@ -21,7 +21,7 @@ function initials(name: string) {
  *   dan tampilkan logo lebih besar (mengisi kartu).
  * - Bila logo kosong / gagal dimuat, tampilkan placeholder inisial + warna brand.
  */
-export function TechnologyLogo({ item }: { item: TechItem }) {
+export function TechnologyLogo({ item }: { item: ManagedTechnology }) {
   const [failed, setFailed] = useState(false);
   const useImage = Boolean(item.logo) && !failed;
   // Tampilkan hanya logo untuk SVG wordmark (yang sudah berisi nama brand).
@@ -45,7 +45,8 @@ export function TechnologyLogo({ item }: { item: TechItem }) {
             <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl">
               <Image
                 src={item.logo}
-                alt={item.name}
+                alt={showLabel ? "" : item.name}
+                aria-hidden={showLabel ? true : undefined}
                 width={36}
                 height={36}
                 className="h-7 w-7 object-contain"

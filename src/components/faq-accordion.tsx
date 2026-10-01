@@ -1,23 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ServiceFaq } from "@/lib/content";
 
 /**
- * Accordion FAQ reusable (dipakai di halaman detail layanan).
+ * Accordion FAQ reusable (dipakai di halaman detail layanan & beranda).
  */
 export function FaqAccordion({ items }: { items: ServiceFaq[] }) {
   const [open, setOpen] = useState<number | null>(0);
+  // Prefix unik per-instance agar ID tidak bentrok bila accordion dirender
+  // lebih dari sekali pada satu halaman.
+  const uid = useId();
 
   return (
     <div className="flex flex-col gap-3">
       {items.map((faq, i) => {
         const isOpen = open === i;
-        const panelId = `faq-panel-${i}`;
-        const buttonId = `faq-button-${i}`;
+        const panelId = `${uid}-faq-panel-${i}`;
+        const buttonId = `${uid}-faq-button-${i}`;
         return (
           <div
             key={faq.question}

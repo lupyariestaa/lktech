@@ -6,13 +6,14 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { AlertCircle, Loader2, LogIn, Mail } from "lucide-react";
 import { getClientAuth, signInWithGoogle } from "@/lib/auth";
 import { normalizeAuthError } from "@/lib/auth-errors";
+import { startAdminSession } from "@/lib/admin-fetch";
 import { useAuth } from "@/components/auth-provider";
 import { GoogleIcon } from "@/components/auth/google-icon";
 
 const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30";
 
-export function LoginForm() {
+export function LoginForm({ redirectTo = "/admin/leads" }: { redirectTo?: string }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
@@ -20,19 +21,27 @@ export function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Bila sudah login, langsung ke dashboard.
+  // Bila sudah login (dan sesi valid), langsung ke dashboard.
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/admin/leads");
+      (async () => {
+        const ok = await startAdminSession();
+        router.replace(ok ? redirectTo : "/admin/login");
+      })();
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, redirectTo]);
 
   const onGoogle = async () => {
     setError(null);
     setBusy(true);
     try {
       await signInWithGoogle();
-      router.replace("/admin/leads");
+      const ok = await startAdminSession();
+      if (ok) {
+        router.replace(redirectTo);
+      } else {
+        setError("Akun ini tidak memiliki akses admin.");
+      }
     } catch (err) {
       setError(normalizeAuthError(err));
     } finally {
@@ -50,7 +59,12 @@ export function LoginForm() {
       // Hanya login — pendaftaran mandiri dinonaktifkan (akun admin dibuat
       // manual lewat Firebase Console).
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace("/admin/leads");
+      const ok = await startAdminSession();
+      if (ok) {
+        router.replace(redirectTo);
+      } else {
+        setError("Akun ini tidak memiliki akses admin.");
+      }
     } catch (err) {
       setError(normalizeAuthError(err));
     } finally {
