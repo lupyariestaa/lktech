@@ -50,7 +50,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const projectRoutes: MetadataRoute.Sitemap = projects.map((p) => ({
     url: `${SITE.url}/portofolio/${p.slug}`,
-    lastModified: now,
+    // Tanggal update nyata bila ada; fallback ke waktu build.
+    lastModified: toDate(p.updatedAt, now),
     changeFrequency: "yearly",
     priority: 0.6,
   }));

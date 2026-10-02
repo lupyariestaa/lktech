@@ -41,6 +41,7 @@ function normalizeProject(data: Record<string, unknown>): Project {
       typeof data.order === "number" && Number.isFinite(data.order)
         ? data.order
         : undefined,
+    updatedAt: typeof data.updatedAtISO === "string" ? data.updatedAtISO : undefined,
   };
 }
 

@@ -35,6 +35,8 @@ export type Project = {
    * Dipakai untuk menampilkan penanda "Contoh" agar tidak disangka proyek nyata.
    */
   demo?: boolean;
+  /** Waktu perubahan terakhir (ISO) — diisi server saat menyimpan. */
+  updatedAt?: string;
 };
 
 /** Proyek tersimpan di Firestore (dengan id dokumen). */

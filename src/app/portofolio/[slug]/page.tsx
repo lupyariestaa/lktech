@@ -26,6 +26,7 @@ import {
 import { getPortfolioMediaMap } from "@/lib/portfolio-media";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+import { SITE } from "@/lib/site";
 
 type Params = { slug: string };
 
@@ -110,6 +111,63 @@ export default async function ProjectDetailPage({
 
   return (
     <>
+      {/* JSON-LD: CreativeWork + BreadcrumbList */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            {
+              "@context": "https://schema.org",
+              "@type": "CreativeWork",
+              name: project.title,
+              headline: project.title,
+              description: project.summary,
+              about: project.category,
+              dateCreated: String(project.year),
+              keywords: [...project.tags, ...project.techStack].join(", "),
+              image: galleryImages.length ? galleryImages.map((g) => g.url) : undefined,
+              creator: { "@type": "Organization", name: "LKTech" },
+              ...(project.testimonial
+                ? {
+                    review: {
+                      "@type": "Review",
+                      reviewBody: project.testimonial.quote,
+                      author: {
+                        "@type": "Person",
+                        name: project.testimonial.author,
+                      },
+                    },
+                  }
+                : {}),
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "Beranda",
+                  item: `${SITE.url}/`,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: "Portofolio",
+                  item: `${SITE.url}/portofolio`,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 3,
+                  name: project.title,
+                  item: `${SITE.url}/portofolio/${project.slug}`,
+                },
+              ],
+            },
+          ]),
+        }}
+      />
+
       {/* Hero */}
       <section className="relative overflow-hidden bg-white pt-32 pb-12 sm:pt-36">
         <div className="grid-lines absolute inset-0 opacity-50" />
