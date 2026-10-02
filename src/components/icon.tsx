@@ -20,6 +20,14 @@ import {
   Layers,
   Target,
   FolderOpen,
+  Building2,
+  LayoutGrid,
+  LayoutDashboard,
+  GraduationCap,
+  Newspaper,
+  CalendarDays,
+  ShoppingCart,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +53,14 @@ const ICONS: Record<string, LucideIcon> = {
   layers: Layers,
   target: Target,
   folder: FolderOpen,
+  building: Building2,
+  layoutGrid: LayoutGrid,
+  layoutDashboard: LayoutDashboard,
+  graduation: GraduationCap,
+  newspaper: Newspaper,
+  calendar: CalendarDays,
+  cart: ShoppingCart,
+  settings: Settings,
 };
 
 export function Icon({

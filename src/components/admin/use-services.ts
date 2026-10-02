@@ -1,40 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { adminFetch } from "@/lib/admin-fetch";
+import { SERVICES } from "@/lib/services";
 
 export type ServiceOption = { slug: string; title: string };
+
+/** Daftar layanan ringkas (slug + judul) dari modul hardcoded. */
+const SERVICE_OPTIONS: ServiceOption[] = SERVICES.map((s) => ({
+  slug: s.slug,
+  title: s.title,
+}));
 
 /**
  * Hook ringan untuk mengambil daftar layanan (slug + judul) saja.
  *
- * Memakai endpoint khusus `/api/admin/services` yang hanya mengembalikan daftar
- * ringkas — TIDAK memuat seluruh `SiteContent` (menghindari over-fetch).
- * Fetch dilakukan sekali saat mount; `setState` hanya setelah `await`.
+ * Sejak sistem layanan menjadi HARDCODED (tidak dikelola dashboard), daftar
+ * ini dibaca langsung dari modul `@/lib/services` — tanpa request API.
  */
 export function useServices() {
-  const [services, setServices] = useState<ServiceOption[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await adminFetch<{ services: ServiceOption[] }>(
-          "/api/admin/services",
-        );
-        if (!active) return;
-        setServices(data.services);
-      } catch {
-        /* biarkan kosong; field layanan bersifat opsional */
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return { services, loading };
+  return { services: SERVICE_OPTIONS, loading: false };
 }

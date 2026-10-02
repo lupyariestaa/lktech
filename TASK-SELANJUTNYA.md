@@ -1,11 +1,30 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Upgrade Sistem Portfolio (F1–F7)**.
+> Terakhir diperbarui: sesi **Upgrade Sistem Layanan**.
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Sistem Portfolio (F1–F7)
+## 🎉 Sesi Terakhir — Upgrade Sistem Layanan
+
+Upgrade sistem layanan (`docs/2026-10-02-upgrade-sistem-layanan.md`, F0–F6) **selesai**:
+
+| Fase | Hasil |
+| --- | --- |
+| F1 | **Sumber layanan hardcoded** (`src/lib/services.ts`) — tidak lagi dikelola dashboard |
+| F2 | `/layanan` jadi **landing section bergantian** per layanan + CTA "Lihat Detail"/"Konsultasi" + FAQ + alur kerja + CTA penutup |
+| F3 | Detail layanan kaya: **"Apa saja yang bisa dibuat"** (Website & Mobile: 8 jenis + 8 untuk mobile) & **"Cocok untuk"** |
+| F4 | **Paket** dengan badge "Rekomendasi" + **CTA WhatsApp per paket** + **tabel banding**; hero & sidebar kaya |
+| F5 | **Menu/halaman/manager/API "Layanan" dihapus** dari dashboard |
+| F6 | Metadata + JSON-LD Service + tagline di kartu |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅.
+
+**Sisa manual:** uji browser + deploy.
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Sistem Portfolio (F1–F7)
 
 Upgrade sistem portfolio berdasarkan `docs/2026-10-02-upgrade-sistem-portfolio.md`
 —— **F1–F6 selesai**; F7 = uji browser & deploy (manual).
@@ -136,6 +155,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 24 | Revisi sistem produk: galeri via MediaPicker, lightbox galeri, ratio 16:9, kanvas paket (pan+zoom), alur wajib pilih paket | ✅ |
 | 25 | Upgrade portfolio F1–F3: generalisasi galeri, detail profesional, daftar (search/filter/sort/URL/pagination) | ✅ |
 | 26 | Upgrade portfolio F4–F6: kelola gambar di form, featured/urutan, badge Contoh, JSON-LD + sitemap | ✅ |
+| 27 | Upgrade sistem layanan: landing bergantian, detail hardcoded kaya (Website & Mobile), paket+CTA+tabel banding, hapus menu dashboard | ✅ |
 
 ---
 

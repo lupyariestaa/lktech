@@ -1,31 +1,37 @@
 import type { Metadata } from "next";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
-import { ServiceCard } from "@/components/service-card";
+import { ServiceShowcase } from "@/components/service-showcase";
+import { FaqAccordion } from "@/components/faq-accordion";
+import { CtaContact } from "@/components/sections/cta-contact";
+import { ButtonAnchor, ButtonLink } from "@/components/ui/button";
 import { Reveal } from "@/components/motion";
-import { ButtonAnchor } from "@/components/ui/button";
+import { SERVICES } from "@/lib/services";
 import { getSiteContent } from "@/lib/site-content";
-import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { getSiteSettings } from "@/lib/settings";
+import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+
+export const revalidate = 300;
 
 export const metadata: Metadata = {
-    title: "Layanan",
+  title: "Layanan",
   description:
-    "Layanan LKTech: pembuatan website, aplikasi mobile, konsultasi teknologi, desain & branding, serta digital marketing untuk bisnis Anda.",
+    "Layanan digital LKTech: pembuatan website, aplikasi mobile, konsultasi teknologi, desain & branding, hingga digital marketing.",
   alternates: { canonical: "/layanan" },
   openGraph: {
-  title: "Layanan",
+    title: "Layanan",
     description:
-      "Pembuatan website, aplikasi mobile, konsultasi teknologi, desain & branding, dan digital marketing.",
+      "Solusi digital lengkap: website, aplikasi mobile, konsultasi teknologi, desain & branding, digital marketing.",
     url: "/layanan",
   },
 };
 
-export const revalidate = 300;
-
 export default async function LayananPage() {
-  const settings = await getSiteSettings();
-  const { services, process } = await getSiteContent();
+  const [{ process, faqs }, settings] = await Promise.all([
+    getSiteContent(),
+    getSiteSettings(),
+  ]);
+
   return (
     <>
       <PageHero
@@ -33,11 +39,10 @@ export default async function LayananPage() {
         eyebrow="Layanan Kami"
         title={
           <>
-            Solusi digital{" "}
-            <span className="text-gradient">lengkap &amp; terpadu</span>
+            Solusi digital <span className="text-gradient">lengkap & terpadu</span>
           </>
         }
-        description="Pilih layanan yang Anda butuhkan, atau konsultasikan kebutuhan Anda — kami bantu temukan kombinasi yang paling tepat untuk bisnis Anda."
+        description={`Dari website hingga aplikasi mobile — ${SERVICES.length} layanan utama untuk membantu bisnis Anda tumbuh di dunia digital.`}
       >
         <div className="flex flex-wrap items-center justify-center gap-3">
           <ButtonAnchor
@@ -51,48 +56,55 @@ export default async function LayananPage() {
             Konsultasi Gratis
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </ButtonAnchor>
-          <ButtonAnchor href="/#layanan" size="lg" variant="outline">
-            Lihat di Beranda
-          </ButtonAnchor>
+          <ButtonLink href="/produk" size="lg" variant="outline">
+            Lihat Produk
+          </ButtonLink>
         </div>
       </PageHero>
 
-      <section className="relative bg-surface py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((service, i) => (
-              <Reveal key={service.slug} delay={i * 0.06}>
-                <ServiceCard service={service} />
-              </Reveal>
-            ))}
-          </div>
+      {/* Blok layanan bergantian (landing) */}
+      <section className="relative bg-white py-20">
+        <div className="mx-auto flex max-w-6xl flex-col gap-20 px-6 sm:gap-28">
+          {SERVICES.map((service, i) => (
+            <ServiceShowcase
+              key={service.slug}
+              service={service}
+              index={i}
+              whatsapp={settings.whatsapp}
+            />
+          ))}
         </div>
       </section>
 
-      {/* Alur kerja ringkas */}
+      {/* Alur kerja */}
       {process.length > 0 && (
-        <section className="relative bg-white py-20">
+        <section className="relative bg-surface py-20">
           <div className="mx-auto max-w-6xl px-6">
-            <h2 className="text-center text-2xl font-bold text-secondary sm:text-3xl">
-              Bagaimana <span className="text-gradient">kami bekerja?</span>
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-relaxed text-muted">
-              Setiap layanan dikerjakan dengan alur yang jelas dan transparan,
-              dari konsultasi hingga dukungan pasca-rilis.
-            </p>
+            <div className="text-center">
+              <span className="text-xs font-semibold tracking-widest text-primary uppercase">
+                Cara Kerja
+              </span>
+              <h2 className="mt-2 text-2xl font-bold text-secondary sm:text-3xl">
+                Bagaimana kami bekerja?
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+                Proses yang jelas dan transparan — dari konsultasi awal hingga
+                dukungan setelah peluncuran.
+              </p>
+            </div>
 
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {process.map((item, i) => (
-                <Reveal key={item.step} delay={i * 0.08}>
-                  <div className="relative h-full rounded-3xl border border-slate-100 bg-surface p-6">
-                    <span className="text-3xl font-bold text-primary/20">
-                      {item.step}
+              {process.map((step, i) => (
+                <Reveal key={step.step || i} delay={i * 0.08}>
+                  <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6">
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-sm font-bold text-white">
+                      {step.step || i + 1}
                     </span>
-                    <h3 className="mt-3 text-base font-bold text-secondary">
-                      {item.title}
+                    <h3 className="mt-4 text-sm font-bold text-secondary">
+                      {step.title}
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-muted">
-                      {item.description}
+                      {step.description}
                     </p>
                   </div>
                 </Reveal>
@@ -101,6 +113,27 @@ export default async function LayananPage() {
           </div>
         </section>
       )}
+
+      {/* FAQ umum */}
+      {faqs.length > 0 && (
+        <section className="relative bg-white py-20">
+          <div className="mx-auto max-w-3xl px-6">
+            <div className="text-center">
+              <span className="text-xs font-semibold tracking-widest text-primary uppercase">
+                FAQ
+              </span>
+              <h2 className="mt-2 text-2xl font-bold text-secondary sm:text-3xl">
+                Pertanyaan yang sering diajukan
+              </h2>
+            </div>
+            <div className="mt-10">
+              <FaqAccordion items={faqs} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      <CtaContact />
     </>
   );
 }

@@ -6,7 +6,6 @@ import {
   Image as ImageIcon,
   Inbox,
   LayoutDashboard,
-  LayoutGrid,
   Newspaper,
   Package,
   PanelsTopLeft,
@@ -78,12 +77,6 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         title: "Konten Beranda",
         href: "/admin/content",
         icon: Files,
-      },
-      {
-        label: "Layanan",
-        title: "Layanan",
-        href: "/admin/services",
-        icon: LayoutGrid,
       },
       {
         label: "Harga",

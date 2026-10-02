@@ -4,14 +4,23 @@ import { useRef } from "react";
 import Link from "next/link";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
-import type { Service } from "@/lib/content";
 import { Icon } from "@/components/icon";
+
+/** Bentuk minimal layanan yang dibutuhkan kartu (kompatibel berbagai sumber). */
+type ServiceLike = {
+  slug: string;
+  title: string;
+  tagline?: string;
+  description: string;
+  icon: string;
+  accent: string;
+};
 
 /**
  * Kartu layanan dengan efek 3D tilt saat hover.
  * Seluruh kartu menautkan ke halaman detail layanan (`/layanan/[slug]`).
  */
-export function ServiceCard({ service }: { service: Service }) {
+export function ServiceCard({ service }: { service: ServiceLike }) {
   const ref = useRef<HTMLAnchorElement>(null);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
@@ -60,6 +69,11 @@ export function ServiceCard({ service }: { service: Service }) {
         <h3 className="relative mt-5 text-lg font-bold text-secondary">
           {service.title}
         </h3>
+        {service.tagline && (
+          <p className="relative mt-1.5 text-sm font-medium text-primary">
+            {service.tagline}
+          </p>
+        )}
         <p className="relative mt-2 flex-1 text-sm leading-relaxed text-muted">
           {service.description}
         </p>

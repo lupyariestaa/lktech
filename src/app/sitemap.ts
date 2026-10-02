@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/site";
-import { getSiteContent } from "@/lib/site-content";
 import { getProjects } from "@/lib/projects";
 import { getArticles } from "@/lib/articles";
 import { getProducts } from "@/lib/products";
+import { SERVICES } from "@/lib/services";
 
 export const revalidate = 3600;
 
@@ -17,8 +17,7 @@ function toDate(value: string | undefined, now: Date): Date {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
-  const [content, projects, articles, products] = await Promise.all([
-    getSiteContent(),
+  const [projects, articles, products] = await Promise.all([
     getProjects(),
     getArticles(),
     getProducts(),
@@ -39,9 +38,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE.url}/kontak`, lastModified: now, changeFrequency: "yearly", priority: 0.7 },
   ];
 
-  // Slug layanan dibaca dari konten dinamis agar layanan yang ditambah dari
-  // dashboard ikut masuk sitemap.
-  const serviceRoutes: MetadataRoute.Sitemap = content.services.map((s) => ({
+  // Slug layanan dibaca dari modul layanan (hardcoded).
+  const serviceRoutes: MetadataRoute.Sitemap = SERVICES.map((s) => ({
     url: `${SITE.url}/layanan/${s.slug}`,
     lastModified: now,
     changeFrequency: "monthly",
