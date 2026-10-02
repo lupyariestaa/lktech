@@ -19,22 +19,86 @@ import { useProductPurchase } from "@/components/product-purchase-context";
 import { cn } from "@/lib/utils";
 
 /**
- * Panel pembelian di sidebar halaman produk (multi-varian).
- *
- * User WAJIB memilih paket dulu (di sini atau di kartu paket — tersinkron via
- * context). Tombol "Tambah ke Keranjang" & "Beli Sekarang" baru AKTIF setelah
- * paket dipilih. Login tetap wajib saat checkout.
+ * Daftar pilihan paket (radio). Dipakai bersama oleh panel sidebar (desktop)
+ * dan bottom sheet (mobile), agar perilaku konsisten.
  */
-export function ProductPurchasePanel({ product }: { product: Product }) {
+export function VariantPickerList({ product }: { product: Product }) {
+  const { selectedVariantSlug, selectVariant } = useProductPurchase();
+  const variants = product.variants;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {variants.map((v) => {
+        const isSel = v.slug === selectedVariantSlug;
+        return (
+          <button
+            key={v.slug}
+            type="button"
+            onClick={() => selectVariant(isSel ? null : v.slug)}
+            disabled={v.soldOut}
+            aria-pressed={isSel}
+            className={cn(
+              "flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors",
+              isSel
+                ? "border-primary bg-primary-50"
+                : "border-slate-200 bg-white hover:border-primary/40",
+              v.soldOut && "cursor-not-allowed opacity-50",
+            )}
+          >
+            <span className="flex min-w-0 items-center gap-2.5">
+              <span
+                className={cn(
+                  "grid h-5 w-5 shrink-0 place-items-center rounded-full border",
+                  isSel
+                    ? "border-primary bg-primary text-white"
+                    : "border-slate-300 bg-white",
+                )}
+              >
+                {isSel && <Check className="h-3 w-3" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-secondary">
+                  {v.name}
+                  {v.highlight && (
+                    <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                      Rekomendasi
+                    </span>
+                  )}
+                </span>
+                {v.tagline && (
+                  <span className="mt-0.5 block truncate text-xs text-muted">
+                    {v.tagline}
+                  </span>
+                )}
+                {v.soldOut && (
+                  <span className="text-xs text-muted">Stok habis</span>
+                )}
+              </span>
+            </span>
+            <span className="shrink-0 text-sm font-bold text-secondary">
+              {formatPrice(v.price)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Hook bersama: menyiapkan aksi tambah-ke-keranjang / beli-now untuk paket
+ * terpilih, dengan guard login. Dipakai panel desktop & bar mobile.
+ */
+export function useBuySelectedVariant(product: Product) {
   const router = useRouter();
   const { user } = useAuth();
   const { add } = useCart();
-  const { selectedVariantSlug, selectVariant } = useProductPurchase();
+  const { selectedVariantSlug } = useProductPurchase();
   const [busy, setBusy] = useState<"cart" | "buy" | null>(null);
   const [added, setAdded] = useState(false);
 
-  const variants = product.variants;
-  const selected = variants.find((v) => v.slug === selectedVariantSlug) ?? null;
+  const selected =
+    product.variants.find((v) => v.slug === selectedVariantSlug) ?? null;
 
   const requireLogin = (): boolean => {
     if (!user) {
@@ -44,7 +108,7 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
     return true;
   };
 
-  const onAdd = (buyNow: boolean) => {
+  const run = (buyNow: boolean) => {
     if (!selected || selected.soldOut) return;
     if (!requireLogin()) return;
     setBusy(buyNow ? "buy" : "cart");
@@ -58,6 +122,77 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
     setTimeout(() => setAdded(false), 1800);
   };
 
+  return { selected, busy, added, addToCart: () => run(false), buyNow: () => run(true) };
+}
+
+/** Tombol CTA (Beli Sekarang + Tambah Keranjang) — dirender oleh panel/bar. */
+export function SelectedVariantActions({
+  product,
+  className,
+}: {
+  product: Product;
+  className?: string;
+}) {
+  const { selected, busy, added, addToCart, buyNow } = useBuySelectedVariant(product);
+
+  return (
+    <div className={cn("flex flex-col gap-2.5", className)}>
+      <button
+        type="button"
+        onClick={buyNow}
+        disabled={!selected || busy !== null}
+        className={cn(
+          "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all",
+          !selected
+            ? "cursor-not-allowed bg-slate-300 shadow-none"
+            : "bg-primary shadow-primary/30 hover:-translate-y-0.5 hover:bg-primary-dark",
+        )}
+      >
+        {busy === "buy" ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Zap className="h-4 w-4" />
+        )}
+        Beli Sekarang
+      </button>
+      <button
+        type="button"
+        onClick={addToCart}
+        disabled={!selected || busy !== null}
+        className={cn(
+          "inline-flex items-center justify-center gap-2 rounded-full border px-6 py-2.5 text-sm font-semibold transition-colors",
+          !selected
+            ? "cursor-not-allowed border-slate-200 text-slate-400"
+            : "border-slate-200 bg-white text-secondary hover:border-primary/40 hover:text-primary",
+        )}
+      >
+        {added ? (
+          <>
+            <Check className="h-4 w-4 text-emerald-600" /> Ditambahkan
+          </>
+        ) : (
+          <>
+            <ShoppingCart className="h-4 w-4" /> Tambah ke Keranjang
+          </>
+        )}
+      </button>
+
+      {!selected && (
+        <p className="text-center text-xs font-medium text-amber-600">
+          Pilih paket terlebih dahulu untuk melanjutkan.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Panel pembelian di sidebar halaman produk (DESKTOP/tablet ≥ lg).
+ *
+ * User WAJIB memilih paket dulu. Tombol "Tambah ke Keranjang" & "Beli Sekarang"
+ * baru AKTIF setelah paket dipilih.
+ */
+export function ProductPurchasePanel({ product }: { product: Product }) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-surface p-6">
       <p className="text-xs font-medium text-muted">Mulai dari</p>
@@ -67,134 +202,19 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
         </span>
       </div>
 
-      {/* Pilihan paket */}
       <div className="mt-5">
         <p className="text-xs font-semibold text-secondary">
           Pilih paket{" "}
           <span className="font-normal text-muted">
-            ({variants.length} paket)
+            ({product.variants.length} paket)
           </span>
         </p>
-        <div className="mt-2 flex flex-col gap-2">
-          {variants.map((v) => {
-            const isSel = v.slug === selectedVariantSlug;
-            return (
-              <button
-                key={v.slug}
-                type="button"
-                onClick={() => selectVariant(isSel ? null : v.slug)}
-                disabled={v.soldOut}
-                aria-pressed={isSel}
-                className={cn(
-                  "flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors",
-                  isSel
-                    ? "border-primary bg-primary-50"
-                    : "border-slate-200 bg-white hover:border-primary/40",
-                  v.soldOut && "cursor-not-allowed opacity-50",
-                )}
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <span
-                    className={cn(
-                      "grid h-5 w-5 shrink-0 place-items-center rounded-full border",
-                      isSel
-                        ? "border-primary bg-primary text-white"
-                        : "border-slate-300 bg-white",
-                    )}
-                  >
-                    {isSel && <Check className="h-3 w-3" />}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-secondary">
-                      {v.name}
-                      {v.highlight && (
-                        <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                          Rekomendasi
-                        </span>
-                      )}
-                    </span>
-                    {v.soldOut && (
-                      <span className="text-xs text-muted">Stok habis</span>
-                    )}
-                  </span>
-                </span>
-                <span className="shrink-0 text-sm font-bold text-secondary">
-                  {formatPrice(v.price)}
-                </span>
-              </button>
-            );
-          })}
+        <div className="mt-2">
+          <VariantPickerList product={product} />
         </div>
       </div>
 
-      {/* Ringkasan terpilih */}
-      {selected && (
-        <div className="mt-4 rounded-2xl border border-primary/20 bg-primary-50/60 px-4 py-3">
-          <p className="text-xs text-muted">Terpilih</p>
-          <div className="mt-0.5 flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-secondary">
-              {selected.name}
-            </span>
-            <span className="text-sm font-bold text-primary">
-              {formatPrice(selected.price)}
-            </span>
-          </div>
-          {selected.delivery && (
-            <p className="mt-0.5 text-xs text-muted">
-              Estimasi: {selected.delivery}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* CTA */}
-      <div className="mt-4 flex flex-col gap-2.5">
-        <button
-          type="button"
-          onClick={() => onAdd(true)}
-          disabled={!selected || busy !== null}
-          className={cn(
-            "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all",
-            !selected
-              ? "cursor-not-allowed bg-slate-300 shadow-none"
-              : "bg-primary shadow-primary/30 hover:-translate-y-0.5 hover:bg-primary-dark",
-          )}
-        >
-          {busy === "buy" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Zap className="h-4 w-4" />
-          )}
-          Beli Sekarang
-        </button>
-        <button
-          type="button"
-          onClick={() => onAdd(false)}
-          disabled={!selected || busy !== null}
-          className={cn(
-            "inline-flex items-center justify-center gap-2 rounded-full border px-6 py-2.5 text-sm font-semibold transition-colors",
-            !selected
-              ? "cursor-not-allowed border-slate-200 text-slate-400"
-              : "border-slate-200 bg-white text-secondary hover:border-primary/40 hover:text-primary",
-          )}
-        >
-          {added ? (
-            <>
-              <Check className="h-4 w-4 text-emerald-600" /> Ditambahkan
-            </>
-          ) : (
-            <>
-              <ShoppingCart className="h-4 w-4" /> Tambah ke Keranjang
-            </>
-          )}
-        </button>
-
-        {!selected && (
-          <p className="text-center text-xs font-medium text-amber-600">
-            Pilih paket terlebih dahulu untuk melanjutkan.
-          </p>
-        )}
-      </div>
+      <SelectedVariantActions product={product} className="mt-4" />
 
       <a
         href="#paket"

@@ -129,7 +129,7 @@ export function ProductLightbox({
       {/* Strip thumbnail */}
       {total > 1 && (
         <div
-          className="flex justify-center gap-2 px-4 pb-5 sm:px-6"
+          className="no-scrollbar flex justify-start gap-2 overflow-x-auto px-4 pb-5 sm:justify-center sm:px-6"
           onClick={(e) => e.stopPropagation()}
         >
           {images.map((img, i) => (

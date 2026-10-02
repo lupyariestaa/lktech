@@ -19,6 +19,7 @@ import {
   ProductPurchaseProvider,
 } from "@/components/product-purchase-context";
 import { ProductPurchasePanel } from "@/components/product-purchase-panel";
+import { ProductPurchaseBar } from "@/components/product-purchase-bar";
 import { Reveal } from "@/components/motion";
 import {
   getProductBySlug,
@@ -170,9 +171,9 @@ export default async function ProdukDetailPage({
 
       <div className="bg-white">
         <ProductPurchaseProvider>
-        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 pb-28 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12 lg:pb-16">
           {/* ===== Konten utama ===== */}
-          <div className="flex flex-col gap-14">
+          <div className="flex flex-col gap-10 sm:gap-14">
             {/* Galeri / cover (interaktif: thumbnail + lightbox) */}
             <ProductGallery images={galleryImages} productName={product.name} />
 
@@ -325,8 +326,8 @@ export default async function ProdukDetailPage({
             )}
           </div>
 
-          {/* ===== Sidebar pembelian ===== */}
-          <aside className="lg:sticky lg:top-28 lg:h-fit">
+          {/* ===== Sidebar pembelian (desktop/tablet ≥ lg) ===== */}
+          <aside className="hidden lg:sticky lg:top-28 lg:block lg:h-fit">
             <div className="flex flex-col gap-5">
               {multi ? (
                 <ProductPurchasePanel product={product} />
@@ -346,7 +347,7 @@ export default async function ProdukDetailPage({
                   <ProductBuyActions product={product} compact className="mt-5" />
                   <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
                     <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                    Pembelian memerlukan login akun Google. Checkout & konfirmasi
+                    Pembelian memerlukan login akun Google. Checkout &amp; konfirmasi
                     dilakukan via WhatsApp.
                   </p>
                 </div>
@@ -392,6 +393,52 @@ export default async function ProdukDetailPage({
         </ProductPurchaseProvider>
       </div>
 
+      {/* Info ringkas (mobile): pengiriman & tools */}
+      {(product.delivery || product.tools.length > 0) && (
+        <div className="bg-white lg:hidden">
+          <div className="mx-auto max-w-6xl px-4 pb-6 sm:px-6">
+            <div className="flex flex-col gap-4">
+              {product.delivery && (
+                <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-5">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary">
+                    <Truck className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-xs text-muted">
+                      {multi ? "Estimasi umum" : "Pengiriman"}
+                    </p>
+                    <p className="text-sm font-semibold text-secondary">
+                      {product.delivery}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {product.tools.length > 0 && (
+                <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-secondary">
+                    <Wrench className="h-4 w-4 text-primary" />
+                    Tools &amp; Teknologi
+                  </h3>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {product.tools.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bar pembelian sticky (mobile) */}
+      {multi && <ProductPurchaseBar product={product} />}
+
       {/* Produk lain */}
       {others.length > 0 && (
         <section className="relative bg-surface py-20">
@@ -415,6 +462,9 @@ export default async function ProdukDetailPage({
           </div>
         </section>
       )}
+
+      {/* Spacer agar sticky bar mobile tidak menutupi konten terakhir */}
+      {multi && <div className="h-20 lg:hidden" aria-hidden="true" />}
     </>
   );
 }
@@ -425,7 +475,7 @@ function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
       <span className="text-xs font-semibold tracking-widest text-primary uppercase">
         {eyebrow}
       </span>
-      <h2 className="mt-2 text-2xl font-bold text-secondary sm:text-3xl">
+      <h2 className="mt-2 text-xl font-bold text-secondary sm:text-2xl lg:text-3xl">
         {title}
       </h2>
     </div>
