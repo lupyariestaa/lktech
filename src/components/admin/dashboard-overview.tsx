@@ -1,8 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Inbox, Loader2, Clock, CheckCircle2, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Inbox,
+  Loader2,
+  Clock,
+  CheckCircle2,
+  Sparkles,
+  ReceiptText,
+  Wallet,
+} from "lucide-react";
 import { fetchLeads } from "@/lib/admin-api";
+import { fetchOrdersSummary } from "@/lib/admin-orders-api";
+import type { OrdersSummary } from "@/lib/orders";
+import { formatRupiah } from "@/lib/format";
 import { LEAD_STATUS_LABEL, type StoredLead } from "@/lib/lead-types";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { cn } from "@/lib/utils";
@@ -87,6 +100,8 @@ export function DashboardOverview() {
           );
         })}
       </div>
+
+      <OrderSnapshot />
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <div className="flex items-center justify-between">
@@ -239,6 +254,68 @@ function LeadTrendChart({ leads }: { leads: StoredLead[] }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Ringkasan pesanan di dashboard (Total, Baru, Diproses, Omzet).
+ * Mengambil sendiri dari `/api/admin/orders?summary=1`; gagal → sembunyikan
+ * seksi (tidak mengganggu ringkasan lead).
+ */
+function OrderSnapshot() {
+  const [summary, setSummary] = useState<OrdersSummary | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const s = await fetchOrdersSummary();
+        if (active) setSummary(s);
+      } catch {
+        /* silent — sembunyikan seksi bila gagal */
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!summary) return null;
+
+  const cards = [
+    { label: "Total Pesanan", value: String(summary.total), icon: ReceiptText, color: "bg-primary-50 text-primary" },
+    { label: "Pesanan Baru", value: String(summary.baru), icon: Sparkles, color: "bg-blue-50 text-blue-600" },
+    { label: "Diproses", value: String(summary.diproses), icon: Clock, color: "bg-amber-50 text-amber-600" },
+    { label: "Omzet (selesai)", value: formatRupiah(summary.omzet), icon: Wallet, color: "bg-emerald-50 text-emerald-600" },
+  ];
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-bold text-secondary">Pesanan</h2>
+        <Link
+          href="/admin/orders"
+          className="group inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
+        >
+          Kelola pesanan
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((c) => {
+          const Icon = c.icon;
+          return (
+            <div key={c.label} className="rounded-2xl border border-slate-200 p-4">
+              <span className={cn("grid h-9 w-9 place-items-center rounded-xl", c.color)}>
+                <Icon className="h-4 w-4" />
+              </span>
+              <p className="mt-3 text-lg font-bold text-secondary">{c.value}</p>
+              <p className="mt-0.5 text-xs text-muted">{c.label}</p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

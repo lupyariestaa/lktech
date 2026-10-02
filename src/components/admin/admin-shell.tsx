@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { MobileDrawer } from "@/components/admin/sidebar/mobile-drawer";
 import { SidebarContent } from "@/components/admin/sidebar/sidebar-content";
 import { useSidebarState } from "@/components/admin/use-sidebar-state";
-import { useLeadBadge } from "@/components/admin/use-lead-badge";
+import { useAdminBadges } from "@/components/admin/use-admin-badges";
 import { CommandPalette } from "@/components/admin/command-palette";
 
 /**
@@ -21,7 +21,7 @@ import { CommandPalette } from "@/components/admin/command-palette";
  *
  * Navigasi menu melewati guard "perubahan belum disimpan" via
  * `useUnsavedNavigation`; modifier-click (Ctrl/Cmd/Shift/Alt) dibiarkan
- * native (buka tab baru) — ditangani di `SidebarItem`.
+ * native (buka tab baru) â€” ditangani di `SidebarItem`.
  */
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -31,11 +31,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const [open, setOpen] = useState(false); // drawer mobile
   const { collapsed, toggle: toggleRail } = useSidebarState();
-  const { newCount } = useLeadBadge();
+  const { newLeads, newOrders } = useAdminBadges();
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Tutup drawer otomatis saat route berubah (mobile). Dibandingkan saat render
-  // (bukan di effect) agar tidak memicu cascading render — pola yang disarankan
+  // (bukan di effect) agar tidak memicu cascading render â€” pola yang disarankan
   // React untuk menyesuaikan state berdasarkan perubahan nilai sebelumnya.
   const [lastPath, setLastPath] = useState(pathname);
   if (pathname !== lastPath) {
@@ -43,8 +43,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     if (open) setOpen(false);
   }
 
-  // Tutup drawer bila viewport melebar ke desktop (≥ lg). Tanpa ini, `open`
-  // bisa "nyangkut" true padahal drawer `display:none` → konten tetap `inert`.
+  // Tutup drawer bila viewport melebar ke desktop (â‰¥ lg). Tanpa ini, `open`
+  // bisa "nyangkut" true padahal drawer `display:none` â†’ konten tetap `inert`.
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
     const onChange = (e: MediaQueryListEvent) => {
@@ -91,7 +91,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   /**
    * Navigasi internal: tutup drawer lalu lewat guard unsaved.
    * Klik ke halaman yang sedang aktif tidak memicu guard (tidak ada
-   * perpindahan konteks — hanya menutup drawer).
+   * perpindahan konteks â€” hanya menutup drawer).
    */
   const onNavigate = useCallback(
     (href: string) => {
@@ -111,7 +111,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-surface">
       <div className="flex w-full">
-        {/* Sidebar desktop (≥ lg) — expanded ↔ rail */}
+        {/* Sidebar desktop (â‰¥ lg) â€” expanded â†” rail */}
         <aside
           className={cn(
             "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out lg:flex",
@@ -121,25 +121,25 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <SidebarContent
             variant={collapsed ? "rail" : "expanded"}
             pathname={pathname}
-            badges={{ newLeads: newCount }}
+            badges={{ newLeads, newOrders }}
             user={user}
             onNavigate={onNavigate}
             onLogout={onLogout}
           />
         </aside>
 
-        {/* Drawer mobile (< lg) — conditional render + dialog semantics */}
+        {/* Drawer mobile (< lg) â€” conditional render + dialog semantics */}
         <MobileDrawer
           open={open}
           onClose={closeDrawer}
           pathname={pathname}
-          badges={{ newLeads: newCount }}
+          badges={{ newLeads, newOrders }}
           user={user}
           onNavigate={onNavigate}
           onLogout={onLogout}
         />
 
-        {/* Main — `inert` saat drawer mobile terbuka agar Tab tidak "lolos"
+        {/* Main â€” `inert` saat drawer mobile terbuka agar Tab tidak "lolos"
             ke konten di belakang dialog (mendukung aria-modal secara nyata). */}
         <div
           className="flex min-h-screen w-full min-w-0 flex-col"
@@ -166,7 +166,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 className="hidden h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-surface hover:text-primary lg:grid"
                 aria-label={collapsed ? "Perlebar sidebar" : "Ciutkan sidebar"}
                 aria-pressed={collapsed}
-                title={`${collapsed ? "Perlebar" : "Ciutkan"} sidebar — shortcut [`}
+                title={`${collapsed ? "Perlebar" : "Ciutkan"} sidebar â€” shortcut [`}
               >
                 {collapsed ? (
                   <PanelLeftOpen className="h-5 w-5" />
@@ -175,7 +175,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 )}
               </button>
 
-              {/* Judul konteks — bukan heading (h1 ada di tiap halaman) */}
+              {/* Judul konteks â€” bukan heading (h1 ada di tiap halaman) */}
               <p className="min-w-0 truncate text-sm font-semibold text-secondary">
                 {title}
               </p>
@@ -189,7 +189,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 aria-label="Cari menu (Ctrl+K)"
               >
                 <Search className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Cari menu…</span>
+                <span className="hidden sm:inline">Cari menuâ€¦</span>
                 <kbd className="ml-1 hidden rounded-md border border-slate-200 bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 lg:inline">
                   Ctrl K
                 </kbd>

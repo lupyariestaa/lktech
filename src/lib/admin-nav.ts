@@ -10,6 +10,7 @@ import {
   Newspaper,
   Package,
   PanelsTopLeft,
+  ReceiptText,
   Settings,
   Tags,
 } from "lucide-react";
@@ -23,7 +24,7 @@ import {
  */
 
 /** Jenis badge dinamis yang bisa dirender pada item menu. */
-export type LeadBadgeKind = "newLeads";
+export type NavBadgeKind = "newLeads" | "newOrders";
 
 export type AdminNavItem = {
   /** Label pendek untuk sidebar & tooltip rail. */
@@ -33,7 +34,7 @@ export type AdminNavItem = {
   href: string;
   icon: LucideIcon;
   /** Badge dinamis yang dirender di item ini. */
-  badge?: LeadBadgeKind;
+  badge?: NavBadgeKind;
 };
 
 export type AdminNavGroup = {
@@ -85,12 +86,6 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         icon: LayoutGrid,
       },
       {
-        label: "Produk",
-        title: "Produk",
-        href: "/admin/products",
-        icon: Package,
-      },
-      {
         label: "Harga",
         title: "Harga",
         href: "/admin/pricing",
@@ -113,6 +108,25 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         title: "Blog",
         href: "/admin/blog",
         icon: Newspaper,
+      },
+    ],
+  },
+  {
+    id: "toko",
+    label: "Toko",
+    items: [
+      {
+        label: "Produk",
+        title: "Produk",
+        href: "/admin/products",
+        icon: Package,
+      },
+      {
+        label: "Pesanan",
+        title: "Pesanan",
+        href: "/admin/orders",
+        icon: ReceiptText,
+        badge: "newOrders",
       },
     ],
   },

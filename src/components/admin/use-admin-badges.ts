@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { adminFetch } from "@/lib/admin-fetch";
+import type { OrdersSummary } from "@/lib/orders";
 
 /** Interval polling badge (ms) — hanya berjalan saat tab visible. */
 const POLL_INTERVAL_MS = 60_000;
@@ -13,22 +14,28 @@ export type LeadSummary = {
   selesai: number;
 };
 
+export type AdminBadges = {
+  /** Jumlah lead berstatus "baru". */
+  newLeads: number;
+  /** Jumlah pesanan berstatus "baru". */
+  newOrders: number;
+  leadSummary: LeadSummary | null;
+  orderSummary: OrdersSummary | null;
+};
+
 /**
- * Badge jumlah lead berstatus "baru" untuk sidebar.
+ * Badge dinamis sidebar: lead baru + pesanan baru.
  *
- * - Polling ringan `GET /api/admin/leads?summary=1` setiap 60 detik,
- *   HANYA saat tab visible; refresh saat tab kembali visible.
+ * - Polling ringan `?summary=1` (lead & order, paralel) setiap 60 detik,
+ *   HANYA saat tab visible; refresh saat tab kembali visible/focus.
  * - Gagal fetch → diam (badge 0) — jangan ganggu admin dengan error.
  * - AbortController saat unmount/overlap agar tidak ada request nyangkut.
  * - setState hanya terjadi setelah `await` di dalam async — sesuai aturan
  *   React 19 `set-state-in-effect`.
  */
-export function useLeadBadge(): {
-  newCount: number;
-  summary: LeadSummary | null;
-  refresh: () => Promise<void>;
-} {
-  const [summary, setSummary] = useState<LeadSummary | null>(null);
+export function useAdminBadges(): AdminBadges & { refresh: () => Promise<void> } {
+  const [leadSummary, setLeadSummary] = useState<LeadSummary | null>(null);
+  const [orderSummary, setOrderSummary] = useState<OrdersSummary | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
@@ -36,11 +43,17 @@ export function useLeadBadge(): {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const data = await adminFetch<{ summary: LeadSummary }>(
-        "/api/admin/leads?summary=1",
-        { signal: controller.signal },
-      );
-      if (!controller.signal.aborted) setSummary(data.summary);
+      const [lead, order] = await Promise.all([
+        adminFetch<{ summary: LeadSummary }>("/api/admin/leads?summary=1", {
+          signal: controller.signal,
+        }).catch(() => null),
+        adminFetch<{ summary: OrdersSummary }>("/api/admin/orders?summary=1", {
+          signal: controller.signal,
+        }).catch(() => null),
+      ]);
+      if (controller.signal.aborted) return;
+      if (lead) setLeadSummary(lead.summary);
+      if (order) setOrderSummary(order.summary);
     } catch {
       /* silent — badge opsional, jangan ganggu admin */
     }
@@ -65,14 +78,17 @@ export function useLeadBadge(): {
 
     // Fetch awal — pola async IIFE (setState hanya setelah await).
     (async () => {
-      try {
-        const data = await adminFetch<{ summary: LeadSummary }>(
-          "/api/admin/leads?summary=1",
-        );
-        if (active) setSummary(data.summary);
-      } catch {
-        /* silent — badge opsional, jangan ganggu admin */
-      }
+      const [lead, order] = await Promise.all([
+        adminFetch<{ summary: LeadSummary }>("/api/admin/leads?summary=1").catch(
+          () => null,
+        ),
+        adminFetch<{ summary: OrdersSummary }>(
+          "/api/admin/orders?summary=1",
+        ).catch(() => null),
+      ]);
+      if (!active) return;
+      if (lead) setLeadSummary(lead.summary);
+      if (order) setOrderSummary(order.summary);
     })();
     start();
 
@@ -94,5 +110,11 @@ export function useLeadBadge(): {
     };
   }, [refresh]);
 
-  return { newCount: summary?.baru ?? 0, summary, refresh };
+  return {
+    newLeads: leadSummary?.baru ?? 0,
+    newOrders: orderSummary?.baru ?? 0,
+    leadSummary,
+    orderSummary,
+    refresh,
+  };
 }

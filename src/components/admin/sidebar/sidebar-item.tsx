@@ -5,16 +5,17 @@ import { cn } from "@/lib/utils";
 import {
   isAdminItemActive,
   type AdminNavItem,
-  type LeadBadgeKind,
+  type NavBadgeKind,
 } from "@/lib/admin-nav";
 
 export type SidebarVariant = "expanded" | "rail";
 
 /** Daftar nilai badge aktif (key = jenis badge di config nav). */
-export type SidebarBadges = Partial<Record<LeadBadgeKind, number>>;
+export type SidebarBadges = Partial<Record<NavBadgeKind, number>>;
 
-const BADGE_ARIA: Record<LeadBadgeKind, (n: number) => string> = {
+const BADGE_ARIA: Record<NavBadgeKind, (n: number) => string> = {
   newLeads: (n) => `${n} lead baru`,
+  newOrders: (n) => `${n} pesanan baru`,
 };
 
 /** Format angka badge dengan batas atas (mis. 99+). */

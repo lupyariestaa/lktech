@@ -1,11 +1,32 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Upgrade Sidebar Dashboard Admin** (audit UI/UX FASE 0–7).
+> Terakhir diperbarui: sesi **Modul Admin Orders/Pesanan** (FASE 0–7).
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Sidebar Dashboard Admin
+## 🎉 Sesi Terakhir — Modul Admin Orders/Pesanan
+
+Halaman **Pesanan** admin dibangun dari nol (`docs/2026-10-02-orders-admin-module.md`, FASE 0–7):
+
+| Fase | Hasil |
+| --- | --- |
+| 1 | Data layer: `getOrdersPage/summary/updateStatus/delete` + util `format.ts` |
+| 2 | API `GET/PATCH/DELETE /api/admin/orders` (+`?summary=1`) + klien `admin-orders-api.ts` |
+| 3 | Halaman `/admin/orders` + `orders-manager.tsx` (list, filter, cari, detail dialog, ubah status, ekspor CSV, pagination); nav grup **"Toko"** |
+| 4 | Badge generik **`newOrders`** (lead + order satu hook) + **email notifikasi order** |
+| 5 | Metrik pesanan di dashboard overview (Total/Baru/Diproses/Omzet) |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅.
+
+**Sisa manual (belum otomatis):**
+- [ ] Uji browser: buat order → muncul di `/admin/orders`; filter/cari/detail/ubah status/ekspor.
+- [ ] Uji badge pesanan & email notifikasi; cek metrik di dashboard.
+- [ ] **Deploy**: `git push` ke `main` → Vercel → uji produksi.
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Sidebar Dashboard Admin
 
 Upgrade menyeluruh sidebar dashboard admin berdasarkan
 `docs/2026-10-02-sidebar-dashboard-upgrade.md` (FASE 0–7) **selesai**:
@@ -14,21 +35,17 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | --- | --- |
 | 1 | Config nav terpusat (`src/lib/admin-nav.ts`) + komponen baru `components/admin/sidebar/*` |
 | 2 | **A11y**: drawer conditional-render + `role="dialog"`/`aria-modal`, focus trap + restore (`use-drawer-focus`), `inert` konten saat drawer buka, `id="konten"` (SkipLink hidup di admin), touch target ≥44px, **fix modified-click** (Ctrl/Cmd+Click buka tab baru) |
-| 3 | **IA**: grouping menu (Utama/Konten Website/Aset/Sistem) + section label; header judul jadi `<p>` (tak lagi dobel h1); metadata `title` per halaman |
-| 4 | **Fitur**: badge lead baru (endpoint `?summary=1` + polling 60s), **mode rail** desktop (collapse `w-20` + persist `localStorage`), **user menu** di footer sidebar (dropdown aksesibel + logout) |
-| 5 | **Polish**: rail marker item aktif, scroll-fade nav, animasi backdrop/drawer (framer-motion) |
-| 6 | **Command palette** `Ctrl/Cmd+K` + shortcut `[` toggle rail + tombol cari di header (tanpa dependency baru) |
-| 7 | QA statis + smoke test dev server (lihat di bawah) |
+| 3 | **IA**: grouping menu + section label; header judul jadi `<p>` (tak lagi dobel h1); metadata `title` per halaman |
+| 4 | **Fitur**: badge lead baru, **mode rail** desktop (persist `localStorage`), **user menu** di footer sidebar |
+| 5 | **Polish**: rail marker item aktif, scroll-fade nav, animasi backdrop/drawer |
+| 6 | **Command palette** `Ctrl/Cmd+K` + shortcut `[` toggle rail + tombol cari di header |
 
-**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ ·
-smoke test (`/admin/login` 200, `/admin/leads` → 307 login, `/` 200, `?summary=1` → 401 tanpa auth) ✅.
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅.
 
-**Sisa manual (belum otomatis):**
-- [ ] Uji manual browser: responsif, keyboard (Tab/SkipLink/Escape/trap/`[`/`Ctrl+K`), screen reader.
-- [ ] Uji fungsional: badge lead ≤60s setelah submit kontak; rail persist; guard unsaved; logout.
-- [ ] **Deploy**: `git push` ke `main` → Vercel → uji produksi.
+**Sisa manual:** uji manual browser + deploy (belum diverifikasi sebelum sesi Orders).
 
 ---
+
 
 
 ## ✅ Sudah Selesai (ringkasan)
@@ -57,6 +74,7 @@ smoke test (`/admin/login` 200, `/admin/leads` → 307 login, `/` 200, `?summary
 | 20 | Kelola **Konten Beranda** (Keunggulan, Alur Kerja, Statistik, Testimoni) dari dashboard | ✅ |
 | 21 | Upgrade dashboard: full-width, header dinamis, toast konsisten, rate limit lead, guard akses admin | ✅ |
 | 22 | Upgrade sidebar dashboard: grouping menu, badge lead, mode rail, user menu, a11y drawer (focus trap/dialog), command palette `Ctrl+K` | ✅ |
+| 23 | Modul admin Orders/Pesanan: halaman `/admin/orders`, API admin, badge pesanan, notifikasi email order, metrik dashboard | ✅ |
 
 ---
 

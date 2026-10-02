@@ -7,6 +7,22 @@ export const ORDER_STATUSES = [
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+/** Label tampilan status pesanan. */
+export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  baru: "Baru",
+  diproses: "Diproses",
+  selesai: "Selesai",
+  dibatalkan: "Dibatalkan",
+};
+
+/** Kelas badge status pesanan (konsisten dengan pola lead). */
+export const ORDER_STATUS_STYLE: Record<OrderStatus, string> = {
+  baru: "bg-blue-50 text-blue-600 border-blue-100",
+  diproses: "bg-amber-50 text-amber-600 border-amber-100",
+  selesai: "bg-emerald-50 text-emerald-600 border-emerald-100",
+  dibatalkan: "bg-slate-100 text-slate-500 border-slate-200",
+};
+
 /** Satu item pesanan dengan harga yang SUDAH diverifikasi server. */
 export type OrderItem = {
   slug: string;

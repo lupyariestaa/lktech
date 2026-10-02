@@ -7,6 +7,7 @@ import { getProductsBySlugs } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
 import { incrementUserOrderCount } from "@/lib/user-profile";
 import { buildOrderMessage } from "@/lib/cart";
+import { sendOrderNotification } from "@/lib/email";
 import type { OrderItem } from "@/lib/order-types";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -210,6 +211,11 @@ export async function POST(req: Request) {
     // Naikkan penghitung pesanan user (best-effort, tidak menggagalkan order).
     incrementUserOrderCount(check.uid).catch((err) =>
       console.error("[api/orders] gagal menaikkan orderCount:", err),
+    );
+
+    // Notifikasi email ke admin (best-effort — tidak menggagalkan order).
+    sendOrderNotification(order).catch((err) =>
+      console.error("[api/orders] gagal kirim notifikasi pesanan:", err),
     );
 
     return NextResponse.json({
