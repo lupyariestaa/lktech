@@ -1,10 +1,11 @@
 # UPGRADE SISTEM PORTFOLIO LKTech — Audit, Rencana & Task Implementation Flow
 
-> **Status dokumen:** 📋 Rencana (belum dieksekusi)
-> **Disusun:** 2026-10-02
+> **Status dokumen:** 🟡 **Sebagian dieksekusi** (FASE 1–3 selesai; FASE 4–7 belum)
+> **Disusun:** 2026-10-02 · **F1–F3 dieksekusi:** 2026-10-02
 > **Cakupan:** Seluruh sistem portfolio — halaman publik (`/portofolio`, `/portofolio/[slug]`), kelola di dashboard (`/admin/projects`), data layer, integrasi media, SEO.
 > **Tujuan:** Menjadikan portfolio LKTech **jauh lebih baik & profesional** — dari segi tampilan, pengalaman pengunjung (calon klien), kemudahan pengelolaan admin, dan kekuatan SEO — **tanpa membuat rumit**.
 > **Prasyarat baca:** `docs/2026-10-02-revisi-sistem-produk.md` (pola galeri+lightbox yang bisa dipakai ulang), `docs/2026-10-02-orders-admin-module.md` (pola manager & media), `docs/README.md`.
+> **Hasil eksekusi F1–F3:** lihat [§13 Status Eksekusi](#13-status-eksekusi).
 
 ---
 
@@ -502,3 +503,88 @@ Sistem portfolio punya **fondasi data yang cukup baik**; yang kurang adalah **la
 **Prioritas eksekusi:** F1 → F2 (detail) → F3 (daftar) → F4 (dashboard) → F5–F6 (pelengkap) → F7.
 
 > Setelah dieksekusi, ubah status di header + tambah bagian "Status Eksekusi", dan catat temuan baru sebagai `PF-25+` bila ada.
+
+---
+
+## 13. STATUS EKSEKUSI (F1–F3)
+
+> **Dieksekusi:** 2026-10-02 · **Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅
+> *Commit terpisah per fase. Uji manual browser = pemilik.*
+
+### 13.1 Ringkasan per fase
+
+| Fase | Isi | Status | Commit |
+|---|---|---|---|
+| **F1** | Fondasi: field `featured`/`order` + generalisasi galeri (`MediaGallery`/`MediaLightbox`) | ✅ | `feat(portfolio): F1 ...` |
+| **F2** | Halaman detail profesional (galeri interaktif, metrics dinamis, tags, proyek terkait, OG image, ratio 16:9) | ✅ | `feat(portfolio): F2 ...` |
+| **F3** | Daftar kuat (search, filter kategori+tag, sort, URL state, pagination, empty state) | ✅ | `feat(portfolio): F3 ...` |
+| F4 | Dashboard: kelola gambar (MediaPicker) + `featured` + kategori select + validasi | ⏳ Belum | — |
+| F5 | Data contoh & seed | ⏳ Belum | — |
+| F6 | SEO (JSON-LD, sitemap) & integrasi media usage | ⏳ Belum | — |
+| F7 | QA menyeluruh & deploy | ⏳ Belum | — |
+
+### 13.2 Temuan teratasi
+
+| ID | Temuan | Status |
+|---|---|---|
+| PF-01 | Galeri detail tidak interaktif | ✅ `MediaGallery` (gambar besar + thumbnail + lightbox) |
+| PF-02 | Metrics grid hardcoded | ✅ Grid responsif dinamis (`grid-cols-2 sm:3 lg:4`) |
+| PF-03 | "Proyek lainnya" tak relevan | ✅ Prioritaskan kategori/layanan sama + `ProjectCard` |
+| PF-04 | Tags tak tampil di detail | ✅ Chips tag di hero |
+| PF-05 | Ratio kaku 16/10 | ✅ 16:9 (`aspect-video`) konsisten |
+| PF-07 | Tanpa search | ✅ Pencarian judul/klien/ringkasan/tag |
+| PF-08 | Tanpa sorting | ✅ Terbaru/Terlama/Judul A–Z |
+| PF-09 | Tanpa pagination | ✅ "Muat lagi" 9/halaman |
+| PF-10 | Filter hanya kategori | ✅ + filter tema/tag |
+| PF-11 | Filter tak di URL | ✅ URL state (`?kategori&tema&q&urut`) |
+| PF-19 | Tanpa OG image per proyek | ✅ `openGraph.images` dari cover |
+| PF-21 | Impor tipe tak konsisten | ✅ `project-card` pakai `project-types` |
+| PF-13 | Tanpa `featured`/`order` | ✅ Field ditambah (belum ada UI — F4) |
+
+### 13.3 Keputusan teknis saat eksekusi
+
+1. **Generalisasi galeri** — `MediaGallery` + `MediaLightbox` generik (file baru); `ProductGallery` jadi **wrapper tipis**; `product-lightbox.tsx` dihapus (digantikan `media-lightbox.tsx`). Halaman Produk **tidak berubah** (verifikasi build).
+2. **Field `featured`/`order`** ditambah ke `Project` + normalizer + **sorting baru** (unggulan → order → tahun → judul). UI kurasi menyusul di F4.
+3. **URL state dibaca di server** (`searchParams` prop) → gaya awal diberikan sebagai `initial*` props; **ditulis** via `history.replaceState`. Ini menghindari pelanggaran `set-state-in-effect` **dan** hydration mismatch. Konsekuensi: `/portofolio` menjadi **dynamic** (`ƒ`) — wajar untuk halaman dengan filter.
+4. **Filter "Tema" (tag)** ditambahkan (bonus di atas rencana kategori).
+
+### 13.4 File baru & diubah
+
+**Baru:**
+- `src/components/media-gallery.tsx` — galeri generik (dipakai Produk & Portfolio).
+- `src/components/media-lightbox.tsx` — lightbox generik.
+
+**Diubah:**
+- `src/lib/project-types.ts` — `featured?`, `order?`.
+- `src/lib/projects.ts` — normalizer + `sortProjects()`.
+- `src/components/product-gallery.tsx` — wrapper tipis di atas `MediaGallery`.
+- `src/components/project-card.tsx` — impor tipe.
+- `src/components/project-cover.tsx` — ratio 16:9.
+- `src/app/portofolio/[slug]/page.tsx` — galeri interaktif, metrics dinamis, tags, proyek terkait relevan, OG image.
+- `src/app/portofolio/page.tsx` — `searchParams` → `tags` + `initial*`.
+- `src/components/portfolio-grid.tsx` — search/filter/sort/URL/pagination/empty.
+- `src/components/product-lightbox.tsx` — **dihapus** (→ `media-lightbox.tsx`).
+
+### 13.5 Verifikasi
+
+```
+npx tsc --noEmit   → bersih (0 error)
+npx eslint .       → bersih (0 error, 0 warning)
+npm run build      → ✓ Compiled successfully
+                     route: ƒ /portofolio · ● /portofolio/[slug]
+```
+
+### 13.6 Sisa (FASE 4–7) & manual
+- [ ] **F4**: kelola gambar di form proyek (MediaPicker) + `featured` toggle + kategori select + validasi.
+- [ ] **F5**: penanda "Contoh" + seed proyek (opsional).
+- [ ] **F6**: JSON-LD per proyek + sitemap `lastModified` + usage galeri.
+- [ ] **F7**: QA menyeluruh & deploy.
+- [ ] **Manual**: buat proyek uji + unggah gambar di Media (kategori `portofolio`), uji galeri/lightbox, search/filter/sort, URL share.
+- [ ] **Isi data asli** (ganti 6 proyek contoh) via dashboard.
+
+### 13.7 Catatan operasional
+- Tidak ada koleksi Firestore baru → **tidak perlu** publish ulang `firestore.rules`.
+- Field `featured`/`order` opsional — data lama tetap valid (default: tidak unggulan, order = ∞).
+- Galeri tetap dikelola via koleksi media (`projectSlug`); F4 akan menjembatani dari form proyek.
+
+> Dibuat oleh sesi eksekusi 2026-10-02 (F1–F3). Lanjutkan F4–F7 sesuai §7.

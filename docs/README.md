@@ -34,4 +34,4 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-02 | [Modul Admin Orders/Pesanan (audit + task flow)](2026-10-02-orders-admin-module.md) | Selesai |
 | 2026-10-02 | [Revisi Sistem Produk (galeri, lightbox, ratio 16:9, kanvas paket, alur pilih paket)](2026-10-02-revisi-sistem-produk.md) | Selesai |
 | 2026-10-02 | [Prompt Generate Image Cover Produk (6 prompt)](2026-10-02-prompt-image-cover-produk.md) | Referensi |
-| 2026-10-02 | [Upgrade Sistem Portfolio (audit + task flow)](2026-10-02-upgrade-sistem-portfolio.md) | Rencana |
+| 2026-10-02 | [Upgrade Sistem Portfolio (audit + task flow)](2026-10-02-upgrade-sistem-portfolio.md) | Sebagian (F1–F3) |

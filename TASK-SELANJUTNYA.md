@@ -1,11 +1,32 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Revisi Sistem Produk** (FASE 0–7).
+> Terakhir diperbarui: sesi **Upgrade Sistem Portfolio (F1–F3)**.
 
 ---
 
-## 🎉 Sesi Terakhir — Revisi Sistem Produk
+## 🚧 Sesi Terakhir — Upgrade Sistem Portfolio (F1–F3)
+
+Upgrade sistem portfolio berdasarkan `docs/2026-10-02-upgrade-sistem-portfolio.md`
+— **F1–F3 selesai**, F4–F7 menyusul.
+
+| Fase | Hasil | Status |
+| --- | --- | --- |
+| F1 | Field `featured`/`order` + **generalisasi galeri** (`MediaGallery`/`MediaLightbox`, dipakai Produk & Portfolio); `ProductGallery` jadi wrapper tipis | ✅ |
+| F2 | **Detail profesional**: galeri interaktif (thumbnail+lightbox), metrics dinamis, tags, "proyek terkait" relevan, OG image, ratio 16:9 | ✅ |
+| F3 | **Daftar kuat**: search + filter kategori & tema + sort + URL state + pagination + empty state | ✅ |
+| F4 | Dashboard: kelola gambar (MediaPicker), `featured`, kategori select, validasi | ⏳ |
+| F5 | Penanda data contoh + seed proyek | ⏳ |
+| F6 | JSON-LD per proyek + sitemap + usage galeri | ⏳ |
+| F7 | QA menyeluruh & deploy | ⏳ |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅.
+
+**Sisa manual:** uji browser (galeri, search/filter/sort, share URL) + isi data asli proyek + lanjut F4–F7.
+
+---
+
+## 🎉 Sesi Sebelumnya — Revisi Sistem Produk
 
 Revisi 5 poin sistem produk (`docs/2026-10-02-revisi-sistem-produk.md`, FASE 0–7) **selesai**:
 
@@ -113,6 +134,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 22 | Upgrade sidebar dashboard: grouping menu, badge lead, mode rail, user menu, a11y drawer (focus trap/dialog), command palette `Ctrl+K` | ✅ |
 | 23 | Modul admin Orders/Pesanan: halaman `/admin/orders`, API admin, badge pesanan, notifikasi email order, metrik dashboard | ✅ |
 | 24 | Revisi sistem produk: galeri via MediaPicker, lightbox galeri, ratio 16:9, kanvas paket (pan+zoom), alur wajib pilih paket | ✅ |
+| 25 | Upgrade portfolio F1–F3: generalisasi galeri, detail profesional, daftar (search/filter/sort/URL/pagination) | ✅ |
 
 ---
 
