@@ -1,4 +1,11 @@
-import { ArticlesManager } from "@/components/admin/articles-manager";
+﻿import { ArticlesManager } from "@/components/admin/articles-manager";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "Blog",
+};
 
 export default function AdminBlogPage() {
   return (

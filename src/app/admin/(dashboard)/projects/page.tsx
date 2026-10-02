@@ -1,4 +1,11 @@
-import { ProjectsManager } from "@/components/admin/projects-manager";
+﻿import { ProjectsManager } from "@/components/admin/projects-manager";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "Portofolio",
+};
 
 export default function AdminProjectsPage() {
   return (

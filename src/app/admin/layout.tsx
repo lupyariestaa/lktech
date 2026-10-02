@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Admin — LKTech",
+  // Absolute: halaman admin tidak ikut template "%s | LKTech" (tab & riwayat
+  // memakai judul per halaman, mis. "Lead & Pesan — Admin").
+  title: {
+    absolute: "Admin — LKTech",
+    template: "%s — Admin",
+  },
   robots: { index: false, follow: false },
 };
 

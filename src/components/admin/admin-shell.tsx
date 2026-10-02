@@ -1,61 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  Inbox,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  ExternalLink,
-  FolderKanban,
-  Newspaper,
-  Image as ImageIcon,
-  Settings,
-  X,
-  LayoutGrid,
-  HelpCircle,
-  Tags,
-  PanelsTopLeft,
-  Files,
-  Package,
-} from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useUnsavedNavigation } from "@/components/admin/unsaved-changes";
 import { signOutUser } from "@/lib/auth";
 import { clearAdminSession } from "@/lib/admin-fetch";
+import { matchAdminItem } from "@/lib/admin-nav";
 import { cn } from "@/lib/utils";
+import { MobileDrawer } from "@/components/admin/sidebar/mobile-drawer";
+import { SidebarContent } from "@/components/admin/sidebar/sidebar-content";
+import { useSidebarState } from "@/components/admin/use-sidebar-state";
+import { useLeadBadge } from "@/components/admin/use-lead-badge";
+import { CommandPalette } from "@/components/admin/command-palette";
 
-const NAV = [
-  { label: "Ringkasan", href: "/admin", icon: LayoutDashboard },
-  { label: "Lead", href: "/admin/leads", icon: Inbox },
-  { label: "Hero", href: "/admin/hero", icon: PanelsTopLeft },
-  { label: "Konten", href: "/admin/content", icon: Files },
-  { label: "Layanan", href: "/admin/services", icon: LayoutGrid },
-  { label: "Produk", href: "/admin/products", icon: Package },
-  { label: "Harga", href: "/admin/pricing", icon: Tags },
-  { label: "FAQ", href: "/admin/faq", icon: HelpCircle },
-  { label: "Portofolio", href: "/admin/projects", icon: FolderKanban },
-  { label: "Blog", href: "/admin/blog", icon: Newspaper },
-  { label: "Media", href: "/admin/media", icon: ImageIcon },
-  { label: "Pengaturan", href: "/admin/settings", icon: Settings },
-];
-
-/** Judul halaman berdasarkan pathname saat ini (header full-width). */
-function titleForPath(pathname: string): string {
-  const match = [...NAV]
-    .sort((a, b) => b.href.length - a.href.length)
-    .find((n) => pathname === n.href || pathname.startsWith(`${n.href}/`));
-  return match?.label ?? "Dashboard";
-}
-
+/**
+ * Shell dashboard admin: sidebar (desktop rail/expanded + drawer mobile),
+ * header (toggle rail + judul konteks + tombol palette), dan main content.
+ *
+ * Navigasi menu melewati guard "perubahan belum disimpan" via
+ * `useUnsavedNavigation`; modifier-click (Ctrl/Cmd/Shift/Alt) dibiarkan
+ * native (buka tab baru) — ditangani di `SidebarItem`.
+ */
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const navigate = useUnsavedNavigation();
-  const [open, setOpen] = useState(false);
+
+  const [open, setOpen] = useState(false); // drawer mobile
+  const { collapsed, toggle: toggleRail } = useSidebarState();
+  const { newCount } = useLeadBadge();
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Tutup drawer otomatis saat route berubah (mobile). Dibandingkan saat render
   // (bukan di effect) agar tidak memicu cascading render — pola yang disarankan
@@ -66,150 +43,173 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     if (open) setOpen(false);
   }
 
-  // Tutup drawer dengan tombol Escape (aksesibilitas).
+  // Tutup drawer bila viewport melebar ke desktop (≥ lg). Tanpa ini, `open`
+  // bisa "nyangkut" true padahal drawer `display:none` → konten tetap `inert`.
   useEffect(() => {
-    if (!open) return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setOpen(false);
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // Shortcut global: Ctrl/Cmd+K (palette) & "[" (toggle rail, desktop only).
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+        return;
+      }
+      if (e.key === "[") {
+        // Jangan intercept saat sedang mengetik di kolom input.
+        const t = e.target as HTMLElement | null;
+        if (
+          t &&
+          (t.tagName === "INPUT" ||
+            t.tagName === "TEXTAREA" ||
+            t.tagName === "SELECT" ||
+            t.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        toggleRail();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [toggleRail]);
 
-  const onLogout = async () => {
+  const onLogout = useCallback(async () => {
     await clearAdminSession();
     await signOutUser();
     router.replace("/admin/login");
-  };
+  }, [router]);
 
-  const title = titleForPath(pathname);
+  /**
+   * Navigasi internal: tutup drawer lalu lewat guard unsaved.
+   * Klik ke halaman yang sedang aktif tidak memicu guard (tidak ada
+   * perpindahan konteks — hanya menutup drawer).
+   */
+  const onNavigate = useCallback(
+    (href: string) => {
+      setOpen(false);
+      if (matchAdminItem(pathname)?.href !== href) {
+        navigate(href);
+      }
+    },
+    [navigate, pathname],
+  );
+
+  const title = matchAdminItem(pathname)?.title ?? "Dashboard";
+
+  const closeDrawer = useCallback(() => setOpen(false), []);
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
 
   return (
     <div className="min-h-screen bg-surface">
       <div className="flex w-full">
-        {/* Sidebar */}
+        {/* Sidebar desktop (≥ lg) — expanded ↔ rail */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform lg:static lg:translate-x-0",
-            open ? "translate-x-0" : "-translate-x-full",
+            "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out lg:flex",
+            collapsed ? "w-20" : "w-64",
           )}
         >
-          <div className="flex items-center justify-between p-4">
-            <Link href="/admin" className="flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-sm font-bold text-white">
-                LK
-              </span>
-              <span className="text-sm font-bold text-secondary">
-                Admin Panel
-              </span>
-            </Link>
-            <button
-              onClick={() => setOpen(false)}
-              className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 lg:hidden"
-              aria-label="Tutup menu"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <nav
-            aria-label="Menu dashboard"
-            className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 pb-4"
-          >
-            {NAV.map((item) => {
-              const Icon = item.icon;
-              const active =
-                item.href === "/admin"
-                  ? pathname === "/admin"
-                  : pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  onClick={(e) => {
-                    setOpen(false);
-                    // Intersep: bila ada perubahan belum disimpan, minta konfirmasi
-                    // dulu sebelum pindah halaman.
-                    if (!active) {
-                      e.preventDefault();
-                      navigate(item.href);
-                    }
-                  }}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary text-white shadow-sm shadow-primary/25"
-                      : "text-slate-600 hover:bg-primary-50 hover:text-primary",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="border-t border-slate-200 p-4">
-            <Link
-              href="/"
-              target="_blank"
-              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-surface hover:text-primary"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Lihat Website
-            </Link>
-          </div>
+          <SidebarContent
+            variant={collapsed ? "rail" : "expanded"}
+            pathname={pathname}
+            badges={{ newLeads: newCount }}
+            user={user}
+            onNavigate={onNavigate}
+            onLogout={onLogout}
+          />
         </aside>
 
-        {/* Backdrop mobile */}
-        {open && (
-          <div
-            className="fixed inset-0 z-30 bg-secondary/30 lg:hidden"
-            onClick={() => setOpen(false)}
-          />
-        )}
+        {/* Drawer mobile (< lg) — conditional render + dialog semantics */}
+        <MobileDrawer
+          open={open}
+          onClose={closeDrawer}
+          pathname={pathname}
+          badges={{ newLeads: newCount }}
+          user={user}
+          onNavigate={onNavigate}
+          onLogout={onLogout}
+        />
 
-        {/* Main */}
-        <div className="flex min-h-screen w-full flex-col">
+        {/* Main — `inert` saat drawer mobile terbuka agar Tab tidak "lolos"
+            ke konten di belakang dialog (mendukung aria-modal secara nyata). */}
+        <div
+          className="flex min-h-screen w-full min-w-0 flex-col"
+          inert={open ? true : undefined}
+        >
           <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              {/* Hamburger (mobile) */}
               <button
+                type="button"
                 onClick={() => setOpen(true)}
-                className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-secondary lg:hidden"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-slate-200 text-secondary transition-colors hover:border-primary/30 hover:text-primary lg:hidden"
                 aria-label="Buka menu"
+                aria-expanded={open}
+                aria-controls="admin-mobile-drawer"
               >
-                <Menu className="h-4 w-4" />
+                <Menu className="h-5 w-5" />
               </button>
 
-              <h1 className="text-sm font-semibold text-secondary">{title}</h1>
+              {/* Toggle rail (desktop) */}
+              <button
+                type="button"
+                onClick={toggleRail}
+                className="hidden h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-surface hover:text-primary lg:grid"
+                aria-label={collapsed ? "Perlebar sidebar" : "Ciutkan sidebar"}
+                aria-pressed={collapsed}
+                title={`${collapsed ? "Perlebar" : "Ciutkan"} sidebar — shortcut [`}
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="h-5 w-5" />
+                ) : (
+                  <PanelLeftClose className="h-5 w-5" />
+                )}
+              </button>
+
+              {/* Judul konteks — bukan heading (h1 ada di tiap halaman) */}
+              <p className="min-w-0 truncate text-sm font-semibold text-secondary">
+                {title}
+              </p>
             </div>
 
-            <div className="ml-auto flex items-center gap-3">
-              <div className="hidden text-right sm:block">
-                <p className="text-sm font-semibold text-secondary">
-                  {user?.displayName ?? "Admin"}
-                </p>
-                <p className="text-xs text-muted">{user?.email}</p>
-              </div>
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-light text-sm font-bold text-white">
-                {(user?.displayName ?? user?.email ?? "A").charAt(0).toUpperCase()}
-              </span>
+            <div className="flex shrink-0 items-center gap-2">
               <button
-                onClick={onLogout}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-500"
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                className="flex h-11 items-center gap-2 rounded-full border border-slate-200 px-4 text-sm text-muted transition-colors hover:border-primary/30 hover:text-primary"
+                aria-label="Cari menu (Ctrl+K)"
               >
-                <LogOut className="h-3.5 w-3.5" />
-                Keluar
+                <Search className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Cari menu…</span>
+                <kbd className="ml-1 hidden rounded-md border border-slate-200 bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 lg:inline">
+                  Ctrl K
+                </kbd>
               </button>
             </div>
           </header>
 
-          <main className="w-full flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <main id="konten" tabIndex={-1} className="w-full flex-1 px-4 py-6 sm:px-6 lg:px-8">
             {children}
           </main>
         </div>
       </div>
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={closePalette}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      />
     </div>
   );
 }
+

@@ -1,4 +1,11 @@
-import { FaqManager } from "@/components/admin/faq-manager";
+﻿import { FaqManager } from "@/components/admin/faq-manager";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "FAQ",
+};
 
 export default function AdminFaqPage() {
   return (

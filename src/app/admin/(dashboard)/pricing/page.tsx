@@ -1,4 +1,11 @@
-import { PricingManager } from "@/components/admin/pricing-manager";
+﻿import { PricingManager } from "@/components/admin/pricing-manager";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "Harga",
+};
 
 export default function AdminPricingPage() {
   return (

@@ -1,4 +1,11 @@
-import { ProductsManager } from "@/components/admin/products-manager";
+﻿import { ProductsManager } from "@/components/admin/products-manager";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "Produk",
+};
 
 export default function AdminProductsPage() {
   return (

@@ -1,4 +1,11 @@
-import { DashboardOverview } from "@/components/admin/dashboard-overview";
+﻿import { DashboardOverview } from "@/components/admin/dashboard-overview";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "Ringkasan",
+};
 
 export default function AdminHomePage() {
   return (

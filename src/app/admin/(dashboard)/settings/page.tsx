@@ -1,5 +1,12 @@
-import { SettingsManager } from "@/components/admin/settings-manager";
+﻿import { SettingsManager } from "@/components/admin/settings-manager";
 import { EmailNotifier } from "@/components/admin/email-notifier";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "Pengaturan",
+};
 
 export default function AdminSettingsPage() {
   return (

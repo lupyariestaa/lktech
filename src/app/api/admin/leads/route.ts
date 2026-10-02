@@ -8,6 +8,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/leads — daftar semua lead (terbaru lebih dulu).
+ * GET /api/admin/leads?summary=1 — ringkasan jumlah per status (untuk
+ * badge sidebar; jangan tarik semua dokumen).
  */
 export async function GET(req: Request) {
   const check = await requireAdmin(req);
@@ -19,6 +21,33 @@ export async function GET(req: Request) {
       { error: "Admin SDK tidak tersedia." },
       { status: 503 },
     );
+  }
+
+  // Ringkasan count per status untuk badge sidebar (response kecil).
+  const wantsSummary = new URL(req.url).searchParams.get("summary") === "1";
+  if (wantsSummary) {
+    try {
+      const [total, ...byStatus] = await Promise.all([
+        db.collection("leads").count().get(),
+        ...LEAD_STATUSES.map((status) =>
+          db.collection("leads").where("status", "==", status).count().get(),
+        ),
+      ]);
+      const counts = { total: total.data().count } as Record<string, number>;
+      LEAD_STATUSES.forEach((status, i) => {
+        counts[status] = byStatus[i].data().count;
+      });
+      return NextResponse.json(
+        { summary: counts },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } catch (err) {
+      console.error("[api/admin/leads] summary gagal:", err);
+      return NextResponse.json(
+        { error: "Gagal menghitung lead." },
+        { status: 500 },
+      );
+    }
   }
 
   try {

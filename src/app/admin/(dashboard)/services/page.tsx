@@ -1,4 +1,11 @@
-import { ServicesManager } from "@/components/admin/services-manager";
+﻿import { ServicesManager } from "@/components/admin/services-manager";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "Layanan",
+};
 
 export default function AdminServicesPage() {
   return (

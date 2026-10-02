@@ -1,4 +1,11 @@
-import { LeadsManager } from "@/components/admin/leads-manager";
+﻿import { LeadsManager } from "@/components/admin/leads-manager";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "Lead & Pesan",
+};
 
 export default function AdminLeadsPage() {
   return (

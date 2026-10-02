@@ -30,3 +30,4 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | ---------- | ----------------------------------------------------------------------- | ----------- |
 | 2026-02-14 | [Auth split (admin/user) + Sistem Produk](2026-02-14-auth-split-dan-produk.md) | In Progress |
 | 2026-10-02 | [Rencana Upgrade Sistem Media (M1–M6)](2026-10-02-media-system-upgrade.md) | Rencana |
+| 2026-10-02 | [Upgrade Sidebar Dashboard Admin (audit UI/UX + task flow)](2026-10-02-sidebar-dashboard-upgrade.md) | Selesai |

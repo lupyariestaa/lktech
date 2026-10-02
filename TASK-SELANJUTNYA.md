@@ -1,32 +1,35 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Upgrade Dashboard (FASE 1–6 audit)** + Vercel Analytics.
+> Terakhir diperbarui: sesi **Upgrade Sidebar Dashboard Admin** (audit UI/UX FASE 0–7).
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Dashboard (Audit FASE 1–6)
+## 🎉 Sesi Terakhir — Upgrade Sidebar Dashboard Admin
 
-Semua fase inti dari `AUDIT-DAN-RENCANA-UPGRADE-DASHBOARD.md` **sudah dikerjakan**:
+Upgrade menyeluruh sidebar dashboard admin berdasarkan
+`docs/2026-10-02-sidebar-dashboard-upgrade.md` (FASE 0–7) **selesai**:
 
 | Fase | Hasil |
 | --- | --- |
-| 1 | Settings **anti data-basi**: `/api/settings` → `no-store`, `SettingsProvider` pakai `initial`, `GET /api/admin/settings`, `revalidatePath` saat simpan |
-| 2 | Dashboard **full-width**, header judul dinamis, drawer tutup saat pindah halaman + Escape, **toast konsisten** di semua manager |
-| 3 | Refactor: `admin-fetch.ts`, `use-async-list.ts`, `useServices()`, batasi email test |
-| 4 | **Konten dinamis baru**: Keunggulan, Alur Kerja, Statistik, Testimoni (menu `/admin/content`) + hero klien dinamis (avatar stok dihapus) |
-| 5 | SEO (`title.template`, sitemap dinamis, structured-data ISO), A11y (aria-pressed, FAQ aria-controls, focus trap media picker, switch hero), Security (rate limit lead + honeypot, guard admin `/api/admin/me`, self-registration dimatikan) |
-| 6 | Data contoh ditandai + peringatan di dashboard; testimoni Ritel Jaya disinkronkan |
+| 1 | Config nav terpusat (`src/lib/admin-nav.ts`) + komponen baru `components/admin/sidebar/*` |
+| 2 | **A11y**: drawer conditional-render + `role="dialog"`/`aria-modal`, focus trap + restore (`use-drawer-focus`), `inert` konten saat drawer buka, `id="konten"` (SkipLink hidup di admin), touch target ≥44px, **fix modified-click** (Ctrl/Cmd+Click buka tab baru) |
+| 3 | **IA**: grouping menu (Utama/Konten Website/Aset/Sistem) + section label; header judul jadi `<p>` (tak lagi dobel h1); metadata `title` per halaman |
+| 4 | **Fitur**: badge lead baru (endpoint `?summary=1` + polling 60s), **mode rail** desktop (collapse `w-20` + persist `localStorage`), **user menu** di footer sidebar (dropdown aksesibel + logout) |
+| 5 | **Polish**: rail marker item aktif, scroll-fade nav, animasi backdrop/drawer (framer-motion) |
+| 6 | **Command palette** `Ctrl/Cmd+K` + shortcut `[` toggle rail + tombol cari di header (tanpa dependency baru) |
+| 7 | QA statis + smoke test dev server (lihat di bawah) |
 
-**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npm run build` sukses ✅ · lint = baseline (4 error pra-ada).
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ ·
+smoke test (`/admin/login` 200, `/admin/leads` → 307 login, `/` 200, `?summary=1` → 401 tanpa auth) ✅.
 
 **Sisa manual (belum otomatis):**
-- [ ] Uji end-to-end di server lokal & **deploy** (`git push` → Vercel).
-- [ ] Isi **data asli** (testimoni/klien/proyek) via dashboard.
-- [ ] (Opsional) Bereskan 4 error lint pra-ada `react-hooks/set-state-in-effect`
-      (`media-picker-dialog`, `content-provider`, `hero-showcase-carousel`, `intro-loader`).
+- [ ] Uji manual browser: responsif, keyboard (Tab/SkipLink/Escape/trap/`[`/`Ctrl+K`), screen reader.
+- [ ] Uji fungsional: badge lead ≤60s setelah submit kontak; rail persist; guard unsaved; logout.
+- [ ] **Deploy**: `git push` ke `main` → Vercel → uji produksi.
 
 ---
+
 
 ## ✅ Sudah Selesai (ringkasan)
 
@@ -53,6 +56,7 @@ Semua fase inti dari `AUDIT-DAN-RENCANA-UPGRADE-DASHBOARD.md` **sudah dikerjakan
 | 19 | Kelola **Harga/Paket** beranda dari dashboard | ✅ |
 | 20 | Kelola **Konten Beranda** (Keunggulan, Alur Kerja, Statistik, Testimoni) dari dashboard | ✅ |
 | 21 | Upgrade dashboard: full-width, header dinamis, toast konsisten, rate limit lead, guard akses admin | ✅ |
+| 22 | Upgrade sidebar dashboard: grouping menu, badge lead, mode rail, user menu, a11y drawer (focus trap/dialog), command palette `Ctrl+K` | ✅ |
 
 ---
 

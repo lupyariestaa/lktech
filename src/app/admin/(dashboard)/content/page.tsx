@@ -1,4 +1,11 @@
-import { ContentExtraManager } from "@/components/admin/content-extra-manager";
+﻿import { ContentExtraManager } from "@/components/admin/content-extra-manager";
+
+import type { Metadata } from "next";
+
+/** Judul tab browser & riwayat navigasi. */
+export const metadata: Metadata = {
+  title: "Konten Beranda",
+};
 
 export default function AdminContentPage() {
   return (
