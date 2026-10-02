@@ -48,15 +48,17 @@ export async function getOrdersByUser(uid: string): Promise<Order[]> {
   const db = getAdminDb();
   if (!db) return [];
 
-  const snap = await db
-    .collection(COLLECTION)
-    .where("uid", "==", uid)
-    .orderBy("createdAtISO", "desc")
-    .get();
+  // CATATAN: sengaja TANPA `orderBy` di query. Kombinasi `where(uid)` +
+  // `orderBy(createdAtISO)` menuntut composite index Firestore; bila index
+  // belum ada, query gagal dan riwayat pembeli tampak kosong. Karena jumlah
+  // order per user kecil, urutkan di memori — hasil sama, tanpa index.
+  const snap = await db.collection(COLLECTION).where("uid", "==", uid).get();
 
-  return snap.docs.map((doc) =>
-    normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
-  );
+  return snap.docs
+    .map((doc) =>
+      normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
+    )
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 // ===== Admin: daftar, ringkasan, ubah status =====
@@ -135,6 +137,12 @@ export type OrdersPageQuery = {
 /**
  * Daftar seluruh pesanan (admin), terbaru lebih dulu, dengan cursor
  * pagination. `nextCursor` = `createdAtISO` item terakhir bila masih ada lagi.
+ *
+ * CATATAN (penting): filter status diterapkan di MEMORI, bukan `where()` di
+ * query. Kombinasi `where(status)` + `orderBy(createdAtISO)` menuntut composite
+ * index Firestore — bila index belum dibuat, query GAGAL dan daftar tampak
+ * kosong. Dengan menyaring di memori, hasil benar tanpa bergantung index
+ * (jumlah order awal masih kecil; lihat `firestore.indexes.json` untuk skala).
  */
 export async function getOrdersPage(
   query: OrdersPageQuery = {},
@@ -143,23 +151,40 @@ export async function getOrdersPage(
   if (!db) return { orders: [], nextCursor: null };
 
   const limit = Math.min(Math.max(query.limit ?? ORDERS_PAGE_SIZE, 1), 100);
-  let ref: Query = db
-    .collection(COLLECTION)
-    .orderBy("createdAtISO", "desc");
-  if (query.status && query.status !== "semua") {
-    ref = ref.where("status", "==", query.status);
-  }
+  const filtering = query.status && query.status !== "semua";
+
+  // Saat memfilter status, ambil halaman lebih besar lalu saring di memori
+  // (jumlah order yang perlu disaring masih wajar di tahap ini).
+  const fetchLimit = filtering ? Math.min(limit * 4, 200) : limit;
+
+  let ref: Query = db.collection(COLLECTION).orderBy("createdAtISO", "desc");
   if (query.cursor) {
     ref = ref.startAfter(query.cursor);
   }
-  // Ambil limit+1 untuk tahu apakah masih ada halaman berikutnya.
-  const snap = await ref.limit(limit + 1).get();
-  const docs = snap.docs.slice(0, limit);
-  const orders = docs.map((doc) =>
-    normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
-  );
+  const snap = await ref.limit(fetchLimit + 1).get();
+
+  let docs = snap.docs;
+  const hasMoreServer = docs.length > fetchLimit;
+  if (hasMoreServer) docs = docs.slice(0, fetchLimit);
+
+  const all = docs.map((doc) => ({
+    order: normalizeOrder({
+      id: doc.id,
+      ...(doc.data() as Record<string, unknown>),
+    }),
+    raw: doc.get("createdAtISO") as string,
+  }));
+
+  const filtered = filtering
+    ? all.filter((x) => x.order.status === query.status)
+    : all;
+
+  const page = filtered.slice(0, limit);
+  const orders = page.map((x) => x.order);
+  // Halaman berikutnya ada bila sisa item (atau masih ada di server).
+  const moreInPage = filtered.length > limit;
   const nextCursor =
-    snap.docs.length > limit && docs.length > 0
+    (moreInPage || hasMoreServer) && docs.length > 0
       ? (docs[docs.length - 1].get("createdAtISO") as string)
       : null;
 

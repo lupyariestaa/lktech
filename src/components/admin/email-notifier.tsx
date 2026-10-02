@@ -6,7 +6,7 @@ import { sendTestEmail } from "@/lib/admin-api";
 import { useToast } from "@/components/admin/toast";
 
 /**
- * Panel untuk menguji notifikasi email lead.
+ * Panel untuk menguji notifikasi email (lead & pesanan).
  */
 export function EmailNotifier() {
   const toast = useToast();
@@ -35,7 +35,8 @@ export function EmailNotifier() {
     <div className="rounded-3xl border border-slate-200 bg-white p-6">
       <h2 className="text-sm font-bold text-secondary">Notifikasi Email</h2>
       <p className="mt-1 text-xs text-muted">
-        Kirim email otomatis ke Anda setiap ada lead baru dari form kontak.
+        Kirim email otomatis ke Anda setiap ada <strong>lead baru</strong> dari
+        form kontak &amp; <strong>pesanan baru</strong> dari checkout produk.
         Diatur lewat env <code>RESEND_API_KEY</code> &amp;{" "}
         <code>LEAD_NOTIFY_EMAILS</code>.
       </p>

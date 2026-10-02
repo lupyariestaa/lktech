@@ -175,6 +175,45 @@ Severity: 🔴 Tinggi · 🟠 Menengah · 🔵 Rendah.
 | OR-08 | Tanpa pagination | 🟠 | F2 |
 | OR-09 | Tanpa jejak `updatedBy` | 🔵 | F3 |
 | OR-10 | Tanpa nomor ramah-manusia | 🔵 | F3 |
+| OR-11 | **Bug: riwayat pesanan pembeli kosong** (composite index) | 🔴 | Pasca-rilis |
+| OR-12 | **Bug: filter status pesanan admin error** (composite index) | 🔴 | Pasca-rilis |
+
+---
+
+### 3.2 TEMUAN PASCA-RILIS (ditemukan & diperbaiki 2026-10-02)
+
+> Laporan pemilik: setelah checkout berhasil (order masuk dashboard admin),
+> **riwayat pesanan di `/akun` pembeli tetap kosong**. Investigasi menemukan
+> **akar masalah: composite index Firestore** — dan sekaligus mengungkap bug
+> tersembunyi kedua.
+
+**[OR-11] Riwayat pesanan pembeli kosong (`getOrdersByUser`)** — 🔴 Tinggi
+- **Lokasi:** `src/lib/orders.ts` — `getOrdersByUser()`.
+- **Akar masalah:** query `where("uid","==",uid).orderBy("createdAtISO","desc")`
+  menuntut **composite index** Firestore (equality + orderBy berbeda field).
+  Index belum ada → query error `FAILED_PRECONDITION` → `GET /api/orders`
+  melempar 500 → di `user-account.tsx` kegagalan ditelan (best-effort) →
+  riwayat tampak kosong.
+- **Bukti:** diuji dengan Admin SDK — query gagal dengan pesan index; query
+  tanpa `orderBy` mengembalikan order dengan benar.
+- **Perbaikan:** `getOrdersByUser` **tanpa** `orderBy` di query; urutkan hasil
+  **di memori** (jumlah order per user kecil). ✅
+
+**[OR-12] Filter status pesanan admin error (`getOrdersPage`)** — 🔴 Tinggi
+- **Lokasi:** `src/lib/orders.ts` — `getOrdersPage()`.
+- **Akar masalah:** sama — `where("status","==",x).orderBy("createdAtISO")`
+  menuntut composite index. Muncul saat admin memfilter status di `/admin/orders`.
+  (Default "semua" tidak kena karena hanya `orderBy`.)
+- **Perbaikan:** query `orderBy(createdAtISO)` saja + **saring status di memori**
+  (konsisten dengan pola modul Media yang memang menghindari composite index). ✅
+
+**Perbaikan pendukung:**
+- Tambah `firestore.indexes.json` (index untuk `orders`: `uid+createdAtISO` &
+  `status+createdAtISO`) + daftarkan di `firebase.json` — untuk skalabilitas ke
+  depan bila ingin kembali memakai query index-based. Kode tetap aman tanpa index.
+- Konfirmasi modul lain (Media, Leads, Products, media-audit/collections) **tidak**
+  terdampak: semuanya sudah pakai pola "saring/urut di memori" atau agregasi
+  `count()` tanpa `orderBy` campuran.
 
 ---
 
@@ -672,5 +711,25 @@ npm run build      → ✓ Compiled successfully
 - Query `count()`/`select()` pada `orders` memakai index otomatis (single-field equality) — tanpa composite index.
 - Notifikasi order **best-effort**: kegagalan email tidak menggagalkan checkout.
 - Env tambahan (opsional): `ORDER_NOTIFY_EMAILS` (fallback ke `LEAD_NOTIFY_EMAILS` bila diimplementasikan sesi berikutnya).
+
+### 14.8 Perbaikan pasca-rilis (2026-10-02) — OR-11 & OR-12
+
+**Pemicu:** laporan pemilik — riwayat pesanan pembeli kosong padahal order masuk di dashboard admin.
+
+**Akar:** composite index Firestore (lihat §3.2). Kombinasi `where()` + `orderBy()`
+pada field berbeda menuntut index; tanpa index query **gagal** (ditelan best-effort → tampak kosong).
+
+**Perbaikan (commit terpisah):**
+- `getOrdersByUser` — buang `orderBy` dari query, urutkan di memori (riwayat pembeli pulih). ✅
+- `getOrdersPage` — `orderBy` saja + saring status di memori (filter admin pulih). ✅
+- Tambah `firestore.indexes.json` + registrasi di `firebase.json` (kesiapan skala).
+- Update teks `EmailNotifier` (menyebut notifikasi lead **&** pesanan).
+
+**Verifikasi:** diuji langsung dengan Admin SDK — query riwayat pembeli & filter
+status kini mengembalikan data; `tsc`/`lint`/`build` bersih.
+
+> **Pelajaran:** hindari `where()` + `orderBy()` beda field tanpa composite index.
+> Pola aman (dipakai Media & kini Orders): `orderBy` saja → filter/sort di memori,
+> atau `count()` aggregation (single-field equality) untuk ringkasan.
 
 > Dibuat oleh sesi eksekusi 2026-10-02. Jika ada temuan baru, catat sebagai `OR-11+` di bagian audit (§3).
