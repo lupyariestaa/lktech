@@ -32,3 +32,4 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-02 | [Rencana Upgrade Sistem Media (M1–M6)](2026-10-02-media-system-upgrade.md) | Rencana |
 | 2026-10-02 | [Upgrade Sidebar Dashboard Admin (audit UI/UX + task flow)](2026-10-02-sidebar-dashboard-upgrade.md) | Selesai |
 | 2026-10-02 | [Modul Admin Orders/Pesanan (audit + task flow)](2026-10-02-orders-admin-module.md) | Selesai |
+| 2026-10-02 | [Revisi Sistem Produk (galeri, lightbox, ratio 16:9, kanvas paket, alur pilih paket)](2026-10-02-revisi-sistem-produk.md) | Selesai |

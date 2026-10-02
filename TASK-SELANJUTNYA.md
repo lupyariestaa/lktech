@@ -1,11 +1,48 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Modul Admin Orders/Pesanan** (FASE 0–7).
+> Terakhir diperbarui: sesi **Revisi Sistem Produk** (FASE 0–7).
 
 ---
 
-## 🎉 Sesi Terakhir — Modul Admin Orders/Pesanan
+## 🎉 Sesi Terakhir — Revisi Sistem Produk
+
+Revisi 5 poin sistem produk (`docs/2026-10-02-revisi-sistem-produk.md`, FASE 0–7) **selesai**:
+
+| # | Revisi | Hasil |
+| --- | --- | --- |
+| 1 | Galeri manual → MediaPicker | Field galeri admin pakai `MediaPickerDialog mode="multiple"` + crop 16:9 + reorder/hapus |
+| 2 | Galeri statis → interaktif | `ProductGallery` (thumbnail klik → ganti besar) + `ProductLightbox` (navigasi/keyboard) |
+| 3 | Ratio 16:9 | Semua gambar produk (`aspect-video` + `object-cover`) — kartu, cover, galeri, thumbnail |
+| 4 | Kanvas paket | `VariantCanvas` — pan (drag) + zoom `+/−` + reset/"Sesuaikan" |
+| 5 | Alur pilih paket | `ProductPurchasePanel` di sidebar — CTA **disabled sampai paket dipilih** |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅.
+
+**Sisa manual:** uji browser (galeri, lightbox, kanvas touch, alur pilih paket) + deploy.
+
+---
+
+## 🎉 Sesi Sebelumnya — Perbaikan Bug Integrasi Orders (pasca-rilis)
+
+Pemilik melaporkan: **riwayat pesanan pembeli kosong** padahal order masuk di dashboard admin.
+
+**Akar masalah:** composite index Firestore. Query `where(uid)` + `orderBy(createdAtISO)` menuntut composite index; index belum ada → query gagal → riwayat kosong (kegagalan ditelan best-effort). Investigasi juga menemukan bug tersembunyi kedua (filter status admin).
+
+| Kode | Perbaikan |
+| --- | --- |
+| `getOrdersByUser` | Buang `orderBy` dari query → urutkan di memori (riwayat pembeli pulih) |
+| `getOrdersPage` | `orderBy` saja + saring status di memori (filter admin pulih) |
+| `firestore.indexes.json` | Baru — index `orders` untuk kesiapan skala; registrasi di `firebase.json` |
+| `EmailNotifier` | Teks menyebut notifikasi lead **&** pesanan |
+
+**Verifikasi:** diuji langsung via Admin SDK (query sekarang mengembalikan data) ✅ · tsc/lint/build bersih ✅.
+
+**Sisa manual:** uji di produksi setelah deploy — buka `/akun` (riwayat muncul), filter status di `/admin/orders`.
+
+---
+
+## 🎉 Sesi Sebelumnya — Modul Admin Orders/Pesanan
 
 Halaman **Pesanan** admin dibangun dari nol (`docs/2026-10-02-orders-admin-module.md`, FASE 0–7):
 
@@ -75,6 +112,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 21 | Upgrade dashboard: full-width, header dinamis, toast konsisten, rate limit lead, guard akses admin | ✅ |
 | 22 | Upgrade sidebar dashboard: grouping menu, badge lead, mode rail, user menu, a11y drawer (focus trap/dialog), command palette `Ctrl+K` | ✅ |
 | 23 | Modul admin Orders/Pesanan: halaman `/admin/orders`, API admin, badge pesanan, notifikasi email order, metrik dashboard | ✅ |
+| 24 | Revisi sistem produk: galeri via MediaPicker, lightbox galeri, ratio 16:9, kanvas paket (pan+zoom), alur wajib pilih paket | ✅ |
 
 ---
 

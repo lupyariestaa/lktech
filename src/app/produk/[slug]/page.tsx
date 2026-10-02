@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   AlertTriangle,
   Check,
   Layers,
-  Package,
   ShieldCheck,
   Sparkles,
   Truck,
@@ -15,7 +13,12 @@ import {
 import { PageHero } from "@/components/page-hero";
 import { ProductBuyActions } from "@/components/product-buy-actions";
 import { ProductVariantPicker } from "@/components/product-variant-picker";
+import { ProductGallery } from "@/components/product-gallery";
 import { ProductCard } from "@/components/product-card";
+import {
+  ProductPurchaseProvider,
+} from "@/components/product-purchase-context";
+import { ProductPurchasePanel } from "@/components/product-purchase-panel";
 import { Reveal } from "@/components/motion";
 import {
   getProductBySlug,
@@ -82,6 +85,11 @@ export default async function ProdukDetailPage({
   const gallery = [product.cover, ...product.gallery].filter(
     (url) => url && url !== "default",
   );
+  // Gambar galeri dengan alt: cover pakai coverAlt; galeri pakai alt generik.
+  const galleryImages = gallery.map((url, i) => ({
+    url,
+    alt: i === 0 ? product.coverAlt || product.name : `${product.name} — gambar ${i + 1}`,
+  }));
 
   // JSON-LD: produk tunggal → satu Offer; multi-varian → beberapa Offer.
   const jsonLd: Record<string, unknown> = {
@@ -161,47 +169,12 @@ export default async function ProdukDetailPage({
       </PageHero>
 
       <div className="bg-white">
+        <ProductPurchaseProvider>
         <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1fr_340px]">
           {/* ===== Konten utama ===== */}
           <div className="flex flex-col gap-14">
-            {/* Galeri / cover */}
-            <section>
-              <div className="relative aspect-[16/10] overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-primary/10 to-primary-light/10">
-                {gallery.length ? (
-                  <Image
-                    src={gallery[0]}
-                    alt={product.coverAlt || product.name}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 720px"
-                    priority
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-primary/40">
-                    <Package className="h-16 w-16" />
-                  </div>
-                )}
-              </div>
-
-              {gallery.length > 1 && (
-                <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                  {gallery.slice(1).map((url, i) => (
-                    <div
-                      key={`${url}-${i}`}
-                      className="relative aspect-square overflow-hidden rounded-2xl border border-slate-200"
-                    >
-                      <Image
-                        src={url}
-                        alt={`${product.name} ${i + 2}`}
-                        fill
-                        sizes="160px"
-                        className="object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+            {/* Galeri / cover (interaktif: thumbnail + lightbox) */}
+            <ProductGallery images={galleryImages} productName={product.name} />
 
             {/* Deskripsi */}
             <section>
@@ -355,47 +328,29 @@ export default async function ProdukDetailPage({
           {/* ===== Sidebar pembelian ===== */}
           <aside className="lg:sticky lg:top-28 lg:h-fit">
             <div className="flex flex-col gap-5">
-              <div className="rounded-3xl border border-slate-200 bg-surface p-6">
-                <p className="text-xs font-medium text-muted">
-                  {multi ? "Mulai dari" : "Harga"}
-                </p>
-                <div className="mt-1 flex items-end gap-2">
-                  <span className="text-2xl font-bold text-secondary">
-                    {multi ? productPriceLabel(product) : formatPrice(product.price)}
-                  </span>
-                  {hasDiscount && (
-                    <span className="text-sm text-muted line-through">
-                      {formatPrice(product.originalPrice!)}
+              {multi ? (
+                <ProductPurchasePanel product={product} />
+              ) : (
+                <div className="rounded-3xl border border-slate-200 bg-surface p-6">
+                  <p className="text-xs font-medium text-muted">Harga</p>
+                  <div className="mt-1 flex items-end gap-2">
+                    <span className="text-2xl font-bold text-secondary">
+                      {formatPrice(product.price)}
                     </span>
-                  )}
+                    {hasDiscount && (
+                      <span className="text-sm text-muted line-through">
+                        {formatPrice(product.originalPrice!)}
+                      </span>
+                    )}
+                  </div>
+                  <ProductBuyActions product={product} compact className="mt-5" />
+                  <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
+                    <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                    Pembelian memerlukan login akun Google. Checkout & konfirmasi
+                    dilakukan via WhatsApp.
+                  </p>
                 </div>
-
-                {multi ? (
-                  <>
-                    <a
-                      href="#paket"
-                      className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark"
-                    >
-                      <Layers className="h-4 w-4" />
-                      Lihat {product.variants.length} Paket
-                    </a>
-                    <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
-                      <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                      Pilih paket di atas. Pembelian memerlukan login akun Google.
-                      Checkout & konfirmasi via WhatsApp.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <ProductBuyActions product={product} compact className="mt-5" />
-                    <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
-                      <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                      Pembelian memerlukan login akun Google. Checkout & konfirmasi
-                      dilakukan via WhatsApp.
-                    </p>
-                  </>
-                )}
-              </div>
+              )}
 
               {product.delivery && (
                 <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-5">
@@ -434,6 +389,7 @@ export default async function ProdukDetailPage({
             </div>
           </aside>
         </div>
+        </ProductPurchaseProvider>
       </div>
 
       {/* Produk lain */}

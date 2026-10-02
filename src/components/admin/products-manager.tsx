@@ -400,13 +400,14 @@ function ProductForm({
   error: string | null;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
   const { guard, dialogProps } = useUnsavedChanges(true);
 
   const set = <K extends keyof Product>(key: K, value: Product[K]) =>
     onChange({ ...product, [key]: value });
 
   const setList = (
-    key: "tools" | "includes" | "gallery" | "notes",
+    key: "tools" | "includes" | "notes",
     value: string,
   ) =>
     set(
@@ -416,6 +417,24 @@ function ProductForm({
         .map((s) => s.trim())
         .filter(Boolean),
     );
+
+  // ===== Galeri (via MediaPicker multiple) =====
+  const addGalleryUrls = (urls: string[]) =>
+    set("gallery", Array.from(new Set([...product.gallery, ...urls])));
+
+  const removeGalleryAt = (i: number) =>
+    set(
+      "gallery",
+      product.gallery.filter((_, idx) => idx !== i),
+    );
+
+  const moveGallery = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= product.gallery.length) return;
+    const next = [...product.gallery];
+    [next[i], next[j]] = [next[j], next[i]];
+    set("gallery", next);
+  };
 
   return (
     <div>
@@ -585,15 +604,91 @@ function ProductForm({
           </div>
         </div>
 
-        <Field label="Galeri gambar (1 URL per baris)">
-          <textarea
-            rows={3}
-            value={product.gallery.join("\n")}
-            onChange={(e) => setList("gallery", e.target.value)}
-            placeholder="https://res.cloudinary.com/..."
-            className={cn(fieldBase, "resize-none")}
-          />
-        </Field>
+        {/* Galeri (via MediaPicker multiple) */}
+        <div className="rounded-2xl border border-slate-200 bg-surface p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-secondary">
+                Galeri gambar
+              </p>
+              <p className="mt-0.5 text-xs text-muted">
+                Pilih beberapa gambar sekaligus dari Media (rasio disarankan
+                16:9).
+              </p>
+            </div>
+            <button
+              onClick={() => setGalleryPickerOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
+            >
+              <ImageIcon className="h-4 w-4" />
+              Pilih dari Media
+            </button>
+          </div>
+
+          {product.gallery.length === 0 ? (
+            <button
+              onClick={() => setGalleryPickerOpen(true)}
+              className="mt-4 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white py-8 text-muted transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              <ImageIcon className="h-6 w-6" />
+              <span className="text-sm font-medium">
+                Belum ada gambar galeri. Klik untuk memilih.
+              </span>
+            </button>
+          ) : (
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {product.gallery.map((url, i) => (
+                <div
+                  key={`${url}-${i}`}
+                  className="group relative aspect-video overflow-hidden rounded-xl border border-slate-200 bg-white"
+                >
+                  <Image
+                    src={url}
+                    alt={`Galeri ${i + 1}`}
+                    fill
+                    sizes="200px"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-slate-900/70 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveGallery(i, -1)}
+                        disabled={i === 0}
+                        aria-label="Geser ke kiri"
+                        className="grid h-7 w-7 place-items-center rounded-lg bg-white/90 text-slate-600 hover:text-primary disabled:opacity-40"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5 -rotate-90" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveGallery(i, 1)}
+                        disabled={i === product.gallery.length - 1}
+                        aria-label="Geser ke kanan"
+                        className="grid h-7 w-7 place-items-center rounded-lg bg-white/90 text-slate-600 hover:text-primary disabled:opacity-40"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5 -rotate-90" />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeGalleryAt(i)}
+                      aria-label="Hapus gambar"
+                      className="grid h-7 w-7 place-items-center rounded-lg bg-white/90 text-rose-500 hover:bg-white"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {i === 0 && (
+                    <span className="absolute top-1.5 left-1.5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-white">
+                      Pertama
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <Field label="Fitur utama (format: Judul | Deskripsi, 1 per baris)">
           <textarea
@@ -742,6 +837,7 @@ function ProductForm({
         onOpenChange={setPickerOpen}
         mode="single"
         title="Pilih cover produk"
+        cropEnabled
         onSelect={(sel) => {
           if (sel[0]) {
             // PENTING: gunakan SATU onChange (bukan dua `set` berurutan) agar
@@ -755,6 +851,18 @@ function ProductForm({
             });
           }
           setPickerOpen(false);
+        }}
+      />
+
+      <MediaPickerDialog
+        open={galleryPickerOpen}
+        onOpenChange={setGalleryPickerOpen}
+        mode="multiple"
+        title="Pilih gambar galeri"
+        cropEnabled
+        onSelect={(items) => {
+          addGalleryUrls(items.map((it) => it.secureUrl));
+          setGalleryPickerOpen(false);
         }}
       />
     </div>

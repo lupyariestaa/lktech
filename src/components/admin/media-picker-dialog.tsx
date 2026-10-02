@@ -28,10 +28,11 @@ import { cn } from "@/lib/utils";
 export type MediaPickerMode = "single" | "multiple";
 
 /** Rasio crop yang bisa dipilih (untuk URL transformasi Cloudinary). */
-export type CropRatio = "original" | "16:10" | "1:1" | "9:16" | "4:3";
+export type CropRatio = "original" | "16:9" | "16:10" | "1:1" | "9:16" | "4:3";
 
 const CROP_OPTIONS: Array<{ key: CropRatio; label: string; w?: number; h?: number }> = [
   { key: "original", label: "Asli" },
+  { key: "16:9", label: "16:9", w: 1600, h: 900 },
   { key: "16:10", label: "16:10", w: 1600, h: 1000 },
   { key: "1:1", label: "1:1", w: 1200, h: 1200 },
   { key: "4:3", label: "4:3", w: 1200, h: 900 },

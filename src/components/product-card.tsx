@@ -22,7 +22,7 @@ export function ProductCard({ product }: { product: Product }) {
       {/* Cover */}
       <Link
         href={`/produk/${product.slug}`}
-        className="relative block aspect-[16/10] overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10"
+        className="relative block aspect-video overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10"
       >
         {product.cover && product.cover !== "default" ? (
           <Image
