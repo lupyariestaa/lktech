@@ -9,24 +9,26 @@ import { cn } from "@/lib/utils";
 export type GalleryImage = { url: string; alt: string };
 
 /**
- * Lightbox (overlay fullscreen) untuk melihat gambar produk lebih besar.
+ * Lightbox (overlay fullscreen) — GENERIK, dipakai galeri Produk & Portfolio.
  *
  * - Navigasi: tombol prev/next, tombol panah keyboard (←/→), tutup via Escape
  *   atau klik backdrop.
- * - Gambar ditampilkan `object-contain` agar UTUH (tidak terpotong), dengan
- *   latar gelap.
- * - Kunci scroll body, focus trap sederhana, fokus dikembalikan saat ditutup.
+ * - Gambar ditampilkan `object-contain` agar UTUH (tidak terpotong), latar gelap.
+ * - Kunci scroll body, fokus dikembalikan saat ditutup.
  */
-export function ProductLightbox({
+export function MediaLightbox({
   images,
   index,
   onIndexChange,
   onClose,
+  label = "Lihat gambar",
 }: {
   images: GalleryImage[];
   index: number;
   onIndexChange: (i: number) => void;
   onClose: () => void;
+  /** Label aksesibel dialog (mis. "Lihat gambar produk"). */
+  label?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
@@ -67,7 +69,7 @@ export function ProductLightbox({
       className="fixed inset-0 z-[14000] flex flex-col bg-slate-950/90 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label="Lihat gambar produk"
+      aria-label={label}
       onClick={onClose}
     >
       {/* Bar atas */}
@@ -146,13 +148,7 @@ export function ProductLightbox({
                   : "border-transparent opacity-50 hover:opacity-90",
               )}
             >
-              <Image
-                src={img.url}
-                alt=""
-                fill
-                sizes="80px"
-                className="object-cover"
-              />
+              <Image src={img.url} alt="" fill sizes="80px" className="object-cover" />
             </button>
           ))}
         </div>

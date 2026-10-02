@@ -26,6 +26,10 @@ export type Project = {
   metrics: ProjectMetric[];
   techStack: string[];
   testimonial?: ProjectTestimonial;
+  /** Tampilkan sebagai proyek unggulan (mis. di beranda). */
+  featured?: boolean;
+  /** Urutan tampil manual (kecil = lebih dulu). Bila kosong → pakai tahun. */
+  order?: number;
 };
 
 /** Proyek tersimpan di Firestore (dengan id dokumen). */

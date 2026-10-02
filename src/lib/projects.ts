@@ -36,7 +36,26 @@ function normalizeProject(data: Record<string, unknown>): Project {
       data.testimonial && typeof data.testimonial === "object"
         ? (data.testimonial as Project["testimonial"])
         : undefined,
+    featured: data.featured === true,
+    order:
+      typeof data.order === "number" && Number.isFinite(data.order)
+        ? data.order
+        : undefined,
   };
+}
+
+/**
+ * Urutan proyek: unggulan dulu, lalu `order` (kecil→besar; tanpa order di
+ * akhir), lalu tahun terbaru, lalu judul A–Z.
+ */
+function sortProjects(a: Project, b: Project): number {
+  if (Boolean(a.featured) !== Boolean(b.featured)) {
+    return a.featured ? -1 : 1;
+  }
+  const ao = a.order ?? Number.POSITIVE_INFINITY;
+  const bo = b.order ?? Number.POSITIVE_INFINITY;
+  if (ao !== bo) return ao - bo;
+  return b.year - a.year || a.title.localeCompare(b.title);
 }
 
 /**
@@ -52,10 +71,7 @@ export async function getProjects(): Promise<Project[]> {
   try {
     const snap = await db.collection(COLLECTION).get();
     const projects = snap.docs.map((doc) => normalizeProject(doc.data()));
-    // Urutkan: tahun terbaru dulu, lalu judul.
-    return projects.sort(
-      (a, b) => b.year - a.year || a.title.localeCompare(b.title),
-    );
+    return projects.sort(sortProjects);
   } catch (err) {
     console.error("[projects] gagal memuat:", err);
     return [];
@@ -86,7 +102,7 @@ export async function getStoredProjects(): Promise<StoredProject[]> {
   const snap = await db.collection(COLLECTION).get();
   return snap.docs
     .map((doc) => ({ id: doc.id, ...normalizeProject(doc.data()) }))
-    .sort((a, b) => b.year - a.year || a.title.localeCompare(b.title));
+    .sort(sortProjects);
 }
 
 /** Menyimpan (buat/perbarui) proyek berdasarkan slug. */
