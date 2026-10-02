@@ -170,7 +170,7 @@ export default async function ProdukDetailPage({
 
       <div className="bg-white">
         <ProductPurchaseProvider>
-        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1fr_340px]">
+        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* ===== Konten utama ===== */}
           <div className="flex flex-col gap-14">
             {/* Galeri / cover (interaktif: thumbnail + lightbox) */}

@@ -101,12 +101,12 @@ export function VariantCanvas({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0 max-w-full">
       {/* Viewport */}
       <div
         ref={viewportRef}
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-slate-200 bg-surface",
+          "relative min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-surface",
           dragging ? "cursor-grabbing" : "cursor-grab",
         )}
         style={{ touchAction: dragging ? "none" : "pan-y" }}
