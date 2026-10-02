@@ -52,6 +52,7 @@ const emptyProject: Project = {
   serviceSlug: "pembuatan-website",
   year: new Date().getFullYear(),
   summary: "",
+  pages: "",
   cover: "default",
   accent: "from-[#004EDF] to-[#4D82EC]",
   tags: [],
@@ -456,30 +457,42 @@ function ProjectForm({
           </Field>
         </div>
 
-        <Field label="Ringkasan">
-          <textarea
-            rows={2}
-            value={project.summary}
-            onChange={(e) => set("summary", e.target.value)}
-            placeholder="Ringkasan singkat proyek"
-            className={cn(fieldBase, "resize-none")}
-          />
-        </Field>
+        <div className="grid gap-5 sm:grid-cols-[1fr_auto]">
+          <Field label="Ringkasan">
+            <textarea
+              rows={2}
+              value={project.summary}
+              onChange={(e) => set("summary", e.target.value)}
+              placeholder="Ringkasan singkat proyek (untuk kartu & meta)"
+              className={cn(fieldBase, "resize-none")}
+            />
+          </Field>
+          <Field label="Jumlah halaman/layar">
+            <input
+              value={project.pages ?? ""}
+              onChange={(e) => set("pages", e.target.value || undefined)}
+              placeholder="mis. 5 halaman"
+              className={cn(fieldBase, "sm:w-48")}
+            />
+          </Field>
+        </div>
 
-        <Field label="Tantangan">
+        <Field label="Tantangan (opsional)">
           <textarea
             rows={3}
             value={project.challenge}
             onChange={(e) => set("challenge", e.target.value)}
+            placeholder="Boleh dikosongkan bila belum ada data"
             className={cn(fieldBase, "resize-none")}
           />
         </Field>
 
-        <Field label="Solusi">
+        <Field label="Solusi (opsional)">
           <textarea
             rows={3}
             value={project.solution}
             onChange={(e) => set("solution", e.target.value)}
+            placeholder="Boleh dikosongkan bila belum ada data"
             className={cn(fieldBase, "resize-none")}
           />
         </Field>
@@ -493,7 +506,7 @@ function ProjectForm({
               className={cn(fieldBase, "resize-none")}
             />
           </Field>
-          <Field label="Hasil (1 per baris)">
+          <Field label="Hasil (opsional, 1 per baris)">
             <textarea
               rows={4}
               value={project.results.join("\n")}
@@ -511,7 +524,7 @@ function ProjectForm({
           </Field>
         </div>
 
-        <Field label="Metrik (format: Label = Nilai, 1 per baris)">
+        <Field label="Metrik (opsional, format: Label = Nilai, 1 per baris)">
           <textarea
             rows={3}
             value={project.metrics.map((m) => `${m.label} = ${m.value}`).join("\n")}

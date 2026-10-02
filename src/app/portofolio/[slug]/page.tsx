@@ -229,7 +229,21 @@ export default async function ProjectDetailPage({
                 </Link>
               </span>
             )}
+            {project.pages && (
+              <span>
+                Halaman:{" "}
+                <span className="font-semibold text-secondary">
+                  {project.pages}
+                </span>
+              </span>
+            )}
           </div>
+
+          {project.summary && (
+            <p className="mt-5 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+              {project.summary}
+            </p>
+          )}
 
           {project.tags.length > 0 && (
             <div className="mt-5 flex flex-wrap gap-2">
@@ -282,79 +296,95 @@ export default async function ProjectDetailPage({
         </div>
       </section>
 
-      {/* Studi kasus */}
-      <section className="relative bg-white pb-16">
-        <div className="mx-auto grid max-w-5xl gap-10 px-6 lg:grid-cols-2">
-          <Reveal>
-            <div className="flex h-full flex-col rounded-3xl border border-slate-100 bg-surface p-7">
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-rose-50 text-rose-500">
-                <Target className="h-5 w-5" />
-              </span>
-              <h2 className="mt-4 text-lg font-bold text-secondary">
-                Tantangan
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                {project.challenge}
-              </p>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.1}>
-            <div className="flex h-full flex-col rounded-3xl border border-slate-100 bg-surface p-7">
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-amber-50 text-amber-500">
-                <Lightbulb className="h-5 w-5" />
-              </span>
-              <h2 className="mt-4 text-lg font-bold text-secondary">Solusi</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                {project.solution}
-              </p>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* Hasil */}
-      <section className="relative bg-surface py-16">
-        <div className="mx-auto max-w-5xl px-6">
-          <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-500">
-              <TrendingUp className="h-5 w-5" />
-            </span>
-            <h2 className="text-2xl font-bold text-secondary">
-              Hasil &amp; dampak
-            </h2>
-          </div>
-
-          <ul className="mt-8 grid gap-4 sm:grid-cols-3">
-            {project.results.map((r, i) => (
-              <Reveal key={r} delay={i * 0.08}>
-                <li className="flex h-full items-start gap-3 rounded-2xl border border-slate-100 bg-white p-5">
-                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
-                    <Check className="h-3 w-3" />
+      {/* Studi kasus (opsional — tampil hanya bila ada tantangan/solusi) */}
+      {(project.challenge.trim() || project.solution.trim()) && (
+        <section className="relative bg-white pb-16">
+          <div className="mx-auto grid max-w-5xl gap-10 px-6 lg:grid-cols-2">
+            {project.challenge.trim() && (
+              <Reveal>
+                <div className="flex h-full flex-col rounded-3xl border border-slate-100 bg-surface p-7">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-rose-50 text-rose-500">
+                    <Target className="h-5 w-5" />
                   </span>
-                  <span className="text-sm leading-relaxed text-slate-700">
-                    {r}
-                  </span>
-                </li>
+                  <h2 className="mt-4 text-lg font-bold text-secondary">
+                    Tantangan
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                    {project.challenge}
+                  </p>
+                </div>
               </Reveal>
-            ))}
-          </ul>
+            )}
 
-          <div className="mt-8 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold tracking-wide text-muted uppercase">
-              Teknologi:
-            </span>
-            {project.techStack.map((t) => (
-              <span
-                key={t}
-                className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary"
-              >
-                {t}
-              </span>
-            ))}
+            {project.solution.trim() && (
+              <Reveal delay={0.1}>
+                <div className="flex h-full flex-col rounded-3xl border border-slate-100 bg-surface p-7">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-amber-50 text-amber-500">
+                    <Lightbulb className="h-5 w-5" />
+                  </span>
+                  <h2 className="mt-4 text-lg font-bold text-secondary">
+                    Solusi
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                    {project.solution}
+                  </p>
+                </div>
+              </Reveal>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Hasil & teknologi (tampil bila ada hasil ATAU tech stack) */}
+      {(project.results.length > 0 || project.techStack.length > 0) && (
+        <section className="relative bg-surface py-16">
+          <div className="mx-auto max-w-5xl px-6">
+            {project.results.length > 0 && (
+              <>
+                <div className="flex items-center gap-3">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-500">
+                    <TrendingUp className="h-5 w-5" />
+                  </span>
+                  <h2 className="text-2xl font-bold text-secondary">
+                    Hasil &amp; dampak
+                  </h2>
+                </div>
+
+                <ul className="mt-8 grid gap-4 sm:grid-cols-3">
+                  {project.results.map((r, i) => (
+                    <Reveal key={r} delay={i * 0.08}>
+                      <li className="flex h-full items-start gap-3 rounded-2xl border border-slate-100 bg-white p-5">
+                        <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <span className="text-sm leading-relaxed text-slate-700">
+                          {r}
+                        </span>
+                      </li>
+                    </Reveal>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {project.techStack.length > 0 && (
+              <div className="mt-8 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold tracking-wide text-muted uppercase">
+                  Teknologi:
+                </span>
+                {project.techStack.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Testimoni (jika ada) */}
       {project.testimonial && (

@@ -16,8 +16,8 @@ untuk dijadikan BAHAN PORTOFOLIO. Tulis hasilnya ke SATU file Markdown.
 
 PENTING: Lakukan RISET NYATA dari project ini (baca kode, struktur folder, config,
 README, package.json, aset, dsb.). JANGAN mengarang fakta teknis yang bisa dicek.
-Yang boleh dikarang hanya bagian "studi kasus" (tantangan/solusi/hasil) jika memang
-tidak ada data tertulis — tandai bagian itu dengan jelas (lihat bagian ATURAN).
+Bagian "Tantangan/Solusi/Hasil/Metrik/Testimoni" bersifat OPSIONAL — isi hanya bila
+ada bukti; bila tidak ada, tulis "SKIP" (jangan mengarang). Lihat bagian ATURAN.
 
 === LANGKAH RISET (lakukan dulu sebelum menulis) ===
 1. Baca file konfigurasi: package.json, README, next.config / config lain, .env.example.
@@ -28,6 +28,7 @@ tidak ada data tertulis — tandai bagian itu dengan jelas (lihat bagian ATURAN)
    - Klien / pemilik project (nama brand/instansi bila ada).
    - Tahun pengerjaan (dari git log bila ada, atau tahun berjalan).
    - Fitur utama (dari halaman/route/komponen yang ada).
+   - Jumlah halaman/layar/modul (hitung dari route/section).
    - Teknologi & library yang benar-benar dipakai (dari package.json / imports).
 4. Jika ada screenshot/aset gambar di folder publik, sebutkan path-nya.
 5. Simpulkan kategori & teknologi yang paling tepat.
@@ -35,8 +36,10 @@ tidak ada data tertulis — tandai bagian itu dengan jelas (lihat bagian ATURAN)
 === OUTPUT: tulis SATU file Markdown ===
 Nama file: PORTOFOLIO-DATA.md
 Isi persis mengikuti TEMPLATE di bawah (jangan tambah/kurangi judul field).
-Isi setiap field dengan data hasil riset. Jangan sisakan placeholder "..." —
-kalau tidak ada data, tulis nilai default yang masuk akal.
+Isi setiap field dengan data hasil riset.
+Field WAJIB: Judul, Slug, Klien, Kategori, Layanan, Tahun, Ringkasan,
+Jumlah Halaman, Tags, Teknologi.
+Field OPSIONAL (isi atau tulis "SKIP"): Tantangan, Solusi, Hasil, Metrik, Testimoni.
 
 === TEMPLATE (salin & isi) ===
 
@@ -52,8 +55,9 @@ kalau tidak ada data, tulis nilai default yang masuk akal.
 
 ## Deskripsi
 - **Ringkasan (1–2 kalimat):** <ringkasan proyek untuk kartu portofolio & meta description>
-- **Tantangan:** <apa masalah/kebutuhan klien sebelum proyek INI — 2–4 kalimat>
-- **Solusi:** <bagaimana proyek ini menjawab tantangan tsb — 2–4 kalimat>
+- **Jumlah Halaman/Layar:** <mis. "5 halaman" / "12 layar" / "8 modul". Bila tidak jelas, tulis perkiraan dari jumlah route/section.>
+- **Tantangan (OPSIONAL):** <isi HANYA bila kamu yakin/temukan bukti di project. Bila tidak ada data/ragu, tulis: "SKIP" — jangan mengarang.>
+- **Solusi (OPSIONAL):** <isi HANYA bila kamu yakin/temukan bukti. Bila tidak ada data/ragu, tulis: "SKIP" — jangan mengarang.>
 
 ## Tags
 <3–6 kata kunci, satu per baris, mis.:
@@ -61,17 +65,14 @@ website
 umkm
 responsive>
 
-## Hasil (poin dampak)
-<3–6 poin, satu per baris, boleh hasil kualitatif MISALNYA:
-Website resmi online 24 jam
-Konten bisa dikelola mandiri
-Tampilan responsif di semua perangkat>
+## Hasil (OPSIONAL — poin dampak)
+<isi HANYA bila ada bukti/kamu sangat yakin. Bila tidak, tulis: "SKIP".
+Jangan mengarang klaim dampak bisnis yang tidak bisa diverifikasi.>
 
-## Metrik
-<2–6 baris, format: Label = Nilai. Boleh angka realistis bila tak ada data asli:
-Waktu muat = < 2 detik
-Skor performa = 90+
-Halaman = 5 halaman>
+## Metrik (OPSIONAL)
+<isi HANYA bila ada angka nyata (mis. dari kode: jumlah halaman/modul). Bila
+tidak ada, tulis: "SKIP". Jangan mengarang angka.
+Contoh format bila ada: Halaman = 5 halaman>
 
 ## Teknologi
 <Teknologi yang BENAR dipakai (dari package.json/imports), satu per baris, mis.:
@@ -79,10 +80,10 @@ Next.js
 Tailwind CSS
 Firebase>
 
-## Testimoni (opsional)
-> <kutipan testimoni klien — bila tidak ada, tulis "TIDAK ADA">
-- **Nama:** <nama pemberi testimoni, atau "TIDAK ADA">
-- **Jabatan:** <jabatan, perusahaan, atau "TIDAK ADA">
+## Testimoni (OPSIONAL)
+> <kutipan testimoni klien — bila tidak ada, tulis "SKIP">
+- **Nama:** <nama pemberi testimoni, atau "SKIP">
+- **Jabatan:** <jabatan, perusahaan, atau "SKIP">
 
 ## Data Gambar (opsional)
 <Path/lokasi screenshot atau gambar di project ini (untuk diunggah ke Media LKTech).
@@ -100,13 +101,16 @@ Contoh:
 === ATURAN ===
 1. Bahasa Indonesia.
 2. Fakta teknis (teknologi, jenis proyek, fitur) HARUS dari hasil riset — jangan karang.
-3. Bagian "Tantangan/Solusi/Hasil/Metrik/Testimoni" boleh disusun/dikarang secara
-   REALISTIS bila tidak ada data tertulis, TAPI wajib dicatat di "Catatan Verifikasi".
-4. Slug: huruf kecil, tanda hubung, tanpa karakter aneh.
-5. Jangan menambahkan bagian lain di luar template.
-6. Setelah selesai, konfirmasi: "File PORTOFOLIO-DATA.md sudah dibuat." dan
+3. PENTING: Bagian "Tantangan, Solusi, Hasil, Metrik, Testimoni" bersifat OPSIONAL.
+   Isi HANYA bila kamu menemukan bukti/kamu sangat yakin. Bila ragu atau tidak ada
+   data di project, tulis "SKIP" — JANGAN mengarang. Proyek tetap valid tanpa bagian
+   tersebut (website portofolio akan menyembunyikan bagian yang kosong).
+4. Yang WAJIB ada: Judul, Slug, Klien, Kategori, Layanan, Tahun, Ringkasan,
+   Tags, Teknologi.
+5. Slug: huruf kecil, tanda hubung, tanpa karakter aneh.
+6. Jangan menambahkan bagian lain di luar template.
+7. Setelah selesai, konfirmasi: "File PORTOFOLIO-DATA.md sudah dibuat." dan
    ringkas 3 fakta utama yang kamu temukan.
-
 ```
 
 ## (akhir PROMPT)
@@ -117,10 +121,16 @@ Contoh:
 
 Setelah file `.md` diterima, LKTech akan:
 1. Memetakan field ke tipe `Project` (`src/lib/project-types.ts`):
-   `slug, title, client, category, serviceSlug, year, summary, cover, accent, tags,
-   challenge, solution, results[], metrics[], techStack[], testimonial?`.
+   `slug, title, client, category, serviceSlug, year, summary, pages?, cover, accent,
+   tags, challenge, solution, results[], metrics[], techStack[], testimonial?`.
+   Field bertanda `?` / opsional boleh kosong (dilewati bila "SKIP").
 2. `cover` diisi `"default"` (placeholder) + `accent` gradient default; gambar asli
    diunggah ke Media (kategori `portofolio`, `projectSlug`) via dashboard atau
    disiapkan terpisah.
 3. Membuat `scripts/seed-project-<slug>.mjs` (idempoten, pola sama seperti
    `seed-product-*.mjs`) lalu menjalankannya → data masuk koleksi `projects`.
+
+Catatan: **tantangan/solusi/hasil/metrik opsional** — halaman detail otomatis
+menyembunyikan bagian tersebut bila kosong, sehingga proyek tetap tampil rapi
+walau hanya berisi data dasar (kategori, judul, klien, tahun, layanan, tags,
+teknologi, deskripsi, jumlah halaman, gambar).

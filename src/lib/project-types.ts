@@ -17,6 +17,8 @@ export type Project = {
   serviceSlug: string;
   year: number;
   summary: string;
+  /** Jumlah halaman/layar/modul (teks bebas, mis. "5 halaman", "12 layar"). */
+  pages?: string;
   cover: string;
   accent: string;
   tags: string[];

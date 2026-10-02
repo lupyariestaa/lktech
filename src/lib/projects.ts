@@ -20,6 +20,7 @@ function normalizeProject(data: Record<string, unknown>): Project {
     serviceSlug: str(data.serviceSlug),
     year: typeof data.year === "number" ? data.year : Number(data.year) || 0,
     summary: str(data.summary),
+    pages: str(data.pages) || undefined,
     cover: str(data.cover, "default"),
     accent: str(data.accent, "from-[#004EDF] to-[#4D82EC]"),
     tags: strArr(data.tags),
