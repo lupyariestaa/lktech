@@ -77,30 +77,33 @@ const PROJECT_SLUG = "platform-membership-ecommerce-yh-printing";
 
 const project = {
   slug: PROJECT_SLUG,
-  title: "Platform Membership & E-Commerce Y&H Printing",
-  client: "Y&H Printing",
+  title: "Y&H Yudha Member — Platform Membership Anti-Churn untuk Retail Percetakan",
+  client: "Y&H Yudha Grafika",
   category: "Web App",
   serviceSlug: "pembuatan-website",
   year: 2026,
   summary:
-    "Web app terintegrasi untuk keanggotaan B2B percetakan — pemesanan berdiskon otomatis, verifikasi transfer, invoice PDF, pelacakan logistik, hingga undian loyalti berkala.",
+    "Platform membership B2B yang mengubah pembeli dari Shopee, TikTok, Tokopedia, & Lazada menjadi member berlangganan — mencegah pelanggan pindah toko sekaligus menciptakan pendapatan di muka melalui biaya keanggotaan tahunan.",
   cover: "default",
   accent: "from-[#004EDF] to-[#4D82EC]",
-  tags: ["Web App", "E-Commerce", "Membership", "Percetakan", "Firebase"],
+  tags: ["Web App", "Membership", "Retensi Pelanggan", "E-Commerce", "Percetakan", "Firebase"],
   challenge:
-    "Pengelolaan transaksi reseller percetakan sebelumnya dilakukan manual lewat pesan instan, memicu antrean pesanan, risiko kekeliruan pengecekan mutasi rekening, dan status produksi yang sulit dipantau. Perhitungan diskon paket member serta penyelenggaraan program reward undian tahunan juga belum terotomasi secara transparan dan aman.",
+    "Y&H Yudha Grafika punya basis pelanggan yang sangat besar dan aktif — tetapi hampir seluruhnya berbelanja lewat marketplace pihak ketiga (Shopee, TikTok, Tokopedia, Lazada). Ini berisiko: pelanggan mudah berpindah ke toko lain karena harga sama-sama terlihat di semua toko, tanpa ada ikatan dengan brand. Perusahaan butuh cara mengikat pelanggan agar tetap setia, sekaligus menciptakan sumber pendapatan yang tidak bergantung pada margin tipis marketplace.",
   solution:
-    "Membangun sistem web app terpadu dengan pembagian role bertingkat (Member, Admin, Master Admin). Dilengkapi pemesanan produk multi-varian berdiskon otomatis hingga 50%, unggah & kurasi bukti transfer via Cloudinary, penerbitan invoice PDF instan, alur logistik pengiriman paket dengan nomor resi, serta engine undian berkala ber-audit trail. Seluruh alur dirancang agar reseller bisa memesan mandiri tanpa antre.",
+    "Membangun platform membership khusus (Y&H Yudha Member) dengan skema langganan sekali bayar Rp200.000/tahun. Member mendapatkan diskon hingga 50% khusus di website — harga yang tidak tersedia di marketplace — sehingga pelanggan punya alasan kuat untuk loyal dan bertransaksi langsung ke brand. Lewat strategi ini, setiap konversi pelanggan marketplace menjadi member menghasilkan pendapatan di muka bagi perusahaan, sekaligus mencegah churn. Platform dibangun dengan pembagian role bertingkat (Member, Admin, Master Admin), pemesanan multi-varian berdiskon otomatis, verifikasi bukti transfer via Cloudinary, invoice PDF instan, pelacakan logistik ber-nomor resi, dan engine undian loyalti berkala ber-audit trail.",
   results: [
-    "Transaksi reseller beralih dari manual menjadi terotomasi penuh",
-    "Verifikasi bukti transfer & penerbitan invoice PDF berjalan tersentralisasi",
-    "Diskon eksklusif paket membership hingga 50% teraplikasi otomatis saat checkout",
-    "Pelacakan status pesanan & nomor resi kurir transparan secara real-time",
-    "Campaign loyalti & pengundian pemenang berjalan adil dan terverifikasi",
+    "Pelanggan dari marketplace terikat sebagai member berlangganan — menekan risiko berpindah toko",
+    "Tercipta pendapatan di muka dari biaya keanggotaan tahunan (one-time pay per member)",
+    "Diskon member hingga 50% menjadi magnet loyalitas yang tidak tersedia lewat marketplace",
+    "Transaksi member beralih dari manual ke website sendiri (lepas dari ketergantungan marketplace)",
+    "Verifikasi transfer, invoice PDF, & pelacakan resi berjalan tersentralisasi dan otomatis",
+    "Campaign loyalti & pengundian member berjalan adil serta terverifikasi (audit trail)",
   ],
   metrics: [
+    { label: "Biaya member / tahun", value: "Rp200 rb" },
+    { label: "Diskon khusus member", value: "Hingga 50%" },
+    { label: "Potensi pendapatan member", value: "Rp600 jt+" },
     { label: "Waktu respon API", value: "< 150 ms" },
-    { label: "Efisiensi proses order", value: "+60%" },
     { label: "Katalog varian SKU", value: "350+" },
     { label: "Modul panel admin", value: "10 modul" },
   ],
@@ -118,9 +121,9 @@ const project = {
   ],
   testimonial: {
     quote:
-      "Harganya bersahabat banget buat reseller, proses transaksinya serba otomatis lewat website.",
-    author: "Siti Rahma",
-    role: "Reseller Percetakan, Bandung",
+      "Sejak ada website member, pelanggan marketplace kami jadi punya alasan untuk balik lagi ke toko sendiri — bukan cuma lewat WhatsApp.",
+    author: "Pengelola Y&H Yudha Grafika",
+    role: "Tim Operasional Y&H Yudha Grafika",
   },
   featured: true,
   order: 0,
