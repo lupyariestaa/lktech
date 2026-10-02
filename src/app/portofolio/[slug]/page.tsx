@@ -12,8 +12,9 @@ import {
   Quote,
 } from "lucide-react";
 import { ProjectCover } from "@/components/project-cover";
+import { ProjectCard } from "@/components/project-card";
+import { MediaGallery, type GalleryImage } from "@/components/media-gallery";
 import { Reveal } from "@/components/motion";
-import { Icon } from "@/components/icon";
 import { ButtonAnchor } from "@/components/ui/button";
 import { CtaContact } from "@/components/sections/cta-contact";
 import { getSiteContent } from "@/lib/site-content";
@@ -25,7 +26,6 @@ import {
 import { getPortfolioMediaMap } from "@/lib/portfolio-media";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
-import { cn } from "@/lib/utils";
 
 type Params = { slug: string };
 
@@ -47,6 +47,9 @@ export async function generateMetadata({
   const project = await getProjectBySlug(slug);
   if (!project) return { title: "Proyek tidak ditemukan" };
 
+  const mediaMap = await getPortfolioMediaMap();
+  const cover = mediaMap[slug]?.cover?.secureUrl;
+
   return {
     title: project.title,
     description: project.summary,
@@ -56,6 +59,7 @@ export async function generateMetadata({
       description: project.summary,
       type: "article",
       url: `/portofolio/${slug}`,
+      images: cover ? [{ url: cover, alt: project.title }] : undefined,
     },
   };
 }
@@ -77,12 +81,32 @@ export default async function ProjectDetailPage({
   ]);
 
   const service = services.find((s) => s.slug === project.serviceSlug);
-  const others = allProjects.filter((p) => p.slug !== slug).slice(0, 3);
+
+  // Proyek lain: utamakan yang kategori/layanan sama, lalu sisanya (isi sampai 3).
+  const rest = allProjects.filter((p) => p.slug !== slug);
+  const sameCategory = rest.filter((p) => p.category === project.category);
+  const sameService = rest.filter(
+    (p) => p.serviceSlug === project.serviceSlug && p.category !== project.category,
+  );
+  const remaining = rest.filter(
+    (p) => !sameCategory.includes(p) && !sameService.includes(p),
+  );
+  const others = [...sameCategory, ...sameService, ...remaining].slice(0, 3);
 
   const projectMedia = mediaMap[slug];
   const coverImage = projectMedia?.cover.secureUrl;
   const coverAlt = projectMedia?.cover.alt;
   const gallery = projectMedia?.gallery ?? [];
+
+  // Gambar galeri interaktif: cover + gambar tambahan (yang punya URL).
+  const galleryImages: GalleryImage[] = [
+    ...(coverImage
+      ? [{ url: coverImage, alt: coverAlt || project.title }]
+      : []),
+    ...gallery
+      .filter((g) => g.secureUrl)
+      .map((g) => ({ url: g.secureUrl, alt: g.alt || project.title })),
+  ];
 
   return (
     <>
@@ -143,56 +167,55 @@ export default async function ProjectDetailPage({
               </span>
             )}
           </div>
+
+          {project.tags.length > 0 && (
+            <div className="mt-5 flex flex-wrap gap-2">
+              {project.tags.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Cover + metrics */}
+      {/* Cover + galeri + metrics */}
       <section className="relative bg-white pb-16">
         <div className="mx-auto max-w-5xl px-6">
           <Reveal>
             <div className="overflow-hidden rounded-[2rem] border border-slate-100 p-3 shadow-xl shadow-slate-900/5">
-              <ProjectCover
-                name={project.cover}
-                accent={project.accent}
-                label={project.category}
-                image={coverImage}
-                alt={coverAlt}
-                priority
-              />
+              {galleryImages.length > 0 ? (
+                <MediaGallery images={galleryImages} label={project.title} />
+              ) : (
+                <ProjectCover
+                  name={project.cover}
+                  accent={project.accent}
+                  label={project.category}
+                  priority
+                />
+              )}
             </div>
           </Reveal>
 
-          {/* Galeri gambar tambahan */}
-          {gallery.length > 0 && (
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              {gallery.map((g, i) => (
-                <Reveal key={g.id} delay={i * 0.06}>
-                  <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
-                    <ProjectCover
-                      name={`${project.cover}-${i}`}
-                      accent={project.accent}
-                      image={g.secureUrl}
-                      alt={g.alt}
-                    />
-                  </div>
-                </Reveal>
+          {project.metrics.length > 0 && (
+            <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {project.metrics.map((m) => (
+                <div
+                  key={m.label}
+                  className="rounded-2xl border border-slate-100 bg-surface px-4 py-5 text-center"
+                >
+                  <p className="text-xl font-bold text-primary sm:text-2xl">
+                    {m.value}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">{m.label}</p>
+                </div>
               ))}
             </div>
           )}
-
-          <div className="mt-8 grid grid-cols-3 gap-4">
-            {project.metrics.map((m) => (
-              <div
-                key={m.label}
-                className="rounded-2xl border border-slate-100 bg-surface px-4 py-5 text-center"
-              >
-                <p className="text-xl font-bold text-primary sm:text-2xl">
-                  {m.value}
-                </p>
-                <p className="mt-1 text-xs text-muted">{m.label}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -344,37 +367,14 @@ export default async function ProjectDetailPage({
             </Link>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {others.map((p) => (
-              <Link
+              <ProjectCard
                 key={p.slug}
-                href={`/portofolio/${p.slug}`}
-                className="group flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10"
-              >
-                <span
-                  className={cn(
-                    "grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white",
-                    p.accent,
-                  )}
-                >
-                  <Icon
-                    name={
-                      services.find((s) => s.slug === p.serviceSlug)?.icon ??
-                      "sparkles"
-                    }
-                    className="h-5 w-5"
-                  />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-secondary">
-                    {p.title}
-                  </span>
-                  <span className="mt-0.5 block truncate text-xs text-muted">
-                    {p.client} · {p.category}
-                  </span>
-                </span>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-primary" />
-              </Link>
+                project={p}
+                coverImage={mediaMap[p.slug]?.cover?.secureUrl}
+                coverAlt={mediaMap[p.slug]?.cover?.alt}
+              />
             ))}
           </div>
         </div>
