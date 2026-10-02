@@ -25,17 +25,40 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function PortofolioPage() {
-  const [projects, categories, mediaMap, settings] = await Promise.all([
+export default async function PortofolioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    kategori?: string;
+    q?: string;
+    tema?: string;
+    urut?: string;
+  }>;
+}) {
+  const [projects, categories, mediaMap, settings, sp] = await Promise.all([
     getProjects(),
     getProjectCategories(),
     getPortfolioMediaMap(),
     getSiteSettings(),
+    searchParams,
   ]);
   const coverMap: Record<string, { url: string; alt?: string }> = {};
   for (const [slug, media] of Object.entries(mediaMap)) {
     coverMap[slug] = { url: media.cover.secureUrl, alt: media.cover.alt };
   }
+
+  // Daftar tag unik (dari semua proyek), untuk filter "Tema".
+  const tags = Array.from(new Set(projects.flatMap((p) => p.tags)))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  // State awal dari URL (dibaca di server → aman & tanpa hydration mismatch).
+  const initialCategory =
+    sp.kategori && categories.includes(sp.kategori) ? sp.kategori : "Semua";
+  const initialTag = sp.tema && tags.includes(sp.tema) ? sp.tema : null;
+  const initialQuery = sp.q ?? "";
+  const initialSort =
+    sp.urut === "terlama" || sp.urut === "judul" ? sp.urut : "terbaru";
 
   return (
     <>
@@ -73,7 +96,12 @@ export default async function PortofolioPage() {
           <PortfolioGrid
             projects={projects}
             categories={categories}
+            tags={tags}
             mediaMap={coverMap}
+            initialCategory={initialCategory}
+            initialTag={initialTag}
+            initialQuery={initialQuery}
+            initialSort={initialSort}
           />
         </div>
       </section>
