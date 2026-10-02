@@ -169,11 +169,11 @@ export default async function ProdukDetailPage({
         </div>
       </PageHero>
 
+      <ProductPurchaseProvider>
       <div className="bg-white">
-        <ProductPurchaseProvider>
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 pb-28 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12 lg:pb-16">
           {/* ===== Konten utama ===== */}
-          <div className="flex flex-col gap-10 sm:gap-14">
+          <div className="flex min-w-0 flex-col gap-10 sm:gap-14">
             {/* Galeri / cover (interaktif: thumbnail + lightbox) */}
             <ProductGallery images={galleryImages} productName={product.name} />
 
@@ -390,7 +390,6 @@ export default async function ProdukDetailPage({
             </div>
           </aside>
         </div>
-        </ProductPurchaseProvider>
       </div>
 
       {/* Info ringkas (mobile): pengiriman & tools */}
@@ -438,6 +437,7 @@ export default async function ProdukDetailPage({
 
       {/* Bar pembelian sticky (mobile) */}
       {multi && <ProductPurchaseBar product={product} />}
+      </ProductPurchaseProvider>
 
       {/* Produk lain */}
       {others.length > 0 && (
