@@ -35,3 +35,4 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-02 | [Revisi Sistem Produk (galeri, lightbox, ratio 16:9, kanvas paket, alur pilih paket)](2026-10-02-revisi-sistem-produk.md) | Selesai |
 | 2026-10-02 | [Prompt Generate Image Cover Produk (6 prompt)](2026-10-02-prompt-image-cover-produk.md) | Referensi |
 | 2026-10-02 | [Upgrade Sistem Portfolio (audit + task flow)](2026-10-02-upgrade-sistem-portfolio.md) | Selesai |
+| 2026-10-02 | [Prompt Ekstraksi Data Portofolio (untuk agent project klien)](2026-10-02-prompt-ekstraksi-data-portofolio.md) | Referensi |
