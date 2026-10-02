@@ -1,38 +1,40 @@
 # Data Portofolio Proyek
 
 ## Info Dasar
-- **Judul Proyek:** Platform Membership & E-Commerce Y&H Printing
-- **Slug:** platform-membership-ecommerce-yh-printing
-- **Klien:** Y&H Printing
+- **Judul Proyek:** Duitin — SaaS Pengelolaan Keuangan Pribadi
+- **Slug:** duitin-saas-pengelolaan-keuangan-pribadi
+- **Klien:** Duitin (brand produk perangkat lunak keuangan milik pengembang)
 - **Kategori:** Web App
 - **Layanan LKTech Terkait:** pembuatan-website
-- **Tahun:** 2026
+- **Tahun:** 2025
 
 ## Deskripsi
-- **Ringkasan (1–2 kalimat):** Platform web terpadu untuk keanggotaan B2B percetakan Y&H Printing yang memfasilitasi pemesanan produk cetak berdiskon khusus, verifikasi pembayaran transfer bank, pelacakan logistik, hingga program loyalti undian berkala.
-- **Tantangan:** Pengelolaan transaksi reseller percetakan sebelumnya dilakukan manual via pesan instan sehingga memicu antrean pesanan, risiko kekeliruan cek mutasi rekening, dan status produksi yang sulit dipantau. Selain itu, perhitungan diskon paket member khusus dan penyelenggaraan program reward undian tahunan belum memiliki otomasi yang transparan dan aman.
-- **Solusi:** Mengembangkan sistem web app terpadu berbasis React 19, Express, dan Firestore dengan pembagian role bertingkat (Member, Admin, Master Admin). Menyediakan fitur pemesanan produk multi-varian berdiskon otomatis, unggah dan kurasi bukti transfer via Cloudinary, pembuatan invoice PDF instan, alur kerja logistik pengiriman paket, serta engine undian berkala dengan audit trail ketat.
+- **Ringkasan (1–2 kalimat):** Duitin adalah platform SaaS pengelolaan keuangan pribadi berbasis web yang membantu pengguna mencatat pemasukan/pengeluaran, budgeting, utang-piutang, target tabungan, hingga laporan grafik, lengkap dengan CMS admin multi-role dan sistem langganan berbayar.
+- **Tantangan:** Banyak orang kesulitan melacak arus kas karena mencatat keuangan secara manual di spreadsheet yang rumit dan rentan salah hitung, sementara catatan utang piutang serta tagihan rutin sering terlewat. Aplikasi keuangan yang beredar umumnya penuh iklan dan meminta izin data yang berlebihan. Klien membutuhkan satu platform terpusat yang aman, privat, dan mudah dipahami untuk mengelola seluruh kondisi finansial dalam satu tempat.
+- **Solusi:** Duitin dibangun sebagai aplikasi web modern satu pintu yang menggabungkan pencatatan transaksi, budgeting dengan peringatan limit, pelacakan utang-piutang, saving goals, reminder tagihan, dan laporan analitik real-time. Sistem autentikasi Firebase dengan role-based access control memisahkan akses member dan admin, sedangkan pembayaran langganan diotomasi lewat Midtrans Snap berikut verifikasi webhook di sisi server. Seluruh modul dapat dikelola mandiri oleh admin melalui CMS internal.
 
 ## Tags
-web-app
-e-commerce
-membership
-percetakan
-react
+saas
+aplikasi keuangan
+keuangan pribadi
+web app
 firebase
+midtrans
 
 ## Hasil (poin dampak)
-Alur transaksi pemesanan reseller beralih dari manual menjadi terotomasi penuh
-Verifikasi bukti transfer bank dan penerbitan nota invoice PDF berjalan tersentralisasi
-Diskon eksklusif paket membership hingga 50% teraplikasi otomatis saat checkout
-Sistem pelacakan status pesanan dan nomor resi kurir transparan secara real-time
-Penyelenggaraan campaign loyalti dan pengundian pemenang berjalan adil dan terverifikasi
+Aplikasi web resmi yang dapat diakses 24 jam
+Pencatatan pemasukan, pengeluaran, dan utang piutang terpusat
+Budgeting dengan peringatan otomatis saat limit mendekati batas
+Ekspor laporan keuangan ke PDF & Excel (.xlsx)
+Sistem langganan berbayar dengan aktivasi akun otomatis
+CMS admin multi-role untuk mengelola member, paket, dan konten
 
 ## Metrik
-Waktu respon API = < 150 ms
-Efisiensi proses order = Meningkat 60%
-Katalog varian SKU = 350+ produk
-Modul panel admin = 10 modul terintegrasi
+Modul member = 8 tab (Overview, Transactions, Debts, Budgeting, Savings, Reports, Reminders, Settings)
+Modul admin CMS = 7 tab (Overview, Members, Staff, Plans, FAQs, Broadcasts, Settings)
+Harga langganan = Rp 29.000 / 30 hari
+Rating kepuasan = 4.9 / 5.0
+Waktu muat = < 3 detik
 
 ## Teknologi
 React 19
@@ -40,28 +42,46 @@ TypeScript
 Vite
 Tailwind CSS
 Express
-Node.js
-Firebase Admin
-Cloudinary
+Firebase (Authentication, Firestore, Cloud Functions)
+Firebase Admin SDK
+Midtrans (Payment Gateway)
+Cloudinary (Media Upload)
+Google Gemini AI (@google/genai)
+Recharts
 jsPDF
-Lucide React
+SheetJS (xlsx)
 Motion
-Sonner
-Nodemailer
-bcryptjs
-jsonwebtoken
+Lucide React
+Vitest
 
 ## Testimoni (opsional)
-> Harganya bersahabat banget buat reseller, proses transaksinya serba otomatis lewat website.
-- **Nama:** Siti Rahma
-- **Jabatan:** Reseller Percetakan, Bandung
+> "Sebagai freelancer dengan income fluktuatif, dulu saya sering bingung uang lari ke mana. Fitur multi-rekening & budgeting di Duitin bikin saya bisa pisahkan dana operasional, pajak, dan tabungan pribadi secara otomatis."
+- **Nama:** Rian Pratama
+- **Jabatan:** Freelance UI/UX Designer & Remote Worker
 
 ## Data Gambar (opsional)
-TIDAK ADA
+public/image/Logo-Duitin.svg
+public/image/feature-budgeting.svg
+public/image/feature-export.svg
+public/image/feature-grafik.svg
+public/image/feature-pencatatan.svg
+public/image/feature-reminder.svg
+public/image/feature-tabungan.svg
+public/image/feature-utang.svg
+public/image/showcase-overview.svg
+public/image/showcase-transactions.svg
+public/image/showcase-debts.svg
+public/image/showcase-budgeting.svg
+public/image/showcase-reports.svg
+public/image/avatar-1.svg
+public/image/avatar-2.svg
+public/image/avatar-3.svg
+public/videos/pricing-bg.mp4
 
 ## Catatan Verifikasi
-- Bagian Tantangan, Solusi, dan Hasil kualitatif disusun berdasarkan temuan fitur teknis di codebase karena tidak ada dokumen brief tertulis klien.
-- Angka metrik (efisiensi order, respon API) merupakan estimasi realistis berbasis struktur arsitektur sistem.
-- Kutipan testimoni diambil dari data fallback testimonial di file src/pages/Home.tsx.
-- Nama klien Y&H Printing / Y&H Yudha Member diambil dari konfigurasi sistem, metadata website, dan dokumen implementasi internal.
-- Tidak ditemukan aset gambar statis lokal di folder publik repositori (aset eksternal via Cloudinary/URL).
+- Nama klien tidak ditemukan sebagai badan usaha/instansi tertulis di repo; "Duitin" adalah brand nama produk (diambil dari metadata.json dan konfigurasi aplikasi), mohon dikonfirmasi apakah ini proyek internal/LKTech sendiri atau untuk klien eksternal.
+- Tahun pengerjaan: dokumen audit (audit/INDEX.md) tertulis "March 2025" namun git log komit terbaru bertanggal 2026-09-03; diambil 2025 dari dokumen audit resmi, mohon disesuaikan bila tanggal pengerjaan sebenarnya berbeda.
+- Bagian Tantangan & Solusi disusun secara realistis dari fitur yang ada di kode (tidak ada dokumen brief klien tertulis) -> perlu ditinjau ulang.
+- Bagian Hasil (dampak) merupakan penyusunan ulang dari fitur teknis, bukan klaim dampak bisnis terukur.
+- Metrik: hanya "8 tab member", "7 tab admin", dan "harga Rp 29.000/30 hari" yang bersumber dari kode/audit; angka "Rating 4.9/5.0" diambil dari konten hero/landing (bersifat marketing internal), dan "Waktu muat < 3 detik" adalah estimasi yang dikarang.
+- Testimoni diambil dari section TestimonialsSection.tsx pada landing page. Testimoni ini tampaknya disusun sebagai konten marketing internal, bukan testimoni klien nyata -> perlu dikonfirmasi keasliannya sebelum dipublikasikan.
