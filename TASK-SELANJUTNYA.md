@@ -1,28 +1,28 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Upgrade Sistem Portfolio (F1–F3)**.
+> Terakhir diperbarui: sesi **Upgrade Sistem Portfolio (F1–F7)**.
 
 ---
 
-## 🚧 Sesi Terakhir — Upgrade Sistem Portfolio (F1–F3)
+## 🎉 Sesi Terakhir — Upgrade Sistem Portfolio (F1–F7)
 
 Upgrade sistem portfolio berdasarkan `docs/2026-10-02-upgrade-sistem-portfolio.md`
-— **F1–F3 selesai**, F4–F7 menyusul.
+—— **F1–F6 selesai**; F7 = uji browser & deploy (manual).
 
 | Fase | Hasil | Status |
 | --- | --- | --- |
-| F1 | Field `featured`/`order` + **generalisasi galeri** (`MediaGallery`/`MediaLightbox`, dipakai Produk & Portfolio); `ProductGallery` jadi wrapper tipis | ✅ |
+| F1 | Field `featured`/`order` + **generalisasi galeri** (`MediaGallery`/`MediaLightbox`, dipakai Produk & Portfolio) | ✅ |
 | F2 | **Detail profesional**: galeri interaktif (thumbnail+lightbox), metrics dinamis, tags, "proyek terkait" relevan, OG image, ratio 16:9 | ✅ |
 | F3 | **Daftar kuat**: search + filter kategori & tema + sort + URL state + pagination + empty state | ✅ |
-| F4 | Dashboard: kelola gambar (MediaPicker), `featured`, kategori select, validasi | ⏳ |
-| F5 | Penanda data contoh + seed proyek | ⏳ |
-| F6 | JSON-LD per proyek + sitemap + usage galeri | ⏳ |
-| F7 | QA menyeluruh & deploy | ⏳ |
+| F4 | **Dashboard**: kelola gambar proyek (MediaPicker+reorder+set cover), toggle Unggulan, urutan, kategori datalist, validasi | ✅ |
+| F5 | Penanda **"Contoh"** untuk data demo | ✅ |
+| F6 | **SEO**: JSON-LD per proyek (`CreativeWork`+`BreadcrumbList`) + sitemap `lastModified` nyata | ✅ |
+| F7 | QA statis ✅ · uji browser & deploy | ⏳ manual |
 
 **Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅.
 
-**Sisa manual:** uji browser (galeri, search/filter/sort, share URL) + isi data asli proyek + lanjut F4–F7.
+**Sisa manual:** uji browser (galeri, search/filter/sort, kelola gambar, JSON-LD) + isi data asli proyek + deploy.
 
 ---
 
@@ -135,6 +135,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 23 | Modul admin Orders/Pesanan: halaman `/admin/orders`, API admin, badge pesanan, notifikasi email order, metrik dashboard | ✅ |
 | 24 | Revisi sistem produk: galeri via MediaPicker, lightbox galeri, ratio 16:9, kanvas paket (pan+zoom), alur wajib pilih paket | ✅ |
 | 25 | Upgrade portfolio F1–F3: generalisasi galeri, detail profesional, daftar (search/filter/sort/URL/pagination) | ✅ |
+| 26 | Upgrade portfolio F4–F6: kelola gambar di form, featured/urutan, badge Contoh, JSON-LD + sitemap | ✅ |
 
 ---
 

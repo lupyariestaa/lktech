@@ -1,7 +1,7 @@
 # UPGRADE SISTEM PORTFOLIO LKTech — Audit, Rencana & Task Implementation Flow
 
-> **Status dokumen:** 🟡 **Sebagian dieksekusi** (FASE 1–3 selesai; FASE 4–7 belum)
-> **Disusun:** 2026-10-02 · **F1–F3 dieksekusi:** 2026-10-02
+> **Status dokumen:** ✅ **Dieksekusi** (FASE 1–6 selesai; F7 = QA & deploy manual)
+> **Disusun:** 2026-10-02 · **Dieksekusi:** 2026-10-02
 > **Cakupan:** Seluruh sistem portfolio — halaman publik (`/portofolio`, `/portofolio/[slug]`), kelola di dashboard (`/admin/projects`), data layer, integrasi media, SEO.
 > **Tujuan:** Menjadikan portfolio LKTech **jauh lebih baik & profesional** — dari segi tampilan, pengalaman pengunjung (calon klien), kemudahan pengelolaan admin, dan kekuatan SEO — **tanpa membuat rumit**.
 > **Prasyarat baca:** `docs/2026-10-02-revisi-sistem-produk.md` (pola galeri+lightbox yang bisa dipakai ulang), `docs/2026-10-02-orders-admin-module.md` (pola manager & media), `docs/README.md`.
@@ -518,10 +518,24 @@ Sistem portfolio punya **fondasi data yang cukup baik**; yang kurang adalah **la
 | **F1** | Fondasi: field `featured`/`order` + generalisasi galeri (`MediaGallery`/`MediaLightbox`) | ✅ | `feat(portfolio): F1 ...` |
 | **F2** | Halaman detail profesional (galeri interaktif, metrics dinamis, tags, proyek terkait, OG image, ratio 16:9) | ✅ | `feat(portfolio): F2 ...` |
 | **F3** | Daftar kuat (search, filter kategori+tag, sort, URL state, pagination, empty state) | ✅ | `feat(portfolio): F3 ...` |
-| F4 | Dashboard: kelola gambar (MediaPicker) + `featured` + kategori select + validasi | ⏳ Belum | — |
-| F5 | Data contoh & seed | ⏳ Belum | — |
-| F6 | SEO (JSON-LD, sitemap) & integrasi media usage | ⏳ Belum | — |
-| F7 | QA menyeluruh & deploy | ⏳ Belum | — |
+| **F4** | Dashboard: kelola gambar (MediaPicker) + `featured` + kategori select + validasi | ✅ | `feat(portfolio): F4 ...` |
+| **F5** | Data contoh: penanda "Contoh" untuk proyek demo | ✅ | `feat(portfolio): F5 ...` |
+| **F6** | SEO: JSON-LD per proyek + sitemap `lastModified` nyata | ✅ | `feat(portfolio): F6 ...` |
+| **F7** | QA menyeluruh & deploy | ⚠️ QA statis ✅ · uji browser & deploy manual | — |
+
+### 13.1b Temuan tambahan teratasi (F4–F6)
+
+| ID | Temuan | Status |
+|---|---|---|
+| PF-12 | Tak bisa kelola gambar di form proyek | ✅ `ProjectMediaManager` (MediaPicker multiple + reorder + set cover) |
+| PF-13 | Tanpa `featured`/`order` | ✅ Toggle unggulan + field urutan + badge di daftar |
+| PF-14 | Kategori input bebas | ✅ Datalist saran (kurangi typo) |
+| PF-15 | Validasi lemah | ✅ Kategori wajib + pesan jelas |
+| PF-06/22 | Data contoh tanpa penanda | ✅ Badge "Contoh" (field `demo`) |
+| PF-18 | Tanpa JSON-LD per proyek | ✅ `CreativeWork` + `BreadcrumbList` (+Review) |
+| PF-19 | Tanpa OG image per proyek | ✅ (F2) |
+| PF-20/24 | Sitemap `lastModified` = now | ✅ Pakai `updatedAt` nyata |
+| PF-16 | Usage galeri kosong | ⏭️ Dilewati (galeri = aset media itu sendiri; tak perlu ref usage) |
 
 ### 13.2 Temuan teratasi
 
@@ -574,17 +588,22 @@ npm run build      → ✓ Compiled successfully
                      route: ƒ /portofolio · ● /portofolio/[slug]
 ```
 
-### 13.6 Sisa (FASE 4–7) & manual
-- [ ] **F4**: kelola gambar di form proyek (MediaPicker) + `featured` toggle + kategori select + validasi.
-- [ ] **F5**: penanda "Contoh" + seed proyek (opsional).
-- [ ] **F6**: JSON-LD per proyek + sitemap `lastModified` + usage galeri.
-- [ ] **F7**: QA menyeluruh & deploy.
-- [ ] **Manual**: buat proyek uji + unggah gambar di Media (kategori `portofolio`), uji galeri/lightbox, search/filter/sort, URL share.
-- [ ] **Isi data asli** (ganti 6 proyek contoh) via dashboard.
+### 13.6 Sisa manual (F7) & catatan
+- [ ] Uji browser: galeri/lightbox detail, search/filter/sort + share URL, form kelola gambar, badge "Contoh", JSON-LD (Rich Results Test).
+- [ ] **Isi data asli** (ganti 6 proyek contoh) via dashboard + unggah gambar.
+- [ ] **Deploy**: `git push` → Vercel → uji produksi.
 
 ### 13.7 Catatan operasional
-- Tidak ada koleksi Firestore baru → **tidak perlu** publish ulang `firestore.rules`.
-- Field `featured`/`order` opsional — data lama tetap valid (default: tidak unggulan, order = ∞).
-- Galeri tetap dikelola via koleksi media (`projectSlug`); F4 akan menjembatani dari form proyek.
 
-> Dibuat oleh sesi eksekusi 2026-10-02 (F1–F3). Lanjutkan F4–F7 sesuai §7.
+- Tidak ada koleksi Firestore baru → **tidak perlu** publish ulang `firestore.rules`.
+- Field `featured`/`order`/`demo`/`updatedAt` opsional — data lama tetap valid.
+- Galeri dikelola via koleksi media (`projectSlug`); kini bisa dari form proyek (F4).
+- `/portofolio` bersifat **dynamic** (`ƒ`) karena `searchParams` (URL state filter).
+
+### 13.8 Seluruh temuan audit (24) — status
+
+| Teratasi (F1–F6) | Dilewati (out of scope / sengaja) |
+|---|---|
+| PF-01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,18,19,20,21,22,24 | PF-16 (usage galeri), PF-17 (`cover` seed), PF-23 (seed proyek) |
+
+> **F1–F6 dieksekusi** 2026-10-02 (commit terpisah). Sisa: F7 (uji browser & deploy) = manual oleh pemilik.
