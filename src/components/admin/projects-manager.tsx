@@ -22,12 +22,27 @@ import { useAsyncList } from "@/components/admin/use-async-list";
 import { useServices } from "@/components/admin/use-services";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { ProjectMediaManager } from "@/components/admin/project-media-manager";
 import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import { useUnsavedChanges } from "@/components/admin/use-unsaved-changes";
 import { cn, slugify } from "@/lib/utils";
 
 const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
+
+/** Kategori saran (bisa tetap diketik bebas / nilai baru). */
+const CATEGORY_SUGGESTIONS = [
+  "Website",
+  "Landing Page",
+  "Aplikasi Mobile",
+  "E-commerce",
+  "Toko Online",
+  "Web App",
+  "Desain & Branding",
+  "Digital Marketing",
+  "Company Profile",
+  "Sekolah & Instansi",
+];
 
 const emptyProject: Project = {
   slug: "",
@@ -45,6 +60,7 @@ const emptyProject: Project = {
   results: [],
   metrics: [],
   techStack: [],
+  featured: false,
 };
 
 export function ProjectsManager() {
@@ -106,6 +122,12 @@ export function ProjectsManager() {
     if (!editing) return;
     if (!editing.title.trim()) {
       const msg = "Judul wajib diisi.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (!editing.category.trim()) {
+      const msg = "Kategori wajib diisi.";
       setError(msg);
       toast.error(msg);
       return;
@@ -223,8 +245,13 @@ export function ProjectsManager() {
                   <span className="text-slate-300">•</span>
                   <span>{p.year}</span>
                 </div>
-                <h3 className="mt-0.5 truncate text-sm font-bold text-secondary">
+                <h3 className="mt-0.5 flex items-center gap-2 truncate text-sm font-bold text-secondary">
                   {p.title}
+                  {p.featured && (
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                      Unggulan
+                    </span>
+                  )}
                 </h3>
                 <p className="truncate text-xs text-muted">/{p.slug}</p>
               </div>
@@ -357,11 +384,17 @@ function ProjectForm({
           </Field>
           <Field label="Kategori">
             <input
+              list="project-category-options"
               value={project.category}
               onChange={(e) => set("category", e.target.value)}
               placeholder="mis. Website"
               className={fieldBase}
             />
+            <datalist id="project-category-options">
+              {CATEGORY_SUGGESTIONS.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </Field>
           <Field label="Tahun">
             <input
@@ -393,6 +426,32 @@ function ProjectForm({
               onChange={(e) => set("accent", e.target.value)}
               placeholder="from-[#004EDF] to-[#4D82EC]"
               className={fieldBase}
+            />
+          </Field>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-5 rounded-2xl border border-slate-200 bg-surface p-5">
+          <label className="flex items-center gap-2.5 text-sm font-medium text-secondary">
+            <input
+              type="checkbox"
+              checked={project.featured ?? false}
+              onChange={(e) => set("featured", e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/30"
+            />
+            Proyek Unggulan (tampil di beranda)
+          </label>
+          <Field label="Urutan (opsional)">
+            <input
+              type="number"
+              value={project.order ?? ""}
+              onChange={(e) =>
+                set(
+                  "order",
+                  e.target.value === "" ? undefined : Number(e.target.value),
+                )
+              }
+              placeholder="kosong = otomatis"
+              className={cn(fieldBase, "w-40")}
             />
           </Field>
         </div>
@@ -524,13 +583,15 @@ function ProjectForm({
         </div>
       </div>
 
-      <p className="mt-6 text-xs text-muted">
-        Gambar proyek dikelola di menu{" "}
-        <Link href="/admin/media" className="font-semibold text-primary">
-          Media
-        </Link>{" "}
-        (pilih &quot;Proyek terkait&quot;).
-      </p>
+      {isNew ? (
+        <p className="mt-6 rounded-2xl bg-amber-50 px-4 py-3 text-xs text-amber-700">
+          Simpan proyek dulu untuk mulai mengelola gambar (cover & galeri).
+        </p>
+      ) : (
+        <div className="mt-6">
+          <ProjectMediaManager projectSlug={project.slug} />
+        </div>
+      )}
 
       <div className="mt-5 flex items-center gap-3">
         <button
