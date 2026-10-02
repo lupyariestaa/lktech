@@ -35,6 +35,11 @@ export function ProjectCard({
           <span className="text-primary">{project.client}</span>
           <span className="text-slate-300">•</span>
           <span>{project.year}</span>
+          {project.demo && (
+            <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              Contoh
+            </span>
+          )}
         </div>
 
         <h3 className="mt-2 text-lg font-bold text-secondary transition-colors group-hover:text-primary">

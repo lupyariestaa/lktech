@@ -66,7 +66,7 @@ function sortProjects(a: Project, b: Project): number {
 export async function getProjects(): Promise<Project[]> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
-  if (!db) return DEFAULT_PROJECTS;
+  if (!db) return DEFAULT_PROJECTS.map((p) => ({ ...p, demo: true }));
 
   try {
     const snap = await db.collection(COLLECTION).get();

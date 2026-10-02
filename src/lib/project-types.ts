@@ -30,6 +30,11 @@ export type Project = {
   featured?: boolean;
   /** Urutan tampil manual (kecil = lebih dulu). Bila kosong → pakai tahun. */
   order?: number;
+  /**
+   * True bila ini data contoh (fallback demo, belum ada di Firestore).
+   * Dipakai untuk menampilkan penanda "Contoh" agar tidak disangka proyek nyata.
+   */
+  demo?: boolean;
 };
 
 /** Proyek tersimpan di Firestore (dengan id dokumen). */
