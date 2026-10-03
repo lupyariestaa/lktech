@@ -278,6 +278,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 30 | Halaman harga publik `/harga`: kartu paket, tabel banding, FAQ harga, sitemap, JSON-LD | ✅ |
 | 31 | Portal akun pengguna: tab (ringkasan/pesanan/favorit/alamat/profil), pesan lagi, wishlist server, alamat, edit profil | ✅ |
 | 32 | Modul Pengguna admin: nomor WhatsApp di profil, halaman `/admin/users` (statistik, cari/filter, detail, blokir, hapus, ekspor CSV) | ✅ |
+| 33 | Enforcement blokir user: cegah checkout/keranjang/wishlist/alamat (server `requireActiveUser` + banner & disable UI) | ✅ |
 
 ---
 

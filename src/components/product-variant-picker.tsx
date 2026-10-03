@@ -7,6 +7,7 @@ import type { Product, ProductVariant } from "@/lib/product-types";
 import { cardItemForVariant } from "@/lib/cart";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
+import { useAccountStatus } from "@/components/account-status-provider";
 import { VariantCanvas } from "@/components/variant-canvas";
 import { VariantCard } from "@/components/variant-card";
 import { waLink } from "@/lib/whatsapp";
@@ -29,6 +30,7 @@ export function ProductVariantPicker({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const { blocked } = useAccountStatus();
   const { add } = useCart();
   const [busySlug, setBusySlug] = useState<string | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export function ProductVariantPicker({
   };
 
   const pick = (variant: ProductVariant, buyNow: boolean) => {
-    if (variant.soldOut || busySlug) return;
+    if (variant.soldOut || blocked || busySlug) return;
     if (!requireLogin()) return;
     setBusySlug(variant.slug);
     add(cardItemForVariant(product, variant, 1));

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/admin-guard";
+import { requireActiveUser, requireUser } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { checkoutSchema } from "@/lib/order-schema";
 import { createOrder, getOrdersByUser } from "@/lib/orders";
@@ -29,7 +29,7 @@ const RATE_WINDOW_MS = 10 * 60 * 1000; // 10 menit
  * - Pesan WhatsApp kanonik disusun server & disimpan bersama order.
  */
 export async function POST(req: Request) {
-  const check = await requireUser(req);
+  const check = await requireActiveUser(req);
   if (!check.ok) return check.response;
 
   const rl = rateLimit(`order:${check.uid}`, RATE_LIMIT, RATE_WINDOW_MS);

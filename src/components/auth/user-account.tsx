@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, LogOut, X } from "lucide-react";
+import { Check, Loader2, LogOut, ShieldAlert, X } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { useAccountStatus } from "@/components/account-status-provider";
 import { getIdToken, signOutUser } from "@/lib/auth";
 import { fetchMyOrders } from "@/lib/order-api";
 import {
@@ -50,6 +51,7 @@ function initialTab(): AccountTab {
 /** Halaman akun user: portal ber-tab (ringkasan, pesanan, favorit, alamat, profil). */
 export function UserAccount() {
   const { user } = useAuth();
+  const { blocked } = useAccountStatus();
   const router = useRouter();
   const { add } = useCart();
 
@@ -139,6 +141,10 @@ export function UserAccount() {
   // diverifikasi server saat checkout, jadi aman memakai data item pesanan.
   const onReorder = useCallback(
     (order: Order) => {
+      if (blocked) {
+        pushToast("Akun Anda sedang diblokir.", "error");
+        return;
+      }
       setReordering(order.id);
       for (const it of order.items) {
         add({
@@ -158,7 +164,7 @@ export function UserAccount() {
       );
       router.push("/keranjang");
     },
-    [add, router, pushToast],
+    [add, router, pushToast, blocked],
   );
 
   const onRemoveFav = useCallback(
@@ -182,6 +188,10 @@ export function UserAccount() {
 
   const onAddFavToCart = useCallback(
     (product: Product) => {
+      if (blocked) {
+        pushToast("Akun Anda sedang diblokir.", "error");
+        return;
+      }
       if (hasVariants(product)) {
         router.push(`/produk/${product.slug}`);
         return;
@@ -189,11 +199,12 @@ export function UserAccount() {
       add(toCartItem(product, null, 1));
       pushToast("Ditambahkan ke keranjang.", "success");
     },
-    [add, router, pushToast],
+    [add, router, pushToast, blocked],
   );
 
   const onAddressCreate = useCallback(
     async (input: AddressInput) => {
+      if (blocked) throw new Error("Akun Anda sedang diblokir.");
       setAddrBusy(true);
       try {
         const next = await createAddress(input);
@@ -203,11 +214,12 @@ export function UserAccount() {
         setAddrBusy(false);
       }
     },
-    [pushToast],
+    [pushToast, blocked],
   );
 
   const onAddressUpdate = useCallback(
     async (id: string, patch: Partial<AddressInput>) => {
+      if (blocked) throw new Error("Akun Anda sedang diblokir.");
       setAddrBusy(true);
       try {
         const next = await updateAddress(id, patch);
@@ -217,11 +229,12 @@ export function UserAccount() {
         setAddrBusy(false);
       }
     },
-    [pushToast],
+    [pushToast, blocked],
   );
 
   const onAddressDelete = useCallback(
     async (id: string) => {
+      if (blocked) throw new Error("Akun Anda sedang diblokir.");
       setAddrBusy(true);
       try {
         const next = await deleteAddress(id);
@@ -231,7 +244,7 @@ export function UserAccount() {
         setAddrBusy(false);
       }
     },
-    [pushToast],
+    [pushToast, blocked],
   );
 
   const badges = useMemo(
@@ -271,6 +284,20 @@ export function UserAccount() {
           Keluar
         </button>
       </div>
+
+      {blocked && (
+        <div className="mt-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3.5 text-sm text-rose-700">
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-semibold">Akun Anda sedang diblokir</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-rose-600">
+              Anda tidak dapat melakukan checkout, menambah ke keranjang,
+              mengelola favorit, atau alamat. Hubungi kami via WhatsApp untuk
+              info lebih lanjut.
+            </p>
+          </div>
+        </div>
+      )}
 
       {error && (
         <p className="mt-5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">

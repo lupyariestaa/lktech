@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/admin-guard";
+import { requireActiveUser, requireUser } from "@/lib/admin-guard";
 import {
   addAddress,
   deleteAddress,
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
 
 /** POST /api/user/addresses — tambah alamat baru. */
 export async function POST(req: Request) {
-  const check = await requireUser(req);
+  const check = await requireActiveUser(req);
   if (!check.ok) return check.response;
 
   const rl = rateLimit(`address:${check.uid}`, RATE_LIMIT, RATE_WINDOW_MS);
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
 
 /** PATCH /api/user/addresses?id= — perbarui alamat / jadikan utama. */
 export async function PATCH(req: Request) {
-  const check = await requireUser(req);
+  const check = await requireActiveUser(req);
   if (!check.ok) return check.response;
 
   const id = new URL(req.url).searchParams.get("id")?.trim();
@@ -134,7 +134,7 @@ export async function PATCH(req: Request) {
 
 /** DELETE /api/user/addresses?id= — hapus alamat. */
 export async function DELETE(req: Request) {
-  const check = await requireUser(req);
+  const check = await requireActiveUser(req);
   if (!check.ok) return check.response;
 
   const id = new URL(req.url).searchParams.get("id")?.trim();

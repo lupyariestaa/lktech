@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Heart, Loader2 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useWishlist } from "@/components/wishlist-provider";
+import { useAccountStatus } from "@/components/account-status-provider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,6 +26,7 @@ export function FavoriteButton({
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const { blocked } = useAccountStatus();
   const { has, toggle } = useWishlist();
   const [busy, setBusy] = useState(false);
 
@@ -33,7 +35,7 @@ export function FavoriteButton({
   const onClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (busy) return;
+    if (busy || blocked) return;
     if (!user) {
       router.push(`/masuk?next=${encodeURIComponent(pathname || "/produk")}`);
       return;

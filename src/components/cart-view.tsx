@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
+import { useAccountStatus } from "@/components/account-status-provider";
 import { createOrderRequest } from "@/lib/order-api";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
@@ -26,6 +27,7 @@ import { cn } from "@/lib/utils";
 export function CartView() {
   const { items, subtotal, ready, setQty, remove, clear } = useCart();
   const { user } = useAuth();
+  const { blocked } = useAccountStatus();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -34,6 +36,12 @@ export function CartView() {
   const onCheckout = async () => {
     setError(null);
     if (items.length === 0 || sending) return;
+    if (blocked) {
+      setError(
+        "Akun Anda sedang diblokir, sehingga tidak dapat melakukan checkout. Hubungi kami via WhatsApp untuk bantuan.",
+      );
+      return;
+    }
 
     // Wajib login sebelum checkout.
     if (!user) {
@@ -228,12 +236,20 @@ export function CartView() {
             <div className="my-5 h-px bg-slate-100" />
 
             {user ? (
-              <div className="rounded-2xl bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
-                Checkout sebagai{" "}
-                <span className="font-semibold text-secondary">
-                  {user.displayName || user.email}
-                </span>
-              </div>
+              blocked ? (
+                <div className="flex items-start gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-xs leading-relaxed text-rose-600">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  Akun Anda sedang diblokir, sehingga tidak dapat melakukan
+                  checkout. Hubungi kami via WhatsApp untuk bantuan.
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
+                  Checkout sebagai{" "}
+                  <span className="font-semibold text-secondary">
+                    {user.displayName || user.email}
+                  </span>
+                </div>
+              )
             ) : (
               <div className="flex items-start gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-700">
                 <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -250,7 +266,7 @@ export function CartView() {
 
             <button
               onClick={onCheckout}
-              disabled={sending}
+              disabled={sending || (Boolean(user) && blocked)}
               className={cn(
                 "mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70",
               )}

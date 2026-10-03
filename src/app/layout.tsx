@@ -10,6 +10,7 @@ import { StructuredData } from "@/components/structured-data";
 import { SettingsProvider } from "@/components/settings-provider";
 import { ContentProvider } from "@/components/content-provider";
 import { AuthProvider } from "@/components/auth-provider";
+import { AccountStatusProvider } from "@/components/account-status-provider";
 import { CartProvider } from "@/components/cart-provider";
 import { WishlistProvider } from "@/components/wishlist-provider";
 
@@ -106,16 +107,18 @@ export default async function RootLayout({
       <body>
         <SkipLink />
         <AuthProvider>
-          <SettingsProvider initial={settings}>
-            <ContentProvider initial={content}>
-              <WishlistProvider>
-                <CartProvider>
-                  {children}
-                  <StructuredData settings={settings} />
-                </CartProvider>
-              </WishlistProvider>
-            </ContentProvider>
-          </SettingsProvider>
+          <AccountStatusProvider>
+            <SettingsProvider initial={settings}>
+              <ContentProvider initial={content}>
+                <WishlistProvider>
+                  <CartProvider>
+                    {children}
+                    <StructuredData settings={settings} />
+                  </CartProvider>
+                </WishlistProvider>
+              </ContentProvider>
+            </SettingsProvider>
+          </AccountStatusProvider>
         </AuthProvider>
         <Analytics />
       </body>

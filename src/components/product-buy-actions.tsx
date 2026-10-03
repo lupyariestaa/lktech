@@ -8,6 +8,7 @@ import { cartItemKey, toCartItem } from "@/lib/cart";
 import { hasVariants, productIsPurchasable } from "@/lib/product-format";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
+import { useAccountStatus } from "@/components/account-status-provider";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
@@ -32,11 +33,13 @@ export function ProductBuyActions({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const { blocked } = useAccountStatus();
   const { add, has } = useCart();
   const [added, setAdded] = useState(false);
 
   const soldOut = product.soldOut;
   const needsConsultation = !hasVariants(product) && !productIsPurchasable(product);
+  const disabled = soldOut || (Boolean(user) && blocked);
 
   // Produk tanpa harga → arahkan ke WhatsApp untuk konsultasi.
   if (needsConsultation) {
@@ -72,7 +75,7 @@ export function ProductBuyActions({
   };
 
   const onAdd = () => {
-    if (soldOut) return;
+    if (soldOut || blocked) return;
     if (!requireLogin()) return;
     add(toCartItem(product, null, 1));
     setAdded(true);
@@ -80,7 +83,7 @@ export function ProductBuyActions({
   };
 
   const onBuyNow = () => {
-    if (soldOut) return;
+    if (soldOut || blocked) return;
     if (!requireLogin()) return;
     // Siapkan keranjang berisi 1 produk ini lalu lanjut checkout.
     add(toCartItem(product, null, 1));
@@ -93,11 +96,12 @@ export function ProductBuyActions({
     <div className={cn("flex gap-3", compact ? "flex-col" : "flex-wrap", className)}>
       <button
         onClick={onAdd}
-        disabled={soldOut}
+        disabled={disabled}
+        title={blocked ? "Akun Anda sedang diblokir." : undefined}
         className={cn(
           "inline-flex items-center justify-center gap-2 rounded-full border font-semibold transition-all",
           compact ? "px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
-          soldOut
+          disabled
             ? "cursor-not-allowed border-slate-200 text-slate-400"
             : added
               ? "border-emerald-200 bg-emerald-50 text-emerald-600"
@@ -119,11 +123,12 @@ export function ProductBuyActions({
 
       <button
         onClick={onBuyNow}
-        disabled={soldOut}
+        disabled={disabled}
+        title={blocked ? "Akun Anda sedang diblokir." : undefined}
         className={cn(
           "inline-flex items-center justify-center gap-2 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/30 transition-all",
           compact ? "px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
-          soldOut
+          disabled
             ? "cursor-not-allowed opacity-60"
             : "hover:-translate-y-0.5 hover:bg-primary-dark",
         )}

@@ -15,6 +15,7 @@ import { cardItemForVariant } from "@/lib/cart";
 import { formatPrice, productPriceLabel } from "@/lib/product-format";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
+import { useAccountStatus } from "@/components/account-status-provider";
 import { useProductPurchase } from "@/components/product-purchase-context";
 import { cn } from "@/lib/utils";
 
@@ -92,6 +93,7 @@ export function VariantPickerList({ product }: { product: Product }) {
 export function useBuySelectedVariant(product: Product) {
   const router = useRouter();
   const { user } = useAuth();
+  const { blocked } = useAccountStatus();
   const { add } = useCart();
   const { selectedVariantSlug } = useProductPurchase();
   const [busy, setBusy] = useState<"cart" | "buy" | null>(null);
@@ -109,7 +111,7 @@ export function useBuySelectedVariant(product: Product) {
   };
 
   const run = (buyNow: boolean) => {
-    if (!selected || selected.soldOut) return;
+    if (!selected || selected.soldOut || blocked) return;
     if (!requireLogin()) return;
     setBusy(buyNow ? "buy" : "cart");
     add(cardItemForVariant(product, selected, 1));

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/admin-guard";
+import { requireActiveUser, requireUser } from "@/lib/admin-guard";
 import {
   addToWishlist,
   getUserProfile,
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
  * Body: { slug }. Slug divalidasi ke produk yang ada & (sebaiknya) aktif.
  */
 export async function POST(req: Request) {
-  const check = await requireUser(req);
+  const check = await requireActiveUser(req);
   if (!check.ok) return check.response;
 
   const rl = rateLimit(`wishlist:${check.uid}`, RATE_LIMIT, RATE_WINDOW_MS);
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
 
 /** DELETE /api/user/wishlist?slug= — hapus produk dari favorit. */
 export async function DELETE(req: Request) {
-  const check = await requireUser(req);
+  const check = await requireActiveUser(req);
   if (!check.ok) return check.response;
 
   const slug = new URL(req.url).searchParams.get("slug")?.trim();

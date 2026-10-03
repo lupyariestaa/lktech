@@ -142,3 +142,34 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
 
   return { ok: true, uid: verified.uid, email };
 }
+
+/**
+ * Seperti `requireUser`, tetapi juga MENOLAK user yang diblokir (mis. spam).
+ *
+ * Dipakai pada aksi transaksi (checkout, wishlist, alamat) agar user yang
+ * diblokir admin tidak bisa bertindak. Mengembalikan 403 dengan pesan jelas.
+ */
+export async function requireActiveUser(
+  req: Request,
+): Promise<AdminCheck> {
+  const check = await requireUser(req);
+  if (!check.ok) return check;
+
+  const { getUserProfile } = await import("@/lib/user-profile");
+  const profile = await getUserProfile(check.uid);
+  if (profile?.blocked) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error:
+            "Akun Anda sedang diblokir. Hubungi kami via WhatsApp untuk info lebih lanjut.",
+          code: "user_blocked",
+        },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return check;
+}

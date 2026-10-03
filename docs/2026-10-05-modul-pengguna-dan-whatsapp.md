@@ -8,9 +8,14 @@
 > **Verifikasi:** `npx tsc --noEmit` ✅ · `npx eslint .` ✅ · `npm run build` ✅ (66 halaman).
 
 > **Status Eksekusi (U0–U8):** Seluruh fase **selesai**.
-> File baru: `src/lib/admin-users.ts`, `src/lib/admin-users-api.ts`, `src/app/api/admin/users/route.ts`, `src/app/api/admin/users/[uid]/route.ts`, `src/app/admin/(dashboard)/users/page.tsx`, `src/components/admin/users-manager.tsx`, `src/components/admin/user-detail-dialog.tsx`.
+> File baru: `src/lib/admin-users.ts`, `src/lib/admin-users-api.ts`, `src/app/api/admin/users/route.ts`, `src/app/api/admin/users/[uid]/route.ts`, `src/app/admin/(dashboard)/users/page.tsx`, `src/components/admin/users-manager.tsx`, `src/components/admin/user-detail-dialog.tsx`, `src/components/account-status-provider.tsx`.
 > Diubah: `src/lib/user-types.ts` (whatsapp/blocked + tipe admin), `src/lib/user-profile.ts` (normalizer + CRUD), `src/lib/api-schemas.ts` (whatsapp/profile/block schema), `src/app/api/user/profile/route.ts` (PATCH whatsapp), `src/lib/user-account-api.ts`, `src/components/auth/account-profile.tsx` (form WA), `src/components/auth/user-account.tsx`, `src/lib/admin-nav.ts` (menu Pengguna), `src/components/admin/dashboard-overview.tsx` (UserSnapshot).
 > Temuan teratasi: PU-01..PU-13.
+
+> **Revisi lanjutan — Enforcement blokir (R8):** Fitur "blokir user" kini **berefek nyata** (bukan sekadar penanda):
+> - **Server**: helper `requireActiveUser` (di `admin-guard.ts`) menolak user diblokir dengan `403 { code: "user_blocked" }`. Diterapkan pada aksi transaksi: `POST /api/orders`, wishlist (`POST`/`DELETE`), alamat (`POST`/`PATCH`/`DELETE`). Endpoint `GET` tetap boleh.
+> - **Klien**: `AccountStatusProvider` (di root layout) menyediakan status `blocked` ke seluruh aplikasi → banner "akun diblokir" di `/akun`, tombol **checkout** & **tambah ke keranjang** & **favorit** & **alamat** dinonaktifkan, dan guard pada handler "Pesan lagi"/keranjang.
+> - Efek: user diblokir **tidak bisa melakukan aksi transaksi apa pun** (sesuai keputusan pemilik), tetap bisa login & melihat akun.
 
 ---
 
@@ -392,7 +397,7 @@ export type AdminUserRow = {
 | R5 | Privasi data user (email/WA) | Tinggi | Halaman `noindex`, akses `requireAdmin`, tak ada endpoint publik |
 | R6 | Dokumen lama tanpa field baru | Sedang | Normalizer backward-compat |
 | R7 | `orderCount` cache tak sinkron | Rendah | Hitung dari order nyata saat tampil |
-| R8 | Blokir user tak mengefek (belum ada enforcement) | Rendah | v1 sifatnya penanda admin; enforcement diuji bila perlu |
+| R8 | Blokir user tak mengefek (belum ada enforcement) | Rendah | ✅ **Diatasi**: `requireActiveUser` (server) + `AccountStatusProvider` (UI) — aksi transaksi diblokir |
 
 ---
 
@@ -403,7 +408,7 @@ export type AdminUserRow = {
 - **`/admin/users` & detail** → `metadata.robots = noindex`.
 - **PII** (email, WhatsApp) hanya untuk admin; tidak dikirim ke klien lain.
 - **Hapus user**: konfirmasi eksplisit; dokumen `users/{uid}` dihapus (pesanan tetap ada — demi integritas riwayat; catat sebagai keputusan).
-- **Blokir**: v1 penanda; enforcement (mis. cegah checkout) → opsional fase lanjut.
+- **Blokir**: **berefek nyata** — user diblokir tidak dapat melakukan aksi transaksi (checkout, keranjang, wishlist, alamat) karena ditolak server (`requireActiveUser`) + UI dinonaktifkan. User tetap bisa login & melihat akun.
 
 ---
 
