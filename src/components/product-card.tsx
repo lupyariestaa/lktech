@@ -7,6 +7,7 @@ import type { Product } from "@/lib/product-types";
 import { PRODUCT_CATEGORY_LABEL } from "@/lib/product-types";
 import { formatPrice, hasVariants, productPriceLabel } from "@/lib/product-format";
 import { ProductBuyActions } from "@/components/product-buy-actions";
+import { FavoriteButton } from "@/components/favorite-button";
 import { cn } from "@/lib/utils";
 
 /** Kartu produk untuk daftar `/produk`. */
@@ -18,7 +19,7 @@ export function ProductCard({ product }: { product: Product }) {
     product.originalPrice > product.price;
 
   return (
-    <div className="group flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5">
       {/* Cover */}
       <Link
         href={`/produk/${product.slug}`}
@@ -57,6 +58,9 @@ export function ProductCard({ product }: { product: Product }) {
           )}
         </div>
       </Link>
+
+      {/* Tombol favorit (di luar <Link> agar HTML valid) */}
+      <FavoriteButton slug={product.slug} className="absolute top-3 right-3 z-10" />
 
       {/* Body */}
       <div className="flex flex-1 flex-col p-5">

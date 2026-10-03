@@ -210,3 +210,33 @@ export const productSchema = z.object({
   active: z.boolean().optional(),
   waMessage: z.string().trim().max(1000).optional(),
 });
+
+// ===== Akun user: wishlist & alamat =====
+
+/** Slug produk untuk operasi wishlist. */
+export const wishlistSlugSchema = z.object({
+  slug: z.string().trim().min(1, "Slug produk wajib diisi").max(200),
+});
+
+/** Payload alamat pengiriman (untuk create/update). */
+export const addressSchema = z.object({
+  label: z.string().trim().min(1, "Label wajib diisi").max(40),
+  recipient: z.string().trim().min(2, "Nama penerima minimal 2 karakter").max(80),
+  phone: z
+    .string()
+    .trim()
+    .min(8, "Nomor minimal 8 digit")
+    .max(20, "Nomor terlalu panjang")
+    .regex(/^[0-9+\-\s()]+$/, "Nomor telepon tidak valid"),
+  address: z.string().trim().min(10, "Alamat minimal 10 karakter").max(500),
+  city: z.string().trim().min(2, "Kota wajib diisi").max(120),
+  postalCode: z.string().trim().max(12).optional(),
+  note: z.string().trim().max(200).optional(),
+  isPrimary: z.boolean().optional(),
+});
+
+/** Patch nama tampilan (edit profil). */
+export const displayNameSchema = z.object({
+  displayName: z.string().trim().min(2, "Nama minimal 2 karakter").max(80),
+});
+

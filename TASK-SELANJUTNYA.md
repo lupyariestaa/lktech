@@ -1,11 +1,31 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Halaman Harga Publik (`/harga`)**.
+> Terakhir diperbarui: sesi **Portal Akun Pengguna (perluasan)**.
 
 ---
 
-## 🎉 Sesi Terakhir — Halaman Harga / Paket Publik (`/harga`)
+## 🎉 Sesi Terakhir — Portal Akun Pengguna (Perluasan)
+
+`/akun` diubah dari "profil + riwayat" menjadi **portal ber-tab** (`docs/2026-10-05-portal-akun-pengguna.md`, F0–F7):
+
+| Fase | Hasil |
+| --- | --- |
+| F1 | **Data & API**: perluasan `UserProfile` (`wishlist`/`addresses`), CRUD di `user-profile.ts`, API `/api/user/wishlist` & `/api/user/addresses`, `PATCH /api/user/profile` (edit nama) |
+| F2 | **Portal ber-tab** (`account-tabs`) — Ringkasan/Pesanan/Favorit/Alamat/Profil, sinkron `?tab=` |
+| F3 | **Tab Profil** — edit nama (email read-only) |
+| F4 | **Tab Pesanan** — detail + **"Pesan lagi"** (isi keranjang) |
+| F5 | **Tab Favorit** — wishlist server (`WishlistProvider`) + tambah ke keranjang |
+| F6 | **Tab Alamat** — CRUD + tandai utama |
+| F7 | **Entry point**: tombol favorit di kartu & detail produk; polish, QA, docs |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (65 halaman).
+
+**Sisa manual:** uji browser (login Google → `/akun`: tab, pesan lagi, favorit, alamat, edit nama) + deploy.
+
+---
+
+## 🎉 Sesi Sebelumnya — Halaman Harga / Paket Publik (`/harga`)
 
 Halaman harga khusus dibangun (`docs/2026-10-03-halaman-harga-publik.md`, F0–F7):
 
@@ -236,6 +256,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 28 | Peningkatan blog: kategori, tag, RSS, JSON-LD, artikel terkait + seed 3 artikel | ✅ |
 | 29 | Sentry error tracking + event tracking konversi (Vercel Analytics) | ✅ |
 | 30 | Halaman harga publik `/harga`: kartu paket, tabel banding, FAQ harga, sitemap, JSON-LD | ✅ |
+| 31 | Portal akun pengguna: tab (ringkasan/pesanan/favorit/alamat/profil), pesan lagi, wishlist server, alamat, edit profil | ✅ |
 
 ---
 

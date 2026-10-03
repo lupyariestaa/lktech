@@ -1,10 +1,16 @@
 # PORTAL AKUN PENGGUNA — Perluasan (Rencana & Task Implementation Flow)
 
-> **Status dokumen:** 📝 **Rencana** (belum dieksekusi)
-> **Disusun:** 2026-10-05
+> **Status dokumen:** ✅ **Dieksekusi** (FASE 0–7 selesai)
+> **Disusun:** 2026-10-05 · **Dieksekusi:** 2026-10-05
 > **Cakupan:** Halaman `/akun` — perluasan dari sekadar "profil + riwayat pesanan" menjadi **portal akun** lengkap: navigasi tab, **profil (edit)**, **riwayat pesanan (detail + ulang pesan)**, **wishlist/favorit produk**, dan **alamat pengiriman**. Plus titik masuk (entry point) dari navbar/produk.
 > **Tujuan:** Mendorong **repeat order** & loyalitas dengan memberikan pengalaman akun yang nyaman — pelanggan mudah menemukan pesanan lama, menyimpannya sebagai favorit, menyimpan alamat, dan mengulang pembelian dengan cepat.
 > **Prasyarat baca:** `docs/2026-10-02-orders-admin-module.md` (model order), pola API `requireUser` (`src/lib/admin-guard.ts`), `docs/2026-10-02-revisi-sistem-produk.md` (model produk/varian), `docs/README.md`.
+> **Verifikasi:** `npx tsc --noEmit` ✅ · `npx eslint .` ✅ · `npm run build` ✅ (65 halaman).
+
+> **Status Eksekusi (F0–F7):** Seluruh fase **selesai**.
+> File baru: `src/components/auth/account-tabs.tsx`, `account-overview.tsx`, `account-orders.tsx`, `account-wishlist.tsx`, `account-addresses.tsx`, `account-profile.tsx`, `src/components/wishlist-provider.tsx`, `src/components/favorite-button.tsx`, `src/lib/user-account-api.ts`, `src/app/api/user/wishlist/route.ts`, `src/app/api/user/addresses/route.ts`.
+> Diubah: `src/lib/user-types.ts` (wishlist/addresses), `src/lib/user-profile.ts` (CRUD), `src/lib/api-schemas.ts`, `src/app/api/user/profile/route.ts` (PATCH), `src/components/auth/user-account.tsx` (portal ber-tab), `src/app/layout.tsx` (WishlistProvider), `src/components/product-card.tsx` & `src/app/produk/[slug]/page.tsx` (tombol favorit).
+> Temuan teratasi: AK-01..AK-12.
 
 ---
 

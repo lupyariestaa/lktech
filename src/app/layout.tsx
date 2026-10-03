@@ -11,6 +11,7 @@ import { SettingsProvider } from "@/components/settings-provider";
 import { ContentProvider } from "@/components/content-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { CartProvider } from "@/components/cart-provider";
+import { WishlistProvider } from "@/components/wishlist-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -107,10 +108,12 @@ export default async function RootLayout({
         <AuthProvider>
           <SettingsProvider initial={settings}>
             <ContentProvider initial={content}>
-              <CartProvider>
-                {children}
-                <StructuredData settings={settings} />
-              </CartProvider>
+              <WishlistProvider>
+                <CartProvider>
+                  {children}
+                  <StructuredData settings={settings} />
+                </CartProvider>
+              </WishlistProvider>
             </ContentProvider>
           </SettingsProvider>
         </AuthProvider>

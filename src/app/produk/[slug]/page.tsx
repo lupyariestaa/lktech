@@ -20,6 +20,7 @@ import {
 } from "@/components/product-purchase-context";
 import { ProductPurchasePanel } from "@/components/product-purchase-panel";
 import { ProductPurchaseBar } from "@/components/product-purchase-bar";
+import { FavoriteButton } from "@/components/favorite-button";
 import { Reveal } from "@/components/motion";
 import {
   getProductBySlug,
@@ -166,6 +167,7 @@ export default async function ProdukDetailPage({
               Stok habis
             </span>
           )}
+          <FavoriteButton slug={product.slug} />
         </div>
       </PageHero>
 

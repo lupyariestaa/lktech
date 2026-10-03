@@ -1,49 +1,85 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Loader2,
-  LogOut,
-  Mail,
-  Package,
-  ShieldCheck,
-  ShoppingBag,
-  UserRound,
-} from "lucide-react";
+import { Check, Loader2, LogOut, X } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { getIdToken, signOutUser } from "@/lib/auth";
 import { fetchMyOrders } from "@/lib/order-api";
-import { formatPrice } from "@/lib/product-format";
-import type { Order, OrderStatus } from "@/lib/order-types";
-import type { UserProfile } from "@/lib/user-types";
+import {
+  createAddress,
+  deleteAddress,
+  fetchAddresses,
+  fetchWishlist,
+  removeWishlist,
+  updateAddress,
+  type AddressInput,
+} from "@/lib/user-account-api";
+import { useCart } from "@/components/cart-provider";
+import { toCartItem } from "@/lib/cart";
+import { hasVariants } from "@/lib/product-format";
+import type { Order } from "@/lib/order-types";
+import type { Product } from "@/lib/product-types";
+import type { SavedAddress, UserProfile } from "@/lib/user-types";
+import { AccountTabs, type AccountTab } from "@/components/auth/account-tabs";
+import { AccountOverview } from "@/components/auth/account-overview";
+import { AccountOrders } from "@/components/auth/account-orders";
+import { AccountWishlist } from "@/components/auth/account-wishlist";
+import { AccountAddresses } from "@/components/auth/account-addresses";
+import { AccountProfile } from "@/components/auth/account-profile";
 import { cn } from "@/lib/utils";
 
-const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  baru: "Baru",
-  diproses: "Diproses",
-  selesai: "Selesai",
-  dibatalkan: "Dibatalkan",
-};
+/** Toast ringan (pesan aksi cepat). */
+type Toast = { id: number; text: string; tone: "success" | "error" };
 
-const ORDER_STATUS_CLASS: Record<OrderStatus, string> = {
-  baru: "bg-blue-50 text-blue-600",
-  diproses: "bg-amber-50 text-amber-600",
-  selesai: "bg-emerald-50 text-emerald-600",
-  dibatalkan: "bg-rose-50 text-rose-600",
-};
+const VALID_TABS: AccountTab[] = [
+  "ringkasan",
+  "pesanan",
+  "favorit",
+  "alamat",
+  "profil",
+];
 
-/** Halaman akun user: profil, statistik, riwayat pesanan, dan aksi keluar. */
+/** Baca tab awal dari query string (?tab=) — dipakai sebagai state awal. */
+function initialTab(): AccountTab {
+  if (typeof window === "undefined") return "ringkasan";
+  const t = new URLSearchParams(window.location.search).get("tab");
+  return t && (VALID_TABS as string[]).includes(t) ? (t as AccountTab) : "ringkasan";
+}
+
+/** Halaman akun user: portal ber-tab (ringkasan, pesanan, favorit, alamat, profil). */
 export function UserAccount() {
   const { user } = useAuth();
   const router = useRouter();
+  const { add } = useCart();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [wishlist, setWishlist] = useState<Product[]>([]);
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [tab, setTab] = useState<AccountTab>(initialTab);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [reordering, setReordering] = useState<string | null>(null);
+  const [removingFav, setRemovingFav] = useState<string | null>(null);
+  const [addrBusy, setAddrBusy] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const pushToast = useCallback((text: string, tone: Toast["tone"]) => {
+    const id = Date.now() + Math.random();
+    setToasts((t) => [...t, { id, text, tone }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200);
+  }, []);
+
+  const changeTab = useCallback((next: AccountTab) => {
+    setTab(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", next);
+    window.history.replaceState(null, "", url.toString());
+  }, []);
+
+  // Muat data akun.
   useEffect(() => {
     let active = true;
     (async () => {
@@ -57,13 +93,16 @@ export function UserAccount() {
         const data = await res.json();
         if (active) setProfile(data.profile ?? null);
 
-        // Riwayat pesanan (best-effort — kegagalan tidak memblokir profil).
-        try {
-          const list = await fetchMyOrders();
-          if (active) setOrders(list);
-        } catch {
-          /* abaikan: riwayat kosong bila gagal */
-        }
+        // Best-effort: kegagalan salah satu tidak memblokir yang lain.
+        const [ordersRes, wishlistRes, addrRes] = await Promise.allSettled([
+          fetchMyOrders(),
+          fetchWishlist(),
+          fetchAddresses(),
+        ]);
+        if (!active) return;
+        if (ordersRes.status === "fulfilled") setOrders(ordersRes.value);
+        if (wishlistRes.status === "fulfilled") setWishlist(wishlistRes.value.products);
+        if (addrRes.status === "fulfilled") setAddresses(addrRes.value);
       } catch (err) {
         if (active)
           setError(err instanceof Error ? err.message : "Gagal memuat profil.");
@@ -94,140 +133,217 @@ export function UserAccount() {
       })
     : "—";
 
+  const orderCount = Math.max(profile?.orderCount ?? 0, orders.length);
+
+  // "Pesan lagi": masukkan item pesanan ke keranjang. Harga/validasi final tetap
+  // diverifikasi server saat checkout, jadi aman memakai data item pesanan.
+  const onReorder = useCallback(
+    (order: Order) => {
+      setReordering(order.id);
+      for (const it of order.items) {
+        add({
+          slug: it.slug,
+          name: it.name,
+          price: it.price,
+          cover: "default",
+          qty: it.qty,
+          variantSlug: it.variantSlug,
+          variantName: it.variantName,
+        });
+      }
+      setReordering(null);
+      pushToast(
+        `${order.items.length} item ditambahkan ke keranjang.`,
+        "success",
+      );
+      router.push("/keranjang");
+    },
+    [add, router, pushToast],
+  );
+
+  const onRemoveFav = useCallback(
+    async (slug: string) => {
+      setRemovingFav(slug);
+      try {
+        await removeWishlist(slug);
+        setWishlist((list) => list.filter((p) => p.slug !== slug));
+        pushToast("Dihapus dari favorit.", "success");
+      } catch (err) {
+        pushToast(
+          err instanceof Error ? err.message : "Gagal menghapus favorit.",
+          "error",
+        );
+      } finally {
+        setRemovingFav(null);
+      }
+    },
+    [pushToast],
+  );
+
+  const onAddFavToCart = useCallback(
+    (product: Product) => {
+      if (hasVariants(product)) {
+        router.push(`/produk/${product.slug}`);
+        return;
+      }
+      add(toCartItem(product, null, 1));
+      pushToast("Ditambahkan ke keranjang.", "success");
+    },
+    [add, router, pushToast],
+  );
+
+  const onAddressCreate = useCallback(
+    async (input: AddressInput) => {
+      setAddrBusy(true);
+      try {
+        const next = await createAddress(input);
+        setAddresses(next);
+        pushToast("Alamat disimpan.", "success");
+      } finally {
+        setAddrBusy(false);
+      }
+    },
+    [pushToast],
+  );
+
+  const onAddressUpdate = useCallback(
+    async (id: string, patch: Partial<AddressInput>) => {
+      setAddrBusy(true);
+      try {
+        const next = await updateAddress(id, patch);
+        setAddresses(next);
+        pushToast("Alamat diperbarui.", "success");
+      } finally {
+        setAddrBusy(false);
+      }
+    },
+    [pushToast],
+  );
+
+  const onAddressDelete = useCallback(
+    async (id: string) => {
+      setAddrBusy(true);
+      try {
+        const next = await deleteAddress(id);
+        setAddresses(next);
+        pushToast("Alamat dihapus.", "success");
+      } finally {
+        setAddrBusy(false);
+      }
+    },
+    [pushToast],
+  );
+
+  const badges = useMemo(
+    () => ({ pesanan: orderCount, favorit: wishlist.length }),
+    [orderCount, wishlist.length],
+  );
+
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-28">
-      <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-900/5">
-        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
+    <div className="mx-auto w-full max-w-4xl px-6 py-28">
+      {/* Header akun */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
           {photoURL ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={photoURL}
               alt={displayName}
-              width={72}
-              height={72}
-              className="h-[72px] w-[72px] rounded-2xl object-cover"
+              width={56}
+              height={56}
+              className="h-14 w-14 rounded-2xl object-cover"
             />
           ) : (
-            <span className="grid h-[72px] w-[72px] place-items-center rounded-2xl bg-gradient-to-br from-primary to-primary-light text-2xl font-bold text-white">
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-primary-light text-xl font-bold text-white">
               {initial}
             </span>
           )}
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-secondary">{displayName}</h1>
-            <p className="mt-1 flex items-center justify-center gap-1.5 text-sm text-muted sm:justify-start">
-              <Mail className="h-3.5 w-3.5" />
-              {email}
-            </p>
-            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Terverifikasi via Google
-            </span>
+            <h1 className="text-lg font-bold text-secondary">{displayName}</h1>
+            <p className="truncate text-sm text-muted">{email}</p>
           </div>
         </div>
-
-        {error && (
-          <p className="mt-5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
-            {error}
-          </p>
-        )}
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <StatCard
-            icon={ShoppingBag}
-            label="Total Pembelian"
-            value={
-              loading
-                ? "…"
-                : `${Math.max(profile?.orderCount ?? 0, orders.length)}`
-            }
-          />
-          <StatCard icon={UserRound} label="Bergabung Sejak" value={createdAt} />
-        </div>
-
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link
-            href="/produk"
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark"
-          >
-            <Package className="h-4 w-4" />
-            Jelajahi Produk
-          </Link>
-          <button
-            onClick={onLogout}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-500"
-          >
-            <LogOut className="h-4 w-4" />
-            Keluar
-          </button>
-        </div>
+        <button
+          onClick={onLogout}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-500"
+        >
+          <LogOut className="h-4 w-4" />
+          Keluar
+        </button>
       </div>
 
-      {/* Riwayat pesanan */}
-      <section className="mt-8">
-        <h2 className="text-lg font-bold text-secondary">Riwayat Pesanan</h2>
-        {orders.length === 0 ? (
-          <div className="mt-4 rounded-3xl border border-dashed border-slate-200 bg-white py-12 text-center">
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-surface text-muted">
-              <ShoppingBag className="h-6 w-6" />
-            </span>
-            <p className="mt-4 text-sm font-medium text-secondary">
-              Belum ada pesanan.
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              Pesanan yang Anda checkout akan muncul di sini.
-            </p>
+      {error && (
+        <p className="mt-5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
+          {error}
+        </p>
+      )}
+
+      {/* Tabs */}
+      <div className="mt-8">
+        <AccountTabs active={tab} onChange={changeTab} badges={badges} />
+      </div>
+
+      {/* Panels */}
+      <div className="mt-8">
+        {tab === "ringkasan" && (
+          <div role="tabpanel" id="panel-ringkasan" aria-labelledby="tab-ringkasan">
+            <AccountOverview
+              displayName={displayName}
+              email={email}
+              photoURL={photoURL}
+              initial={initial}
+              createdAt={createdAt}
+              orderCount={orderCount}
+              wishlistCount={wishlist.length}
+              onLogout={onLogout}
+              onGoTab={(t) => changeTab(t)}
+            />
           </div>
-        ) : (
-          <ul className="mt-4 flex flex-col gap-3">
-            {orders.map((order) => (
-              <li
-                key={order.id}
-                className="rounded-3xl border border-slate-200 bg-white p-5"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-muted">
-                      {new Date(order.createdAt).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                    <p className="mt-0.5 text-sm font-bold text-secondary">
-                      {formatPrice(order.total)}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-semibold",
-                      ORDER_STATUS_CLASS[order.status],
-                    )}
-                  >
-                    {ORDER_STATUS_LABEL[order.status]}
-                  </span>
-                </div>
-                <ul className="mt-3 flex flex-col gap-1 border-t border-slate-100 pt-3">
-                  {order.items.map((it) => (
-                    <li
-                      key={it.slug}
-                      className="flex items-center justify-between text-xs text-muted"
-                    >
-                      <span className="truncate pr-3">
-                        {it.name}
-                        {it.qty > 1 ? ` ×${it.qty}` : ""}
-                      </span>
-                      <span className="shrink-0 font-medium text-secondary">
-                        {formatPrice(it.subtotal)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
         )}
-      </section>
+
+        {tab === "pesanan" && (
+          <div role="tabpanel" id="panel-pesanan" aria-labelledby="tab-pesanan">
+            <AccountOrders
+              orders={orders}
+              onReorder={onReorder}
+              reordering={reordering}
+            />
+          </div>
+        )}
+
+        {tab === "favorit" && (
+          <div role="tabpanel" id="panel-favorit" aria-labelledby="tab-favorit">
+            <AccountWishlist
+              products={wishlist}
+              removing={removingFav}
+              onRemove={onRemoveFav}
+              onAddToCart={onAddFavToCart}
+            />
+          </div>
+        )}
+
+        {tab === "alamat" && (
+          <div role="tabpanel" id="panel-alamat" aria-labelledby="tab-alamat">
+            <AccountAddresses
+              addresses={addresses}
+              busy={addrBusy}
+              onCreate={onAddressCreate}
+              onUpdate={onAddressUpdate}
+              onDelete={onAddressDelete}
+            />
+          </div>
+        )}
+
+        {tab === "profil" && (
+          <div role="tabpanel" id="panel-profil" aria-labelledby="tab-profil">
+            <AccountProfile
+              key={displayName}
+              email={email}
+              initialDisplayName={displayName}
+            />
+          </div>
+        )}
+      </div>
 
       {loading && (
         <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted">
@@ -235,26 +351,29 @@ export function UserAccount() {
           Memuat profil...
         </div>
       )}
-    </div>
-  );
-}
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof ShoppingBag;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className={cn("rounded-2xl border border-slate-100 bg-surface p-5")}>
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-primary shadow-sm">
-        <Icon className="h-5 w-5" />
-      </span>
-      <p className="mt-3 text-xs font-medium text-muted">{label}</p>
-      <p className="mt-0.5 text-lg font-bold text-secondary">{value}</p>
+      {/* Toasts */}
+      <div
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-0 bottom-6 z-[200] flex flex-col items-center gap-2 px-6"
+      >
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={cn(
+              "pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-white shadow-lg",
+              t.tone === "success" ? "bg-secondary" : "bg-rose-500",
+            )}
+          >
+            {t.tone === "success" ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <X className="h-4 w-4" />
+            )}
+            {t.text}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
