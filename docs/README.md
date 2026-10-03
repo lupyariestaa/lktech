@@ -43,6 +43,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-03 | [Halaman Harga / Paket Publik (`/harga`)](2026-10-03-halaman-harga-publik.md) | Selesai |
 | 2026-10-05 | [Portal Akun Pengguna — Perluasan (profil, favorit, alamat, pesan lagi)](2026-10-05-portal-akun-pengguna.md) | Selesai |
 | 2026-10-05 | [Modul Pengguna & Nomor WhatsApp (profil WA + "Kelola User" dashboard)](2026-10-05-modul-pengguna-dan-whatsapp.md) | Selesai |
+| 2026-10-05 | [Email Transaksional ke Pembeli (konfirmasi pesanan & update status)](2026-10-05-email-transaksional-pembeli.md) | Rencana |
 
 ### Dokumen pendukung (referensi & setup)
 
