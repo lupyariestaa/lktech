@@ -41,6 +41,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-02 | [Upgrade Sistem Layanan (landing bergantian + detail hardcoded)](2026-10-02-upgrade-sistem-layanan.md) | Selesai |
 | 2026-10-03 | [Peningkatan Blog — SEO & Discovery (kategori, tag, RSS, JSON-LD)](2026-10-03-peningkatan-blog-seo-discovery.md) | Selesai |
 | 2026-10-03 | [Halaman Harga / Paket Publik (`/harga`)](2026-10-03-halaman-harga-publik.md) | Selesai |
+| 2026-10-05 | [Portal Akun Pengguna — Perluasan (profil, favorit, alamat, pesan lagi)](2026-10-05-portal-akun-pengguna.md) | Rencana |
 
 ### Dokumen pendukung (referensi & setup)
 
