@@ -9,6 +9,7 @@ import {
   Newspaper,
   Package,
   PanelsTopLeft,
+  Percent,
   ReceiptText,
   Settings,
   Tags,
@@ -121,6 +122,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/orders",
         icon: ReceiptText,
         badge: "newOrders",
+      },
+      {
+        label: "Kupon",
+        title: "Kupon / Diskon",
+        href: "/admin/coupons",
+        icon: Percent,
       },
       {
         label: "Pengguna",

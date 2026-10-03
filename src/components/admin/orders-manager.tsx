@@ -576,10 +576,40 @@ function OrderDetailDialog({
           </ul>
 
           <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
-            <span className="text-sm font-semibold text-secondary">Total</span>
-            <span className="text-base font-bold text-primary">
-              {formatRupiah(order.total)}
-            </span>
+            {order.coupon && order.coupon.discount > 0 && (
+              <div className="w-full">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted">Subtotal</span>
+                  <span className="font-medium text-secondary">
+                    {formatRupiah(order.subtotal)}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-emerald-600">
+                    Diskon ({order.coupon.code})
+                  </span>
+                  <span className="font-medium text-emerald-600">
+                    −{formatRupiah(order.coupon.discount)}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between border-t border-dashed border-slate-200 pt-2">
+                  <span className="text-sm font-semibold text-secondary">
+                    Total
+                  </span>
+                  <span className="text-base font-bold text-primary">
+                    {formatRupiah(order.total)}
+                  </span>
+                </div>
+              </div>
+            )}
+            {!(order.coupon && order.coupon.discount > 0) && (
+              <>
+                <span className="text-sm font-semibold text-secondary">Total</span>
+                <span className="text-base font-bold text-primary">
+                  {formatRupiah(order.total)}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Pesan WA kanonik */}

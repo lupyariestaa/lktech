@@ -38,6 +38,14 @@ export type OrderItem = {
   variantName?: string;
 };
 
+/** Kupon yang tercatat pada sebuah order (snapshot saat checkout). */
+export type OrderCoupon = {
+  code: string;
+  type: "percent" | "amount";
+  /** Jumlah diskon (Rupiah) yang diterapkan. */
+  discount: number;
+};
+
 /** Pesanan tersimpan di Firestore (`orders/{id}`). */
 export type Order = {
   id: string;
@@ -45,6 +53,11 @@ export type Order = {
   buyerName: string;
   buyerEmail: string;
   items: OrderItem[];
+  /** Subtotal sebelum diskon (Rp). Untuk order lama: = `total`. */
+  subtotal: number;
+  /** Kupon yang dipakai (bila ada). */
+  coupon?: OrderCoupon;
+  /** Total akhir = subtotal − diskon. */
   total: number;
   status: OrderStatus;
   /** Nomor WhatsApp tujuan checkout (dari settings situs). */
@@ -85,13 +98,31 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
     ? (data.status as OrderStatus)
     : "baru";
 
+  const total = num(data.total);
+  const subtotal = num(data.subtotal) || total;
+
+  let coupon: OrderCoupon | undefined;
+  if (data.coupon && typeof data.coupon === "object") {
+    const c = data.coupon as Record<string, unknown>;
+    const code = str(c.code);
+    if (code) {
+      coupon = {
+        code,
+        type: str(c.type) === "amount" ? "amount" : "percent",
+        discount: num(c.discount),
+      };
+    }
+  }
+
   return {
     id: str(data.id),
     uid: str(data.uid),
     buyerName: str(data.buyerName),
     buyerEmail: str(data.buyerEmail),
     items,
-    total: num(data.total),
+    subtotal,
+    coupon,
+    total,
     status,
     whatsapp: str(data.whatsapp),
     message: str(data.message),

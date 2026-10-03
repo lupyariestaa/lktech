@@ -12,10 +12,12 @@ export const checkoutItemSchema = z.object({
  * Body checkout. Harga/nama produk TIDAK dikirim klien — server mengambil &
  * memverifikasi ulang dari Firestore agar tidak bisa dimanipulasi.
  * `buyerName` hanya untuk tampilan (dibersihkan server); email diambil dari token.
+ * `couponCode` opsional — kode kupon; diskon dihitung SERVER.
  */
 export const checkoutSchema = z.object({
   items: z.array(checkoutItemSchema).min(1).max(50),
   buyerName: z.string().trim().max(80).optional(),
+  couponCode: z.string().trim().max(40).optional(),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;

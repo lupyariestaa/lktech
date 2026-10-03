@@ -1,11 +1,13 @@
 import { getIdToken } from "@/lib/auth";
-import type { Order } from "@/lib/order-types";
+import type { Order, OrderCoupon } from "@/lib/order-types";
 
 /** Payload ringkas hasil checkout yang dikembalikan server. */
 export type CheckoutResult = {
   order: {
     id: string;
     items: Order["items"];
+    subtotal: number;
+    coupon?: OrderCoupon;
     total: number;
     message: string;
     whatsapp: string;
@@ -22,11 +24,13 @@ export type CheckoutRequestItem = {
 
 /**
  * Membuat pesanan di server. Server memverifikasi login, menghitung ulang harga
- * dari Firestore, dan mengembalikan pesan WhatsApp kanonik.
+ * dari Firestore, memvalidasi kupon (opsional), dan mengembalikan pesan WhatsApp
+ * kanonik.
  */
 export async function createOrderRequest(
   items: CheckoutRequestItem[],
   buyerName: string,
+  couponCode?: string,
 ): Promise<CheckoutResult> {
   const token = await getIdToken();
   if (!token) throw new Error("Sesi berakhir. Silakan masuk kembali.");
@@ -37,7 +41,7 @@ export async function createOrderRequest(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ items, buyerName }),
+    body: JSON.stringify({ items, buyerName, couponCode }),
   });
 
   const data = await res.json().catch(() => ({}));

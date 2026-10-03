@@ -97,10 +97,13 @@ export function sanitizeMessageText(value: string): string {
  *
  * Fungsi ini dipakai baik di server (untuk menyimpan pesan kanonik) maupun di
  * klien (untuk membuka link WhatsApp), sehingga isi pesan selalu konsisten.
+ *
+ * `summary` (opsional) menambahkan baris subtotal/diskon bila ada kupon.
  */
 export function buildOrderMessage(
   items: OrderItem[],
   buyer: CheckoutBuyer,
+  summary?: { subtotal: number; discount: number; couponCode?: string },
 ): string {
   const lines: string[] = [];
   lines.push("Halo LKTech! Saya ingin memesan produk berikut:");
@@ -114,8 +117,22 @@ export function buildOrderMessage(
     );
   });
   lines.push("");
-  const total = items.reduce((sum, it) => sum + it.subtotal, 0);
-  lines.push(`Total: ${formatPrice(total)}`);
+
+  const subtotal =
+    summary?.subtotal ?? items.reduce((sum, it) => sum + it.subtotal, 0);
+  const discount = summary?.discount ?? 0;
+
+  if (discount > 0) {
+    lines.push(`Subtotal: ${formatPrice(subtotal)}`);
+    const codeLabel = summary?.couponCode
+      ? ` (${sanitizeMessageText(summary.couponCode)})`
+      : "";
+    lines.push(`Diskon${codeLabel}: -${formatPrice(discount)}`);
+    lines.push(`Total: ${formatPrice(subtotal - discount)}`);
+  } else {
+    lines.push(`Total: ${formatPrice(subtotal)}`);
+  }
+
   lines.push("");
   lines.push("Data pemesan:");
   lines.push(`- Nama: ${sanitizeMessageText(buyer.name) || "-"}`);

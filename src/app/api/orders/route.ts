@@ -9,7 +9,8 @@ import { incrementUserOrderCount } from "@/lib/user-profile";
 import { buildOrderMessage } from "@/lib/cart";
 import { sendOrderNotification } from "@/lib/email";
 import { sendOrderConfirmationToBuyer } from "@/lib/email-order";
-import type { OrderItem } from "@/lib/order-types";
+import { getCouponByCode, redeemCoupon, validateCoupon } from "@/lib/coupons";
+import type { OrderCoupon, OrderItem } from "@/lib/order-types";
 import { rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -188,26 +189,61 @@ export async function POST(req: Request) {
       });
     }
 
-    const total = items.reduce((sum, it) => sum + it.subtotal, 0);
+    const subtotal = items.reduce((sum, it) => sum + it.subtotal, 0);
     const settings = await getSiteSettings();
+
+    // ===== Kupon (opsional) — divalidasi & dihitung SERVER =====
+    let discount = 0;
+    let orderCoupon: OrderCoupon | undefined;
+    let couponId: string | null = null;
+    const couponCode = parsed.data.couponCode?.trim();
+    if (couponCode) {
+      const coupon = await getCouponByCode(couponCode);
+      const result = validateCoupon(coupon, { subtotal, uid: check.uid });
+      if (!result.ok) {
+        return NextResponse.json(
+          { error: result.reason, code: "coupon_invalid" },
+          { status: 409 },
+        );
+      }
+      discount = result.discount;
+      couponId = result.coupon.id;
+      orderCoupon = {
+        code: result.coupon.code,
+        type: result.coupon.type,
+        discount: result.discount,
+      };
+    }
+
+    const total = Math.max(0, subtotal - discount);
 
     // Nama pembeli: dari klien (untuk tampilan), dibersihkan & dibatasi panjang.
     // Email pembeli: dari token terverifikasi (tidak bisa dipalsukan).
     const buyerName = (parsed.data.buyerName ?? "").slice(0, 80).trim();
-    const message = buildOrderMessage(items, {
-      name: buyerName,
-      email: check.email,
-    });
+    const message = buildOrderMessage(
+      items,
+      { name: buyerName, email: check.email },
+      { subtotal, discount, couponCode: orderCoupon?.code },
+    );
 
     const order = await createOrder({
       uid: check.uid,
       buyerName,
       buyerEmail: check.email,
       items,
+      subtotal,
+      coupon: orderCoupon,
       total,
       whatsapp: settings.whatsapp,
       message,
     });
+
+    // Catat pemakaian kupon (best-effort — tidak menggagalkan order).
+    if (couponId) {
+      redeemCoupon(couponId, check.uid).catch((err) =>
+        console.error("[api/orders] gagal mencatat pemakaian kupon:", err),
+      );
+    }
 
     // Naikkan penghitung pesanan user (best-effort, tidak menggagalkan order).
     incrementUserOrderCount(check.uid).catch((err) =>
@@ -231,6 +267,8 @@ export async function POST(req: Request) {
       order: {
         id: order.id,
         items: order.items,
+        subtotal: order.subtotal,
+        coupon: order.coupon,
         total: order.total,
         message: order.message,
         whatsapp: order.whatsapp,

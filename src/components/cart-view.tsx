@@ -17,10 +17,12 @@ import {
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
+import { CartCoupon, type AppliedCoupon } from "@/components/cart-coupon";
 import { createOrderRequest } from "@/lib/order-api";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
-import { trackCheckout } from "@/lib/analytics";
+import { formatRupiah } from "@/lib/format";
+import { trackCheckout, trackEvent } from "@/lib/analytics";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +33,11 @@ export function CartView() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+
+  // Diskon bila kupon diterapkan (server memverifikasi ulang saat checkout).
+  const discount = appliedCoupon?.discount ?? 0;
+  const total = Math.max(0, subtotal - discount);
   const [done, setDone] = useState(false);
 
   const onCheckout = async () => {
@@ -51,7 +58,7 @@ export function CartView() {
 
     setSending(true);
     try {
-      // Server memverifikasi harga/stok & menyusun pesan kanonik.
+      // Server memverifikasi harga/stok, memvalidasi kupon, & menyusun pesan.
       const { order } = await createOrderRequest(
         items.map((it) => ({
           slug: it.slug,
@@ -59,6 +66,7 @@ export function CartView() {
           qty: it.qty,
         })),
         user.displayName ?? "",
+        appliedCoupon?.code,
       );
 
       // Buka WhatsApp dengan pesan kanonik dari server.
@@ -71,10 +79,14 @@ export function CartView() {
 
       trackCheckout({
         items: items.reduce((n, it) => n + it.qty, 0),
-        total: subtotal,
+        total: order.total,
       });
+      if (appliedCoupon) {
+        trackEvent("coupon_applied", { code: appliedCoupon.code });
+      }
 
       clear();
+      setAppliedCoupon(null);
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal membuat pesanan.");
@@ -232,6 +244,36 @@ export function CartView() {
               <span className="font-bold text-secondary">
                 {formatPrice(subtotal)}
               </span>
+            </div>
+
+            {discount > 0 && (
+              <div className="mt-2 flex items-center justify-between text-sm">
+                <span className="text-emerald-600">
+                  Diskon
+                  {appliedCoupon ? ` (${appliedCoupon.code})` : ""}
+                </span>
+                <span className="font-bold text-emerald-600">
+                  −{formatRupiah(discount)}
+                </span>
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center justify-between border-t border-dashed border-slate-200 pt-4">
+              <span className="text-sm font-semibold text-secondary">Total</span>
+              <span className="text-lg font-bold text-primary">
+                {formatPrice(total)}
+              </span>
+            </div>
+
+            {/* Kode promo */}
+            <div className="mt-5">
+              <CartCoupon
+                subtotal={subtotal}
+                applied={appliedCoupon}
+                onApplied={setAppliedCoupon}
+                onCleared={() => setAppliedCoupon(null)}
+                disabled={Boolean(user) && blocked}
+              />
             </div>
 
             <div className="my-5 h-px bg-slate-100" />

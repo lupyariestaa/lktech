@@ -1,0 +1,56 @@
+export const COUPON_TYPES = ["percent", "amount"] as const;
+export type CouponType = (typeof COUPON_TYPES)[number];
+
+export const COUPON_TYPE_LABEL: Record<CouponType, string> = {
+  percent: "Persen (%)",
+  amount: "Nominal (Rp)",
+};
+
+/** Batas aman penyimpanan daftar uid pemakai (agar dokumen tidak membengkak). */
+export const MAX_COUPON_USED_BY = 1000;
+
+/** Kupon yang tersimpan di Firestore (`coupons/{id}`). */
+export type Coupon = {
+  id: string;
+  /** Kode unik (uppercase, A-Z0-9). */
+  code: string;
+  description?: string;
+  type: CouponType;
+  /** Persen (1–100) atau nominal Rupiah. */
+  value: number;
+  /** Minimal subtotal agar kupon berlaku (0 = tanpa syarat). */
+  minSpend: number;
+  /** Batas maksimum diskon untuk tipe persen (opsional). */
+  maxDiscount?: number;
+  /** Masa berlaku (ISO). Kosong = tak dibatasi. */
+  startsAt?: string;
+  endsAt?: string;
+  /** Kuota total pemakaian (0/undefined = tak terbatas). */
+  usageLimit?: number;
+  /** Batas pemakaian per user (default 1). */
+  limitPerUser: number;
+  /** Aktif/nonaktif (bisa dimatikan tanpa dihapus). */
+  active: boolean;
+  /** Jumlah pemakaian (denormalisasi). */
+  usageCount: number;
+  /** Daftar uid pemakai (dibatasi `MAX_COUPON_USED_BY`). */
+  usedBy: string[];
+  createdAtISO: string;
+  updatedAtISO?: string;
+  createdBy?: string;
+};
+
+/** Kupon yang TERCATAT pada sebuah order (snapshot saat checkout). */
+export type OrderCoupon = {
+  code: string;
+  type: CouponType;
+  /** Jumlah diskon (Rupiah) yang diterapkan. */
+  discount: number;
+};
+
+/** Ringkasan statistik kupon untuk kartu/badge dashboard. */
+export type CouponsSummary = {
+  total: number;
+  active: number;
+  totalUsage: number;
+};

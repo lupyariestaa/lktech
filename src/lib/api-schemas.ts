@@ -275,3 +275,38 @@ export const userBlockSchema = z.object({
   blocked: z.boolean(),
 });
 
+// ===== Kupon =====
+const couponBaseFields = {
+  code: z
+    .string()
+    .trim()
+    .min(3, "Kode minimal 3 karakter")
+    .max(40, "Kode terlalu panjang"),
+  description: z.string().trim().max(200).optional(),
+  type: z.enum(["percent", "amount"]),
+  value: z.number().finite().min(0).max(1_000_000_000),
+  minSpend: z.number().finite().min(0).max(1_000_000_000).default(0),
+  maxDiscount: z.number().finite().min(0).max(1_000_000_000).optional(),
+  startsAt: z.string().trim().max(40).optional(),
+  endsAt: z.string().trim().max(40).optional(),
+  usageLimit: z.number().int().min(0).max(1_000_000).optional(),
+  limitPerUser: z.number().int().min(0).max(1000).optional(),
+  active: z.boolean().default(true),
+};
+
+export const couponCreateSchema = z.object(couponBaseFields);
+
+export const couponUpdateSchema = z.object({
+  code: couponBaseFields.code.optional(),
+  description: couponBaseFields.description,
+  type: couponBaseFields.type.optional(),
+  value: couponBaseFields.value.optional(),
+  minSpend: couponBaseFields.minSpend.optional(),
+  maxDiscount: couponBaseFields.maxDiscount,
+  startsAt: couponBaseFields.startsAt,
+  endsAt: couponBaseFields.endsAt,
+  usageLimit: couponBaseFields.usageLimit,
+  limitPerUser: couponBaseFields.limitPerUser,
+  active: z.boolean().optional(),
+});
+

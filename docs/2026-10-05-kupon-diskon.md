@@ -1,10 +1,16 @@
 # KUPON / DISKON — Modul Promo (Admin + Penerapan di Keranjang & Checkout)
 
-> **Status dokumen:** 📝 **Rencana** (belum dieksekusi)
-> **Disusun:** 2026-10-05
+> **Status dokumen:** ✅ **Dieksekusi** (FASE K0–K8 selesai)
+> **Disusun:** 2026-10-05 · **Dieksekusi:** 2026-10-05
 > **Cakupan:** Sistem **kupon/diskon** end-to-end — CRUD kupon di dashboard (`/admin/coupons`), validasi & penerapan kupon di keranjang (`/keranjang`), perhitungan diskon **terverifikasi server** saat checkout, pencatatan pemakaian di order, dan tampilan diskon di semua tempat (keranjang, pesan WhatsApp, email, detail order admin).
 > **Tujuan:** Mendorong **konversi & kampanye promosi** — pembeli bisa memakai kode promo (persen/nominal) dengan syarat (min. belanja, masa berlaku, kuota) yang dikelola admin.
 > **Prasyarat baca:** `docs/2026-10-02-orders-admin-module.md` (modul & model order), `docs/2026-10-02-revisi-sistem-produk.md` (produk/varian), `docs/2026-10-05-email-transaksional-pembeli.md` (email order), pola modul admin (`docs/2026-10-05-modul-pengguna-dan-whatsapp.md`), `docs/README.md`.
+> **Verifikasi:** `npx tsc --noEmit` ✅ · `npx eslint .` ✅ · `npm run build` ✅ (67 halaman).
+
+> **Status Eksekusi (K0–K8):** Seluruh fase **selesai**.
+> File baru: `src/lib/coupon-types.ts`, `src/lib/coupons.ts` (logika `computeDiscount`/`validateCoupon` + data layer), `src/lib/admin-coupons-api.ts`, `src/lib/coupon-api.ts`, `src/app/api/admin/coupons/route.ts`, `src/app/api/coupons/validate/route.ts`, `src/app/admin/(dashboard)/coupons/page.tsx`, `src/components/admin/coupons-manager.tsx`, `src/components/cart-coupon.tsx`.
+> Diubah: `src/lib/order-types.ts` (`OrderCoupon`, `subtotal`, `coupon`), `src/lib/orders.ts` (`createOrder` simpan field baru), `src/lib/order-schema.ts` (`couponCode`), `src/lib/cart.ts` (`buildOrderMessage` tampilkan diskon), `src/lib/email-order.ts` (baris diskon email), `src/lib/api-schemas.ts` (schema kupon), `src/app/api/orders/route.ts` (validasi & terapkan kupon + `redeemCoupon`), `src/lib/order-api.ts` (`couponCode`), `src/components/cart-view.tsx` (integrasi `CartCoupon` + total), `src/components/admin/orders-manager.tsx` (diskon di detail), `src/lib/admin-nav.ts` (menu "Kupon").
+> Temuan teratasi: KP-01..KP-09.
 
 ---
 

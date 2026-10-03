@@ -1,11 +1,32 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Email Transaksional ke Pembeli**.
+> Terakhir diperbarui: sesi **Kupon / Diskon**.
 
 ---
 
-## 🎉 Sesi Terakhir — Email Transaksional ke Pembeli
+## 🎉 Sesi Terakhir — Kupon / Diskon
+
+Sistem promo end-to-end (`docs/2026-10-05-kupon-diskon.md`, K0–K8):
+
+| Fase | Hasil |
+| --- | --- |
+| K1 | Logika inti `src/lib/coupons.ts` (`computeDiscount`, `validateCoupon`) + data layer + `coupon-types.ts` |
+| K2 | Model order: `OrderCoupon`, `subtotal`, `coupon` (+ normalizer backward-compat) |
+| K3 | API admin `/api/admin/coupons` (CRUD + summary) + klien + ekspor CSV |
+| K4 | Halaman **`/admin/coupons`** + manager (daftar, form buat/edit, aktif/nonaktif, hapus); menu "Kupon" |
+| K5 | API **validasi** `/api/coupons/validate` + komponen **`CartCoupon`** di keranjang |
+| K6 | **Checkout server-authoritative**: validasi & hitung diskon di server, `total = subtotal − diskon`, kuota dicatat (`redeemCoupon`) |
+| K7 | Diskon tampil di **pesan WhatsApp**, **email** (konfirmasi/status), & **detail order admin** |
+| K8 | QA: `tsc`/`lint`/`build` bersih ✅ (67 halaman) |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (67 halaman).
+
+**Sisa manual:** uji browser (buat kupon di `/admin/coupons` → pakai kode di `/keranjang` → checkout; cek diskon di WhatsApp/email/admin) + deploy.
+
+---
+
+## 🎉 Sesi Sebelumnya — Email Transaksional ke Pembeli
 
 Email otomatis ke pembeli (`docs/2026-10-05-email-transaksional-pembeli.md`, E0–E7):
 
@@ -301,6 +322,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 32 | Modul Pengguna admin: nomor WhatsApp di profil, halaman `/admin/users` (statistik, cari/filter, detail, blokir, hapus, ekspor CSV) | ✅ |
 | 33 | Enforcement blokir user: cegah checkout/keranjang/wishlist/alamat (server `requireActiveUser` + banner & disable UI) | ✅ |
 | 34 | Email transaksional ke pembeli: konfirmasi pesanan + update status (template ber-brand, toggle di Pengaturan) | ✅ |
+| 35 | Kupon/diskon: modul admin `/admin/coupons`, validasi & penerapan di keranjang, checkout server-authoritative, diskon tampil di WhatsApp/email/admin | ✅ |
 
 ---
 

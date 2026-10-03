@@ -144,13 +144,23 @@ function confirmationText(order: Order): string {
         `- ${it.name}${it.variantName ? ` (${it.variantName})` : ""} ×${it.qty} = ${formatRupiah(it.subtotal)}`,
     )
     .join("\n");
+  const pricing: string[] = [];
+  if (order.coupon && order.coupon.discount > 0) {
+    pricing.push(`Subtotal     : ${formatRupiah(order.subtotal)}`);
+    pricing.push(
+      `Diskon (${order.coupon.code}) : -${formatRupiah(order.coupon.discount)}`,
+    );
+    pricing.push(`Total        : ${formatRupiah(order.total)}`);
+  } else {
+    pricing.push(`Total        : ${formatRupiah(order.total)}`);
+  }
   return [
     `Halo ${order.buyerName || "Pelanggan"},`,
     "",
     "Terima kasih! Pesanan Anda sudah kami terima.",
     "",
     `Kode pesanan : ${shortOrderCode(order.id)}`,
-    `Total        : ${formatRupiah(order.total)}`,
+    ...pricing,
     "",
     "Item:",
     items || "-",
@@ -172,6 +182,18 @@ function confirmationHtml(order: Order): string {
       <table style="width:100%;border-collapse:collapse">${itemsRowsHtml(order)}</table>
     </div>
     <table style="width:100%;border-collapse:collapse;margin-top:8px;padding-top:12px;border-top:2px solid #004EDF">
+      ${
+        order.coupon && order.coupon.discount > 0
+          ? `<tr>
+        <td style="padding-top:12px;color:#64748b;font-size:14px">Subtotal</td>
+        <td style="padding-top:12px;color:#334155;font-size:14px;text-align:right">${formatRupiah(order.subtotal)}</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:#059669;font-size:14px">Diskon (${esc(order.coupon.code)})</td>
+        <td style="padding:4px 0;color:#059669;font-size:14px;font-weight:600;text-align:right">−${formatRupiah(order.coupon.discount)}</td>
+      </tr>`
+          : ""
+      }
       <tr>
         <td style="padding-top:12px;color:#0a0f1e;font-size:15px;font-weight:700">Total</td>
         <td style="padding-top:12px;color:#004EDF;font-size:15px;font-weight:700;text-align:right">${formatRupiah(order.total)}</td>
@@ -272,7 +294,11 @@ function statusHtml(order: Order, status: Exclude<OrderStatus, "baru">): string 
       </tr>
       <tr>
         <td style="padding:0 16px 14px;color:#64748b;font-size:13px">Total</td>
-        <td style="padding:0 16px 14px;color:#0a0f1e;font-size:14px;font-weight:700;text-align:right">${formatRupiah(order.total)}</td>
+        <td style="padding:0 16px 14px;color:#0a0f1e;font-size:14px;font-weight:700;text-align:right">${formatRupiah(order.total)}${
+          order.coupon && order.coupon.discount > 0
+            ? `<br/><span style="color:#059669;font-size:11px;font-weight:600">Diskon ${esc(order.coupon.code)} −${formatRupiah(order.coupon.discount)}</span>`
+            : ""
+        }</td>
       </tr>
     </table>
     <div style="margin-top:24px">${button(`${SITE.url}/akun?tab=pesanan`, "Lihat Pesanan Saya")}</div>

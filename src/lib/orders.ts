@@ -27,17 +27,19 @@ export async function createOrder(
   if (!db) throw new Error("Admin SDK tidak tersedia.");
 
   const nowISO = new Date().toISOString();
-  const payload = {
+  const payload: Record<string, unknown> = {
     uid: data.uid,
     buyerName: data.buyerName,
     buyerEmail: data.buyerEmail,
     items: data.items,
+    subtotal: data.subtotal,
     total: data.total,
     status: data.status ?? "baru",
     whatsapp: data.whatsapp,
     message: data.message,
     createdAtISO: nowISO,
   };
+  if (data.coupon) payload.coupon = data.coupon;
 
   const ref = await db.collection(COLLECTION).add(payload);
   return normalizeOrder({ ...payload, id: ref.id, createdAtISO: nowISO });
