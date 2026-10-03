@@ -240,3 +240,36 @@ export const displayNameSchema = z.object({
   displayName: z.string().trim().min(2, "Nama minimal 2 karakter").max(80),
 });
 
+/**
+ * Normalisasi nomor telepon Indonesia ke digit (mis. "0812…"/"+62 812…" → "62812…").
+ * Dipakai untuk menyimpan nomor WhatsApp secara konsisten.
+ */
+export function normalizeWhatsapp(input: string): string {
+  let digits = input.replace(/\D/g, "");
+  if (digits.startsWith("0")) digits = `62${digits.slice(1)}`;
+  return digits;
+}
+
+/** Nomor WhatsApp user (validasi + normalisasi). */
+export const whatsappSchema = z
+  .string()
+  .trim()
+  .min(8, "Nomor WhatsApp minimal 8 digit")
+  .max(24, "Nomor WhatsApp terlalu panjang")
+  .transform((v) => normalizeWhatsapp(v))
+  .refine((v) => /^62\d{8,15}$/.test(v), {
+    message: "Nomor WhatsApp tidak valid (contoh: 08123456789).",
+  });
+
+/** Patch profil user (nama +/atau WhatsApp). */
+export const profileUpdateSchema = z.object({
+  displayName: z.string().trim().min(2, "Nama minimal 2 karakter").max(80).optional(),
+  whatsapp: whatsappSchema.optional(),
+});
+
+/** Toggle blokir user (admin). */
+export const userBlockSchema = z.object({
+  id: z.string().trim().min(1, "id wajib diisi").max(200),
+  blocked: z.boolean(),
+});
+

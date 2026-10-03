@@ -1,11 +1,31 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Portal Akun Pengguna (perluasan)**.
+> Terakhir diperbarui: sesi **Modul Pengguna & Nomor WhatsApp**.
 
 ---
 
-## 🎉 Sesi Terakhir — Portal Akun Pengguna (Perluasan)
+## 🎉 Sesi Terakhir — Modul Pengguna & Nomor WhatsApp
+
+Profil user + modul admin "Pengguna" (`docs/2026-10-05-modul-pengguna-dan-whatsapp.md`, U0–U8):
+
+| Fase | Hasil |
+| --- | --- |
+| U1 | **Nomor WhatsApp** di profil (`/akun` → tab Profil); validasi + normalisasi; tersimpan via PATCH `/api/user/profile` |
+| U2 | Data layer `admin-users.ts` — gabung `users` × `orders` (jumlah pesanan, total belanja, sudah/belum pesan) |
+| U3 | API `/api/admin/users` (list/summary/blokir/hapus) + `/api/admin/users/[uid]` (detail + pesanan) |
+| U4 | Halaman **`/admin/users`** — kartu statistik, toolbar (cari/filter), tabel responsif, **ekspor CSV**; menu "Pengguna" di nav |
+| U5 | **Detail user** (dialog) + riwayat pesanan + aksi blokir |
+| U6 | **Blokir/unblokir** + **hapus user** (konfirmasi) |
+| U7 | Kartu **UserSnapshot** di Ringkasan dashboard; polish |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (66 halaman).
+
+**Sisa manual:** uji browser (login Google → isi no. WA di `/akun`; buka `/admin/users`: cari, filter, detail, blokir, hapus, ekspor CSV) + deploy.
+
+---
+
+## 🎉 Sesi Sebelumnya — Portal Akun Pengguna (Perluasan)
 
 `/akun` diubah dari "profil + riwayat" menjadi **portal ber-tab** (`docs/2026-10-05-portal-akun-pengguna.md`, F0–F7):
 
@@ -257,6 +277,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 29 | Sentry error tracking + event tracking konversi (Vercel Analytics) | ✅ |
 | 30 | Halaman harga publik `/harga`: kartu paket, tabel banding, FAQ harga, sitemap, JSON-LD | ✅ |
 | 31 | Portal akun pengguna: tab (ringkasan/pesanan/favorit/alamat/profil), pesan lagi, wishlist server, alamat, edit profil | ✅ |
+| 32 | Modul Pengguna admin: nomor WhatsApp di profil, halaman `/admin/users` (statistik, cari/filter, detail, blokir, hapus, ekspor CSV) | ✅ |
 
 ---
 

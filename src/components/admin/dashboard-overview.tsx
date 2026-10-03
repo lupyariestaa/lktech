@@ -10,11 +10,16 @@ import {
   CheckCircle2,
   Sparkles,
   ReceiptText,
+  Users,
+  UserCheck,
+  UserPlus,
   Wallet,
 } from "lucide-react";
 import { fetchLeads } from "@/lib/admin-api";
 import { fetchOrdersSummary } from "@/lib/admin-orders-api";
+import { fetchUsersSummary } from "@/lib/admin-users-api";
 import type { OrdersSummary } from "@/lib/orders";
+import type { AdminUsersSummary } from "@/lib/user-types";
 import { formatRupiah } from "@/lib/format";
 import { LEAD_STATUS_LABEL, type StoredLead } from "@/lib/lead-types";
 import { useAsyncList } from "@/components/admin/use-async-list";
@@ -102,6 +107,8 @@ export function DashboardOverview() {
       </div>
 
       <OrderSnapshot />
+
+      <UserSnapshot />
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <div className="flex items-center justify-between">
@@ -299,6 +306,63 @@ function OrderSnapshot() {
           className="group inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
         >
           Kelola pesanan
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((c) => {
+          const Icon = c.icon;
+          return (
+            <div key={c.label} className="rounded-2xl border border-slate-200 p-4">
+              <span className={cn("grid h-9 w-9 place-items-center rounded-xl", c.color)}>
+                <Icon className="h-4 w-4" />
+              </span>
+              <p className="mt-3 text-lg font-bold text-secondary">{c.value}</p>
+              <p className="mt-0.5 text-xs text-muted">{c.label}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function UserSnapshot() {
+  const [summary, setSummary] = useState<AdminUsersSummary | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const s = await fetchUsersSummary();
+        if (active) setSummary(s);
+      } catch {
+        /* silent — sembunyikan seksi bila gagal */
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!summary) return null;
+
+  const cards = [
+    { label: "Total Pengguna", value: String(summary.total), icon: Users, color: "bg-primary-50 text-primary" },
+    { label: "Baru (30 hari)", value: String(summary.newLast30Days), icon: UserPlus, color: "bg-blue-50 text-blue-600" },
+    { label: "Sudah Pesan", value: String(summary.withOrders), icon: UserCheck, color: "bg-emerald-50 text-emerald-600" },
+    { label: "Belum Pesan", value: String(summary.withoutOrders), icon: Clock, color: "bg-amber-50 text-amber-600" },
+  ];
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-bold text-secondary">Pengguna</h2>
+        <Link
+          href="/admin/users"
+          className="group inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
+        >
+          Kelola pengguna
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>

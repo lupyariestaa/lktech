@@ -337,9 +337,10 @@ export function UserAccount() {
         {tab === "profil" && (
           <div role="tabpanel" id="panel-profil" aria-labelledby="tab-profil">
             <AccountProfile
-              key={displayName}
+              key={`${displayName}|${profile?.whatsapp ?? ""}`}
               email={email}
               initialDisplayName={displayName}
+              initialWhatsapp={profile?.whatsapp ?? ""}
             />
           </div>
         )}

@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/admin-guard";
 import {
   getUserProfile,
-  updateUserDisplayName,
+  updateUserProfileFields,
   upsertUserProfile,
 } from "@/lib/user-profile";
-import { displayNameSchema, userProfileSchema } from "@/lib/api-schemas";
+import { profileUpdateSchema, userProfileSchema } from "@/lib/api-schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,8 +66,8 @@ export async function POST(req: Request) {
 }
 
 /**
- * PATCH /api/user/profile — perbarui nama tampilan (edit profil).
- * Hanya `displayName` yang bisa diubah; email/uid tetap dari token.
+ * PATCH /api/user/profile — perbarui profil (nama tampilan +/atau nomor WhatsApp).
+ * Email/uid tetap dari token dan tidak bisa diubah.
  */
 export async function PATCH(req: Request) {
   const check = await requireUser(req);
@@ -80,19 +80,19 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const parsed = displayNameSchema.safeParse(body);
+  const parsed = profileUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Nama tidak valid." },
+      { error: parsed.error.issues[0]?.message ?? "Data profil tidak valid." },
       { status: 400 },
     );
   }
 
   try {
-    const profile = await updateUserDisplayName(
-      check.uid,
-      parsed.data.displayName,
-    );
+    const profile = await updateUserProfileFields(check.uid, {
+      displayName: parsed.data.displayName,
+      whatsapp: parsed.data.whatsapp,
+    });
     if (!profile) {
       return NextResponse.json(
         { error: "Profil tidak ditemukan." },

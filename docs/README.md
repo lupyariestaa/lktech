@@ -42,7 +42,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-03 | [Peningkatan Blog — SEO & Discovery (kategori, tag, RSS, JSON-LD)](2026-10-03-peningkatan-blog-seo-discovery.md) | Selesai |
 | 2026-10-03 | [Halaman Harga / Paket Publik (`/harga`)](2026-10-03-halaman-harga-publik.md) | Selesai |
 | 2026-10-05 | [Portal Akun Pengguna — Perluasan (profil, favorit, alamat, pesan lagi)](2026-10-05-portal-akun-pengguna.md) | Selesai |
-| 2026-10-05 | [Modul Pengguna & Nomor WhatsApp (profil WA + "Kelola User" dashboard)](2026-10-05-modul-pengguna-dan-whatsapp.md) | Rencana |
+| 2026-10-05 | [Modul Pengguna & Nomor WhatsApp (profil WA + "Kelola User" dashboard)](2026-10-05-modul-pengguna-dan-whatsapp.md) | Selesai |
 
 ### Dokumen pendukung (referensi & setup)
 

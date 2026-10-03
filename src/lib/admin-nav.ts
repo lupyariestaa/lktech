@@ -12,6 +12,7 @@ import {
   ReceiptText,
   Settings,
   Tags,
+  Users,
 } from "lucide-react";
 
 /**
@@ -120,6 +121,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/orders",
         icon: ReceiptText,
         badge: "newOrders",
+      },
+      {
+        label: "Pengguna",
+        title: "Pengguna",
+        href: "/admin/users",
+        icon: Users,
       },
     ],
   },

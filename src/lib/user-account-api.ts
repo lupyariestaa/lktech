@@ -105,14 +105,19 @@ export async function deleteAddress(id: string): Promise<SavedAddress[]> {
 
 // ===== Profil =====
 
-export async function updateDisplayName(
-  displayName: string,
-): Promise<void> {
+export async function updateProfile(patch: {
+  displayName?: string;
+  whatsapp?: string;
+}): Promise<void> {
   const res = await fetch("/api/user/profile", {
     method: "PATCH",
     headers: { ...(await authHeaders()), "Content-Type": "application/json" },
-    body: JSON.stringify({ displayName }),
+    body: JSON.stringify(patch),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error ?? "Gagal memperbarui profil.");
+}
+
+export async function updateDisplayName(displayName: string): Promise<void> {
+  return updateProfile({ displayName });
 }

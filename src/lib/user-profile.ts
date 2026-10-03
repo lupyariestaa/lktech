@@ -61,6 +61,8 @@ function normalizeProfile(
     orderCount: typeof data.orderCount === "number" ? data.orderCount : 0,
     wishlist: normalizeWishlist(data.wishlist),
     addresses: normalizeAddresses(data.addresses),
+    whatsapp: str(data.whatsapp),
+    blocked: data.blocked === true,
   };
 }
 
@@ -104,6 +106,8 @@ export async function upsertUserProfile(profile: {
       orderCount: 0,
       wishlist: [],
       addresses: [],
+      whatsapp: "",
+      blocked: false,
     });
     return {
       ...base,
@@ -112,6 +116,8 @@ export async function upsertUserProfile(profile: {
       orderCount: 0,
       wishlist: [],
       addresses: [],
+      whatsapp: "",
+      blocked: false,
     };
   }
 
@@ -145,6 +151,8 @@ export async function upsertUserProfile(profile: {
     orderCount: prev.orderCount,
     wishlist: prev.wishlist,
     addresses: prev.addresses,
+    whatsapp: prev.whatsapp,
+    blocked: prev.blocked,
   };
 }
 
@@ -156,6 +164,14 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const doc = await db.collection(COLLECTION).doc(uid).get();
   if (!doc.exists) return null;
   return { uid, ...normalizeProfile(doc.data() ?? {}) };
+}
+
+/** Bangun `UserProfile` dari dokumen Firestore mentah (dipakai juga oleh admin). */
+export function buildUserProfile(
+  uid: string,
+  data: Record<string, unknown>,
+): UserProfile {
+  return { uid, ...normalizeProfile(data) };
 }
 
 /** Menaikkan penghitung order user (best-effort). */
@@ -188,6 +204,83 @@ export async function updateUserDisplayName(
     { merge: true },
   );
   return getUserProfile(uid);
+}
+
+/** Perbarui nomor WhatsApp user. Mengembalikan profil terbaru. */
+export async function updateUserWhatsapp(
+  uid: string,
+  whatsapp: string,
+): Promise<UserProfile | null> {
+  const db = getAdminDb();
+  if (!db) return null;
+
+  const ref = db.collection(COLLECTION).doc(uid);
+  const existing = await ref.get();
+  if (!existing.exists) return null;
+
+  await ref.set(
+    { whatsapp: whatsapp.trim(), updatedAtISO: new Date().toISOString() },
+    { merge: true },
+  );
+  return getUserProfile(uid);
+}
+
+/** Perbarui nama + WhatsApp sekaligus (dipakai PATCH profil). */
+export async function updateUserProfileFields(
+  uid: string,
+  fields: { displayName?: string; whatsapp?: string },
+): Promise<UserProfile | null> {
+  const db = getAdminDb();
+  if (!db) return null;
+
+  const ref = db.collection(COLLECTION).doc(uid);
+  const existing = await ref.get();
+  if (!existing.exists) return null;
+
+  const patch: Record<string, unknown> = {
+    updatedAtISO: new Date().toISOString(),
+  };
+  if (typeof fields.displayName === "string") {
+    patch.displayName = fields.displayName.trim().slice(0, 80);
+  }
+  if (typeof fields.whatsapp === "string") {
+    patch.whatsapp = fields.whatsapp.trim();
+  }
+
+  await ref.set(patch, { merge: true });
+  return getUserProfile(uid);
+}
+
+/** Tandai user diblokir / tidak (dipakai admin). */
+export async function setUserBlocked(
+  uid: string,
+  blocked: boolean,
+): Promise<boolean> {
+  const db = getAdminDb();
+  if (!db) return false;
+
+  const ref = db.collection(COLLECTION).doc(uid);
+  const existing = await ref.get();
+  if (!existing.exists) return false;
+
+  await ref.set(
+    { blocked, updatedAtISO: new Date().toISOString() },
+    { merge: true },
+  );
+  return true;
+}
+
+/** Hapus dokumen profil user (dipakai admin). */
+export async function deleteUserProfile(uid: string): Promise<boolean> {
+  const db = getAdminDb();
+  if (!db) return false;
+
+  const ref = db.collection(COLLECTION).doc(uid);
+  const existing = await ref.get();
+  if (!existing.exists) return false;
+
+  await ref.delete();
+  return true;
 }
 
 // ===== Wishlist =====

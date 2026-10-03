@@ -1,10 +1,16 @@
 # MODUL PENGGUNA & NOMOR WHATSAPP — Profil User + "Kelola User" di Dashboard
 
-> **Status dokumen:** 📝 **Rencana** (belum dieksekusi)
-> **Disusun:** 2026-10-05
+> **Status dokumen:** ✅ **Dieksekusi** (FASE U0–U8 selesai)
+> **Disusun:** 2026-10-05 · **Dieksekusi:** 2026-10-05
 > **Cakupan:** (1) **Nomor WhatsApp user** — field di profil (`/akun`) yang diisi user manual; (2) **Modul admin "Pengguna"** — halaman `/admin/users` untuk melihat seluruh user yang login (nama, email, WhatsApp, kapan masuk, sudah pesan/belum, total belanja, dsb.) dengan pencarian, filter, ekspor CSV, statistik ringkas, detail, blokir, dan hapus.
 > **Tujuan:** Pemilik dapat **mengenal & menindaklanjuti** user yang sudah login (terutama lead jual beli) — tahu nomor WhatsApp-nya, siapa yang aktif, siapa yang sudah membeli, dan siapa yang belum (potensi follow-up).
 > **Prasyarat baca:** `docs/2026-10-05-portal-akun-pengguna.md` (data profil user), `docs/2026-10-02-orders-admin-module.md` (pola modul admin orders), `docs/2026-10-02-sidebar-dashboard-upgrade.md` (nav & shell admin), `docs/README.md`.
+> **Verifikasi:** `npx tsc --noEmit` ✅ · `npx eslint .` ✅ · `npm run build` ✅ (66 halaman).
+
+> **Status Eksekusi (U0–U8):** Seluruh fase **selesai**.
+> File baru: `src/lib/admin-users.ts`, `src/lib/admin-users-api.ts`, `src/app/api/admin/users/route.ts`, `src/app/api/admin/users/[uid]/route.ts`, `src/app/admin/(dashboard)/users/page.tsx`, `src/components/admin/users-manager.tsx`, `src/components/admin/user-detail-dialog.tsx`.
+> Diubah: `src/lib/user-types.ts` (whatsapp/blocked + tipe admin), `src/lib/user-profile.ts` (normalizer + CRUD), `src/lib/api-schemas.ts` (whatsapp/profile/block schema), `src/app/api/user/profile/route.ts` (PATCH whatsapp), `src/lib/user-account-api.ts`, `src/components/auth/account-profile.tsx` (form WA), `src/components/auth/user-account.tsx`, `src/lib/admin-nav.ts` (menu Pengguna), `src/components/admin/dashboard-overview.tsx` (UserSnapshot).
+> Temuan teratasi: PU-01..PU-13.
 
 ---
 
