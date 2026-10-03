@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -130,23 +129,6 @@ export default async function LayananDetailPage({
           </span>
         </div>
       </PageHero>
-
-      {/* Visual hero (bila tersedia) */}
-      {service.image && (
-        <div className="bg-white">
-          <div className="mx-auto max-w-4xl px-6">
-            <Image
-              src={service.image}
-              alt={service.imageAlt ?? service.title}
-              width={1536}
-              height={1024}
-              priority
-              sizes="(min-width: 896px) 848px, 100vw"
-              className="mx-auto h-auto w-full object-contain"
-            />
-          </div>
-        </div>
-      )}
 
       <div className="bg-white">
         <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[minmax(0,1fr)_320px]">
