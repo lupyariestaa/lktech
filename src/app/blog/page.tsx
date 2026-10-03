@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Rss } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { BlogGrid } from "@/components/blog-grid";
 import {
@@ -69,17 +67,7 @@ export default async function BlogPage() {
           </>
         }
         description="Tips, panduan, dan pemikiran seputar teknologi & bisnis digital — dibagikan gratis untuk Anda."
-      >
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/blog/rss.xml"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-sm font-medium text-secondary backdrop-blur transition-colors hover:border-primary/40 hover:text-primary"
-          >
-            <Rss className="h-4 w-4" />
-            Berlangganan RSS
-          </Link>
-        </div>
-      </PageHero>
+      />
 
       <section className="relative bg-surface py-16">
         <div className="mx-auto max-w-6xl px-6">
