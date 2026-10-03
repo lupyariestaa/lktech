@@ -10,7 +10,7 @@ export const COMPANY = {
 
 export const NAV_LINKS = [
   { label: "Beranda", href: "/#beranda" },
-  { label: "Layanan", href: "/#layanan" },
+  { label: "Layanan", href: "/layanan" },
   { label: "Produk", href: "/produk" },
   { label: "Portofolio", href: "/portofolio" },
   { label: "Blog", href: "/blog" },
