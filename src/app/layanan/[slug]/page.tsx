@@ -134,18 +134,16 @@ export default async function LayananDetailPage({
       {/* Visual hero (bila tersedia) */}
       {service.image && (
         <div className="bg-white">
-          <div className="mx-auto max-w-6xl px-6">
-            <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
-              <Image
-                src={service.image}
-                alt={service.imageAlt ?? service.title}
-                width={1536}
-                height={1024}
-                priority
-                sizes="(min-width: 1152px) 1104px, 100vw"
-                className="h-auto w-full object-cover"
-              />
-            </div>
+          <div className="mx-auto max-w-4xl px-6">
+            <Image
+              src={service.image}
+              alt={service.imageAlt ?? service.title}
+              width={1536}
+              height={1024}
+              priority
+              sizes="(min-width: 896px) 848px, 100vw"
+              className="mx-auto h-auto w-full object-contain drop-shadow-xl"
+            />
           </div>
         </div>
       )}

@@ -38,17 +38,17 @@ export function ServiceShowcase({
               aria-hidden="true"
             />
             {service.image ? (
-              <div className="relative aspect-[3/2] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
+              <div className="relative aspect-[3/2]">
                 <Image
                   src={service.image}
                   alt={service.imageAlt ?? service.title}
                   fill
                   sizes="(min-width: 1024px) 560px, 100vw"
-                  className="object-cover"
+                  className="object-contain drop-shadow-xl"
                 />
                 <span
                   className={cn(
-                    "absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-br px-3 py-1.5 text-xs font-semibold text-white shadow-lg",
+                    "absolute top-1 left-1 z-10 inline-flex items-center gap-2 rounded-full bg-gradient-to-br px-3 py-1.5 text-xs font-semibold text-white shadow-lg",
                     service.accent,
                   )}
                 >
