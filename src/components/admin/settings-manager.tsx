@@ -181,6 +181,52 @@ export function SettingsManager() {
       </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6">
+        <h2 className="text-sm font-bold text-secondary">Notifikasi Email Pembeli</h2>
+        <p className="mt-1 text-xs text-muted">
+          Email otomatis ke pembeli. Notifikasi ke admin tetap berjalan
+          terpisah. (Perlu domain terverifikasi di Resend agar terkirim ke
+          semua alamat email.)
+        </p>
+
+        <div className="mt-5 flex flex-col gap-3">
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface px-4 py-3.5">
+            <input
+              type="checkbox"
+              checked={settings.notifyBuyerOnOrder}
+              onChange={(e) => update("notifyBuyerOnOrder", e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/30"
+            />
+            <span>
+              <span className="block text-sm font-medium text-secondary">
+                Konfirmasi pesanan
+              </span>
+              <span className="mt-0.5 block text-xs text-muted">
+                Kirim email rincian pesanan ke pembeli saat checkout berhasil.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface px-4 py-3.5">
+            <input
+              type="checkbox"
+              checked={settings.notifyBuyerOnStatus}
+              onChange={(e) => update("notifyBuyerOnStatus", e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/30"
+            />
+            <span>
+              <span className="block text-sm font-medium text-secondary">
+                Update status pesanan
+              </span>
+              <span className="mt-0.5 block text-xs text-muted">
+                Kirim email ke pembeli saat status pesanan berubah
+                (diproses/selesai/dibatalkan).
+              </span>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-secondary">Media Sosial</h2>

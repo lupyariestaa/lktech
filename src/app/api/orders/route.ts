@@ -8,6 +8,7 @@ import { getSiteSettings } from "@/lib/settings";
 import { incrementUserOrderCount } from "@/lib/user-profile";
 import { buildOrderMessage } from "@/lib/cart";
 import { sendOrderNotification } from "@/lib/email";
+import { sendOrderConfirmationToBuyer } from "@/lib/email-order";
 import type { OrderItem } from "@/lib/order-types";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -217,6 +218,13 @@ export async function POST(req: Request) {
     sendOrderNotification(order).catch((err) =>
       console.error("[api/orders] gagal kirim notifikasi pesanan:", err),
     );
+
+    // Email konfirmasi ke PEMBELI (best-effort — tidak menggagalkan order).
+    if (settings.notifyBuyerOnOrder) {
+      sendOrderConfirmationToBuyer(order).catch((err) =>
+        console.error("[api/orders] gagal kirim konfirmasi ke pembeli:", err),
+      );
+    }
 
     return NextResponse.json({
       ok: true,

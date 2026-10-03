@@ -3,11 +3,14 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import {
   deleteOrder,
+  getOrderById,
   getOrdersPage,
   getOrdersSummary,
   updateOrderStatus,
 } from "@/lib/orders";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/order-types";
+import { sendOrderStatusToBuyer } from "@/lib/email-order";
+import { getSiteSettings } from "@/lib/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,6 +109,19 @@ export async function PATCH(req: Request) {
 
   try {
     await updateOrderStatus(id, status as OrderStatus, check.email);
+
+    // Email update status ke pembeli (best-effort — tidak menggagalkan update).
+    // Status "baru" dilewati di dalam helper (konfirmasi sudah dikirim saat checkout).
+    getSiteSettings()
+      .then(async (settings) => {
+        if (!settings.notifyBuyerOnStatus) return;
+        const order = await getOrderById(id);
+        if (order) await sendOrderStatusToBuyer(order, status as OrderStatus);
+      })
+      .catch((err) =>
+        console.error("[api/admin/orders] gagal kirim email status:", err),
+      );
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/orders] PATCH gagal:", err);

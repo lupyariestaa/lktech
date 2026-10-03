@@ -21,6 +21,15 @@ export function mergeSettings(data: Partial<SiteSettings> | undefined): SiteSett
             Boolean(s && typeof s.href === "string" && s.href.trim() && typeof s.label === "string"),
         )
       : DEFAULT_SETTINGS.socials,
+    // Default aktif bila belum pernah di-set (undefined → true).
+    notifyBuyerOnOrder:
+      typeof data?.notifyBuyerOnOrder === "boolean"
+        ? data.notifyBuyerOnOrder
+        : DEFAULT_SETTINGS.notifyBuyerOnOrder,
+    notifyBuyerOnStatus:
+      typeof data?.notifyBuyerOnStatus === "boolean"
+        ? data.notifyBuyerOnStatus
+        : DEFAULT_SETTINGS.notifyBuyerOnStatus,
   };
 }
 

@@ -1,10 +1,18 @@
 # EMAIL TRANSAKSIONAL KE PEMBELI — Konfirmasi Pesanan & Update Status
 
-> **Status dokumen:** 📝 **Rencana** (belum dieksekusi)
-> **Disusun:** 2026-10-05
+> **Status dokumen:** ✅ **Dieksekusi** (FASE E0–E7 selesai)
+> **Disusun:** 2026-10-05 · **Dieksekusi:** 2026-10-05
 > **Cakupan:** Email otomatis **ke pembeli** — (1) **konfirmasi pesanan** saat checkout berhasil, (2) **notifikasi perubahan status** pesanan (diproses/selesai/dibatalkan) saat admin mengubah status. Termasuk template HTML, integrasi ke alur order, dan halaman pengaturan/preferensi bila perlu.
 > **Tujuan:** Memberi **kepastian & kepercayaan** ke pembeli (bukti pesanan tercatat + tautan WhatsApp), mengurangi pertanyaan "pesanan saya bagaimana?", dan mendorong repeat order. Melengkapi notifikasi email yang saat ini **hanya ke admin**.
 > **Prasyarat baca:** `docs/2026-10-02-orders-admin-module.md` (model & alur order), `src/lib/email.ts` (infrastruktur email existing), `docs/2026-10-05-portal-akun-pengguna.md` (profil/order pembeli), `docs/README.md`.
+> **Verifikasi:** `npx tsc --noEmit` ✅ · `npx eslint .` ✅ · `npm run build` ✅ (66 halaman).
+
+> **Status Eksekusi (E0–E7):** Seluruh fase **selesai**.
+> File baru: `src/lib/email-order.ts` (email konfirmasi + update status ke pembeli, best-effort).
+> Diubah: `src/app/api/orders/route.ts` (kirim konfirmasi), `src/app/api/admin/orders/route.ts` (kirim update status + cek toggle), `src/lib/orders.ts` (`getOrderById`), `src/lib/settings-types.ts` + `src/lib/settings.ts` + `src/lib/api-schemas.ts` (toggle `notifyBuyerOnOrder`/`notifyBuyerOnStatus`), `src/components/admin/settings-manager.tsx` (UI toggle), `src/components/cart-view.tsx` (teks konfirmasi email), `.env.example` (`ORDER_REPLY_TO`).
+> Temuan teratasi: ET-01..ET-08.
+
+> **⚠️ Penting:** agar email terkirim ke **pembeli umum**, domain harus **diverifikasi di Resend** (§10). Saat ini `EMAIL_FROM=LKTech <onboarding@resend.dev>` → hanya terkirim ke alamat terdaftar Resend. Kode sudah siap & aman (best-effort); email admin tetap berjalan.
 
 ---
 

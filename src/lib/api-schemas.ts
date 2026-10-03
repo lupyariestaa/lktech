@@ -37,6 +37,8 @@ export const settingsSchema = z.object({
   whatsapp: z.string().trim().max(30),
   location: z.string().trim().max(200),
   socials: z.array(socialLinkSchema).max(12),
+  notifyBuyerOnOrder: z.boolean().optional(),
+  notifyBuyerOnStatus: z.boolean().optional(),
 });
 
 // ===== Media =====

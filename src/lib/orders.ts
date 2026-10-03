@@ -206,6 +206,15 @@ export async function updateOrderStatus(
   });
 }
 
+/** Mengambil satu pesanan berdasarkan id (null bila tidak ada). */
+export async function getOrderById(id: string): Promise<Order | null> {
+  const db = getAdminDb();
+  if (!db) return null;
+  const doc = await db.collection(COLLECTION).doc(id).get();
+  if (!doc.exists) return null;
+  return normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) });
+}
+
 /** Menghapus pesanan (permanen). */
 export async function deleteOrder(id: string): Promise<void> {
   const db = getAdminDb();

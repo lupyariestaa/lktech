@@ -102,7 +102,8 @@ export function CartView() {
         </h1>
         <p className="mt-2 text-sm text-muted">
           Pesanan Anda sudah diteruskan ke WhatsApp kami. Lanjutkan percakapan di
-          WhatsApp untuk menyelesaikan pembayaran.
+          WhatsApp untuk menyelesaikan pembayaran. Rincian pesanan juga kami
+          kirimkan ke email Anda.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link

@@ -1,11 +1,32 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Modul Pengguna & Nomor WhatsApp**.
+> Terakhir diperbarui: sesi **Email Transaksional ke Pembeli**.
 
 ---
 
-## 🎉 Sesi Terakhir — Modul Pengguna & Nomor WhatsApp
+## 🎉 Sesi Terakhir — Email Transaksional ke Pembeli
+
+Email otomatis ke pembeli (`docs/2026-10-05-email-transaksional-pembeli.md`, E0–E7):
+
+| Fase | Hasil |
+| --- | --- |
+| E1–E2 | Modul **`src/lib/email-order.ts`**: email konfirmasi + template HTML ber-brand (status: diproses/selesai/dibatalkan) |
+| E3 | **Konfirmasi pesanan** dikirim ke pembeli saat checkout (`POST /api/orders`) |
+| E4 | **Update status** dikirim ke pembeli saat admin ubah status (`getOrderById` + `sendOrderStatusToBuyer`); status `baru` dilewati |
+| E5 | **Toggle di Pengaturan** (`notifyBuyerOnOrder`/`notifyBuyerOnStatus`) + teks di `/keranjang` |
+| E6 | `.env.example` (`ORDER_REPLY_TO`); dokumentasi |
+| E7 | QA: `tsc`/`lint`/`build` bersih ✅ (66 halaman) |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (66 halaman).
+
+**⚠️ Wajib untuk produksi:** **verifikasi domain di Resend** agar email terkirim ke pembeli umum (lihat §10 dokumen). Tanpa itu, hanya ke alamat terdaftar Resend.
+
+**Sisa manual:** verifikasi domain Resend + uji email (checkout → konfirmasi; ubah status → update) + deploy.
+
+---
+
+## 🎉 Sesi Sebelumnya — Modul Pengguna & Nomor WhatsApp
 
 Profil user + modul admin "Pengguna" (`docs/2026-10-05-modul-pengguna-dan-whatsapp.md`, U0–U8):
 
@@ -279,6 +300,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 31 | Portal akun pengguna: tab (ringkasan/pesanan/favorit/alamat/profil), pesan lagi, wishlist server, alamat, edit profil | ✅ |
 | 32 | Modul Pengguna admin: nomor WhatsApp di profil, halaman `/admin/users` (statistik, cari/filter, detail, blokir, hapus, ekspor CSV) | ✅ |
 | 33 | Enforcement blokir user: cegah checkout/keranjang/wishlist/alamat (server `requireActiveUser` + banner & disable UI) | ✅ |
+| 34 | Email transaksional ke pembeli: konfirmasi pesanan + update status (template ber-brand, toggle di Pengaturan) | ✅ |
 
 ---
 
