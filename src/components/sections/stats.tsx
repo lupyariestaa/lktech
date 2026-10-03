@@ -44,7 +44,7 @@ export function Stats() {
       <div className="pointer-events-none absolute -bottom-24 right-1/4 h-72 w-72 animate-aurora rounded-full bg-primary-light/30 blur-[110px] [animation-delay:-5s]" />
 
       <div className="relative mx-auto max-w-6xl px-6">
-        <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-6 sm:gap-8 lg:grid-cols-4">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -54,10 +54,10 @@ export function Stats() {
               transition={{ duration: 0.6, delay: i * 0.1 }}
               className="text-center"
             >
-              <p className="text-4xl font-bold text-white sm:text-5xl">
+              <p className="text-3xl font-bold text-white sm:text-5xl">
                 <Counter value={stat.value} suffix={stat.suffix} />
               </p>
-              <p className="mt-2 text-sm font-medium text-white/60">
+              <p className="mt-2 text-xs font-medium text-white/60 sm:text-sm">
                 {stat.label}
               </p>
             </motion.div>

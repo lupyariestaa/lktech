@@ -139,5 +139,5 @@ export function Markdown({ content }: { content: string }) {
   }
   flushList();
 
-  return <div>{blocks}</div>;
+  return <div className="break-words [overflow-wrap:anywhere]">{blocks}</div>;
 }

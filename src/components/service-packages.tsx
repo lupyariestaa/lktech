@@ -88,62 +88,67 @@ function CompareTable({
   const names = packages.map((p) => p.name);
 
   return (
-    <div className="mt-10 overflow-x-auto rounded-2xl border border-slate-200">
-      <table className="w-full min-w-[520px] border-collapse text-sm">
-        <thead>
-          <tr className="bg-surface">
-            <th
-              scope="col"
-              className="sticky left-0 z-10 bg-surface px-5 py-4 text-left font-semibold text-secondary"
-            >
-              Fitur
-            </th>
-            {names.map((n) => (
+    <div className="mt-10">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+        <table className="w-full min-w-[520px] border-collapse text-sm">
+          <thead>
+            <tr className="bg-surface">
               <th
-                key={n}
                 scope="col"
-                className="px-5 py-4 text-center font-semibold text-secondary"
+                className="sticky left-0 z-10 bg-surface px-5 py-4 text-left font-semibold text-secondary"
               >
-                {n}
+                Fitur
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {compare.map((row, ri) => (
-            <tr
-              key={row.feature}
-              className={ri % 2 === 0 ? "bg-white" : "bg-surface/60"}
-            >
-              <th
-                scope="row"
-                className="sticky left-0 z-10 bg-inherit px-5 py-3.5 text-left font-medium text-muted"
-              >
-                {row.feature}
-              </th>
-              {row.values.map((v, vi) => (
-                <td key={vi} className="px-5 py-3.5 text-center">
-                  {typeof v === "boolean" ? (
-                    v ? (
-                      <Check
-                        className="mx-auto h-4 w-4 text-emerald-500"
-                        aria-label="Ya"
-                      />
-                    ) : (
-                      <Minus
-                        className="mx-auto h-4 w-4 text-slate-300"
-                        aria-label="Tidak"
-                      />
-                    )
-                  ) : (
-                    <span className="text-secondary">{v}</span>
-                  )}
-                </td>
+              {names.map((n) => (
+                <th
+                  key={n}
+                  scope="col"
+                  className="px-5 py-4 text-center font-semibold text-secondary"
+                >
+                  {n}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {compare.map((row, ri) => {
+              const rowBg = ri % 2 === 0 ? "bg-white" : "bg-slate-50";
+              return (
+                <tr key={row.feature} className={rowBg}>
+                  <th
+                    scope="row"
+                    className={`sticky left-0 z-10 ${rowBg} px-5 py-3.5 text-left font-medium text-muted`}
+                  >
+                    {row.feature}
+                  </th>
+                  {row.values.map((v, vi) => (
+                    <td key={vi} className="px-5 py-3.5 text-center">
+                      {typeof v === "boolean" ? (
+                        v ? (
+                          <Check
+                            className="mx-auto h-4 w-4 text-emerald-500"
+                            aria-label="Ya"
+                          />
+                        ) : (
+                          <Minus
+                            className="mx-auto h-4 w-4 text-slate-300"
+                            aria-label="Tidak"
+                          />
+                        )
+                      ) : (
+                        <span className="text-secondary">{v}</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 text-center text-xs text-muted sm:hidden">
+        Geser tabel ke samping untuk melihat semua paket →
+      </p>
     </div>
   );
 }

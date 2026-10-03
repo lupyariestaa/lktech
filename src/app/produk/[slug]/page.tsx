@@ -229,7 +229,7 @@ export default async function ProdukDetailPage({
             {!multi && product.specs.length > 0 && (
               <section>
                 <SectionTitle eyebrow="Spesifikasi" title="Detail teknis" />
-                <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200">
+                <div className="mt-8 overflow-x-auto rounded-2xl border border-slate-200">
                   <table className="w-full text-sm">
                     <tbody>
                       {product.specs.map((s, i) => (
@@ -239,11 +239,11 @@ export default async function ProdukDetailPage({
                         >
                           <th
                             scope="row"
-                            className="w-1/3 px-5 py-3.5 text-left font-medium text-muted"
+                            className="w-1/3 px-5 py-3.5 text-left font-medium text-muted align-top break-words"
                           >
                             {s.label}
                           </th>
-                          <td className="px-5 py-3.5 font-semibold text-secondary">
+                          <td className="px-5 py-3.5 font-semibold text-secondary align-top break-words">
                             {s.value}
                           </td>
                         </tr>

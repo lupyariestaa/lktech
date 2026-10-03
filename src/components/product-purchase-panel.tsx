@@ -56,17 +56,17 @@ export function VariantPickerList({ product }: { product: Product }) {
               >
                 {isSel && <Check className="h-3 w-3" />}
               </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-secondary">
-                  {v.name}
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-secondary">
+                  <span className="break-words">{v.name}</span>
                   {v.highlight && (
-                    <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
                       Rekomendasi
                     </span>
                   )}
                 </span>
                 {v.tagline && (
-                  <span className="mt-0.5 block truncate text-xs text-muted">
+                  <span className="mt-0.5 block text-xs text-muted">
                     {v.tagline}
                   </span>
                 )}

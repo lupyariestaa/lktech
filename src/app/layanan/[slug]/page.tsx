@@ -405,7 +405,7 @@ export default async function LayananDetailPage({
       {/* Layanan lainnya */}
       <section className="relative bg-surface py-20">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="flex items-end justify-between gap-4">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
             <h2 className="text-2xl font-bold text-secondary sm:text-3xl">
               Layanan <span className="text-gradient">lainnya</span>
             </h2>
@@ -431,10 +431,10 @@ export default async function LayananDetailPage({
                   <Icon name={s.icon} className="h-5 w-5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-secondary">
+                  <span className="block text-sm font-semibold text-secondary">
                     {s.title}
                   </span>
-                  <span className="mt-0.5 block truncate text-xs text-muted">
+                  <span className="mt-0.5 block text-xs text-muted">
                     {s.tagline}
                   </span>
                 </span>

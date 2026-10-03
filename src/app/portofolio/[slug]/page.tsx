@@ -192,14 +192,16 @@ export default async function ProjectDetailPage({
             <span className="text-secondary">{project.title}</span>
           </nav>
 
-          <span className="inline-flex items-center rounded-full bg-primary-50 px-3.5 py-1 text-xs font-semibold tracking-wide text-primary uppercase">
-            {project.category}
-          </span>
-          {project.demo && (
-            <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-              Contoh
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-primary-50 px-3.5 py-1 text-xs font-semibold tracking-wide text-primary uppercase">
+              {project.category}
             </span>
-          )}
+            {project.demo && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                Contoh
+              </span>
+            )}
+          </div>
 
           <h1 className="mt-4 text-3xl font-bold text-secondary sm:text-4xl lg:text-[2.75rem] lg:leading-tight">
             {project.title}
@@ -449,7 +451,7 @@ export default async function ProjectDetailPage({
       {/* Proyek lain */}
       <section className="relative bg-surface py-20">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="flex items-end justify-between gap-4">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
             <h2 className="text-2xl font-bold text-secondary sm:text-3xl">
               Proyek <span className="text-gradient">lainnya</span>
             </h2>

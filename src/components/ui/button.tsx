@@ -21,7 +21,7 @@ const variants: Record<ButtonVariant, string> = {
 const sizes: Record<ButtonSize, string> = {
   sm: "h-9 px-4 text-sm",
   md: "h-11 px-6 text-sm",
-  lg: "h-13 px-8 text-base",
+  lg: "h-13 px-8 text-base max-sm:h-12 max-sm:px-6",
 };
 
 type CommonProps = {

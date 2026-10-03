@@ -69,7 +69,7 @@ function DeviceMockups({ showcase }: { showcase: HeroShowcase }) {
 
         {/* Phone card */}
         <motion.div
-          className="absolute -right-4 -bottom-12 w-36 sm:-right-10 sm:w-44"
+          className="absolute -right-1 -bottom-10 w-28 sm:-right-10 sm:-bottom-12 sm:w-44"
           style={{ transform: "translateZ(80px)" }}
           animate={{ y: [0, -14, 0] }}
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
@@ -92,7 +92,7 @@ function DeviceMockups({ showcase }: { showcase: HeroShowcase }) {
 
         {/* Floating chips */}
         <motion.div
-          className="glass-strong absolute -top-5 -left-5 flex items-center gap-2 rounded-2xl px-3 py-2 shadow-lg sm:-left-8"
+          className="glass-strong absolute -top-4 -left-2 flex items-center gap-2 rounded-2xl px-3 py-2 shadow-lg sm:-top-5 sm:-left-8"
           style={{ transform: "translateZ(60px)" }}
           animate={{ y: [0, -10, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
