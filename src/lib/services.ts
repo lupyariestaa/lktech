@@ -84,6 +84,10 @@ export type Service = {
   waMessage: string;
   /** Poin singkat untuk blok landing (3 item). */
   landingPoints: string[];
+  /** Gambar ilustrasi (path publik, mis. `/layanan/pembuatan-website.png`). */
+  image?: string;
+  /** Alt text gambar ilustrasi (a11y). */
+  imageAlt?: string;
   detail: ServiceDetail;
 };
 
@@ -100,6 +104,8 @@ export const SERVICES: Service[] = [
     icon: "globe",
     accent: "from-[#004EDF] to-[#4D82EC]",
     waMessage: WA_MESSAGES.website,
+    image: "/layanan/pembuatan-website.png",
+    imageAlt: "Ilustrasi layanan pembuatan website LKTech",
     landingPoints: [
       "Desain custom sesuai identitas brand Anda",
       "Mobile-first, cepat, & skor performa tinggi",
@@ -357,6 +363,8 @@ export const SERVICES: Service[] = [
     icon: "smartphone",
     accent: "from-[#4D82EC] to-[#0A0F1E]",
     waMessage: WA_MESSAGES.mobile,
+    image: "/layanan/aplikasi-mobile.png",
+    imageAlt: "Ilustrasi layanan aplikasi mobile LKTech",
     landingPoints: [
       "Satu basis kode untuk Android & iOS",
       "UI/UX intuitif, ringan, & hemat baterai",
@@ -598,6 +606,8 @@ export const SERVICES: Service[] = [
     icon: "compass",
     accent: "from-[#004EDF] to-[#003BB3]",
     waMessage: WA_MESSAGES.consultant,
+    image: "/layanan/konsultasi-teknologi.png",
+    imageAlt: "Ilustrasi layanan konsultasi teknologi LKTech",
     landingPoints: [
       "Analisis kebutuhan & sistem saat ini",
       "Rekomendasi arsitektur & teknologi",
@@ -747,6 +757,8 @@ export const SERVICES: Service[] = [
     icon: "palette",
     accent: "from-[#4D82EC] to-[#004EDF]",
     waMessage: WA_MESSAGES.general,
+    image: "/layanan/desain-branding.png",
+    imageAlt: "Ilustrasi layanan desain & branding LKTech",
     landingPoints: [
       "Logo & identitas brand yang khas",
       "Panduan penggunaan brand (guideline)",
@@ -892,6 +904,8 @@ export const SERVICES: Service[] = [
     icon: "megaphone",
     accent: "from-[#003BB3] to-[#4D82EC]",
     waMessage: WA_MESSAGES.general,
+    image: "/layanan/digital-marketing.png",
+    imageAlt: "Ilustrasi layanan digital marketing LKTech",
     landingPoints: [
       "Strategi konten yang terarah",
       "Pengelolaan media sosial",

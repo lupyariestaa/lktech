@@ -525,8 +525,13 @@ npm run build      → ✓ Compiled successfully (46 halaman)
 
 ### 13.6 Sisa manual (F7)
 - [ ] Uji browser: `/layanan` (blok bergantian + CTA), detail `pembuatan-website` & `aplikasi-mobile` (kinds, useCases, paket+CTA, tabel banding), responsif mobile.
-- [ ] Pastikan dashboard tak lagi menampilkan menu "Layanan".
+- [x] Pastikan dashboard tak lagi menampilkan menu "Layanan" (dikonfirmasi via kode: `admin-nav.ts` tanpa item Layanan, halaman/manager/API terhapus).
+- [x] Dokumentasi diperbarui: `docs/README.md` (status Selesai) + `TASK-SELANJUTNYA.md` (catatan layanan hardcoded, koreksi klaim dashboard usang).
 - [ ] **Deploy**: `git push` → Vercel → uji produksi.
+
+> **Catatan sesi lanjutan (2026-10-02):** F0–F6 sudah selesai & ter-commit (`26d30cd`).
+> Verifikasi ulang otomatis: `npx tsc --noEmit` ✅ · `npx eslint .` ✅ · `npm run build` ✅ (5 detail layanan ter-generate).
+> Yang tersisa hanya **uji browser + deploy** (manual, butuh lingkungan produksi/preview).
 
 ### 13.7 Catatan operasional
 - Detail layanan **hardcoded** → perubahan butuh deploy (bukan via dashboard). Diterima (keputusan pemilik).

@@ -187,7 +187,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 - [ ] Lengkapi `identitas-perusahaan.md` (kontak, sosmed, tagline resmi).
 - [ ] Update `identitas-perusahaan.md` & `tech-stack.md` bila ada perubahan.
 
-> Catatan: layanan, FAQ, dan harga kini dapat diubah dari dashboard (`/admin/services`, `/admin/faq`, `/admin/pricing`).
+> Catatan: FAQ dan harga dapat diubah dari dashboard (`/admin/faq`, `/admin/pricing`). **Layanan tidak lagi dikelola dashboard** — sumbernya hardcoded di `src/lib/services.ts` (ubah → deploy).
 
 #### 5. Verifikasi Domain Email (Resend) — SKIP (diputuskan tanpa domain sendiri)
 - [ ] Verifikasi domain di Resend agar email notifikasi bisa dikirim ke alamat mana pun.
@@ -198,7 +198,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 #### 6. Peningkatan Dashboard (opsional)
 - [x] Filter/pencarian lead lebih lanjut + ekspor CSV.
 - [x] Statistik lead (grafik tren).
-- [x] Kelola layanan (services) dari dashboard — termasuk detail tiap layanan.
+- [x] Kelola layanan (services) dari dashboard — **dihapus** (layanan kini hardcoded di `src/lib/services.ts`).
 - [x] Kelola FAQ & harga dari dashboard.
 
 #### 7. Peningkatan SEO (lanjutan) — SKIP sementara (tunggu proper dulu)

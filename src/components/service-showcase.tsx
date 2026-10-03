@@ -1,4 +1,5 @@
 import { ArrowRight, Check, MessageCircle } from "lucide-react";
+import Image from "next/image";
 import type { Service } from "@/lib/services";
 import { Icon } from "@/components/icon";
 import { Reveal } from "@/components/motion";
@@ -36,26 +37,47 @@ export function ServiceShowcase({
               )}
               aria-hidden="true"
             />
-            <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-surface to-white">
-              <div
-                className={cn(
-                  "absolute inset-0 bg-gradient-to-br opacity-[0.06]",
-                  service.accent,
-                )}
-                aria-hidden="true"
-              />
-              <span className="text-[7rem] leading-none font-black text-secondary/5 sm:text-[9rem]">
-                {number}
-              </span>
-              <span
-                className={cn(
-                  "absolute grid h-24 w-24 place-items-center rounded-3xl bg-gradient-to-br text-white shadow-xl shadow-slate-900/10",
-                  service.accent,
-                )}
-              >
-                <Icon name={service.icon} className="h-12 w-12" />
-              </span>
-            </div>
+            {service.image ? (
+              <div className="relative aspect-[3/2] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
+                <Image
+                  src={service.image}
+                  alt={service.imageAlt ?? service.title}
+                  fill
+                  sizes="(min-width: 1024px) 560px, 100vw"
+                  className="object-cover"
+                />
+                <span
+                  className={cn(
+                    "absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-br px-3 py-1.5 text-xs font-semibold text-white shadow-lg",
+                    service.accent,
+                  )}
+                >
+                  <Icon name={service.icon} className="h-3.5 w-3.5" />
+                  {number}
+                </span>
+              </div>
+            ) : (
+              <div className="relative flex aspect-[3/2] items-center justify-center overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-surface to-white">
+                <div
+                  className={cn(
+                    "absolute inset-0 bg-gradient-to-br opacity-[0.06]",
+                    service.accent,
+                  )}
+                  aria-hidden="true"
+                />
+                <span className="text-[7rem] leading-none font-black text-secondary/5 sm:text-[9rem]">
+                  {number}
+                </span>
+                <span
+                  className={cn(
+                    "absolute grid h-24 w-24 place-items-center rounded-3xl bg-gradient-to-br text-white shadow-xl shadow-slate-900/10",
+                    service.accent,
+                  )}
+                >
+                  <Icon name={service.icon} className="h-12 w-12" />
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
