@@ -45,6 +45,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-05 | [Modul Pengguna & Nomor WhatsApp (profil WA + "Kelola User" dashboard)](2026-10-05-modul-pengguna-dan-whatsapp.md) | Selesai |
 | 2026-10-05 | [Email Transaksional ke Pembeli (konfirmasi pesanan & update status)](2026-10-05-email-transaksional-pembeli.md) | Selesai |
 | 2026-10-05 | [Kupon / Diskon — Modul Promo (admin + penerapan di keranjang & checkout)](2026-10-05-kupon-diskon.md) | Selesai |
+| 2026-10-05 | [Dashboard Analitik Penjualan (grafik omzet, tren pesanan, produk terlaris)](2026-10-05-analitik-penjualan.md) | Rencana |
 
 ### Dokumen pendukung (referensi & setup)
 
