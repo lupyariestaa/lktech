@@ -17,7 +17,8 @@ import { Icon } from "@/components/icon";
 import { FaqAccordion } from "@/components/faq-accordion";
 import { ServicePackages } from "@/components/service-packages";
 import { CtaContact } from "@/components/sections/cta-contact";
-import { ButtonAnchor, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { SERVICES, getService, getServiceSlugs } from "@/lib/services";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink } from "@/lib/whatsapp";
@@ -104,7 +105,9 @@ export default async function LayananDetailPage({
         description={detail.heroDescription}
       >
         <div className="flex flex-wrap items-center gap-3">
-          <ButtonAnchor
+          <TrackedWaButton
+            location="layanan-detail-hero"
+            label={service.title}
             href={waHref}
             target="_blank"
             rel="noopener noreferrer"
@@ -114,7 +117,7 @@ export default async function LayananDetailPage({
             <MessageCircle className="h-5 w-5" />
             Konsultasi Layanan Ini
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </ButtonAnchor>
+          </TrackedWaButton>
           <ButtonLink href="#paket" size="lg" variant="outline">
             Lihat Paket
           </ButtonLink>
@@ -334,7 +337,9 @@ export default async function LayananDetailPage({
                   terbaik, gratis.
                 </p>
                 <div className="mt-5 flex flex-col gap-2.5">
-                  <ButtonAnchor
+                  <TrackedWaButton
+                    location="layanan-detail-sidebar"
+                    label={service.title}
                     href={waHref}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -343,7 +348,7 @@ export default async function LayananDetailPage({
                   >
                     <MessageCircle className="h-4 w-4" />
                     Chat via WhatsApp
-                  </ButtonAnchor>
+                  </TrackedWaButton>
                   <ButtonLink
                     href="/kontak"
                     size="md"

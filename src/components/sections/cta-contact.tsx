@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { COMPANY } from "@/lib/content";
 import { ButtonAnchor } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { useSettings } from "@/components/settings-provider";
 
@@ -52,7 +53,8 @@ export function CtaContact() {
                 Mulai Konsultasi
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </ButtonAnchor>
-              <ButtonAnchor
+              <TrackedWaButton
+                location="cta-contact"
                 href={waLink(WA_MESSAGES.general, settings.whatsapp)}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -61,7 +63,7 @@ export function CtaContact() {
               >
                 <MessageCircle className="h-5 w-5" />
                 Chat via WhatsApp
-              </ButtonAnchor>
+              </TrackedWaButton>
             </div>
 
             <p className="mt-6 text-sm text-white/70">

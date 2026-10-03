@@ -3,6 +3,7 @@
 import { Mail, MapPin, MessageCircle } from "lucide-react";
 import { COMPANY, PAGE_NAV_LINKS } from "@/lib/content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+import { trackWhatsAppClick } from "@/lib/analytics";
 import { Icon } from "@/components/icon";
 import { Logo } from "@/components/logo";
 import { useSettings } from "@/components/settings-provider";
@@ -82,6 +83,7 @@ export function Footer() {
                   href={waLink(WA_MESSAGES.general, settings.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackWhatsAppClick("footer")}
                   className="flex items-start gap-2.5 text-sm text-muted transition-colors hover:text-primary"
                 >
                   <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />

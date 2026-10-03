@@ -3,6 +3,7 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { PortfolioGrid } from "@/components/portfolio-grid";
 import { ButtonAnchor } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { getPortfolioMediaMap } from "@/lib/portfolio-media";
 import { getProjectCategories, getProjects } from "@/lib/projects";
 import { getSiteSettings } from "@/lib/settings";
@@ -74,7 +75,8 @@ export default async function PortofolioPage({
         description={`Kami telah mengerjakan ${projects.length}+ proyek lintas industri. Jelajahi studi kasus singkat di bawah untuk melihat cara kami bekerja.`}
       >
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <ButtonAnchor
+          <TrackedWaButton
+            location="portofolio-hero"
             href={waLink(WA_MESSAGES.general, settings.whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
@@ -84,7 +86,7 @@ export default async function PortofolioPage({
             <MessageCircle className="h-5 w-5" />
             Diskusikan Proyek Anda
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </ButtonAnchor>
+          </TrackedWaButton>
           <ButtonAnchor href="/layanan" size="lg" variant="outline">
             Lihat Layanan
           </ButtonAnchor>

@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, MessageCircle } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { Markdown } from "@/lib/markdown";
 import { ArticleCard, ArticleTags } from "@/components/article-card";
-import { ButtonAnchor } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { CtaContact } from "@/components/sections/cta-contact";
 import {
   getArticleBySlug,
@@ -146,7 +146,9 @@ export default async function ArticleDetailPage({
                 Konsultasi gratis bersama tim LKTech.
               </p>
             </div>
-            <ButtonAnchor
+            <TrackedWaButton
+              location="blog-detail"
+              label={article.title}
               href={waLink(WA_MESSAGES.general, settings.whatsapp)}
               target="_blank"
               rel="noopener noreferrer"
@@ -157,7 +159,7 @@ export default async function ArticleDetailPage({
               <MessageCircle className="h-5 w-5" />
               Mulai Konsultasi
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </ButtonAnchor>
+            </TrackedWaButton>
           </div>
 
           <Link

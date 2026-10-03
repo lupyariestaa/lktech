@@ -4,7 +4,8 @@ import { PageHero } from "@/components/page-hero";
 import { ServiceShowcase } from "@/components/service-showcase";
 import { FaqAccordion } from "@/components/faq-accordion";
 import { CtaContact } from "@/components/sections/cta-contact";
-import { ButtonAnchor, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { Reveal } from "@/components/motion";
 import { SERVICES } from "@/lib/services";
 import { getSiteContent } from "@/lib/site-content";
@@ -45,7 +46,8 @@ export default async function LayananPage() {
         description={`Dari website hingga aplikasi mobile — ${SERVICES.length} layanan utama untuk membantu bisnis Anda tumbuh di dunia digital.`}
       >
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <ButtonAnchor
+          <TrackedWaButton
+            location="layanan-hero"
             href={waLink(WA_MESSAGES.general, settings.whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
@@ -55,7 +57,7 @@ export default async function LayananPage() {
             <MessageCircle className="h-5 w-5" />
             Konsultasi Gratis
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </ButtonAnchor>
+          </TrackedWaButton>
           <ButtonLink href="/produk" size="lg" variant="outline">
             Lihat Produk
           </ButtonLink>

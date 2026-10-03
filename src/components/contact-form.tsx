@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { LEAD_SERVICES, leadSchema, type LeadInput } from "@/lib/lead-schema";
 import { submitLead } from "@/lib/leads";
+import { trackLeadSubmitted, trackLeadFallback } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 type Status = "idle" | "submitting" | "saved" | "fallback" | "error";
@@ -48,9 +49,11 @@ export function ContactForm() {
       const result = await submitLead(values);
       if (result.status === "saved") {
         setStatus("saved");
+        trackLeadSubmitted(values.service);
       } else if (result.status === "fallback") {
         setFallbackUrl(result.whatsappUrl);
         setStatus("fallback");
+        trackLeadFallback(values.service);
       }
       reset();
     } catch (err) {

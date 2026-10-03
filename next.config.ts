@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -56,4 +57,20 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Tanpa `org`/`project`, langkah upload source map dilewati otomatis.
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Token hanya perlu bila ingin upload source map (opsional).
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Jangan tampilkan log build Sentry yang berisik.
+  silent: true,
+
+  // Sembunyikan source map dari publik (aman) bila diupload.
+  widenClientFileUpload: true,
+
+  // Jika tidak ada auth token, jangan gagal build saat upload source map.
+  // (Sentry otomatis skip bila org/project/token tidak lengkap.)
+  telemetry: false,
+});

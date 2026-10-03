@@ -15,7 +15,7 @@ import { ProjectCover } from "@/components/project-cover";
 import { ProjectCard } from "@/components/project-card";
 import { MediaGallery, type GalleryImage } from "@/components/media-gallery";
 import { Reveal } from "@/components/motion";
-import { ButtonAnchor } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { CtaContact } from "@/components/sections/cta-contact";
 import { getSiteContent } from "@/lib/site-content";
 import {
@@ -425,7 +425,9 @@ export default async function ProjectDetailPage({
                 Ceritakan proyek Anda — konsultasi gratis tanpa komitmen.
               </p>
             </div>
-            <ButtonAnchor
+            <TrackedWaButton
+              location="portofolio-detail"
+              label={project.title}
               href={waLink(
                 service ? service.waMessage : WA_MESSAGES.general,
                 settings.whatsapp,
@@ -439,7 +441,7 @@ export default async function ProjectDetailPage({
               <MessageCircle className="h-5 w-5" />
               Mulai Konsultasi
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </ButtonAnchor>
+            </TrackedWaButton>
           </div>
         </div>
       </section>

@@ -9,6 +9,7 @@ import { NAV_LINKS, PAGE_NAV_LINKS } from "@/lib/content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import { ButtonAnchor } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { Logo } from "@/components/logo";
 import { useSettings } from "@/components/settings-provider";
 import { useCart } from "@/components/cart-provider";
@@ -158,7 +159,8 @@ export function Navbar() {
               Keranjang{count > 0 ? ` (${count})` : ""}
             </Link>
           </div>
-          <ButtonAnchor
+          <TrackedWaButton
+            location="navbar-mobile"
             href={waLink(WA_MESSAGES.general, settings.whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
@@ -166,7 +168,7 @@ export function Navbar() {
           >
             <MessageCircle className="h-4 w-4" />
             Chat via WhatsApp
-          </ButtonAnchor>
+          </TrackedWaButton>
         </div>
       </motion.div>
     </header>

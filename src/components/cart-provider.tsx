@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { cartItemKey, type CartItem } from "@/lib/cart";
+import { trackAddToCart } from "@/lib/analytics";
 import { useAuth } from "@/components/auth-provider";
 
 /**
@@ -190,6 +191,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const prev = cache;
     const key = cartItemKey(item);
     const idx = prev.findIndex((it) => cartItemKey(it) === key);
+    // Pelacakan konversi terpusat: catat penambahan ke keranjang.
+    trackAddToCart({
+      slug: item.slug,
+      name: item.name,
+      qty: item.qty,
+      price: item.price,
+    });
     if (idx === -1) {
       setItems([...prev, item]);
       return;

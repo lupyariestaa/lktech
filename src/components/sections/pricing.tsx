@@ -3,7 +3,7 @@
 import { Check, MessageCircle, Sparkles } from "lucide-react";
 import { SectionHeading } from "@/components/section-heading";
 import { Reveal } from "@/components/motion";
-import { ButtonAnchor } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
@@ -74,7 +74,9 @@ export function Pricing() {
                   ))}
                 </ul>
 
-                <ButtonAnchor
+                <TrackedWaButton
+                  location="pricing"
+                  label={plan.name}
                   href={waLink(WA_MESSAGES.pricing, settings.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -83,7 +85,7 @@ export function Pricing() {
                 >
                   <MessageCircle className="h-4 w-4" />
                   Konsultasi Gratis
-                </ButtonAnchor>
+                </TrackedWaButton>
               </div>
             </Reveal>
           ))}

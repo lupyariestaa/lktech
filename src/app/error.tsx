@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, Home, RotateCcw } from "lucide-react";
 
 /**
@@ -16,8 +17,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log ke console untuk diagnosis; di produksi bisa diteruskan ke layanan
-    // error tracking (mis. Sentry) — lihat CFG-03 di GAP-ANALYSIS.md.
+    // Laporkan ke Sentry (no-op bila tidak dikonfigurasi) + log lokal.
+    Sentry.captureException(error);
     console.error("[app] error boundary:", error);
   }, [error]);
 

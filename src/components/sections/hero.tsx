@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowRight, Braces, Code2, MessageCircle, Star } from "lucide-react";
 import { ButtonAnchor } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { COMPANY } from "@/lib/content";
 import type { HeroShowcase } from "@/lib/content-types";
@@ -183,7 +184,8 @@ export function Hero() {
             transition={{ delay: base + 0.45, duration: 0.7 }}
             className="mt-8 flex flex-wrap items-center gap-3"
           >
-            <ButtonAnchor
+            <TrackedWaButton
+              location="hero"
               href={waLink(WA_MESSAGES.general, settings.whatsapp)}
               target="_blank"
               rel="noopener noreferrer"
@@ -193,7 +195,7 @@ export function Hero() {
               <MessageCircle className="h-5 w-5" />
               Mulai Konsultasi
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </ButtonAnchor>
+            </TrackedWaButton>
             <ButtonAnchor href="#layanan" size="lg" variant="outline">
               Lihat Layanan
             </ButtonAnchor>

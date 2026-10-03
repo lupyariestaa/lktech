@@ -1,11 +1,46 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Upgrade Sistem Layanan**.
+> Terakhir diperbarui: sesi **Analytics & Monitoring (Sentry + event tracking)**.
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Sistem Layanan
+## 🎉 Sesi Terakhir — Analytics & Monitoring + Verifikasi Sistem Media
+
+### A. Sistem Media M1–M6 (verifikasi)
+Ternyata sistem media **sudah selesai** pada commit `b44822a` (data layer, API bulk/usage/scan/orphans/tags/collections/audit, UI dashboard lengkap + crop, adopsi `alt`). Sesi ini hanya **memverifikasi** (`tsc`/`lint`/`build` bersih) & **memperbarui status dokumen** dari "Rencana" → "Selesai".
+
+### B. Sentry (error tracking)
+`@sentry/nextjs` dipasang **manual** (client/server/edge + `global-error.tsx` + `error.tsx`), dibungkus di `next.config.ts`. **Aman nonaktif tanpa DSN** — tidak mengirim apa pun bila `NEXT_PUBLIC_SENTRY_DSN` kosong.
+
+| File | Peran |
+| --- | --- |
+| `src/lib/sentry.ts` | Opsi bersama (DSN dari env, environment, sample rate, tanpa PII) |
+| `src/instrumentation-client.ts` | Init Sentry browser (+ router transition) |
+| `src/sentry.server.config.ts` / `src/sentry.edge.config.ts` | Init server & edge |
+| `src/instrumentation.ts` | Register per-runtime + `onRequestError` |
+| `src/app/global-error.tsx` | Error boundary root → `captureException` |
+| `next.config.ts` | `withSentryConfig` (skip upload source map bila tanpa token) |
+
+### C. Event tracking konversi (Vercel Analytics)
+`src/lib/analytics.ts` (pembungkus `track()` yang aman/tanpa-PII) + komponen `src/components/tracked-wa-button.tsx`.
+
+| Event | Titik |
+| --- | --- |
+| `whatsapp_click` | `hero`, `navbar-mobile`, `cta-contact`, `pricing`, `layanan-hero`, `layanan-detail-*`, `layanan-package`, `portofolio-*`, `blog-detail`, `kontak-cta`, `footer` |
+| `lead_submitted` / `lead_fallback_whatsapp` | Form kontak |
+| `add_to_cart` | `cart-provider` (terpusat) |
+| `checkout` | `cart-view` |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (46 halaman).
+
+**⚠️ Langkah manual (produksi):**
+- Isi **`NEXT_PUBLIC_SENTRY_DSN`** di Vercel (opsional `SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN`).
+- Aktifkan **Analytics** di dashboard Vercel (Project → Analytics).
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Sistem Layanan
 
 Upgrade sistem layanan (`docs/2026-10-02-upgrade-sistem-layanan.md`, F0–F6) **selesai**:
 
@@ -17,6 +52,7 @@ Upgrade sistem layanan (`docs/2026-10-02-upgrade-sistem-layanan.md`, F0–F6) **
 | F4 | **Paket** dengan badge "Rekomendasi" + **CTA WhatsApp per paket** + **tabel banding**; hero & sidebar kaya |
 | F5 | **Menu/halaman/manager/API "Layanan" dihapus** dari dashboard |
 | F6 | Metadata + JSON-LD Service + tagline di kartu |
+| — | Gambar ilustrasi per layanan (`public/layanan/*.png`) di landing `/layanan` |
 
 **Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅.
 
@@ -165,8 +201,8 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 
 #### 1. Analytics & Monitoring
 - [x] Pasang **Vercel Analytics** (`@vercel/analytics` + `<Analytics />` di `layout.tsx`). ⚠️ **Aktifkan di dashboard Vercel** (Project → Analytics) agar data mulai terkumpul.
-- [ ] Pasang **error tracking** (Sentry atau sejenis) untuk mendeteksi bug di produksi.
-- [ ] (Opsional) Event tracking untuk konversi (klik WhatsApp, submit form).
+- [x] Pasang **error tracking (Sentry)** — `@sentry/nextjs` (client/server/edge + `global-error`), aman nonaktif tanpa DSN. ⚠️ **Isi `NEXT_PUBLIC_SENTRY_DSN` di Vercel** agar event terkirim (opsional: `SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` untuk source map).
+- [x] **Event tracking konversi** (Vercel Analytics): klik WhatsApp, submit lead, add-to-cart, checkout, klik paket — via `src/lib/analytics.ts`.
 
 #### 2. Domain Sendiri — SKIP (diputuskan belum beli domain)
 - [ ] Beli domain (mis. `lktech.id` / `lktech.com`).

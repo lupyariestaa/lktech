@@ -1,7 +1,7 @@
 import { Check, Minus, Sparkles } from "lucide-react";
 import type { ServicePackage, ServicePackageCompare } from "@/lib/services";
 import { Reveal } from "@/components/motion";
-import { ButtonAnchor } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +59,9 @@ function PackageCard({
           ))}
         </ul>
 
-        <ButtonAnchor
+        <TrackedWaButton
+          location="layanan-package"
+          label={pkg.name}
           href={waLink(message, whatsapp)}
           target="_blank"
           rel="noopener noreferrer"
@@ -69,7 +71,7 @@ function PackageCard({
         >
           <Sparkles className="h-4 w-4" />
           Pilih Paket {pkg.name}
-        </ButtonAnchor>
+        </TrackedWaButton>
       </div>
     </Reveal>
   );

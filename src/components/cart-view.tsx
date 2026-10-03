@@ -19,6 +19,7 @@ import { useAuth } from "@/components/auth-provider";
 import { createOrderRequest } from "@/lib/order-api";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
+import { trackCheckout } from "@/lib/analytics";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,11 @@ export function CartView() {
         // Popup diblokir → arahkan di tab yang sama.
         window.location.href = url;
       }
+
+      trackCheckout({
+        items: items.reduce((n, it) => n + it.qty, 0),
+        total: subtotal,
+      });
 
       clear();
       setDone(true);

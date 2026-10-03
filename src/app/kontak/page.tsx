@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ArrowUpRight, Clock, Mail, MapPin, MessageCircle } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { ContactForm } from "@/components/contact-form";
-import { ButtonAnchor } from "@/components/ui/button";
+import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 
@@ -142,7 +142,8 @@ export default async function KontakPage() {
               <p className="mt-2 text-sm leading-relaxed text-white/85">
                 Tim kami siap membantu Anda via WhatsApp pada jam kerja.
               </p>
-              <ButtonAnchor
+              <TrackedWaButton
+                location="kontak-cta"
                 href={waLink(WA_MESSAGES.general, settings.whatsapp)}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -151,7 +152,7 @@ export default async function KontakPage() {
               >
                 <MessageCircle className="h-4 w-4" />
                 Chat via WhatsApp
-              </ButtonAnchor>
+              </TrackedWaButton>
             </div>
           </aside>
         </div>

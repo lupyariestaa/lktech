@@ -26,3 +26,8 @@ next-env.d.ts
 # Firebase emulator
 .firebase
 *-debug.log
+
+# Sentry (auth token lokal / artifacts)
+.sentryclirc
+.sentry/
+sentry-auth-token.txt
