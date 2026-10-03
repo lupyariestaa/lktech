@@ -182,8 +182,9 @@ lktech-web/
 │  │  └─ whatsapp.ts          # helper deep link wa.me
 │  ├─ hooks/
 │  └─ types/
-├─ identitas-perusahaan.md
-├─ tech-stack.md
+├─ docs/                      # dokumentasi pengembangan
+│  ├─ identitas-perusahaan.md
+│  └─ tech-stack.md
 └─ tailwind.config.ts
 ```
 

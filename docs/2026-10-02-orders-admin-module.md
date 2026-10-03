@@ -4,7 +4,7 @@
 > **Disusun:** 2026-10-02 · **Dieksekusi:** 2026-10-02
 > **Cakupan:** Membangun modul **Pesanan (Orders) admin** dari nol — halaman, API, notifikasi, dashboard metrik. Ini **fitur besar #1** prioritas berikutnya.
 > **Tujuan:** Admin dapat **melihat, memfilter, mengubah status, dan mengekspor** pesanan yang masuk dari checkout produk — yang saat ini **sama sekali tidak bisa diakses admin** (hanya terlihat oleh pembeli di `/akun`).
-> **Prasyarat baca:** `docs/2026-10-02-sidebar-dashboard-upgrade.md` (pola shell/sidebar terbaru), `AUDIT-DAN-RENCANA-UPGRADE-DASHBOARD.md`, `docs/README.md`.
+> **Prasyarat baca:** `docs/2026-10-02-sidebar-dashboard-upgrade.md` (pola shell/sidebar terbaru), `docs/README.md`.
 > **Hasil eksekusi & verifikasi:** lihat [§14 Status Eksekusi](#14-status-eksekusi).
 
 ---

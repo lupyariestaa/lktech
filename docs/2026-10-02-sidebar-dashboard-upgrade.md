@@ -4,7 +4,7 @@
 > **Disusun:** 2026-10-02 · **Dieksekusi:** 2026-10-02
 > **Cakupan:** Sidebar + shell dashboard admin (`/admin/*`) — audit UI/UX khusus sidebar dan rencana upgrade menyeluruh.
 > **Tujuan:** Menjadikan sidebar dashboard **lebih proper, lebih informatif, lebih aksesibel, dan jauh lebih bagus secara UI/UX** tanpa merusak fondasi yang sudah berjalan baik.
-> **Prasyarat baca:** `AUDIT-DAN-RENCANA-UPGRADE-DASHBOARD.md` (audit sistem menyeluruh, FASE 1–6 sudah selesai), `docs/README.md`.
+> **Prasyarat baca:** `docs/README.md`.
 > **Hasil eksekusi & verifikasi:** lihat [§12 Status Eksekusi](#12-status-eksekusi).
 
 ---

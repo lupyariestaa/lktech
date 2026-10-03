@@ -7,6 +7,6 @@ Contoh: `react.svg`, `laravel.svg`, `python.png`.
 Setelah menaruh file, isi field `logo` pada `TECH_STACK` di `src/lib/content.ts`,
 mis. `{ name: "React", logo: "/tech/react.svg", color: "#61DAFB" }`.
 
-Panduan lengkap: lihat `SETUP-LOGO-TEKNOLOGI.md` di root proyek.
+Panduan lengkap: lihat `docs/SETUP-LOGO-TEKNOLOGI.md`.
 
 Selama `logo` masih kosong, kartu akan menampilkan placeholder (inisial + warna brand).

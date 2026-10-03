@@ -230,7 +230,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 - [ ] Sambungkan domain ke Vercel.
 - [ ] Update `SITE_URL` di env Vercel ke domain baru.
 - [ ] Tambahkan domain ke **Firebase Auth → Authorized domains**.
-- [ ] Update `identitas-perusahaan.md` bagian kontak/website.
+- [ ] Update `docs/identitas-perusahaan.md` bagian kontak/website.
 
 ### Prioritas Lanjutan (Nice to Have)
 
@@ -241,8 +241,8 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 - [ ] Ganti konten **portofolio** placeholder dengan proyek nyata (via `/admin/projects`).
 - [ ] Ganti **testimoni** placeholder dengan yang asli.
 - [ ] Isi **logo klien** asli (bagian "Trusted By").
-- [ ] Lengkapi `identitas-perusahaan.md` (kontak, sosmed, tagline resmi).
-- [ ] Update `identitas-perusahaan.md` & `tech-stack.md` bila ada perubahan.
+- [ ] Lengkapi `docs/identitas-perusahaan.md` (kontak, sosmed, tagline resmi).
+- [ ] Update `docs/identitas-perusahaan.md` & `docs/tech-stack.md` bila ada perubahan.
 
 > Catatan: FAQ dan harga dapat diubah dari dashboard (`/admin/faq`, `/admin/pricing`). **Layanan tidak lagi dikelola dashboard** — sumbernya hardcoded di `src/lib/services.ts` (ubah → deploy).
 
@@ -326,4 +326,4 @@ npm run lint     # lint
 2. Baca dokumen ini untuk task yang belum selesai.
 3. Pilih task & lanjutkan.
 
-> Dokumentasi setup admin lengkap: lihat `ADMIN-SETUP.md`.
+> Dokumentasi setup admin lengkap: lihat `docs/ADMIN-SETUP.md`.

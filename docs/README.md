@@ -26,9 +26,11 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 
 ## Daftar dokumen
 
+### Dokumen task / fitur (berdasarkan tanggal)
+
 | Tanggal    | Dokumen                                                                 | Status      |
 | ---------- | ----------------------------------------------------------------------- | ----------- |
-| 2026-02-14 | [Auth split (admin/user) + Sistem Produk](2026-02-14-auth-split-dan-produk.md) | In Progress |
+| 2026-02-14 | [Auth split (admin/user) + Sistem Produk](2026-02-14-auth-split-dan-produk.md) | Selesai |
 | 2026-10-02 | [Rencana Upgrade Sistem Media (M1–M6)](2026-10-02-media-system-upgrade.md) | Selesai |
 | 2026-10-02 | [Upgrade Sidebar Dashboard Admin (audit UI/UX + task flow)](2026-10-02-sidebar-dashboard-upgrade.md) | Selesai |
 | 2026-10-02 | [Modul Admin Orders/Pesanan (audit + task flow)](2026-10-02-orders-admin-module.md) | Selesai |
@@ -38,3 +40,15 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-02 | [Prompt Ekstraksi Data Portofolio (untuk agent project klien)](2026-10-02-prompt-ekstraksi-data-portofolio.md) | Referensi |
 | 2026-10-02 | [Upgrade Sistem Layanan (landing bergantian + detail hardcoded)](2026-10-02-upgrade-sistem-layanan.md) | Selesai |
 | 2026-10-03 | [Peningkatan Blog — SEO & Discovery (kategori, tag, RSS, JSON-LD)](2026-10-03-peningkatan-blog-seo-discovery.md) | Selesai |
+
+### Dokumen pendukung (referensi & setup)
+
+| Dokumen | Isi |
+| ------- | --- |
+| [ADMIN-SETUP.md](ADMIN-SETUP.md) | Panduan mengaktifkan dashboard admin (Firebase Auth + Firestore) |
+| [tech-stack.md](tech-stack.md) | Pilihan teknologi & arsitektur proyek |
+| [identitas-perusahaan.md](identitas-perusahaan.md) | Profil & identitas resmi LKTech (branding, kontak) |
+| [SETUP-LOGO-TEKNOLOGI.md](SETUP-LOGO-TEKNOLOGI.md) | Cara memasang logo teknologi di section marquee |
+| [PORTOFOLIO-DATA.md](PORTOFOLIO-DATA.md) | Data proyek portofolio (contoh) |
+
+> Rencana kerja aktif & task yang belum selesai: lihat [`TASK-SELANJUTNYA.md`](../TASK-SELANJUTNYA.md) di root proyek.

@@ -1068,7 +1068,7 @@ export const STATS = [
 /**
  * Teknologi yang kami gunakan — tampil sebagai marquee di beranda.
  *
- * Cara menambahkan logo asli (lihat `SETUP-LOGO-TEKNOLOGI.md`):
+ * Cara menambahkan logo asli (lihat `docs/SETUP-LOGO-TEKNOLOGI.md`):
  * 1. Simpan file logo di `public/tech/<nama-file>.svg` (atau .png).
  * 2. Isi field `logo` dengan path-nya, mis. "/tech/react.svg".
  *    Selama `logo` kosong, kartu memakai placeholder inisial + warna brand.
