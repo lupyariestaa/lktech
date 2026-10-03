@@ -1,5 +1,4 @@
 import { IntroLoader } from "@/components/intro-loader";
-import { CustomCursor } from "@/components/custom-cursor";
 import { Navbar } from "@/components/sections/navbar";
 import { Hero } from "@/components/sections/hero";
 import { Technologies } from "@/components/sections/technologies";
@@ -18,7 +17,6 @@ export default function Home() {
   return (
     <>
       <IntroLoader />
-      <CustomCursor />
       <Navbar />
       <main id="konten">
         <Hero />

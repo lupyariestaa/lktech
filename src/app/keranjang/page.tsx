@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { CustomCursor } from "@/components/custom-cursor";
 import { Navbar } from "@/components/sections/navbar";
 import { Footer } from "@/components/sections/footer";
 import { CartView } from "@/components/cart-view";
@@ -13,7 +12,6 @@ export const metadata: Metadata = {
 export default function KeranjangPage() {
   return (
     <>
-      <CustomCursor />
       <Navbar />
       <main id="konten">
         <CartView />

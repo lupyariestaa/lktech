@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { CustomCursor } from "@/components/custom-cursor";
 import { Navbar } from "@/components/sections/navbar";
 import { Footer } from "@/components/sections/footer";
 import { UserGuard } from "@/components/auth/user-guard";
@@ -14,7 +13,6 @@ export const metadata: Metadata = {
 export default function AkunPage() {
   return (
     <>
-      <CustomCursor />
       <Navbar />
       <main id="konten">
         <UserGuard>

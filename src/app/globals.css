@@ -207,10 +207,3 @@ p {
     scroll-behavior: auto !important;
   }
 }
-
-/* Hide custom cursor on touch devices */
-@media (pointer: coarse) {
-  .custom-cursor {
-    display: none !important;
-  }
-}
