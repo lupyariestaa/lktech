@@ -1,10 +1,18 @@
 # Rencana Pengembangan Sistem Media — LKTech
 
-> **Status dokumen:** 📝 Rencana (belum dieksekusi)
+> **Status dokumen:** ✅ **Dieksekusi** (FASE M1–M6 selesai — commit `b44822a`)
 > **Jenis:** Flow implementasi + daftar task lengkap
 > **Cakupan:** Sistem Media dashboard admin — data layer, backend/API, UI/UX, a11y, performa, keamanan, integrasi.
 > **Tujuan:** Upgrade besar-besaran sistem media agar **proper, skalabel, dan nyaman dipakai**, bukan sekadar galeri datar.
 > **Aturan:** Dokumen ini **tidak mengubah kode apa pun**. Semua pekerjaan dilakukan pada sesi implementasi terpisah.
+> **Verifikasi:** `npx tsc --noEmit` ✅ · `npx eslint .` ✅ · `npm run build` ✅
+
+> **Status Eksekusi (M1–M6):** Seluruh fase **selesai** pada commit `b44822a` —
+> data layer (`media.ts`, `media-usage.ts`, `media-collections.ts`, `media-normalize.ts`, `media-audit.ts`, `media-revalidate.ts`),
+> API (`bulk`/`usage`/`scan`/`orphans`/`tags`/`collections`/`audit`, list terpaginasi + filter, PATCH, soft-delete + restore, guard hapus),
+> UI dashboard (`media-manager`, `media-picker-dialog` + crop/rasio, `media-detail-panel`, `media-bulk-bar`, `media-card`, `media-toolbar`, `media-sidebar`),
+> serta adopsi `alt`/`coverAlt` di produk, artikel, hero, dan portofolio.
+
 
 ---
 
