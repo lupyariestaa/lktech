@@ -1,11 +1,31 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Peningkatan Blog (SEO & Discovery)**.
+> Terakhir diperbarui: sesi **Halaman Harga Publik (`/harga`)**.
 
 ---
 
-## 🎉 Sesi Terakhir — Peningkatan Blog (SEO & Discovery)
+## 🎉 Sesi Terakhir — Halaman Harga / Paket Publik (`/harga`)
+
+Halaman harga khusus dibangun (`docs/2026-10-03-halaman-harga-publik.md`, F0–F7):
+
+| Fase | Hasil |
+| --- | --- |
+| F1 | `src/lib/pricing.ts` (tabel banding + FAQ harga) · "Professional" → **"Profesional"** · "Harga" masuk `PAGE_NAV_LINKS` & `NAV_LINKS` |
+| F2 | Halaman **`/harga`** + layout dalam (Navbar/Footer/Cursor) — hero + kartu paket + **CTA WhatsApp per paket** + metadata/SEO |
+| F3 | **`PricingTable`** (banding Basic/Profesional/Enterprise, responsif scroll-x) + **FAQ harga** (akordeon) |
+| F4 | Section harga beranda → tautan **"Lihat semua paket & bandingkan"** ke `/harga` |
+| F5 | `/harga` masuk **sitemap** + JSON-LD (`BreadcrumbList`, `OfferCatalog`) + tracking CTA |
+| F6 | Dokumentasi diperbarui |
+| F7 | QA: `tsc`/`lint`/`build` bersih ✅ (65 halaman) |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (65 halaman).
+
+**Sisa manual:** uji browser (`/harga` desktop & mobile) + deploy.
+
+---
+
+## 🎉 Sesi Sebelumnya — Peningkatan Blog (SEO & Discovery)
 
 Blog diperkaya untuk SEO & penemuan konten (`docs/2026-10-03-peningkatan-blog-seo-discovery.md`):
 
@@ -213,6 +233,9 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 25 | Upgrade portfolio F1–F3: generalisasi galeri, detail profesional, daftar (search/filter/sort/URL/pagination) | ✅ |
 | 26 | Upgrade portfolio F4–F6: kelola gambar di form, featured/urutan, badge Contoh, JSON-LD + sitemap | ✅ |
 | 27 | Upgrade sistem layanan: landing bergantian, detail hardcoded kaya (Website & Mobile), paket+CTA+tabel banding, hapus menu dashboard | ✅ |
+| 28 | Peningkatan blog: kategori, tag, RSS, JSON-LD, artikel terkait + seed 3 artikel | ✅ |
+| 29 | Sentry error tracking + event tracking konversi (Vercel Analytics) | ✅ |
+| 30 | Halaman harga publik `/harga`: kartu paket, tabel banding, FAQ harga, sitemap, JSON-LD | ✅ |
 
 ---
 

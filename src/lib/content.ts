@@ -14,7 +14,7 @@ export const NAV_LINKS = [
   { label: "Produk", href: "/produk" },
   { label: "Portofolio", href: "/portofolio" },
   { label: "Blog", href: "/blog" },
-  { label: "Harga", href: "/#harga" },
+  { label: "Harga", href: "/harga" },
   { label: "FAQ", href: "/#faq" },
 ];
 
@@ -23,6 +23,7 @@ export const PAGE_NAV_LINKS = [
   { label: "Beranda", href: "/" },
   { label: "Layanan", href: "/layanan" },
   { label: "Produk", href: "/produk" },
+  { label: "Harga", href: "/harga" },
   { label: "Portofolio", href: "/portofolio" },
   { label: "Blog", href: "/blog" },
   { label: "Kontak", href: "/kontak" },
@@ -1151,7 +1152,7 @@ export const PRICING = [
     highlight: false,
   },
   {
-    name: "Professional",
+    name: "Profesional",
     description: "Pilihan terbaik untuk bisnis yang berkembang.",
     features: [
       "Website / web app lengkap",
