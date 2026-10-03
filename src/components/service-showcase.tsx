@@ -30,13 +30,6 @@ export function ServiceShowcase({
         {/* Visual */}
         <div className={cn(flip && "lg:order-2")}>
           <div className="relative">
-            <div
-              className={cn(
-                "absolute -inset-4 rounded-[2.5rem] bg-gradient-to-br opacity-15 blur-2xl",
-                service.accent,
-              )}
-              aria-hidden="true"
-            />
             {service.image ? (
               <div className="relative aspect-[3/2]">
                 <Image
@@ -44,7 +37,7 @@ export function ServiceShowcase({
                   alt={service.imageAlt ?? service.title}
                   fill
                   sizes="(min-width: 1024px) 560px, 100vw"
-                  className="object-contain drop-shadow-xl"
+                  className="object-contain"
                 />
                 <span
                   className={cn(

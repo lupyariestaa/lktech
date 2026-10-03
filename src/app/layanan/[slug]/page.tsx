@@ -142,7 +142,7 @@ export default async function LayananDetailPage({
               height={1024}
               priority
               sizes="(min-width: 896px) 848px, 100vw"
-              className="mx-auto h-auto w-full object-contain drop-shadow-xl"
+              className="mx-auto h-auto w-full object-contain"
             />
           </div>
         </div>
