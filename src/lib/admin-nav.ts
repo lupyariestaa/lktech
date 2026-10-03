@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   Files,
   FolderKanban,
   HelpCircle,
@@ -54,6 +55,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         title: "Ringkasan",
         href: "/admin",
         icon: LayoutDashboard,
+      },
+      {
+        label: "Analitik",
+        title: "Analitik Penjualan",
+        href: "/admin/analytics",
+        icon: BarChart3,
       },
       {
         label: "Lead",

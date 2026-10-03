@@ -1,11 +1,31 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Kupon / Diskon**.
+> Terakhir diperbarui: sesi **Dashboard Analitik Penjualan**.
 
 ---
 
-## 🎉 Sesi Terakhir — Kupon / Diskon
+## 🎉 Sesi Terakhir — Dashboard Analitik Penjualan
+
+Halaman analitik penjualan (`docs/2026-10-05-analitik-penjualan.md`, A0–A7):
+
+| Fase | Hasil |
+| --- | --- |
+| A1 | Agregasi server-only `src/lib/sales-analytics.ts` (+ tipe aman-klien `sales-analytics-types.ts`): seri harian, totals, AOV, tingkat selesai, status, produk terlaris |
+| A2 | API `/api/admin/analytics?days=&mode=` + klien `admin-analytics-api.ts` |
+| A3 | Halaman **`/admin/analytics`** + `analytics-dashboard` (toggle periode 7/30/90 + mode omzet + kartu ringkasan) |
+| A4 | `sales-chart.tsx` — grafik batang **CSS murni** (tanpa dependensi) + a11y; grafik omzet & jumlah pesanan |
+| A5 | **Produk terlaris** + **distribusi status** (bar komposisi) |
+| A6 | Menu **"Analitik"** di nav + tautan dari Ringkasan; polish |
+| A7 | QA: `tsc`/`lint`/`build` bersih ✅ (68 halaman) |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (68 halaman).
+
+**Sisa manual:** uji browser (`/admin/analytics`: toggle periode, grafik, produk terlaris, status) + deploy.
+
+---
+
+## 🎉 Sesi Sebelumnya — Kupon / Diskon
 
 Sistem promo end-to-end (`docs/2026-10-05-kupon-diskon.md`, K0–K8):
 
@@ -323,6 +343,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 33 | Enforcement blokir user: cegah checkout/keranjang/wishlist/alamat (server `requireActiveUser` + banner & disable UI) | ✅ |
 | 34 | Email transaksional ke pembeli: konfirmasi pesanan + update status (template ber-brand, toggle di Pengaturan) | ✅ |
 | 35 | Kupon/diskon: modul admin `/admin/coupons`, validasi & penerapan di keranjang, checkout server-authoritative, diskon tampil di WhatsApp/email/admin | ✅ |
+| 36 | Dashboard analitik penjualan `/admin/analytics`: grafik omzet & tren pesanan (7/30/90 hari), AOV, produk terlaris, distribusi status | ✅ |
 
 ---
 

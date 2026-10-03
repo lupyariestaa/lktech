@@ -301,13 +301,22 @@ function OrderSnapshot() {
     <div className="rounded-3xl border border-slate-200 bg-white p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-bold text-secondary">Pesanan</h2>
-        <Link
-          href="/admin/orders"
-          className="group inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
-        >
-          Kelola pesanan
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/admin/analytics"
+            className="group inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
+          >
+            Lihat analitik
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+          <Link
+            href="/admin/orders"
+            className="group inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
+          >
+            Kelola pesanan
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
       </div>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => {

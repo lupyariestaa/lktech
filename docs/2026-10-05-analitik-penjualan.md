@@ -1,10 +1,17 @@
 # DASHBOARD ANALITIK PENJUALAN — Grafik Omzet, Tren Pesanan & Produk Terlaris
 
-> **Status dokumen:** 📝 **Rencana** (belum dieksekusi)
-> **Disusun:** 2026-10-05
+> **Status dokumen:** ✅ **Dieksekusi** (FASE A0–A7 selesai)
+> **Disusun:** 2026-10-05 · **Dieksekusi:** 2026-10-05
 > **Cakupan:** Halaman analitik penjualan di dashboard admin — **grafik omzet & jumlah pesanan harian** (7/30/90 hari), **ringkasan periode** (omzet, jumlah order, rata-rata nilai order, tingkat penyelesaian), **produk terlaris** (per unit & per omzet), dan **metrik status**. Menyajikan data dari koleksi `orders` (+ `products`/`users` untuk konteks).
 > **Tujuan:** Memberi pemilik **visibilitas tren bisnis** untuk keputusan berbasis data (kapan ramai, produk apa yang laku, pertumbuhan omzet) — melengkapi metrik ringkas yang sudah ada di Ringkasan.
 > **Prasyarat baca:** `docs/2026-10-02-orders-admin-module.md` (model & modul order), `docs/2026-10-05-kupon-diskon.md` (diskon di order), `docs/2026-10-02-sidebar-dashboard-upgrade.md` (nav & shell), `docs/README.md`.
+> **Verifikasi:** `npx tsc --noEmit` ✅ · `npx eslint .` ✅ · `npm run build` ✅ (68 halaman).
+
+> **Status Eksekusi (A0–A7):** Seluruh fase **selesai**.
+> File baru: `src/lib/sales-analytics-types.ts` (tipe/konstanta, aman-klien), `src/lib/sales-analytics.ts` (agregasi server-only), `src/lib/admin-analytics-api.ts`, `src/app/api/admin/analytics/route.ts`, `src/app/admin/(dashboard)/analytics/page.tsx`, `src/components/admin/analytics-dashboard.tsx`, `src/components/admin/sales-chart.tsx`.
+> Diubah: `src/lib/admin-nav.ts` (menu "Analitik"), `src/components/admin/dashboard-overview.tsx` (tautan "Lihat analitik"), `src/lib/format.ts` (`formatCompactRupiah`).
+> Temuan teratasi: AN-01..AN-08.
+> **Catatan teknis:** tipe analitik dipisah ke `sales-analytics-types.ts` (tanpa `server-only`) karena dikonsumsi komponen klien — logika agregasi tetap server-only di `sales-analytics.ts`. Modul ini **berbeda** dari `@/lib/analytics` (pelacakan event Vercel Analytics).
 
 ---
 
