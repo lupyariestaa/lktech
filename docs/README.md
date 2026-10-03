@@ -37,3 +37,4 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-02 | [Upgrade Sistem Portfolio (audit + task flow)](2026-10-02-upgrade-sistem-portfolio.md) | Selesai |
 | 2026-10-02 | [Prompt Ekstraksi Data Portofolio (untuk agent project klien)](2026-10-02-prompt-ekstraksi-data-portofolio.md) | Referensi |
 | 2026-10-02 | [Upgrade Sistem Layanan (landing bergantian + detail hardcoded)](2026-10-02-upgrade-sistem-layanan.md) | Selesai |
+| 2026-10-03 | [Peningkatan Blog — SEO & Discovery (kategori, tag, RSS, JSON-LD)](2026-10-03-peningkatan-blog-seo-discovery.md) | Selesai |

@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/site";
 import { getProjects } from "@/lib/projects";
-import { getArticles } from "@/lib/articles";
+import { getArticleCategoryList, getArticleTags, getArticles } from "@/lib/articles";
+import { taxonomySlug } from "@/lib/article-types";
 import { getProducts } from "@/lib/products";
 import { SERVICES } from "@/lib/services";
 
@@ -17,10 +18,12 @@ function toDate(value: string | undefined, now: Date): Date {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
-  const [projects, articles, products] = await Promise.all([
+  const [projects, articles, products, categories, tags] = await Promise.all([
     getProjects(),
     getArticles(),
     getProducts(),
+    getArticleCategoryList(),
+    getArticleTags(),
   ]);
 
   // Tanggal "konten terakhir diubah" — dipakai untuk rute statis.
@@ -69,11 +72,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  // Halaman kategori & tag blog (SEO + navigasi).
+  const categoryRoutes: MetadataRoute.Sitemap = categories.map((label) => ({
+    url: `${SITE.url}/blog/kategori/${taxonomySlug(label)}`,
+    lastModified: latestContentDate,
+    changeFrequency: "weekly",
+    priority: 0.5,
+  }));
+
+  const tagRoutes: MetadataRoute.Sitemap = tags.map(({ tag }) => ({
+    url: `${SITE.url}/blog/tag/${taxonomySlug(tag)}`,
+    lastModified: latestContentDate,
+    changeFrequency: "weekly",
+    priority: 0.4,
+  }));
+
   return [
     ...staticRoutes,
     ...serviceRoutes,
     ...projectRoutes,
     ...articleRoutes,
     ...productRoutes,
+    ...categoryRoutes,
+    ...tagRoutes,
   ];
 }

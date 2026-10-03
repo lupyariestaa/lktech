@@ -12,9 +12,11 @@ import {
   getArticleBySlug,
   getArticleSlugs,
   getArticles,
+  pickRelatedArticles,
 } from "@/lib/articles";
 import { getSiteSettings } from "@/lib/settings";
 import { SITE } from "@/lib/site";
+import { taxonomySlug } from "@/lib/article-types";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 
 type Params = { slug: string };
@@ -65,7 +67,7 @@ export default async function ArticleDetailPage({
     getSiteSettings(),
   ]);
 
-  const related = all.filter((a) => a.slug !== slug).slice(0, 3);
+  const related = pickRelatedArticles(article, all, 3);
   const url = `${SITE.url}/blog/${slug}`;
 
   const jsonLd = {
@@ -79,6 +81,18 @@ export default async function ArticleDetailPage({
     publisher: { "@type": "Organization", name: SITE.name },
     mainEntityOfPage: url,
     image: article.coverImage ? [article.coverImage] : undefined,
+    articleSection: article.category,
+    keywords: article.tags.join(", "),
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Beranda", item: SITE.url },
+      { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE.url}/blog` },
+      { "@type": "ListItem", position: 3, name: article.title, item: url },
+    ],
   };
 
   const formatted = (() => {
@@ -99,6 +113,10 @@ export default async function ArticleDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
 
       <PageHero
         align="left"
@@ -107,11 +125,17 @@ export default async function ArticleDetailPage({
           { label: "Blog", href: "/blog" },
           { label: article.title },
         ]}
-        eyebrow={article.category}
+        eyebrow="Blog"
         title={article.title}
         description={article.excerpt}
       >
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
+          <Link
+            href={`/blog/kategori/${taxonomySlug(article.category)}`}
+            className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+          >
+            {article.category}
+          </Link>
           <span>{formatted}</span>
           <span className="text-slate-300">•</span>
           <span>oleh {article.author}</span>

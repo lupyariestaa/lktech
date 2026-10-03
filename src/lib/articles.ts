@@ -196,6 +196,69 @@ export async function getArticleCategories(): Promise<string[]> {
   return ["Semua", ...Array.from(new Set(articles.map((a) => a.category)))];
 }
 
+/** Kategori asli (tanpa "Semua") — untuk tautan & metadata. */
+export async function getArticleCategoryList(): Promise<string[]> {
+  const articles = await getArticles();
+  return Array.from(new Set(articles.map((a) => a.category))).sort();
+}
+
+/**
+ * Daftar tag unik (urut abjad) beserta jumlah artikel, dari artikel published.
+ */
+export async function getArticleTags(): Promise<
+  { tag: string; count: number }[]
+> {
+  const articles = await getArticles();
+  const map = new Map<string, number>();
+  for (const a of articles) {
+    for (const t of a.tags) {
+      map.set(t, (map.get(t) ?? 0) + 1);
+    }
+  }
+  return Array.from(map.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => a.tag.localeCompare(b.tag));
+}
+
+/** Artikel pada kategori tertentu (cocokkan slug → label). */
+export async function getArticlesByCategory(category: string): Promise<Article[]> {
+  const articles = await getArticles();
+  return articles.filter((a) => a.category === category);
+}
+
+/** Artikel yang memiliki tag tertentu (cocokkan slug → label). */
+export async function getArticlesByTag(tag: string): Promise<Article[]> {
+  const articles = await getArticles();
+  return articles.filter((a) => a.tags.includes(tag));
+}
+
+/**
+ * Artikel terkait: prioritaskan kesamaan kategori, lalu kesamaan tag.
+ * Mengembalikan hingga `limit` artikel (tanpa dirinya sendiri).
+ */
+export function pickRelatedArticles(
+  current: Article,
+  all: Article[],
+  limit = 3,
+): Article[] {
+  return all
+    .filter((a) => a.slug !== current.slug)
+    .map((a) => {
+      const sameCategory = a.category === current.category ? 2 : 0;
+      const sharedTags = a.tags.filter((t) => current.tags.includes(t)).length;
+      return { article: a, score: sameCategory + sharedTags };
+    })
+    .sort(
+      (x, y) =>
+        y.score - x.score ||
+        new Date(y.article.publishedAt).getTime() -
+          new Date(x.article.publishedAt).getTime(),
+    )
+    .slice(0, limit)
+    .map((x) => x.article);
+}
+
+
 export async function saveArticle(
   article: Article,
   updatedBy: string,

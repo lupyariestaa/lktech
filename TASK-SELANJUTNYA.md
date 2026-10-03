@@ -1,11 +1,32 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Analytics & Monitoring (Sentry + event tracking)**.
+> Terakhir diperbarui: sesi **Peningkatan Blog (SEO & Discovery)**.
 
 ---
 
-## 🎉 Sesi Terakhir — Analytics & Monitoring + Verifikasi Sistem Media
+## 🎉 Sesi Terakhir — Peningkatan Blog (SEO & Discovery)
+
+Blog diperkaya untuk SEO & penemuan konten (`docs/2026-10-03-peningkatan-blog-seo-discovery.md`):
+
+| Fitur | Hasil |
+| --- | --- |
+| Halaman **kategori** | `/blog/kategori/[category]` (SSG, metadata, JSON-LD `CollectionPage`+`ItemList`+`BreadcrumbList`) |
+| Halaman **tag** | `/blog/tag/[tag]` (struktur sama) |
+| **RSS feed** | `/blog/rss.xml` (RSS 2.0 + autodiscovery) |
+| **Artikel terkait** | relevan (skor kategori + tag), bukan sekadar terbaru |
+| **Filter tag** | di `/blog` (kategori + tag, dengan jumlah) |
+| **Navigasi** | tag & kategori jadi tautan (kartu & detail) |
+| **Structured data** | JSON-LD `Blog` di list, `BlogPosting`+`BreadcrumbList` di detail |
+| **Sitemap** | memuat seluruh URL kategori & tag |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (47 halaman).
+
+**⚠️ Catatan:** koleksi Firestore `articles` **masih kosong** — blog belum punya artikel. Tambahkan lewat `/admin/blog` (atau minta seed 3 artikel contoh).
+
+---
+
+## 🎉 Sesi Sebelumnya — Analytics & Monitoring + Verifikasi Sistem Media
 
 ### A. Sistem Media M1–M6 (verifikasi)
 Ternyata sistem media **sudah selesai** pada commit `b44822a` (data layer, API bulk/usage/scan/orphans/tags/collections/audit, UI dashboard lengkap + crop, adopsi `alt`). Sesi ini hanya **memverifikasi** (`tsc`/`lint`/`build` bersih) & **memperbarui status dokumen** dari "Rencana" → "Selesai".
@@ -240,7 +261,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 #### 7. Peningkatan SEO (lanjutan) — SKIP sementara (tunggu proper dulu)
 - [ ] Daftarkan ke **Google Search Console** + submit sitemap.
 - [ ] Daftarkan **Google Business Profile**.
-- [ ] (Opsional) Halaman kategori/tag blog.
+- [x] **Halaman kategori/tag blog + RSS + JSON-LD** — lihat `docs/2026-10-03-peningkatan-blog-seo-discovery.md`.
 
 ---
 

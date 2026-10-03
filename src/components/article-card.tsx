@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import type { Article } from "@/lib/article-types";
+import { taxonomySlug } from "@/lib/article-types";
 import { cn } from "@/lib/utils";
 
 function formatDate(iso: string) {
@@ -68,14 +69,15 @@ export function ArticleTags({ tags }: { tags: string[] }) {
   return (
     <div className="flex flex-wrap gap-2">
       {tags.map((t) => (
-        <span
+        <Link
           key={t}
+          href={`/blog/tag/${taxonomySlug(t)}`}
           className={cn(
-            "rounded-full bg-surface px-2.5 py-1 text-[11px] font-medium text-slate-500",
+            "rounded-full bg-surface px-2.5 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:bg-primary-50 hover:text-primary",
           )}
         >
-          {t}
-        </span>
+          #{t}
+        </Link>
       ))}
     </div>
   );
