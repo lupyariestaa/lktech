@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireActiveUser, requireUser } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { checkoutSchema } from "@/lib/order-schema";
-import { createOrder, getOrdersByUser } from "@/lib/orders";
+import { createOrder, getOrdersByUser, updateOrderPayment } from "@/lib/orders";
 import { getProductsBySlugs } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
 import { incrementUserOrderCount } from "@/lib/user-profile";
@@ -17,7 +17,13 @@ import {
   validateCoupon,
 } from "@/lib/coupons";
 import { recordOrderEmailStatus, logOrderEmail } from "@/lib/email-status";
-import type { OrderCoupon, OrderItem } from "@/lib/order-types";
+import { fulfillmentTypeForCategories } from "@/lib/order-fulfillment";
+import { notifyOrderAwaitingConfirmation } from "@/lib/order-payment";
+import { createInvoice, isMayarConfigured, getMayarMode } from "@/lib/mayar";
+import { makeToken, downloadUrl } from "@/lib/downloads";
+import { SITE_URL } from "@/lib/site";
+import type { OrderCoupon, OrderItem, OrderPayment } from "@/lib/order-types";
+import type { FulfillmentType } from "@/lib/payment-types";
 import { rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -80,6 +86,8 @@ export async function POST(req: Request) {
 
     // Susun item dengan harga terverifikasi server.
     const items: OrderItem[] = [];
+    /** Kategori produk per item — untuk memutuskan jalur fulfillment. */
+    const categories: string[] = [];
     for (const reqItem of requested) {
       const product = products.get(reqItem.slug);
       if (!product) {
@@ -92,6 +100,7 @@ export async function POST(req: Request) {
           { status: 409 },
         );
       }
+      categories.push(product.category);
       if (!product.active) {
         return NextResponse.json(
           {
@@ -263,6 +272,14 @@ export async function POST(req: Request) {
       { subtotal, discount, couponCode: orderCoupon?.code },
     );
 
+    // ===== Jalur fulfillment (INSTAN vs JASA) =====
+    const fulfillment: FulfillmentType = fulfillmentTypeForCategories(categories);
+
+    // JASA → menunggu konfirmasi (tanpa invoice otomatis).
+    // INSTAN → menunggu bayar (invoice online bila gateway aktif).
+    const initialStatus =
+      fulfillment === "jasa" ? "menunggu_konfirmasi" : "menunggu_bayar";
+
     let order;
     try {
       order = await createOrder({
@@ -273,6 +290,8 @@ export async function POST(req: Request) {
         subtotal,
         coupon: orderCoupon,
         total,
+        status: initialStatus,
+        fulfillment,
         whatsapp: settings.whatsapp,
         message,
       });
@@ -280,6 +299,59 @@ export async function POST(req: Request) {
       // Order gagal → kembalikan kuota kupon yang sudah direservasi.
       if (couponId) await restoreCouponUsage(couponId, check.uid);
       throw orderErr;
+    }
+
+    // ===== INSTAN: buat invoice Mayar (bila gateway dikonfigurasi) =====
+    // Best-effort: bila gagal, order tetap ada (menunggu_bayar) & pembeli
+    // diarahkan ke alur WhatsApp sebagai fallback.
+    let payUrl: string | null = null;
+    let paymentWarning: string | null = null;
+    if (fulfillment === "instan") {
+      const payment: OrderPayment = {
+        provider: "mayar",
+        status: "belum_bayar",
+      };
+      if (isMayarConfigured() && total > 0) {
+        try {
+          const invoice = await createInvoice({
+            name: buyerName || "Pembeli LKTech",
+            email: check.email,
+            description: `Pesanan LKTech ${order.id}`,
+            // Satu baris ringkas (total sudah termasuk diskon). Bila ada diskon,
+            // kirim subtotal + baris diskon negatif agar total = `total`.
+            items:
+              discount > 0 && orderCoupon
+                ? [
+                    { quantity: 1, rate: subtotal, description: "Subtotal pesanan" },
+                    {
+                      quantity: 1,
+                      rate: -discount,
+                      description: `Diskon ${orderCoupon.code}`,
+                    },
+                  ]
+                : [{ quantity: 1, rate: total, description: "Total pesanan" }],
+            extraData: { orderId: order.id },
+          });
+
+          payment.status = "menunggu";
+          payment.invoiceId = invoice.invoiceId;
+          payment.transactionId = invoice.transactionId;
+          payment.payUrl = invoice.payUrl;
+          payment.expiresAt = new Date(invoice.expiredAt).toISOString();
+          payUrl = invoice.payUrl;
+
+          await updateOrderPayment(order.id, payment);
+          order = { ...order, payment };
+        } catch (payErr) {
+          console.error("[api/orders] gagal membuat invoice Mayar:", payErr);
+          paymentWarning =
+            "Link pembayaran otomatis sedang tidak tersedia. Kami arahkan ke WhatsApp untuk menyelesaikan pembayaran.";
+        }
+      } else if (!isMayarConfigured()) {
+        paymentWarning =
+          "Pembayaran online belum aktif. Kami arahkan ke WhatsApp untuk menyelesaikan pembayaran.";
+      }
+      if (!order.payment) order = { ...order, payment };
     }
 
     // Naikkan penghitung pesanan user (best-effort, tidak menggagalkan order).
@@ -305,6 +377,11 @@ export async function POST(req: Request) {
       });
     }
 
+    // JASA (FASE P1): beri tahu pembeli bahwa order menunggu konfirmasi.
+    if (fulfillment === "jasa") {
+      await notifyOrderAwaitingConfirmation(order);
+    }
+
     return NextResponse.json({
       ok: true,
       order: {
@@ -313,10 +390,18 @@ export async function POST(req: Request) {
         subtotal: order.subtotal,
         coupon: order.coupon,
         total: order.total,
+        status: order.status,
+        fulfillment: order.fulfillment,
+        payment: order.payment,
+        // URL bayar (bila ada) untuk diarahkan di keranjang.
+        payUrl,
         message: order.message,
         whatsapp: order.whatsapp,
         createdAt: order.createdAt,
       },
+      // (Opsional) pesan bila invoice otomatis gagal dibuat.
+      warning: paymentWarning,
+      mayarMode: getMayarMode(),
     });
   } catch (err) {
     console.error("[api/orders] gagal membuat order:", err);
@@ -334,7 +419,14 @@ export async function GET(req: Request) {
 
   try {
     const orders = await getOrdersByUser(check.uid);
-    return NextResponse.json({ orders });
+    // Lampirkan link unduhan (bila ada token) — dihitung server, bukan dikirim klien.
+    const enriched = orders.map((o) => ({
+      ...o,
+      downloadUrl: o.downloadTokenId
+        ? downloadUrl(SITE_URL, makeToken(o.downloadTokenId))
+        : undefined,
+    }));
+    return NextResponse.json({ orders: enriched });
   } catch (err) {
     console.error("[api/orders] GET gagal:", err);
     return NextResponse.json(

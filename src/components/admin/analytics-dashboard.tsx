@@ -35,9 +35,13 @@ import { cn } from "@/lib/utils";
 
 const STATUS_ACCENT: Record<OrderStatus, string> = {
   baru: "bg-blue-500",
+  menunggu_bayar: "bg-amber-500",
+  dibayar: "bg-emerald-500",
+  menunggu_konfirmasi: "bg-purple-500",
   diproses: "bg-amber-500",
   selesai: "bg-emerald-500",
   dibatalkan: "bg-slate-400",
+  kedaluwarsa: "bg-slate-400",
 };
 
 export function AnalyticsDashboard() {

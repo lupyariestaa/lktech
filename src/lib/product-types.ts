@@ -85,6 +85,35 @@ export type ProductVariant = {
 };
 
 /**
+ * Satu berkas unduhan produk digital (mis. template `.zip`, source code).
+ * URL harus dapat diakses server/CDN (mis. Cloudinary).
+ */
+export type ProductDownloadFile = {
+  /** Nama tampilan berkas, mis. "Template-LandingPage.zip". */
+  name: string;
+  /** URL berkas (Cloudinary/aman). */
+  url: string;
+  /** Ukuran (byte) — opsional, untuk tampilan. */
+  size?: number;
+};
+
+/**
+ * Konfigurasi produk digital INSTAN (unduhan otomatis setelah bayar).
+ * Bila `enabled` true & `files` tidak kosong, pembeli menerima link unduhan
+ * bertoken setelah order berstatus `dibayar`.
+ */
+export type ProductDownloadable = {
+  enabled: boolean;
+  files: ProductDownloadFile[];
+  /** Masa berlaku link unduhan (hari). Default dari `DOWNLOAD_LINK_DAYS`. */
+  linkDays?: number;
+  /** Batas jumlah unduh per link. Default dari `DOWNLOAD_MAX_HITS`. */
+  maxDownloads?: number;
+  /** Instruksi singkat yang tampil di halaman unduhan (opsional). */
+  note?: string;
+};
+
+/**
  * Produk yang dijual.
  *
  * Produk mendukung DUA mode:
@@ -139,6 +168,11 @@ export type Product = {
   featured: boolean;
   /** Aktif/nonaktif produk di halaman publik. */
   active: boolean;
+  /**
+   * Konfigurasi unduhan otomatis (produk digital INSTAN). Opsional —
+   * produk lama tanpa field ini tetap valid (tidak ada unduhan otomatis).
+   */
+  downloadable?: ProductDownloadable;
   /** Pesan WhatsApp khusus (bila kosong, sistem menyusun otomatis). */
   waMessage?: string;
 };

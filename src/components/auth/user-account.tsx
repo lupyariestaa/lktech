@@ -6,7 +6,7 @@ import { Check, Loader2, LogOut, ShieldAlert, X } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
 import { getIdToken, signOutUser } from "@/lib/auth";
-import { fetchMyOrders } from "@/lib/order-api";
+import { fetchMyOrders, type MyOrder } from "@/lib/order-api";
 import {
   createAddress,
   deleteAddress,
@@ -19,7 +19,6 @@ import {
 import { useCart } from "@/components/cart-provider";
 import { toCartItem } from "@/lib/cart";
 import { hasVariants } from "@/lib/product-format";
-import type { Order } from "@/lib/order-types";
 import type { Product } from "@/lib/product-types";
 import type { SavedAddress, UserProfile } from "@/lib/user-types";
 import { AccountTabs, type AccountTab } from "@/components/auth/account-tabs";
@@ -56,7 +55,7 @@ export function UserAccount() {
   const { add } = useCart();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<MyOrder[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [tab, setTab] = useState<AccountTab>(initialTab);
@@ -140,7 +139,7 @@ export function UserAccount() {
   // "Pesan lagi": masukkan item pesanan ke keranjang. Harga/validasi final tetap
   // diverifikasi server saat checkout, jadi aman memakai data item pesanan.
   const onReorder = useCallback(
-    (order: Order) => {
+    (order: MyOrder) => {
       if (blocked) {
         pushToast("Akun Anda sedang diblokir.", "error");
         return;

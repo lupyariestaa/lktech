@@ -40,6 +40,8 @@ export async function createOrder(
     createdAtISO: nowISO,
   };
   if (data.coupon) payload.coupon = data.coupon;
+  if (data.payment) payload.payment = data.payment;
+  if (data.fulfillment) payload.fulfillment = data.fulfillment;
 
   const ref = await db.collection(COLLECTION).add(payload);
   return normalizeOrder({ ...payload, id: ref.id, createdAtISO: nowISO });
@@ -69,9 +71,13 @@ export async function getOrdersByUser(uid: string): Promise<Order[]> {
 export type OrdersSummary = {
   total: number;
   baru: number;
+  menunggu_bayar: number;
+  dibayar: number;
+  menunggu_konfirmasi: number;
   diproses: number;
   selesai: number;
   dibatalkan: number;
+  kedaluwarsa: number;
   /**
    * Total omzet (Rp) untuk pesanan berstatus "selesai" SEPANJANG WAKTU
    * (netto setelah diskon). Berbeda dari omzet "periode" di Analitik —
@@ -90,9 +96,13 @@ export async function getOrdersSummary(): Promise<OrdersSummary> {
   const empty: OrdersSummary = {
     total: 0,
     baru: 0,
+    menunggu_bayar: 0,
+    dibayar: 0,
+    menunggu_konfirmasi: 0,
     diproses: 0,
     selesai: 0,
     dibatalkan: 0,
+    kedaluwarsa: 0,
     omzet: 0,
   };
   const db = getAdminDb();
@@ -126,9 +136,13 @@ export async function getOrdersSummary(): Promise<OrdersSummary> {
   return {
     total: counts.total ?? 0,
     baru: counts.baru ?? 0,
+    menunggu_bayar: counts.menunggu_bayar ?? 0,
+    dibayar: counts.dibayar ?? 0,
+    menunggu_konfirmasi: counts.menunggu_konfirmasi ?? 0,
     diproses: counts.diproses ?? 0,
     selesai: counts.selesai ?? 0,
     dibatalkan: counts.dibatalkan ?? 0,
+    kedaluwarsa: counts.kedaluwarsa ?? 0,
     omzet,
   };
 }
@@ -220,6 +234,86 @@ export async function updateOrderStatus(
     updatedBy,
   });
   return { previousStatus };
+}
+
+/**
+ * Menyimpan/memperbarui info pembayaran pada order (mis. setelah invoice Mayar
+ * dibuat di checkout). Tidak mengubah status order.
+ */
+export async function updateOrderPayment(
+  id: string,
+  payment: NonNullable<Order["payment"]>,
+): Promise<void> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  await db.collection(COLLECTION).doc(id).update({
+    payment,
+    updatedAtISO: new Date().toISOString(),
+  });
+}
+
+/**
+ * Menyimpan id token unduhan pada order (setelah fulfillment, FASE P1).
+ */
+export async function setOrderDownloadToken(
+  id: string,
+  downloadTokenId: string,
+): Promise<void> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  await db.collection(COLLECTION).doc(id).update({
+    downloadTokenId,
+    updatedAtISO: new Date().toISOString(),
+  });
+}
+
+/**
+ * Menandai order sebagai DIBAYAR secara **idempoten** (aman dipanggil ulang,
+ * mis. dari webhook yang terkirim ganda). Bila order sudah `dibayar`, tidak ada
+ * perubahan (mengembalikan `applied: false`).
+ *
+ * - Mengisi `payment.status = "dibayar"`, `paidAt`, `amount` (bila diberikan),
+ *   serta `status` order (default `"dibayar"`).
+ * - `extraPayment` dipakai untuk menyimpan method/transactionId dari webhook.
+ */
+export async function markOrderPaid(
+  id: string,
+  info: { amount?: number; method?: string; transactionId?: string; at?: string },
+  orderStatus: OrderStatus = "dibayar",
+): Promise<{ applied: boolean; order: Order | null }> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const ref = db.collection(COLLECTION).doc(id);
+  const doc = await ref.get();
+  if (!doc.exists) return { applied: false, order: null };
+
+  const current = normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) });
+  if (current.payment?.status === "dibayar") {
+    return { applied: false, order: current };
+  }
+
+  const at = info.at ?? new Date().toISOString();
+  const payment = {
+    provider: current.payment?.provider ?? "mayar",
+    status: "dibayar" as const,
+    invoiceId: current.payment?.invoiceId,
+    payUrl: current.payment?.payUrl,
+    expiresAt: current.payment?.expiresAt,
+    transactionId: info.transactionId ?? current.payment?.transactionId,
+    method: info.method ?? current.payment?.method,
+    amount: typeof info.amount === "number" ? info.amount : current.payment?.amount,
+    paidAt: at,
+  };
+
+  await ref.update({
+    status: orderStatus,
+    payment,
+    updatedAtISO: at,
+    updatedBy: "system:markOrderPaid",
+  });
+
+  const order = normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>), status: orderStatus, payment });
+  return { applied: true, order };
 }
 
 /** Mengambil satu pesanan berdasarkan id (null bila tidak ada). */

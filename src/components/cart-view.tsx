@@ -39,6 +39,8 @@ export function CartView({ promoCode }: { promoCode?: string }) {
   const discount = appliedCoupon?.discount ?? 0;
   const total = Math.max(0, subtotal - discount);
   const [done, setDone] = useState(false);
+  /** Jenis hasil checkout terakhir, untuk pesan penutup yang tepat. */
+  const [doneKind, setDoneKind] = useState<"bayar" | "jasa" | "wa">("wa");
 
   const onCheckout = async () => {
     setError(null);
@@ -69,14 +71,6 @@ export function CartView({ promoCode }: { promoCode?: string }) {
         appliedCoupon?.code,
       );
 
-      // Buka WhatsApp dengan pesan kanonik dari server.
-      const url = waLink(order.message, order.whatsapp);
-      const opened = window.open(url, "_blank", "noopener,noreferrer");
-      if (!opened) {
-        // Popup diblokir → arahkan di tab yang sama.
-        window.location.href = url;
-      }
-
       trackCheckout({
         items: items.reduce((n, it) => n + it.qty, 0),
         total: order.total,
@@ -87,6 +81,29 @@ export function CartView({ promoCode }: { promoCode?: string }) {
 
       clear();
       setAppliedCoupon(null);
+
+      // INSTAN + invoice tersedia → arahkan ke halaman pembayaran online.
+      if (order.payUrl) {
+        setDoneKind("bayar");
+        setDone(true);
+        window.location.href = order.payUrl;
+        return;
+      }
+
+      // JASA → menunggu konfirmasi (tanpa pembayaran online).
+      if (order.fulfillment === "jasa") {
+        setDoneKind("jasa");
+        setDone(true);
+        return;
+      }
+
+      // Fallback (gateway belum aktif / gagal) → alur WhatsApp seperti semula.
+      const url = waLink(order.message, order.whatsapp);
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        window.location.href = url;
+      }
+      setDoneKind("wa");
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal membuat pesanan.");
@@ -104,19 +121,28 @@ export function CartView({ promoCode }: { promoCode?: string }) {
   }
 
   if (done && items.length === 0) {
+    const copy =
+      doneKind === "bayar"
+        ? {
+            title: "Mengarahkan ke pembayaran",
+            body: "Kami mengarahkan Anda ke halaman pembayaran. Selesaikan pembayaran (QRIS/VA/e-wallet), lalu status pesanan otomatis diperbarui. Bila tidak terarah otomatis, buka pesanan di halaman akun untuk membayar.",
+          }
+        : doneKind === "jasa"
+          ? {
+              title: "Pesanan diterima",
+              body: "Terima kasih! Pesanan jasa Anda kami terima dan akan segera dikonfirmasi. Tim kami akan menghubungi Anda untuk langkah selanjutnya. Rincian juga kami kirim ke email Anda.",
+            }
+          : {
+              title: "Pesanan dikirim",
+              body: "Pesanan Anda sudah diteruskan ke WhatsApp kami. Lanjutkan percakapan di WhatsApp untuk menyelesaikan pembayaran. Rincian pesanan juga kami kirimkan ke email Anda.",
+            };
     return (
       <div className="mx-auto max-w-2xl px-6 py-28 text-center">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-emerald-50 text-emerald-600">
           <CheckCircle2 className="h-8 w-8" />
         </span>
-        <h1 className="mt-6 text-2xl font-bold text-secondary">
-          Pesanan dikirim
-        </h1>
-        <p className="mt-2 text-sm text-muted">
-          Pesanan Anda sudah diteruskan ke WhatsApp kami. Lanjutkan percakapan di
-          WhatsApp untuk menyelesaikan pembayaran. Rincian pesanan juga kami
-          kirimkan ke email Anda.
-        </p>
+        <h1 className="mt-6 text-2xl font-bold text-secondary">{copy.title}</h1>
+        <p className="mt-2 text-sm text-muted">{copy.body}</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/produk"

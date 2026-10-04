@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/orders — daftar pesanan (terbaru dulu) + filter & paginasi.
- *   Query: ?status=baru|diproses|selesai|dibatalkan|semua
+ *   Query: ?status=baru|menunggu_bayar|dibayar|menunggu_konfirmasi|diproses|selesai|dibatalkan|kedaluwarsa|semua
  *          ?limit=<1..100>  ?cursor=<createdAtISO>
  * GET /api/admin/orders?summary=1 — ringkasan jumlah per status + omzet
  *   (untuk badge sidebar & metrik dashboard).
@@ -164,9 +164,12 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ ok: true, unchanged: true });
     }
 
-    // `KP-C2`: transisi → dibatalkan mengembalikan kuota kupon (sekali saja,
-    // karena hanya terjadi pada transisi status).
-    if (status === "dibatalkan" && previousStatus !== "dibatalkan") {
+    // `KP-C2`: transisi → dibatalkan/kedaluwarsa mengembalikan kuota kupon
+    // (sekali saja, karena hanya terjadi pada transisi status).
+    if (
+      (status === "dibatalkan" || status === "kedaluwarsa") &&
+      previousStatus !== status
+    ) {
       const order = await getOrderById(id);
       if (order?.coupon?.couponId) {
         await restoreCouponUsage(order.coupon.couponId, order.uid);
@@ -284,11 +287,19 @@ export async function POST(req: Request) {
 /**
  * DELETE /api/admin/orders?id=xxx — hapus sebuah pesanan (permanen).
  *
- * `EM-H1`/`KP-C2`: hard-delete hanya diizinkan untuk pesanan berstatus "baru"
- * (belum diproses & belum memakai kuota kupon). Untuk status lain, arahkan
- * admin membatalkan pesanan (yang mengembalikan kuota + mengirim email).
+ * `EM-H1`/`KP-C2`: hard-delete hanya diizinkan untuk pesanan yang BELUM
+ * diproses/dipenuhi (status `baru`, `menunggu_bayar`, `menunggu_konfirmasi`,
+ * `kedaluwarsa`) — belum ada komitmen/kerja ke pembeli. Untuk status lain,
+ * arahkan admin membatalkan pesanan (yang mengembalikan kuota + mengirim email).
  * Bila tetap dihapus & pesanan memakai kupon, kuota dikembalikan agar tidak bocor.
  */
+const DELETABLE_STATUSES: readonly OrderStatus[] = [
+  "baru",
+  "menunggu_bayar",
+  "menunggu_konfirmasi",
+  "kedaluwarsa",
+];
+
 export async function DELETE(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
@@ -303,7 +314,7 @@ export async function DELETE(req: Request) {
     if (!order) {
       return NextResponse.json({ error: "Pesanan tidak ditemukan." }, { status: 404 });
     }
-    if (order.status !== "baru") {
+    if (!DELETABLE_STATUSES.includes(order.status)) {
       return NextResponse.json(
         {
           error:

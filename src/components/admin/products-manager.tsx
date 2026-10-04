@@ -21,7 +21,12 @@ import {
   fetchProducts,
   saveProduct,
 } from "@/lib/admin-api";
-import type { Product, StoredProduct } from "@/lib/product-types";
+import type {
+  Product,
+  ProductDownloadable,
+  ProductDownloadFile,
+  StoredProduct,
+} from "@/lib/product-types";
 import {
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_LABEL,
@@ -65,6 +70,7 @@ const emptyProduct: Product = {
   soldOut: false,
   featured: false,
   active: true,
+  downloadable: undefined,
   waMessage: undefined,
 };
 
@@ -771,6 +777,12 @@ function ProductForm({
           onChange={(process) => set("process", process)}
         />
 
+        {/* ===== Unduhan otomatis (produk digital) ===== */}
+        <DownloadableEditor
+          value={product.downloadable}
+          onChange={(v) => set("downloadable", v)}
+        />
+
         {/* ===== Catatan Penting ===== */}
         <Field label="Catatan penting (1 per baris)">
           <textarea
@@ -1206,6 +1218,127 @@ function VariantCard({
 }
 
 /* ================= Editor Alur Pembuatan ================= */
+
+function DownloadableEditor({
+  value,
+  onChange,
+}: {
+  value: ProductDownloadable | undefined;
+  onChange: (v: ProductDownloadable | undefined) => void;
+}) {
+  const cfg: ProductDownloadable = value ?? { enabled: true, files: [] };
+  const files = cfg.files ?? [];
+
+  const update = (patch: Partial<ProductDownloadable>) =>
+    onChange({ ...cfg, files, ...patch });
+
+  const updateFile = (i: number, patch: Partial<ProductDownloadFile>) =>
+    update({ files: files.map((f, j) => (j === i ? { ...f, ...patch } : f)) });
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-surface p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-secondary">
+            Unduhan Otomatis (produk digital)
+          </p>
+          <p className="mt-0.5 text-xs text-muted">
+            Bila diisi, pembeli menerima link unduhan bertoken setelah pembayaran
+            lunas. Kosongkan untuk produk non-digital / jasa.
+          </p>
+        </div>
+        <Toggle
+          label="Aktifkan unduhan"
+          checked={cfg.enabled}
+          onChange={(v) => update({ enabled: v })}
+        />
+      </div>
+
+      {cfg.enabled && (
+        <>
+          <div className="mt-4 flex flex-col gap-3">
+            {files.map((f, i) => (
+              <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    value={f.name}
+                    onChange={(e) => updateFile(i, { name: e.target.value })}
+                    placeholder="Nama berkas (mis. Template.zip)"
+                    className={fieldBase}
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      value={f.url}
+                      onChange={(e) => updateFile(i, { url: e.target.value })}
+                      placeholder="URL berkas (https://…)"
+                      className={fieldBase}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => update({ files: files.filter((_, j) => j !== i) })}
+                      aria-label="Hapus berkas"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => update({ files: [...files, { name: "", url: "" }] })}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-dashed border-slate-300 px-4 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-primary/40 hover:text-primary"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Tambah Berkas
+          </button>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Field label="Masa berlaku link (hari, kosong = default)">
+              <input
+                type="number"
+                min={0}
+                value={cfg.linkDays ?? ""}
+                onChange={(e) =>
+                  update({ linkDays: e.target.value ? Number(e.target.value) : undefined })
+                }
+                placeholder="30"
+                className={fieldBase}
+              />
+            </Field>
+            <Field label="Batas jumlah unduh (kosong = default)">
+              <input
+                type="number"
+                min={0}
+                value={cfg.maxDownloads ?? ""}
+                onChange={(e) =>
+                  update({
+                    maxDownloads: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+                placeholder="5"
+                className={fieldBase}
+              />
+            </Field>
+          </div>
+
+          <Field label="Catatan untuk pembeli (opsional)">
+            <textarea
+              rows={2}
+              value={cfg.note ?? ""}
+              onChange={(e) => update({ note: e.target.value || undefined })}
+              placeholder="Mis. cara instalasi atau lisensi penggunaan."
+              className={cn(fieldBase, "mt-3 resize-none")}
+            />
+          </Field>
+        </>
+      )}
+    </div>
+  );
+}
 
 function ProcessEditor({
   steps,

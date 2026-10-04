@@ -207,6 +207,24 @@ export const productSchema = z.object({
   process: z.array(productProcessStepSchema).max(20).optional(),
   notes: z.array(z.string().trim().max(300)).max(20).optional(),
   variants: z.array(productVariantSchema).max(12).optional(),
+  downloadable: z
+    .object({
+      enabled: z.boolean().optional(),
+      files: z
+        .array(
+          z.object({
+            name: z.string().trim().max(200).optional(),
+            url: z.string().trim().url("URL berkas tidak valid").max(2000),
+            size: z.number().finite().min(0).optional(),
+          }),
+        )
+        .max(30)
+        .optional(),
+      linkDays: z.number().int().min(0).max(3650).optional(),
+      maxDownloads: z.number().int().min(0).max(10000).optional(),
+      note: z.string().trim().max(1000).optional(),
+    })
+    .optional(),
   soldOut: z.boolean().optional(),
   featured: z.boolean().optional(),
   active: z.boolean().optional(),

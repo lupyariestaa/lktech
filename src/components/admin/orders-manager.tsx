@@ -6,6 +6,7 @@ import {
   Check,
   Copy,
   Download,
+  ExternalLink,
   Loader2,
   Mail,
   MessageCircle,
@@ -33,6 +34,10 @@ import {
   type Order,
   type OrderStatus,
 } from "@/lib/order-types";
+import {
+  PAYMENT_STATUS_LABEL,
+  PAYMENT_STATUS_STYLE,
+} from "@/lib/payment-types";
 import type { OrdersSummary } from "@/lib/orders";
 import { formatRupiah, formatDateTime, shortOrderCode } from "@/lib/format";
 import { waLink } from "@/lib/whatsapp";
@@ -46,6 +51,8 @@ const PAGE_LIMIT = 25;
 const SUMMARY_CARDS: Array<{ key: keyof OrdersSummary; label: string; accent: string }> = [
   { key: "total", label: "Total Pesanan", accent: "bg-primary-50 text-primary" },
   { key: "baru", label: "Baru", accent: "bg-blue-50 text-blue-600" },
+  { key: "menunggu_bayar", label: "Menunggu Bayar", accent: "bg-amber-50 text-amber-600" },
+  { key: "menunggu_konfirmasi", label: "Perlu Konfirmasi", accent: "bg-purple-50 text-purple-600" },
   { key: "diproses", label: "Diproses", accent: "bg-amber-50 text-amber-600" },
   { key: "omzet", label: "Omzet (selesai, sepanjang waktu)", accent: "bg-emerald-50 text-emerald-600" },
 ];
@@ -593,6 +600,69 @@ function OrderDetailDialog({
               {order.buyerEmail}
             </a>
           </div>
+
+          {/* Status pembayaran (bila ada) */}
+          {order.payment && (
+            <div className="mt-4 rounded-2xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+                  Pembayaran
+                </p>
+                <span
+                  className={cn(
+                    "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold",
+                    PAYMENT_STATUS_STYLE[order.payment.status],
+                  )}
+                >
+                  {PAYMENT_STATUS_LABEL[order.payment.status]}
+                </span>
+              </div>
+              <dl className="mt-2 flex flex-col gap-1 text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted">Metode</dt>
+                  <dd className="font-medium text-secondary">
+                    {order.payment.provider}
+                    {order.payment.method ? ` · ${order.payment.method}` : ""}
+                  </dd>
+                </div>
+                {typeof order.payment.amount === "number" && (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted">Nominal diterima</dt>
+                    <dd className="font-medium text-secondary">
+                      {formatRupiah(order.payment.amount)}
+                    </dd>
+                  </div>
+                )}
+                {order.payment.paidAt && (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted">Dibayar pada</dt>
+                    <dd className="font-medium text-secondary">
+                      {formatDateTime(order.payment.paidAt)}
+                    </dd>
+                  </div>
+                )}
+                {order.payment.expiresAt && (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted">Kedaluwarsa</dt>
+                    <dd className="font-medium text-secondary">
+                      {formatDateTime(order.payment.expiresAt)}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {order.payment.payUrl && order.payment.status !== "dibayar" && (
+                <a
+                  href={order.payment.payUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Buka halaman pembayaran
+                </a>
+              )}
+            </div>
+          )}
 
           {/* Status email (`XL-4`) */}
           <EmailStatusBlock order={order} />

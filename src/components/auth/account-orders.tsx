@@ -2,23 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, RefreshCw, ShoppingBag } from "lucide-react";
-import type { Order, OrderStatus } from "@/lib/order-types";
+import { ChevronDown, Clock, Download, RefreshCw, ShoppingBag } from "lucide-react";
+import {
+  ORDER_STATUS_LABEL,
+  PENDING_PAYMENT_STATUSES,
+  type Order,
+} from "@/lib/order-types";
+import type { MyOrder } from "@/lib/order-api";
 import { formatPrice } from "@/lib/product-format";
 import { cn } from "@/lib/utils";
 
-const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  baru: "Baru",
-  diproses: "Diproses",
-  selesai: "Selesai",
-  dibatalkan: "Dibatalkan",
-};
-
-const ORDER_STATUS_CLASS: Record<OrderStatus, string> = {
+const ORDER_STATUS_CLASS: Record<Order["status"], string> = {
   baru: "bg-blue-50 text-blue-600",
+  menunggu_bayar: "bg-amber-50 text-amber-600",
+  dibayar: "bg-emerald-50 text-emerald-600",
+  menunggu_konfirmasi: "bg-purple-50 text-purple-600",
   diproses: "bg-amber-50 text-amber-600",
   selesai: "bg-emerald-50 text-emerald-600",
   dibatalkan: "bg-rose-50 text-rose-600",
+  kedaluwarsa: "bg-slate-100 text-slate-500",
 };
 
 function formatDateTime(iso: string): string {
@@ -41,9 +43,9 @@ export function AccountOrders({
   onReorder,
   reordering,
 }: {
-  orders: Order[];
+  orders: MyOrder[];
   /** Callback "pesan lagi" — menambahkan item pesanan ke keranjang. */
-  onReorder: (order: Order) => void;
+  onReorder: (order: MyOrder) => void;
   /** Id pesanan yang sedang diproses "pesan lagi" (untuk spinner). */
   reordering: string | null;
 }) {
@@ -78,6 +80,9 @@ export function AccountOrders({
       {orders.map((order) => {
         const open = openId === order.id;
         const itemCount = order.items.reduce((n, it) => n + it.qty, 0);
+        const pendingPayment =
+          PENDING_PAYMENT_STATUSES.includes(order.status) &&
+          Boolean(order.payment?.payUrl);
         return (
           <li
             key={order.id}
@@ -104,6 +109,41 @@ export function AccountOrders({
                 {ORDER_STATUS_LABEL[order.status]}
               </span>
             </div>
+
+            {pendingPayment && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-amber-100 bg-amber-50/60 px-5 py-3">
+                <Clock className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                <p className="flex-1 text-xs text-amber-700">
+                  Pesanan menunggu pembayaran.
+                  {order.payment?.expiresAt
+                    ? ` Selesaikan sebelum ${formatDateTime(order.payment.expiresAt)}.`
+                    : ""}
+                </p>
+                <a
+                  href={order.payment!.payUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-primary-dark"
+                >
+                  Bayar sekarang
+                </a>
+              </div>
+            )}
+
+            {order.downloadUrl && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-emerald-100 bg-emerald-50/60 px-5 py-3">
+                <Download className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                <p className="flex-1 text-xs text-emerald-700">
+                  Produk digital Anda siap diunduh.
+                </p>
+                <a
+                  href={order.downloadUrl}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-600"
+                >
+                  Unduh produk
+                </a>
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-3">
               <button

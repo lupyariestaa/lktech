@@ -48,7 +48,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-05 | [Dashboard Analitik Penjualan (grafik omzet, tren pesanan, produk terlaris)](2026-10-05-analitik-penjualan.md) | Selesai |
 | 2026-10-05 | [Audit & Rencana Peningkatan: Email Transaksional, Kupon, Analitik](2026-10-05-audit-email-kupon-analitik.md) | Selesai (R0–R7) |
 | 2026-10-06 | [🚀 Roadmap Pengembangan (Konsep & Arah Lanjutan)](2026-10-06-roadmap-pengembangan.md) | 📝 Rencana |
-| 2026-10-06 | [Fase Detail — Konversi & Closing (Mayar.id, bundling, urgency, abandoned checkout)](2026-10-06-fase-konversi-closing.md) | 📝 Rencana |
+| 2026-10-06 | [Fase Detail — Konversi & Closing (Mayar.id, bundling, urgency, abandoned checkout)](2026-10-06-fase-konversi-closing.md) | 🚧 P0 & P1 selesai (kode) |
 
 ### Dokumen pendukung (referensi & setup)
 

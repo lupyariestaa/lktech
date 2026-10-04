@@ -131,6 +131,28 @@ export async function POST(req: Request) {
             waMessage: v.waMessage?.trim() || undefined,
           }))
       : [],
+    downloadable: (() => {
+      const d = body.downloadable;
+      if (!d) return undefined;
+      const files = Array.isArray(d.files)
+        ? d.files
+            .filter((f) => f && f.url?.trim())
+            .map((f) => ({
+              name: f.name?.trim() || "Berkas",
+              url: f.url.trim(),
+              size: typeof f.size === "number" ? f.size : undefined,
+            }))
+        : [];
+      if (files.length === 0) return undefined;
+      return {
+        enabled: d.enabled === undefined ? true : Boolean(d.enabled),
+        files,
+        linkDays: d.linkDays && d.linkDays > 0 ? d.linkDays : undefined,
+        maxDownloads:
+          d.maxDownloads && d.maxDownloads > 0 ? d.maxDownloads : undefined,
+        note: d.note?.trim() || undefined,
+      };
+    })(),
   };
 
   try {

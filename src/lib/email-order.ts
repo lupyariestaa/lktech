@@ -277,6 +277,90 @@ export async function sendOrderConfirmationToBuyer(
 }
 
 /* -------------------------------------------------------------------------- */
+/* 1b. Pembayaran diterima (+ link unduhan) — FASE P1                          */
+/* -------------------------------------------------------------------------- */
+
+function orderPaidText(order: Order, downloadLink?: string): string {
+  const lines = [
+    `Halo ${order.buyerName || "Pelanggan"},`,
+    "",
+    `Pembayaran untuk pesanan ${shortOrderCode(order.id)} telah kami terima. Terima kasih!`,
+    "",
+    `Total dibayar : ${formatRupiah(order.payment?.amount ?? order.total)}`,
+  ];
+  if (downloadLink) {
+    lines.push(
+      "",
+      "Produk digital Anda sudah siap diunduh melalui tautan berikut:",
+      downloadLink,
+      "",
+      "(Simpan email ini — tautan berlaku terbatas.)",
+    );
+  } else {
+    lines.push(
+      "",
+      "Kami akan segera memproses pesanan Anda dan mengirimkan informasi lanjutan lewat email ini.",
+    );
+  }
+  lines.push("", `Lihat pesanan Anda: ${SITE.url}/akun?tab=pesanan`, "", SITE.name);
+  return lines.join("\n");
+}
+
+function orderPaidHtml(order: Order, downloadLink?: string): string {
+  const downloadBlock = downloadLink
+    ? `<div style="margin-top:20px;padding:16px;background:#ecfdf5;border-radius:12px;border-left:3px solid #059669">
+        <p style="margin:0 0 10px;color:#065f46;font-size:13px;line-height:1.6">
+          <strong>Produk digital Anda siap diunduh.</strong> Tautan berlaku terbatas — sebaiknya unduh sekarang dan simpan berkasnya.
+        </p>
+        ${button(downloadLink, "Unduh Produk")}
+      </div>`
+    : `<div style="margin-top:20px;padding:16px;background:#f8fafc;border-radius:12px;border-left:3px solid #004EDF">
+        <p style="margin:0;color:#334155;font-size:13px;line-height:1.6">
+          Kami akan segera memproses pesanan Anda dan mengirimkan informasi lanjutan lewat email ini.
+        </p>
+      </div>`;
+
+  const body = `
+    <p style="margin:0 0 6px;color:#0a0f1e;font-size:15px;font-weight:700">Halo ${esc(order.buyerName || "Pelanggan")},</p>
+    <p style="margin:0 0 16px;color:#334155;font-size:14px;line-height:1.6">Pembayaran Anda telah kami terima. Terima kasih atas kepercayaan Anda!</p>
+    <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:12px">
+      <tr>
+        <td style="padding:14px 16px;color:#64748b;font-size:13px">Kode pesanan</td>
+        <td style="padding:14px 16px;text-align:right;color:#0a0f1e;font-size:14px;font-weight:700">${esc(shortOrderCode(order.id))}</td>
+      </tr>
+      <tr>
+        <td style="padding:0 16px 14px;color:#64748b;font-size:13px">Total dibayar</td>
+        <td style="padding:0 16px 14px;text-align:right;color:#0a0f1e;font-size:14px;font-weight:700">${formatRupiah(order.payment?.amount ?? order.total)}</td>
+      </tr>
+    </table>
+    ${downloadBlock}
+    <div style="margin-top:24px">${button(`${SITE.url}/akun?tab=pesanan`, "Lihat Pesanan Saya")}</div>
+    ${instansiFooter(order)}
+  `;
+  return emailShell({
+    headerTitle: "✅ Pembayaran Diterima",
+    headerSubtitle: `${shortOrderCode(order.id)} · ${formatRupiah(order.payment?.amount ?? order.total)}`,
+    bodyHtml: body,
+  });
+}
+
+/**
+ * Email "pembayaran diterima" ke pembeli, dengan link unduhan bila tersedia
+ * (FASE P1). Best-effort — tidak melempar error.
+ */
+export async function sendOrderPaidToBuyer(
+  order: Order,
+  downloadLink?: string,
+): Promise<EmailResult> {
+  return sendEmail({
+    to: order.buyerEmail,
+    subject: `Pembayaran diterima — ${SITE.name} (${shortOrderCode(order.id)})`,
+    text: orderPaidText(order, downloadLink),
+    html: orderPaidHtml(order, downloadLink),
+  });
+}
+
+/* -------------------------------------------------------------------------- */
 /* 2. Update status                                                            */
 /* -------------------------------------------------------------------------- */
 
@@ -289,6 +373,27 @@ type StatusCopy = {
 
 /** Teks & nada per status (status "baru" tidak dikirim dari jalur update). */
 const STATUS_COPY: Record<Exclude<OrderStatus, "baru">, StatusCopy> = {
+  menunggu_bayar: {
+    headerTitle: "💳 Menunggu Pembayaran",
+    subject: "menunggu pembayaran",
+    intro:
+      "Pesanan Anda sudah dibuat dan sedang menunggu pembayaran. Buka halaman pembayaran untuk menyelesaikan transaksi, atau hubungi kami bila butuh bantuan.",
+    accent: "#D97706",
+  },
+  menunggu_konfirmasi: {
+    headerTitle: "📩 Menunggu Konfirmasi",
+    subject: "menunggu konfirmasi",
+    intro:
+      "Terima kasih! Pesanan Anda kami terima dan akan segera kami konfirmasi. Tim kami akan menghubungi Anda untuk langkah selanjutnya.",
+    accent: "#7C3AED",
+  },
+  dibayar: {
+    headerTitle: "✅ Pembayaran Diterima",
+    subject: "telah dibayar",
+    intro:
+      "Pembayaran Anda telah kami terima. Terima kasih! Kami akan segera memproses pesanan Anda dan mengirimkan informasi lanjutan melalui email ini.",
+    accent: "#059669",
+  },
   diproses: {
     headerTitle: "⚙️ Pesanan Anda Sedang Diproses",
     subject: "sedang diproses",
@@ -309,6 +414,13 @@ const STATUS_COPY: Record<Exclude<OrderStatus, "baru">, StatusCopy> = {
     intro:
       "Pesanan Anda telah dibatalkan. Bila ini tidak sesuai harapan Anda atau terjadi kekeliruan, silakan hubungi kami via WhatsApp agar dapat kami bantu.",
     accent: "#E11D48",
+  },
+  kedaluwarsa: {
+    headerTitle: "⌛ Pesanan Kedaluwarsa",
+    subject: "kedaluwarsa",
+    intro:
+      "Pesanan Anda telah kedaluwarsa karena pembayaran belum diselesaikan dalam batas waktu. Anda dapat memesan kembali kapan saja — kami siap membantu.",
+    accent: "#64748B",
   },
 };
 

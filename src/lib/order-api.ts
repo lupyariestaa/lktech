@@ -9,10 +9,20 @@ export type CheckoutResult = {
     subtotal: number;
     coupon?: OrderCoupon;
     total: number;
+    /** Status order setelah checkout (mis. menunggu_bayar / menunggu_konfirmasi). */
+    status: Order["status"];
+    /** Jalur fulfillment: instan (unduh) atau jasa (konsultasi). */
+    fulfillment?: Order["fulfillment"];
+    /** Info pembayaran (bila dibuat invoice). */
+    payment?: Order["payment"];
+    /** URL halaman pembayaran (bila tersedia). */
+    payUrl?: string | null;
     message: string;
     whatsapp: string;
     createdAt: string;
   };
+  /** Pesan peringatan (mis. gateway tidak tersedia → fallback WhatsApp). */
+  warning?: string | null;
 };
 
 export type CheckoutRequestItem = {
@@ -51,8 +61,14 @@ export async function createOrderRequest(
   return data as CheckoutResult;
 }
 
+/** Pesanan milik user + link unduhan (bila produk digital sudah lunas). */
+export type MyOrder = Order & {
+  /** URL halaman unduhan (dihitung server) — ada bila order digital telah dibayar. */
+  downloadUrl?: string;
+};
+
 /** Mengambil daftar pesanan milik user yang login. */
-export async function fetchMyOrders(): Promise<Order[]> {
+export async function fetchMyOrders(): Promise<MyOrder[]> {
   const token = await getIdToken();
   if (!token) throw new Error("Sesi berakhir. Silakan masuk kembali.");
 
@@ -62,5 +78,5 @@ export async function fetchMyOrders(): Promise<Order[]> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error ?? "Gagal memuat pesanan.");
-  return (data?.orders ?? []) as Order[];
+  return (data?.orders ?? []) as MyOrder[];
 }

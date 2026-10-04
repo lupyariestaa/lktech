@@ -15,6 +15,8 @@ export default function robots(): MetadataRoute.Robots {
           "/akun",
           "/keranjang",
           "/masuk",
+          // Halaman unduhan bertoken: bersifat pribadi — jangan diindeks.
+          "/unduhan",
         ],
       },
     ],

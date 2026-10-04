@@ -1,6 +1,8 @@
 import type {
   Product,
   ProductCategory,
+  ProductDownloadable,
+  ProductDownloadFile,
   ProductFeature,
   ProductProcessStep,
   ProductSpec,
@@ -11,6 +13,8 @@ import type {
 export type {
   Product,
   ProductCategory,
+  ProductDownloadable,
+  ProductDownloadFile,
   ProductFeature,
   ProductProcessStep,
   ProductSpec,
@@ -197,6 +201,32 @@ function normalizeVariant(raw: unknown): ProductVariant | null {
   };
 }
 
+/** Normalisasi konfigurasi unduhan produk digital (opsional). */
+function normalizeDownloadable(raw: unknown): ProductDownloadable | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const d = raw as Record<string, unknown>;
+  const files: ProductDownloadFile[] = Array.isArray(d.files)
+    ? d.files
+        .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+        .map((x) => ({
+          name: str(x.name).trim(),
+          url: str(x.url).trim(),
+          size: typeof x.size === "number" && Number.isFinite(x.size) ? x.size : undefined,
+        }))
+        .filter((f) => f.url)
+    : [];
+  if (!files.length) return undefined;
+  const linkDays = num(d.linkDays, 0);
+  const maxDownloads = num(d.maxDownloads, 0);
+  return {
+    enabled: d.enabled === undefined ? true : Boolean(d.enabled),
+    files,
+    linkDays: linkDays > 0 ? linkDays : undefined,
+    maxDownloads: maxDownloads > 0 ? maxDownloads : undefined,
+    note: str(d.note).trim() || undefined,
+  };
+}
+
 function normalizeProduct(data: Record<string, unknown>): Product {
   const variants = Array.isArray(data.variants)
     ? data.variants
@@ -228,6 +258,7 @@ function normalizeProduct(data: Record<string, unknown>): Product {
     soldOut: Boolean(data.soldOut),
     featured: Boolean(data.featured),
     active: data.active === undefined ? true : Boolean(data.active),
+    downloadable: normalizeDownloadable(data.downloadable),
     waMessage: str(data.waMessage) || undefined,
   };
 }
@@ -313,7 +344,30 @@ export async function saveProduct(
     updatedAtISO: new Date().toISOString(),
     updatedBy,
   };
-  for (const key of ["originalPrice", "coverPublicId", "badge", "delivery", "waMessage"]) {
+  // Bersihkan field opsional `undefined` (Firestore menolaknya).
+  if (payload.downloadable && typeof payload.downloadable === "object") {
+    const d = payload.downloadable as Record<string, unknown>;
+    const dl: Record<string, unknown> = { ...d };
+    for (const key of ["linkDays", "maxDownloads", "note"]) {
+      if (dl[key] === undefined) delete dl[key];
+    }
+    dl.files = Array.isArray(dl.files)
+      ? (dl.files as Array<Record<string, unknown>>).map((f) => {
+          const ff: Record<string, unknown> = { ...f };
+          if (ff.size === undefined) delete ff.size;
+          return ff;
+        })
+      : [];
+    payload.downloadable = dl;
+  }
+  for (const key of [
+    "originalPrice",
+    "coverPublicId",
+    "badge",
+    "delivery",
+    "waMessage",
+    "downloadable",
+  ]) {
     if (payload[key] === undefined) delete payload[key];
   }
 

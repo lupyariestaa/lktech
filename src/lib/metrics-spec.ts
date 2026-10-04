@@ -63,18 +63,20 @@ export const METRIC_HINT = {
 
 /**
  * Hitung tingkat penyelesaian dari distribusi status DALAM JENDELA.
- * Rumus resmi: `selesai / (total − dibatalkan)`; 0 bila penyebut ≤ 0.
+ * Rumus resmi: `selesai / (total − dibatalkan − kedaluwarsa)`; 0 bila penyebut ≤ 0.
+ * Status `dibatalkan` & `kedaluwarsa` adalah terminal NON-penghasil (tak
+ * dihitung sebagai "belum selesai"). Status antara (menunggu_bayar, dibayar,
+ * menunggu_konfirmasi, diproses, baru) dihitung di penyebut karena masih
+ * berpotensi selesai.
  * (Menggantikan perhitungan lama yang memakai seluruh riwayat — `AN-C1`.)
  */
-export function computeCompletionRate(breakdown: {
-  baru: number;
-  diproses: number;
-  selesai: number;
-  dibatalkan: number;
-}): number {
-  const selesai = breakdown.selesai;
-  const denominator =
-    breakdown.baru + breakdown.diproses + breakdown.selesai; // total − dibatalkan
+export function computeCompletionRate(
+  breakdown: Record<string, number>,
+): number {
+  const selesai = breakdown.selesai ?? 0;
+  const excluded = (breakdown.dibatalkan ?? 0) + (breakdown.kedaluwarsa ?? 0);
+  const total = Object.values(breakdown).reduce((n, v) => n + (v || 0), 0);
+  const denominator = total - excluded;
   if (denominator <= 0) return 0;
   return selesai / denominator;
 }

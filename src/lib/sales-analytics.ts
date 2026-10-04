@@ -25,6 +25,17 @@ export type {
 } from "@/lib/sales-analytics-types";
 export { ANALYTICS_RANGES } from "@/lib/sales-analytics-types";
 
+/** Distribusi status kosong (semua status order = 0). */
+function emptyStatusBreakdown(): Record<OrderStatus, number> {
+  return ORDER_STATUSES.reduce(
+    (acc, s) => {
+      acc[s] = 0;
+      return acc;
+    },
+    {} as Record<OrderStatus, number>,
+  );
+}
+
 /**
  * Agregasi analitik PENJUALAN (server-only).
  *
@@ -109,7 +120,7 @@ export async function getSalesAnalytics(opts?: {
       series: buildEmptySeries(days),
       totals: { omzet: 0, orders: 0, aov: 0, completed: 0, cancelled: 0, completionRate: 0 },
       deltas: { omzet: null, orders: null, aov: null },
-      statusBreakdown: { baru: 0, diproses: 0, selesai: 0, dibatalkan: 0 },
+      statusBreakdown: emptyStatusBreakdown(),
       topProducts: [],
     };
   }
@@ -134,12 +145,7 @@ export async function getSalesAnalytics(opts?: {
     .filter((o) => Boolean(o.createdAt));
 
   const byDay = new Map<string, { omzet: number; orders: number }>();
-  const statusBreakdown: Record<OrderStatus, number> = {
-    baru: 0,
-    diproses: 0,
-    selesai: 0,
-    dibatalkan: 0,
-  };
+  const statusBreakdown: Record<OrderStatus, number> = emptyStatusBreakdown();
   const productMap = new Map<string, TopProduct>();
   let omzetTotal = 0;
   let ordersCounted = 0;

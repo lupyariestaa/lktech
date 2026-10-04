@@ -13,7 +13,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:metrics": "node --experimental-strip-types --test scripts/metrics-spec.test.ts"
+    "test:metrics": "node --experimental-strip-types --test scripts/metrics-spec.test.ts",
+    "test:fulfillment": "node --experimental-strip-types --test scripts/order-fulfillment.test.ts",
+    "test:downloads": "node --experimental-strip-types --test scripts/download-token.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

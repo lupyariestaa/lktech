@@ -1,11 +1,67 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Fase Detail — Konversi & Closing**.
+> Terakhir diperbarui: sesi **FASE P1 — Webhook & Fulfillment Otomatis (unduhan)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
-> 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout.
+> 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0 & P1 selesai.**
+
+---
+
+## 🎉 Sesi Terakhir — FASE P1: Webhook & Fulfillment Otomatis (unduhan)
+
+Fase P1 dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi kode** (uji sandbox live = manual, menunggu akun Mayar).
+
+| Area | Hasil |
+| --- | --- |
+| **Webhook** | `src/app/api/webhooks/mayar/route.ts` — event `payment.received`: verifikasi token, korelasi order (`extraData.orderId`), idempoten (`markOrderPaid`), **cocokkan nominal**, fulfillment best-effort, selalu 200 |
+| **Fulfillment** | `src/lib/order-payment.ts` — `fulfillOrder` (kumpulkan berkas → token → email) & `notifyOrderAwaitingConfirmation` (JASA) |
+| **Unduhan** | `src/lib/downloads.ts` + `src/lib/download-token.ts` (HMAC, teruji) — koleksi `downloads/{tokenId}`, batas unduh, kedaluwarsa |
+| **Halaman** | `/unduhan/[token]` (validasi + daftar berkas) + `/api/downloads/[token]/[index]` (redirect + catat hit); **noindex** |
+| **Produk** | Field `downloadable` (`Product` + normalisasi + form admin `DownloadableEditor` + schema API) |
+| **Email** | `sendOrderPaidToBuyer` — "Pembayaran Diterima" + **link unduhan** |
+| **`/akun`** | Tab Pesanan: tombol **Bayar sekarang** & **Unduh produk** (bila sudah lunas) |
+| **Env** | `MAYAR_WEBHOOK_TOKEN`, `DOWNLOAD_TOKEN_SECRET`, `DOWNLOAD_LINK_DAYS`, `DOWNLOAD_MAX_HITS` |
+| **Test** | `npm run test:downloads` (5) — sign/verify token & penolakan token palsu |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ · test (metrics 6 · fulfillment 5 · downloads 5) lolos ✅.
+
+**⚠️ Langkah manual (produksi):**
+- Daftarkan URL webhook di dashboard Mayar → Integration → Webhook: `https://<domain>/api/webhooks/mayar?token=<MAYAR_WEBHOOK_TOKEN>`.
+- Isi `DOWNLOAD_TOKEN_SECRET` (hasil `openssl rand -base64 32`) — bila kosong, unduhan nonaktif (fail-closed).
+- Set produk digital: buka `/admin/products` → isi **Unduhan Otomatis** (nama + URL berkas Cloudinary).
+- Uji sandbox: checkout produk digital → bayar → webhook → status `dibayar` → email link unduhan → `/unduhan/<token>`.
+
+**Backlog P1 → lanjut:** FASE **P2** (alur JASA & invoice manual + cron kedaluwarsa + panel pembayaran admin) → P3 bundling → P4 urgency → P5 abandoned checkout → P6 QA/observability.
+
+---
+
+## 🎉 Sesi Terakhir — FASE P0: Fondasi Pembayaran Online (Mayar.id)
+
+Fase P0 dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi kode** (uji sandbox live = manual, menunggu API key).
+
+| Area | Hasil |
+| --- | --- |
+| **Env** | `.env.example`: `MAYAR_API_KEY`, `MAYAR_MODE` (sandbox/production), `MAYAR_BASE_URL`, `MAYAR_INVOICE_TTL_MINUTES` |
+| **Klien Mayar** | `src/lib/mayar.ts` (server-only) — `createInvoice` (`POST /hl/v2/invoices/create`), `getInvoice` (`GET /hl/v2/invoices/{id}`), `isMayarConfigured`, `getMayarMode`. Base URL dari env (tak hardcode) |
+| **Tipe** | `src/lib/payment-types.ts` (safe-klien): `OrderPayment`, `PaymentStatus` + label/badge, `FulfillmentType` |
+| **Status order** | `order-types.ts`: +4 status (`menunggu_bayar`, `dibayar`, `menunggu_konfirmasi`, `kedaluwarsa`); `normalizeOrder` backward-compat; `PENDING_PAYMENT_STATUSES` |
+| **Fulfillment** | `src/lib/order-fulfillment.ts` — kategori → INSTAN/JASA (jasa & campuran → JASA) |
+| **Order** | `createOrder` simpan `payment`+`fulfillment`; `updateOrderPayment`; `markOrderPaid` (idempoten, siap P1) |
+| **Checkout** | `POST /api/orders`: INSTAN → invoice Mayar → kembalikan `payUrl`; JASA → `menunggu_konfirmasi`; **fallback WhatsApp** bila gateway kosong/gagal |
+| **UI** | Keranjang: redirect ke halaman bayar (INSTAN) / pesan konfirmasi (JASA); `/akun` tab Pesanan: tombol **Bayar sekarang** + info kedaluwarsa; admin: badge status, kartu metrik **Menunggu Bayar**/**Perlu Konfirmasi**, panel pembayaran di detail order |
+| **Kupon** | Restore kuota juga saat transisi → `kedaluwarsa` (`KP-C2`); hard-delete order diizinkan untuk status belum-diproses |
+| **Test** | `npm run test:fulfillment` (5 test) + `test:metrics` diperluas (kedaluwarsa dikecualikan) |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ · `npm run test:metrics` (6) & `test:fulfillment` (5) lolos ✅.
+
+**⚠️ Wajib manual (produksi):**
+- Daftar akun Mayar + sandbox → buat API key → isi `MAYAR_API_KEY` (+ `MAYAR_MODE`) di Vercel.
+- Uji sandbox end-to-end: checkout produk instan → invoice → bayar → **status belum otomatis** (webhook = FASE P1).
+- Tanpa `MAYAR_API_KEY`, checkout otomatis **fallback ke WhatsApp** (aman, tidak error).
+
+**Backlog P0 → lanjut:** FASE **P1** (webhook `/api/webhooks/mayar` + `markOrderPaid` + fulfillment unduhan `/unduhan/[token]`). Fondasi (`markOrderPaid`, `payment` model) sudah disiapkan.
 
 ---
 
@@ -492,12 +548,24 @@ SITE_URL=https://lktech.vercel.app
 RESEND_API_KEY=
 EMAIL_FROM=LKTech <onboarding@resend.dev>
 LEAD_NOTIFY_EMAILS=lupyariestaa@gmail.com
+
+# Mayar.id (Pembayaran Online — FASE P0)
+MAYAR_API_KEY=                    # kosong → checkout fallback ke WhatsApp
+MAYAR_MODE=sandbox                # sandbox | production
+MAYAR_BASE_URL=                   # opsional override
+MAYAR_INVOICE_TTL_MINUTES=1440
+MAYAR_WEBHOOK_TOKEN=              # opsional (disarankan): verifikasi webhook
+
+# Unduhan Produk Digital (FASE P1)
+DOWNLOAD_TOKEN_SECRET=            # kosong → fallback MAYAR_API_KEY; keduanya kosong = unduhan off
+DOWNLOAD_LINK_DAYS=30
+DOWNLOAD_MAX_HITS=5
 ```
 
 ### Firestore Security Rules
 - File: `firestore.rules`
 - **PENTING:** setiap ada koleksi baru, rules harus di-**Publish ulang** di Firebase Console → Firestore → Rules.
-- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`.
+- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`, `downloads`.
 - Subkoleksi: `orders/{id}/emails` (riwayat email), `coupons/{id}/redemptions` (pemakaian per-user).
 - Catatan: rule `match /{document=**}` menolak SEMUA akses klien (termasuk subkoleksi), jadi koleksi baru otomatis terlindungi — publish ulang tetap disarankan.
 

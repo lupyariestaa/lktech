@@ -39,3 +39,33 @@ test("completionRate tidak dipengaruhi jumlah dibatalkan (dikecualikan)", () => 
   const b = computeCompletionRate({ baru: 0, diproses: 0, selesai: 2, dibatalkan: 100 });
   assert.equal(a, b);
 });
+
+test("completionRate menghitung status pembayaran baru di penyebut", () => {
+  const rate = computeCompletionRate({
+    baru: 0,
+    menunggu_bayar: 2,
+    dibayar: 3,
+    menunggu_konfirmasi: 1,
+    diproses: 1,
+    selesai: 3,
+    dibatalkan: 0,
+    kedaluwarsa: 0,
+  });
+  // 3 / (2 + 3 + 1 + 1 + 3) = 3 / 10
+  assert.equal(rate, 0.3);
+});
+
+test("completionRate mengecualikan kedaluwarsa (terminal non-penghasil)", () => {
+  // Total 7, minus dibatalkan(1)+kedaluwarsa(2) = 4 → 2/4 = 0.5
+  const rate = computeCompletionRate({
+    baru: 0,
+    menunggu_bayar: 0,
+    dibayar: 1,
+    menunggu_konfirmasi: 0,
+    diproses: 1,
+    selesai: 2,
+    dibatalkan: 1,
+    kedaluwarsa: 2,
+  });
+  assert.equal(rate, 0.5);
+});
