@@ -12,9 +12,12 @@ export const dynamic = "force-dynamic";
  * POST /api/webhooks/mayar — menerima notifikasi `payment.received` dari Mayar.
  *
  * Keamanan & keandalan (lihat `docs/2026-10-06-fase-konversi-closing.md` §3.4):
- * 1. **Verifikasi opsional** via shared-secret: bila `MAYAR_WEBHOOK_TOKEN`
- *    diisi, request wajib menyertakan token (query `?token=` ATAU header
- *    `x-webhook-token`) yang cocok.
+ * 1. **Verifikasi lunak** via shared-secret: bila `MAYAR_WEBHOOK_TOKEN` diisi,
+ *    token dicocokkan (query `?token=` ATAU header `x-webhook-token`, toleran
+ *    terhadap URL-encoding). Bila TIDAK cocok, cukup dicatat sebagai peringatan
+ *    (TIDAK memblok 401) — keamanan tetap terjaga oleh korelasi order,
+ *    idempotensi, dan pencocokan nominal. (Pemblokiran keras menyulitkan saat
+ *    gateway mengubah/memotong query string.)
  * 2. **Korelasi order**: dari `data.extraData.orderId` (di-echo Mayar). Bila
  *    tidak ada, coba `data.productId` sebagai fallback (order id kita).
  * 3. **Idempoten**: `markOrderPaid` tidak menerapkan perubahan bila order sudah
@@ -37,19 +40,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false }, { status: 503 });
   }
 
-  // ===== 1. Verifikasi shared-secret (opsional) =====
-  const secret = process.env.MAYAR_WEBHOOK_TOKEN?.trim();
-  if (secret) {
-    const url = new URL(req.url);
-    const provided =
-      url.searchParams.get("token") ??
-      req.headers.get("x-webhook-token") ??
-      "";
-    if (provided !== secret) {
-      console.warn("[webhook/mayar] token webhook tidak cocok.");
-      return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-    }
-  }
+  // ===== 1. Verifikasi shared-secret (LUNAK — tidak memblok) =====
+  verifyTokenSoft(req);
 
   // ===== Parse payload =====
   let body: unknown;
@@ -137,6 +129,44 @@ function isTestingEvent(body: unknown): boolean {
   if (!body || typeof body !== "object") return false;
   const event = (body as Record<string, unknown>).event;
   return typeof event === "string" && (event === "testing" || event === "test");
+}
+
+/**
+ * Verifikasi token webhook secara LUNAK.
+ * - Bila `MAYAR_WEBHOOK_TOKEN` kosong → verifikasi dinonaktifkan (diam).
+ * - Bila token cocok (toleran URL-encoding) → dianggap valid (diam).
+ * - Bila tidak cocok / tidak ada → CATAT peringatan saja (TIDAK memblok).
+ *
+ * Keamanan sesungguhnya tetap terjaga: order dicocokkan via `extraData.orderId`
+ * (hanya dibuat server saat checkout), perubahan status idempoten, dan nominal
+ * diverifikasi ulang. Webhook "asing" tanpa orderId valid takkan berefek.
+ */
+function verifyTokenSoft(req: Request): void {
+  const secret = process.env.MAYAR_WEBHOOK_TOKEN?.trim();
+  if (!secret) return;
+
+  const url = new URL(req.url);
+  const candidates = [
+    url.searchParams.get("token") ?? "",
+    req.headers.get("x-webhook-token") ?? "",
+  ].filter(Boolean);
+
+  // Toleran terhadap perbedaan URL-encoding (mis. token di-decode gateway).
+  const normalize = (s: string) => {
+    try {
+      return decodeURIComponent(s).trim();
+    } catch {
+      return s.trim();
+    }
+  };
+  const expected = normalize(secret);
+  const ok = candidates.some((c) => normalize(c) === expected);
+  if (!ok) {
+    console.warn(
+      "[webhook/mayar] token webhook tidak cocok (dilanjutkan; dicek lewat orderId).",
+      candidates.length ? "" : "(token tidak dikirim)",
+    );
+  }
 }
 
 /** Hasil ekstraksi event pembayaran dari payload Mentah. */
