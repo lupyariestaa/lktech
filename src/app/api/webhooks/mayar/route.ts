@@ -59,6 +59,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, ignored: "invalid_json" });
   }
 
+  // ===== Event "testing": tombol "Test URL" di dashboard Mayar =====
+  // Mayar menganggap test BERHASIL bila endpoint membalas 200 dengan format
+  // respons standar mereka (`{statusCode, messages}`). Kita balas persis itu
+  // agar tombol Test URL hijau — TANPA memproses pembayaran apa pun.
+  if (isTestingEvent(body)) {
+    return NextResponse.json({ statusCode: 200, messages: "success", ok: true });
+  }
+
   const payload = extractPaymentEvent(body);
   if (!payload) {
     // Event yang tidak kita tangani — balas 200 agar tidak di-retry.
@@ -122,6 +130,13 @@ export async function POST(req: Request) {
     // 200 agar Mayar tidak menumpuk retry pada error tak terduga.
     return NextResponse.json({ ok: true, error: "processing_failed" });
   }
+}
+
+/** Apakah payload adalah event uji coba dari tombol "Test URL" Mayar. */
+function isTestingEvent(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false;
+  const event = (body as Record<string, unknown>).event;
+  return typeof event === "string" && (event === "testing" || event === "test");
 }
 
 /** Hasil ekstraksi event pembayaran dari payload Mentah. */
