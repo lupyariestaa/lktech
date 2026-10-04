@@ -50,7 +50,13 @@ async function collectDownloadFiles(
     const cfg = product?.downloadable;
     if (!cfg || !cfg.enabled) continue;
     for (const f of cfg.files) {
-      files.push({ name: f.name || product?.name || "Berkas", url: f.url, size: f.size });
+      files.push({
+        name: f.name || product?.name || "Berkas",
+        url: f.url,
+        ...(typeof f.size === "number" && Number.isFinite(f.size)
+          ? { size: f.size }
+          : {}),
+      });
     }
     if (cfg.note) notes.push(cfg.note);
     if (cfg.linkDays && cfg.linkDays > 0) linkDays = Math.min(linkDays ?? cfg.linkDays, cfg.linkDays);

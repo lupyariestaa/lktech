@@ -171,11 +171,19 @@ export async function createDownloadGrant(params: {
   const now = new Date();
   const expires = new Date(now.getTime() + linkDays * 86_400_000);
 
+  // Firestore MENOLAK nilai `undefined`. Bersihkan tiap berkas (mis. `size`
+  // yang tidak diisi) sebelum menyimpan.
+  const files = params.files.map((f) => {
+    const file: Record<string, unknown> = { name: f.name, url: f.url };
+    if (typeof f.size === "number" && Number.isFinite(f.size)) file.size = f.size;
+    return file;
+  });
+
   const payload = {
     orderId: params.orderId,
     uid: params.uid,
     buyerEmail: params.buyerEmail,
-    files: params.files,
+    files,
     note: params.note ?? null,
     maxHits,
     hits: 0,
