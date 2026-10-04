@@ -6,6 +6,68 @@
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0 & P1 selesai (terverifikasi sandbox).**
+> 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
+
+---
+
+## 🧭 STATUS & PETA SEKARANG (baca ini dulu)
+
+> Ringkasan kondisi terkini agar sesi berikutnya langsung paham tanpa membaca
+> seluruh riwayat. Riwayat sesi ada di bawah.
+
+### Kondisi live saat ini
+- **Situs produksi:** `https://lktech.vercel.app` (auto-deploy dari `main`).
+- **Pembayaran online:** ✅ aktif di **MODE SANDBOX Mayar** (`MAYAR_MODE=sandbox`, `MAYAR_API_KEY` terisi di Vercel). Uang asli **belum** — perlu akun produksi (lihat di bawah).
+- **Unduhan produk digital:** ✅ aktif (`DOWNLOAD_TOKEN_SECRET` terisi, / fallback `MAYAR_API_KEY`).
+- **Email ke pembeli:** ⚠️ hanya ke email terdaftar Resend (`lupyariestaa@gmail.com`) — domain belum terverifikasi. **SKIP** sengaja (butuh beli domain). Email ke pembeli umum = 403, dilog, **tidak menggagalkan order**.
+- **Webhook:** ✅ `POST /api/webhooks/mayar` menerima `payment.received` (log Vercel terbukti `POST 200`).
+
+### Cek cepat (endpoint diagnostik)
+```
+GET https://lktech.vercel.app/api/health/payment
+```
+Harus mengembalikan `mayar.configured: true`, `download.configured: true`, `email.configured: true`.
+
+### Alur transaksi INSTAN yang SUDAH TERBUKTI (sandbox)
+```
+/produk → keranjang → checkout → [dibayar? masuk halaman Mayar]
+  → bayar → webhook payment.received → order "dibayar"
+  → /akun (tab Pesanan) tombol "Unduh produk" → /unduhan/[token]
+```
+Produk contoh untuk uji: **Template Katalog Produk UMKM** (`template-katalog-umkm`, kategori `software`, Rp149rb) — dari `scripts/seed-product-template-katalog.mjs`.
+
+### Fase roadmap — posisi sekarang
+```
+Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
+  ✅ P0  Fondasi pembayaran (invoice Mayar, status order, redirect bayar)
+  ✅ P1  Webhook + fulfillment otomatis + unduhan /unduhan/[token]
+  ⏭️ P2  Alur JASA & kedaluwarsa (invoice manual admin, cron expire, restore kupon)  ← NEXT
+  ⬜ P3  Bundling & cross-sell
+  ⬜ P4  Urgency & trust
+  ⬜ P5  Abandoned checkout
+  ⬜ P6  QA/observability + docs
+```
+
+### NEXT TASK (disarankan): FASE P2
+Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "FASE P2 — Alur JASA & Kedaluwarsa". Inti:
+1. Checkout JASA → `menunggu_konfirmasi` + email pembeli & admin (partial sudah ada: `notifyOrderAwaitingConfirmation`).
+2. CTA "Konsultasi dulu" di halaman produk kategori `jasa`.
+3. Admin: buat invoice manual (Mayar) & ubah status.
+4. **Cron kedaluwarsa** order `menunggu_bayar` → `kedaluwarsa` + restore kuota kupon (`KP-C2`).
+5. Panel pembayaran di detail order admin (sudah ada versi dasarnya).
+
+### Langkah manual yang MASIH tertunda (milik pemilik)
+- **Produksi Mayar:** daftar `web.mayar.id` → verifikasi bisnis → buat API key produksi → set `MAYAR_MODE=production` + `MAYAR_API_KEY` di Vercel → daftarkan webhook produksi (`.../api/webhooks/mayar?token=<MAYAR_WEBHOOK_TOKEN>`) → redeploy.
+- **Domain sendiri:** belum dibeli (SKIP) → memblokir verifikasi email Resend & domain kustom.
+- **Isi data asli:** portofolio, testimoni, logo klien (SKIP, manual via dashboard).
+
+### Konvensi kerja proyek ini (WAJIB diikuti)
+1. **Dokumentasi dulu → baru kode.** Setiap inisiatif besar punya `docs/YYYY-MM-DD-<slug>.md` dengan checklist fase.
+2. **Pola sehat:** server-authoritative (harga/status/akses hanya di server), observability (log + status tersimpan), a11y, mobile-first, **backward-compatible** (data lama tetap jalan).
+3. **QA tiap fase:** `npx tsc --noEmit` bersih · `npx eslint .` bersih · `npm run build` sukses · unit test (`npm run test:metrics` / `test:fulfillment` / `test:downloads`).
+4. **Aman tanpa kredensial:** fitur gateway harus fail-safe (fallback / nonaktif) bila env kosong.
+5. **Perubahan rules/env:** update `.env.example` + catat di dokumen (Firestore Rules perlu publish ulang manual).
+6. **Git:** commit dengan pesan konvensional (`feat|fix|docs|chore(...)`), push ke `main` → Vercel auto-deploy.
 
 ---
 

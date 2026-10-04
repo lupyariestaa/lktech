@@ -1,6 +1,7 @@
 # FASE DETAIL — Konversi & Closing (Pembayaran Online, Bundling, Urgency, Abandoned Checkout)
 
-> **Status:** 🚧 Sedang dikerjakan — **FASE P0 & P1 selesai** (kode), P2–P6 belum.
+> **Status:** 🚧 Sedang dikerjakan — **FASE P0 & P1 selesai** (terverifikasi sandbox), P2–P6 belum.
+> **Panduan operasional setup:** `docs/2026-10-06-setup-pembayaran-mayar.md`.
 > **Disusun:** sesi pasca-Roadmap (`docs/2026-10-06-roadmap-pengembangan.md`, Tema 1).
 > **Gateway terpilih:** **Mayar.id** (Headless API V2) — alasan: onboarding produksi jauh lebih ringan daripada Midtrans/Xendit (verifikasi bisnis ringan, cocok perorangan/UMKM), mendukung QRIS/VA/e-wallet, ada sandbox.
 > **Prasyarat baca:** `docs/2026-10-06-roadmap-pengembangan.md`, `docs/2026-10-05-analitik-penjualan.md`, `docs/2026-10-05-kupon-diskon.md`, `docs/2026-10-05-email-transaksional-pembeli.md`, `TASK-SELANJUTNYA.md`.
