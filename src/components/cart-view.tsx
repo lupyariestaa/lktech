@@ -41,6 +41,8 @@ export function CartView({ promoCode }: { promoCode?: string }) {
   const [done, setDone] = useState(false);
   /** Jenis hasil checkout terakhir, untuk pesan penutup yang tepat. */
   const [doneKind, setDoneKind] = useState<"bayar" | "jasa" | "wa">("wa");
+  /** Alasan server saat checkout jatuh ke fallback WhatsApp (bila ada). */
+  const [fallbackWarning, setFallbackWarning] = useState<string | null>(null);
 
   const onCheckout = async () => {
     setError(null);
@@ -61,7 +63,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
     setSending(true);
     try {
       // Server memverifikasi harga/stok, memvalidasi kupon, & menyusun pesan.
-      const { order } = await createOrderRequest(
+      const { order, warning } = await createOrderRequest(
         items.map((it) => ({
           slug: it.slug,
           variantSlug: it.variantSlug,
@@ -98,6 +100,8 @@ export function CartView({ promoCode }: { promoCode?: string }) {
       }
 
       // Fallback (gateway belum aktif / gagal) → alur WhatsApp seperti semula.
+      // `warning` dari server menjelaskan ALASANNYA (agar tidak membingungkan).
+      if (warning) setFallbackWarning(warning);
       const url = waLink(order.message, order.whatsapp);
       const opened = window.open(url, "_blank", "noopener,noreferrer");
       if (!opened) {
@@ -143,6 +147,11 @@ export function CartView({ promoCode }: { promoCode?: string }) {
         </span>
         <h1 className="mt-6 text-2xl font-bold text-secondary">{copy.title}</h1>
         <p className="mt-2 text-sm text-muted">{copy.body}</p>
+        {doneKind === "wa" && fallbackWarning && (
+          <p className="mx-auto mt-4 max-w-md rounded-2xl bg-amber-50 px-4 py-3 text-xs text-amber-700">
+            {fallbackWarning}
+          </p>
+        )}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/produk"
