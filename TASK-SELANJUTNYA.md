@@ -498,7 +498,8 @@ Lihat `docs/2026-10-05-audit-email-kupon-analitik.md`. Seluruh temuan kritis/may
 - [ ] Verifikasi domain di Resend agar email notifikasi bisa dikirim ke alamat mana pun.
 - [ ] Ganti `EMAIL_FROM` ke `LKTech <notifikasi@domain-anda>`.
 
-> Kondisi saat ini: `EMAIL_FROM=LKTech <onboarding@resend.dev>`, notifikasi hanya bisa ke email terdaftar Resend (`lupyariestaa@gmail.com`).
+> Kondisi saat ini: `EMAIL_FROM=LKTech <onboarding@resend.dev>`, notifikasi hanya bisa ke email terdaftar Resend (`lupyariestaa@gmail.com`). Email ke pembeli umum → **HTTP 403** dari Resend (dilog, tidak menggagalkan order).
+> **Keputusan (sesi P1):** SKIP sampai punya domain sendiri (butuh beli domain untuk verifikasi). **Bukan penghalang** — link unduhan tetap diakses via `/akun` → tab Pesanan. Untuk mengaktifkan nanti: beli domain → add domain di Resend → pasang record DNS (SPF/DKIM/MX) di registrar → Verify → set `EMAIL_FROM` ke domain → redeploy. Tidak ada perubahan kode yang diperlukan.
 
 #### 6. Peningkatan Dashboard (opsional)
 - [x] Filter/pencarian lead lebih lanjut + ekspor CSV.
