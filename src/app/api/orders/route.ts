@@ -5,7 +5,7 @@ import { checkoutSchema } from "@/lib/order-schema";
 import { createOrder, getOrdersByUser, updateOrderPayment } from "@/lib/orders";
 import { getProductsBySlugs } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
-import { incrementUserOrderCount } from "@/lib/user-profile";
+import { incrementUserOrderCount, getUserProfile } from "@/lib/user-profile";
 import { buildOrderMessage } from "@/lib/cart";
 import { sendOrderNotification } from "@/lib/email";
 import { sendOrderConfirmationToBuyer } from "@/lib/email-order";
@@ -313,9 +313,16 @@ export async function POST(req: Request) {
       };
       if (isMayarConfigured() && total > 0) {
         try {
+          // `mobile` WAJIB untuk Mayar. Pakai no. WhatsApp profil pembeli bila
+          // ada; jika kosong, fallback ke nomor WhatsApp situs (admin).
+          const profile = await getUserProfile(check.uid).catch(() => null);
+          const mobile =
+            (profile?.whatsapp ?? "").trim() || settings.whatsapp || "";
+
           const invoice = await createInvoice({
             name: buyerName || "Pembeli LKTech",
             email: check.email,
+            mobile,
             description: `Pesanan LKTech ${order.id}`,
             // Satu baris ringkas (total sudah termasuk diskon). Bila ada diskon,
             // kirim subtotal + baris diskon negatif agar total = `total`.

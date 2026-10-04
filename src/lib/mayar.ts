@@ -116,8 +116,22 @@ async function mayarFetch<T>(
 }
 
 /**
+ * Menormalkan nomor HP ke format yang diterima Mayar (`mobile` WAJIB diisi).
+ * - Buang spasi/tanda hubung/karakter non-digit.
+ * - Bila kosong/invalid → fallback (disediakan pemanggil). Mayar menolak
+ *   request tanpa `mobile` (HTTP 400 Validation Error).
+ */
+function normalizeMobile(raw?: string): string {
+  const digits = (raw ?? "").replace(/[^\d]/g, "");
+  return digits;
+}
+
+/**
  * Membuat invoice di Mayar. Mengembalikan id, transactionId, link bayar, &
  * waktu kedaluwarsa (epoch millis dari gateway).
+ *
+ * PENTING: `mobile` REQUIRED oleh Mayar. Pemanggil harus menyuplai nomor valid
+ * (mis. nomor WhatsApp pembeli, fallback ke nomor situs).
  */
 export async function createInvoice(
   input: CreateInvoiceInput,
@@ -126,10 +140,18 @@ export async function createInvoice(
     input.expiredAt ??
     new Date(Date.now() + getInvoiceTtlMinutes() * 60_000).toISOString();
 
+  const mobile = normalizeMobile(input.mobile);
+  if (!mobile) {
+    throw new MayarError(
+      "Nomor HP (mobile) wajib untuk membuat invoice Mayar.",
+      400,
+    );
+  }
+
   const payload: Record<string, unknown> = {
     name: input.name,
     email: input.email,
-    mobile: input.mobile ?? "",
+    mobile,
     description: input.description ?? "",
     expiredAt,
     items: input.items,
