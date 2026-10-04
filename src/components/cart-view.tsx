@@ -26,7 +26,7 @@ import { trackCheckout, trackEvent } from "@/lib/analytics";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
-export function CartView() {
+export function CartView({ promoCode }: { promoCode?: string }) {
   const { items, subtotal, ready, setQty, remove, clear } = useCart();
   const { user } = useAuth();
   const { blocked } = useAccountStatus();
@@ -273,6 +273,7 @@ export function CartView() {
                 onApplied={setAppliedCoupon}
                 onCleared={() => setAppliedCoupon(null)}
                 disabled={Boolean(user) && blocked}
+                promoCode={promoCode}
               />
             </div>
 

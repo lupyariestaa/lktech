@@ -276,6 +276,22 @@ export const userBlockSchema = z.object({
 });
 
 // ===== Kupon =====
+/**
+ * Tanggal ISO opsional — FAIL-CLOSED (`KP-H3`): string kosong → undefined;
+ * string tak valid DITOLAK (bukan diabaikan), agar kupon tak "tanpa batas"
+ * karena salah input. Menerima format ISO dari `new Date().toISOString()`.
+ */
+const couponDateField = z
+  .string()
+  .trim()
+  .max(40)
+  .optional()
+  .transform((v) => (v ? v : undefined))
+  .refine(
+    (v) => v === undefined || !Number.isNaN(new Date(v).getTime()),
+    { message: "Tanggal tidak valid." },
+  );
+
 const couponBaseFields = {
   code: z
     .string()
@@ -287,26 +303,67 @@ const couponBaseFields = {
   value: z.number().finite().min(0).max(1_000_000_000),
   minSpend: z.number().finite().min(0).max(1_000_000_000).default(0),
   maxDiscount: z.number().finite().min(0).max(1_000_000_000).optional(),
-  startsAt: z.string().trim().max(40).optional(),
-  endsAt: z.string().trim().max(40).optional(),
+  startsAt: couponDateField,
+  endsAt: couponDateField,
   usageLimit: z.number().int().min(0).max(1_000_000).optional(),
   limitPerUser: z.number().int().min(0).max(1000).optional(),
   active: z.boolean().default(true),
 };
 
-export const couponCreateSchema = z.object(couponBaseFields);
+/** `startsAt` harus sebelum `endsAt` bila keduanya diisi (`KP-H3`). */
+function refineDateRange<T extends { startsAt?: string; endsAt?: string }>(
+  schema: z.ZodType<T>,
+) {
+  return schema.refine(
+    (v) => {
+      if (!v.startsAt || !v.endsAt) return true;
+      return new Date(v.startsAt).getTime() < new Date(v.endsAt).getTime();
+    },
+    { message: "Tanggal mulai harus sebelum tanggal berakhir.", path: ["endsAt"] },
+  );
+}
 
-export const couponUpdateSchema = z.object({
-  code: couponBaseFields.code.optional(),
-  description: couponBaseFields.description,
-  type: couponBaseFields.type.optional(),
-  value: couponBaseFields.value.optional(),
-  minSpend: couponBaseFields.minSpend.optional(),
-  maxDiscount: couponBaseFields.maxDiscount,
-  startsAt: couponBaseFields.startsAt,
-  endsAt: couponBaseFields.endsAt,
-  usageLimit: couponBaseFields.usageLimit,
-  limitPerUser: couponBaseFields.limitPerUser,
-  active: z.boolean().optional(),
-});
+export const couponCreateSchema = refineDateRange(
+  z.object(couponBaseFields) as z.ZodType<{
+    code: string;
+    description?: string;
+    type: "percent" | "amount";
+    value: number;
+    minSpend: number;
+    maxDiscount?: number;
+    startsAt?: string;
+    endsAt?: string;
+    usageLimit?: number;
+    limitPerUser?: number;
+    active: boolean;
+  }>,
+);
+
+export const couponUpdateSchema = refineDateRange(
+  z.object({
+    code: couponBaseFields.code.optional(),
+    description: couponBaseFields.description,
+    type: couponBaseFields.type.optional(),
+    value: couponBaseFields.value.optional(),
+    minSpend: couponBaseFields.minSpend.optional(),
+    maxDiscount: couponBaseFields.maxDiscount,
+    startsAt: couponBaseFields.startsAt,
+    endsAt: couponBaseFields.endsAt,
+    usageLimit: couponBaseFields.usageLimit,
+    limitPerUser: couponBaseFields.limitPerUser,
+    active: z.boolean().optional(),
+  }) as z.ZodType<{
+    code?: string;
+    description?: string;
+    type?: "percent" | "amount";
+    value?: number;
+    minSpend?: number;
+    maxDiscount?: number;
+    startsAt?: string;
+    endsAt?: string;
+    usageLimit?: number;
+    limitPerUser?: number;
+    active?: boolean;
+  }>,
+);
 

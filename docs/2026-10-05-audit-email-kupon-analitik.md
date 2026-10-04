@@ -1,10 +1,30 @@
 # AUDIT & RENCANA PENINGKATAN — Email Transaksional, Kupon/Diskon, Analitik Penjualan
 
-> **Status dokumen:** 📝 **Rencana** (belum dieksekusi — untuk sesi berikutnya)
+> **Status dokumen:** ✅ **SELESAI** (FASE R0–R7 dieksekusi)
 > **Disusun:** 2026-10-05
+> **Dieksekusi:** 2026-10-05 (remediasi lintas tiga sistem)
 > **Jenis:** Audit menyeluruh (gap flow/backend/API/frontend/edge-case) + task perbaikan & pengembangan lanjutan.
 > **Cakupan:** 3 sistem yang baru dibangun — (A) Email Transaksional ke Pembeli, (B) Kupon/Diskon, (C) Dashboard Analitik Penjualan.
 > **Prasyarat baca:** `docs/2026-10-05-email-transaksional-pembeli.md`, `docs/2026-10-05-kupon-diskon.md`, `docs/2026-10-05-analitik-penjualan.md`, `docs/2026-10-02-orders-admin-module.md`, `docs/README.md`.
+
+---
+
+## ✅ RINGKASAN EKSEKUSI (R0–R7)
+
+Seluruh temuan kritis & mayor ditangani. Verifikasi: `tsc`/`lint`/`build` bersih ✅ (68 halaman) · unit test rumus metrik lolos ✅ (`npm run test:metrics`).
+
+| Fase | Item | Hasil |
+| --- | --- | --- |
+| **R0** | Baseline + spec metrik | `src/lib/metrics-spec.ts` — satu sumber kebenaran rumus (omzet netto/bruto, AOV, completion, TZ) |
+| **R1** | Analitik | `AN-C1` (completionRate per-jendela), `AN-C2` (query `where`+`select`), `AN-M1` (TZ `Asia/Jakarta`), `AN-H1/H2/H4` (label bruto/netto & eksplisit) |
+| **R2** | Integritas kupon | `KP-C1` (reservasi atomik via transaksi SEBELUM createOrder + rollback), `KP-C2` (`restoreCouponUsage` saat batal/hapus), `KP-M1` (`couponId` di order), `KP-H1` (subkoleksi `redemptions` per-user), `KP-H2` (penanda `couponCodes/{code}` unik atomik), `KP-H3` (tanggal fail-closed + refine), `KP-M3` (soft-delete/restore) |
+| **R3** | Reliabilitas email | `EM-C2` (retry backoff + field status di order), `EM-C3` (idempotensi `lastNotifiedStatus`), `EM-H2` (guard STATUS_COPY), `EM-H3` (`after()`), `EM-H4`/`EM-C1` (banner status domain di Pengaturan) |
+| **R4** | Observability | `EM-P1` (kirim ulang + riwayat `orders/{id}/emails`), `KP-M2` (statistik per kupon), `XL-4` (status email & kupon di detail order) |
+| **R5** | Konsistensi | `XL-1`/`AN-P4` (spec metrik tunggal + label "sepanjang waktu"), `XL-2` (lifecycle order: batal = restore kuota + email), `XL-5` (peringatan `SITE_URL` di produksi) |
+| **R6** | Pengembangan | `KP-P1` (halaman `/promo` + prefill `?promo=` + banner promo di `/produk`), `AN-P1` (delta % vs periode sebelumnya), `AN-P2` (ekspor CSV + drill-down klik batang), `AN-H3` (tabel `sr-only` + roving tabindex + sentuh) |
+| **R7** | QA & docs | `tsc`/`lint`/`build` bersih; unit test rumus; `firestore.rules` diperbarui (komentar koleksi baru); dokumentasi diperbarui |
+
+**Sisa manual:** uji browser menyeluruh + `git push` (deploy Vercel) + publish ulang Firestore Rules.
 
 ---
 
@@ -243,57 +263,57 @@ P3 (skala & polish)
 > Remediasi lintas tiga sistem. Tiap fase dites & commit terpisah. Bisa disisipi task pengembangan (P2/P3) sesuai waktu.
 
 ### FASE R0 — Persiapan & baseline (±20 menit)
-- [ ] Baca dokumen ini + 3 dokumen sistem.
-- [ ] Baseline `tsc`/`lint`/`build` bersih.
-- [ ] Putuskan rumus metrik (spec) — lihat `AN-P4` (dokumentasikan lebih dulu agar semua perbaikan konsisten).
+- [x] Baca dokumen ini + 3 dokumen sistem.
+- [x] Baseline `tsc`/`lint`/`build` bersih.
+- [x] Putuskan rumus metrik (spec) — lihat `AN-P4` (dokumentasikan lebih dulu agar semua perbaikan konsisten).
 
 ### FASE R1 — Perbaiki akurasi & performa Analitik (±2.5 jam)
-- [ ] `AN-C1`: `totalOrders` = total order **dalam jendela**; rapikan `statusBreakdown`; tambah unit test rumus.
-- [ ] `AN-C2`: query `where(createdAtISO >= cutoff)` + `.select(...)`; cache singkat `(days,mode)`; **perbaiki doc-comment**.
-- [ ] `AN-H1`: alokasi diskon proporsional / label bruto-netto; `AN-H2`: definisi completion eksplisit.
-- [ ] `AN-H4`: label kartu eksplisit.
+- [x] `AN-C1`: `totalOrders` = total order **dalam jendela**; rapikan `statusBreakdown`; tambah unit test rumus.
+- [x] `AN-C2`: query `where(createdAtISO >= cutoff)` + `.select(...)`; cache singkat `(days,mode)`; **perbaiki doc-comment**.
+- [x] `AN-H1`: alokasi diskon proporsional / label bruto-netto; `AN-H2`: definisi completion eksplisit.
+- [x] `AN-H4`: label kartu eksplisit.
 - **DoD:** angka rekonsiliasi & konsisten; doc sesuai kode.
 
 ### FASE R2 — Integritas Kupon (±3 jam)
-- [ ] `KP-M1`: tambah `couponId` di `OrderCoupon` (+ normalize + simpan saat checkout).
-- [ ] `KP-C1`: `redeemCoupon` → `runTransaction` (cek ulang + increment + arrayUnion), dipanggil **sebelum** createOrder atau `await` + rekonsiliasi.
-- [ ] `KP-C2`: `restoreCouponUsage` + panggil saat batal/hapus (idempoten).
-- [ ] `KP-H2`: kode unik sejati (`coupons/{code}` create-only atau penanda).
-- [ ] `KP-H3`: schema tanggal fail-closed + refine `startsAt < endsAt`.
+- [x] `KP-M1`: tambah `couponId` di `OrderCoupon` (+ normalize + simpan saat checkout).
+- [x] `KP-C1`: `redeemCoupon` → `runTransaction` (cek ulang + increment + arrayUnion), dipanggil **sebelum** createOrder atau `await` + rekonsiliasi.
+- [x] `KP-C2`: `restoreCouponUsage` + panggil saat batal/hapus (idempoten).
+- [x] `KP-H2`: kode unik sejati (`coupons/{code}` create-only atau penanda).
+- [x] `KP-H3`: schema tanggal fail-closed + refine `startsAt < endsAt`.
 - **DoD:** kuota konsisten di bawah concurrency; restore berfungsi.
 
 ### FASE R3 — Reliabilitas Email (±2.5 jam)
-- [ ] `EM-C2`: field status email di order (`confirmationEmailAt/status`, `lastStatusEmailAt/status`) + retry sederhana + log terstruktur.
-- [ ] `EM-C3`: idempotensi (skip bila status sama; `lastNotifiedStatus`).
-- [ ] `EM-H3`: `await` alur email status (atau `after()`).
-- [ ] `EM-H4`/`EM-C1`: status konfigurasi & peringatan domain di Pengaturan.
+- [x] `EM-C2`: field status email di order (`confirmationEmailAt/status`, `lastStatusEmailAt/status`) + retry sederhana + log terstruktur.
+- [x] `EM-C3`: idempotensi (skip bila status sama; `lastNotifiedStatus`).
+- [x] `EM-H3`: `await` alur email status (atau `after()`).
+- [x] `EM-H4`/`EM-C1`: status konfigurasi & peringatan domain di Pengaturan.
 - **DoD:** email tak ganda; kegagalan terekam; admin tahu status konfigurasi.
 
 ### FASE R4 — Observability & UX admin (±2 jam)
-- [ ] `EM-P1` (opsional): tombol "Kirim ulang" + riwayat email di detail order.
-- [ ] `KP-M2`: statistik per kupon (Σ diskon, jumlah order) + daftar order per kupon.
-- [ ] `XL-4`: tampilkan status email & info kupon di detail order.
+- [x] `EM-P1` (opsional): tombol "Kirim ulang" + riwayat email di detail order.
+- [x] `KP-M2`: statistik per kupon (Σ diskon, jumlah order) + daftar order per kupon.
+- [x] `XL-4`: tampilkan status email & info kupon di detail order.
 - **DoD:** admin bisa menelusuri email & dampak kupon.
 
 ### FASE R5 — Konsistensi lintas-sistem (±1.5 jam)
-- [ ] `XL-1`/`AN-P4`: satu spesifikasi metrik (omzet bruto/netto, AOV, completion, TZ) dipakai `getOrdersSummary`, `getSalesAnalytics`, UI.
-- [ ] `XL-2`: kebijakan lifecycle order (batal = restore kuota + email).
-- [ ] Label "sepanjang waktu" pada kartu omzet Ringkasan.
+- [x] `XL-1`/`AN-P4`: satu spesifikasi metrik (omzet bruto/netto, AOV, completion, TZ) dipakai `getOrdersSummary`, `getSalesAnalytics`, UI.
+- [x] `XL-2`: kebijakan lifecycle order (batal = restore kuota + email).
+- [x] Label "sepanjang waktu" pada kartu omzet Ringkasan.
 - **DoD:** tak ada angka "omzet" yang saling bertentangan tanpa penjelasan.
 
 ### FASE R6 — Pengembangan proper (opsional, pilih sesuai waktu)
-- [ ] `KP-P1`: prefill `?promo=` + halaman `/promo` + badge promo.
-- [ ] `AN-P1`: delta vs periode sebelumnya (KPI bergerak).
-- [ ] `AN-P2`: ekspor CSV + drill-down klik batang.
-- [ ] a11y grafik (`AN-H3`): tabel `sr-only` + roving tabindex + touch.
+- [x] `KP-P1`: prefill `?promo=` + halaman `/promo` + badge promo.
+- [x] `AN-P1`: delta vs periode sebelumnya (KPI bergerak).
+- [x] `AN-P2`: ekspor CSV + drill-down klik batang.
+- [x] a11y grafik (`AN-H3`): tabel `sr-only` + roving tabindex + touch.
 - **DoD:** sesuai item yang dipilih.
 
 ### FASE R7 — Skala, QA & deploy
-- [ ] (Opsional) `AN-P3` agregasi harian; `KP-P3`/`XL-3` rate-limit distribusi; `EM-P2` outbox/webhook.
-- [ ] `tsc`/`lint`/`build` bersih.
-- [ ] Checklist DoD §9.
-- [ ] Dokumentasi: status → ✅ + update `docs/README.md` & `TASK-SELANJUTNYA.md` + tandai temuan teratasi.
-- [ ] Commit per fase → push → uji produksi.
+- [~] (Opsional) `AN-P3` agregasi harian; `KP-P3`/`XL-3` rate-limit distribusi; `EM-P2` outbox/webhook — **ditunda** (butuh infra tambahan; dicatat sebagai backlog).
+- [x] `tsc`/`lint`/`build` bersih.
+- [x] Checklist DoD §9.
+- [x] Dokumentasi: status → ✅ + update `docs/README.md` & `TASK-SELANJUTNYA.md` + tandai temuan teratasi.
+- [ ] Commit per fase → push → uji produksi. *(manual)*
 
 ---
 

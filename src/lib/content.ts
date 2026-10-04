@@ -15,6 +15,7 @@ export const NAV_LINKS = [
   { label: "Portofolio", href: "/portofolio" },
   { label: "Blog", href: "/blog" },
   { label: "Harga", href: "/harga" },
+  { label: "Promo", href: "/promo" },
   { label: "FAQ", href: "/#faq" },
 ];
 
@@ -24,6 +25,7 @@ export const PAGE_NAV_LINKS = [
   { label: "Layanan", href: "/layanan" },
   { label: "Produk", href: "/produk" },
   { label: "Harga", href: "/harga" },
+  { label: "Promo", href: "/promo" },
   { label: "Portofolio", href: "/portofolio" },
   { label: "Blog", href: "/blog" },
   { label: "Kontak", href: "/kontak" },

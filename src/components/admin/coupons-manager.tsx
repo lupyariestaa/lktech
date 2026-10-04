@@ -18,8 +18,11 @@ import {
   exportCouponsToCsv,
   fetchCoupons,
   fetchCouponsSummary,
+  fetchCouponStats,
+  restoreCoupon,
   updateCoupon,
   type CouponFormInput,
+  type CouponStat,
 } from "@/lib/admin-coupons-api";
 import {
   COUPON_TYPE_LABEL,
@@ -66,9 +69,11 @@ export function CouponsManager() {
   const toast = useToast();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [summary, setSummary] = useState<CouponsSummary | null>(null);
+  const [stats, setStats] = useState<Record<string, CouponStat>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const [editing, setEditing] = useState<Coupon | null>(null);
@@ -90,6 +95,12 @@ export function CouponsManager() {
         if (!active) return;
         setCoupons(list);
         if (sum) setSummary(sum);
+        // Statistik per-kupon dimuat terpisah (dihitung dari pesanan).
+        fetchCouponStats()
+          .then((s) => {
+            if (active) setStats(s);
+          })
+          .catch(() => {});
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Gagal memuat kupon.");
@@ -106,21 +117,28 @@ export function CouponsManager() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return coupons;
-    return coupons.filter(
-      (c) =>
+    return coupons.filter((c) => {
+      if (showArchived ? !c.archived : c.archived) return false;
+      if (!q) return true;
+      return (
         c.code.toLowerCase().includes(q) ||
-        (c.description ?? "").toLowerCase().includes(q),
-    );
-  }, [coupons, query]);
+        (c.description ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [coupons, query, showArchived]);
+
+  const archivedCount = useMemo(
+    () => coupons.filter((c) => c.archived).length,
+    [coupons],
+  );
 
   const onExport = () => {
-    if (coupons.length === 0) {
+    if (filtered.length === 0) {
       toast.error("Tidak ada kupon untuk diekspor.");
       return;
     }
-    exportCouponsToCsv(coupons);
-    toast.success(`${coupons.length} kupon diekspor ke CSV.`);
+    exportCouponsToCsv(filtered, stats);
+    toast.success(`${filtered.length} kupon diekspor ke CSV.`);
   };
 
   const onToggleActive = async (coupon: Coupon) => {
@@ -141,13 +159,26 @@ export function CouponsManager() {
     setDeleting(true);
     try {
       await deleteCoupon(toDelete.id);
-      toast.success("Kupon dihapus.");
+      toast.success("Kupon diarsipkan.");
       setToDelete(null);
       refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal menghapus kupon.");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const onRestore = async (coupon: Coupon) => {
+    setBusyId(coupon.id);
+    try {
+      await restoreCoupon(coupon.id);
+      toast.success("Kupon dipulihkan.");
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal memulihkan.");
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -172,6 +203,17 @@ export function CouponsManager() {
           />
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {archivedCount > 0 && (
+            <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-secondary">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-300 text-primary focus:ring-primary/30"
+              />
+              Arsip ({archivedCount})
+            </label>
+          )}
           <button
             onClick={refresh}
             aria-label="Muat ulang"
@@ -225,12 +267,18 @@ export function CouponsManager() {
         </div>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
-          {filtered.map((c) => (
+          {filtered.map((c) => {
+            const stat = stats[c.id] ?? stats[`code:${c.code}`];
+            return (
             <li
               key={c.id}
               className={cn(
                 "rounded-2xl border bg-white p-4",
-                c.active ? "border-slate-200" : "border-slate-200 opacity-70",
+                c.archived
+                  ? "border-slate-200 opacity-80"
+                  : c.active
+                    ? "border-slate-200"
+                    : "border-slate-200 opacity-70",
               )}
             >
               <div className="flex items-start justify-between gap-3">
@@ -239,16 +287,22 @@ export function CouponsManager() {
                     <span className="rounded-lg bg-secondary px-2.5 py-1 font-mono text-sm font-bold tracking-wide text-white">
                       {c.code}
                     </span>
-                    <span
-                      className={cn(
-                        "rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                        c.active
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "bg-slate-100 text-slate-500",
-                      )}
-                    >
-                      {c.active ? "Aktif" : "Nonaktif"}
-                    </span>
+                    {c.archived ? (
+                      <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                        Diarsipkan
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                          c.active
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-slate-100 text-slate-500",
+                        )}
+                      >
+                        {c.active ? "Aktif" : "Nonaktif"}
+                      </span>
+                    )}
                   </div>
                   {c.description && (
                     <p className="mt-2 text-xs text-muted">{c.description}</p>
@@ -279,34 +333,60 @@ export function CouponsManager() {
                 <Info label="Berakhir" value={c.endsAt ? isoToLocal(c.endsAt).replace("T", " ") : "—"} />
               </dl>
 
+              {/* Dampak pemakaian (`KP-M2`) */}
+              <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1.5 rounded-xl bg-surface px-3 py-2 text-[11px]">
+                <Info label="Order" value={String(stat?.orderCount ?? 0)} />
+                <Info
+                  label="Σ diskon"
+                  value={formatRupiah(stat?.totalDiscount ?? 0)}
+                />
+                <Info
+                  label="Dibatalkan"
+                  value={String(stat?.cancelledOrders ?? 0)}
+                />
+              </dl>
+
               <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
-                <button
-                  onClick={() => onToggleActive(c)}
-                  disabled={busyId === c.id}
-                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-50"
-                >
-                  {c.active ? "Nonaktifkan" : "Aktifkan"}
-                </button>
-                <button
-                  onClick={() => {
-                    setCreating(false);
-                    setEditing(c);
-                  }}
-                  aria-label="Edit kupon"
-                  className="grid h-8 w-8 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/40 hover:text-primary"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => setToDelete(c)}
-                  aria-label="Hapus kupon"
-                  className="grid h-8 w-8 place-items-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-rose-200 hover:text-rose-500"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {c.archived ? (
+                  <button
+                    onClick={() => onRestore(c)}
+                    disabled={busyId === c.id}
+                    className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-50"
+                  >
+                    Pulihkan
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => onToggleActive(c)}
+                      disabled={busyId === c.id}
+                      className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-50"
+                    >
+                      {c.active ? "Nonaktifkan" : "Aktifkan"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCreating(false);
+                        setEditing(c);
+                      }}
+                      aria-label="Edit kupon"
+                      className="grid h-8 w-8 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/40 hover:text-primary"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setToDelete(c)}
+                      aria-label="Arsipkan kupon"
+                      className="grid h-8 w-8 place-items-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-rose-200 hover:text-rose-500"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 
@@ -327,13 +407,13 @@ export function CouponsManager() {
 
       <ConfirmDialog
         open={Boolean(toDelete)}
-        title="Hapus kupon ini?"
+        title="Arsipkan kupon ini?"
         description={
           toDelete
-            ? `Kupon "${toDelete.code}" akan dihapus permanen. Pemakaian yang sudah tercatat di pesanan tetap tersimpan.`
+            ? `Kupon "${toDelete.code}" akan diarsipkan (tidak dihapus permanen). Pemakaian yang sudah tercatat di pesanan tetap tersimpan, dan kupon bisa dipulihkan.`
             : undefined
         }
-        confirmLabel="Hapus"
+        confirmLabel="Arsipkan"
         busy={deleting}
         onConfirm={onDelete}
         onCancel={() => setToDelete(null)}

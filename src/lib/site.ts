@@ -18,7 +18,18 @@ function resolveSiteUrl(): string {
   ).trim();
   const fallback = "https://lktech.id";
 
-  if (!raw) return fallback;
+  if (!raw) {
+    // `XL-5`: jangan gagalkan diam-diam di produksi — beri peringatan jelas
+    // agar canonical/OG/sitemap/tautan email tak memakai domain placeholder.
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "[site] SITE_URL belum diisi — memakai fallback " +
+          fallback +
+          ". Set SITE_URL di environment produksi.",
+      );
+    }
+    return fallback;
+  }
 
   const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
 

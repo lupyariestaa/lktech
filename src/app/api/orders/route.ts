@@ -9,7 +9,14 @@ import { incrementUserOrderCount } from "@/lib/user-profile";
 import { buildOrderMessage } from "@/lib/cart";
 import { sendOrderNotification } from "@/lib/email";
 import { sendOrderConfirmationToBuyer } from "@/lib/email-order";
-import { getCouponByCode, redeemCoupon, validateCoupon } from "@/lib/coupons";
+import {
+  getCouponByCode,
+  getUserCouponUsage,
+  redeemCoupon,
+  restoreCouponUsage,
+  validateCoupon,
+} from "@/lib/coupons";
+import { recordOrderEmailStatus, logOrderEmail } from "@/lib/email-status";
 import type { OrderCoupon, OrderItem } from "@/lib/order-types";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -199,7 +206,15 @@ export async function POST(req: Request) {
     const couponCode = parsed.data.couponCode?.trim();
     if (couponCode) {
       const coupon = await getCouponByCode(couponCode);
-      const result = validateCoupon(coupon, { subtotal, uid: check.uid });
+      // Jumlah pemakaian user ini dari subkoleksi (akurat > usedBy).
+      const userUsageCount = coupon
+        ? await getUserCouponUsage(coupon.id, check.uid)
+        : 0;
+      const result = validateCoupon(coupon, {
+        subtotal,
+        uid: check.uid,
+        userUsageCount,
+      });
       if (!result.ok) {
         return NextResponse.json(
           { error: result.reason, code: "coupon_invalid" },
@@ -212,10 +227,32 @@ export async function POST(req: Request) {
         code: result.coupon.code,
         type: result.coupon.type,
         discount: result.discount,
+        couponId: result.coupon.id,
       };
     }
 
     const total = Math.max(0, subtotal - discount);
+
+    // `KP-C1`: RESERVASI kuota kupon secara ATOMIK SEBELUM membuat order.
+    // Bila kuota/batas per-user terlampaui oleh checkout bersamaan, tolak di
+    // sini (bukan setelah order terbuat). Di-rollback bila createOrder gagal.
+    if (couponId) {
+      const reserved = await redeemCoupon(couponId, check.uid);
+      if (!reserved.ok) {
+        return NextResponse.json(
+          {
+            error:
+              reserved.reason === "usage_limit_reached"
+                ? "Kuota kode promo sudah habis."
+                : reserved.reason === "per_user_limit_reached"
+                  ? "Anda sudah pernah memakai kode promo ini."
+                  : "Kode promo tidak lagi tersedia.",
+            code: "coupon_unavailable",
+          },
+          { status: 409 },
+        );
+      }
+    }
 
     // Nama pembeli: dari klien (untuk tampilan), dibersihkan & dibatasi panjang.
     // Email pembeli: dari token terverifikasi (tidak bisa dipalsukan).
@@ -226,23 +263,23 @@ export async function POST(req: Request) {
       { subtotal, discount, couponCode: orderCoupon?.code },
     );
 
-    const order = await createOrder({
-      uid: check.uid,
-      buyerName,
-      buyerEmail: check.email,
-      items,
-      subtotal,
-      coupon: orderCoupon,
-      total,
-      whatsapp: settings.whatsapp,
-      message,
-    });
-
-    // Catat pemakaian kupon (best-effort — tidak menggagalkan order).
-    if (couponId) {
-      redeemCoupon(couponId, check.uid).catch((err) =>
-        console.error("[api/orders] gagal mencatat pemakaian kupon:", err),
-      );
+    let order;
+    try {
+      order = await createOrder({
+        uid: check.uid,
+        buyerName,
+        buyerEmail: check.email,
+        items,
+        subtotal,
+        coupon: orderCoupon,
+        total,
+        whatsapp: settings.whatsapp,
+        message,
+      });
+    } catch (orderErr) {
+      // Order gagal → kembalikan kuota kupon yang sudah direservasi.
+      if (couponId) await restoreCouponUsage(couponId, check.uid);
+      throw orderErr;
     }
 
     // Naikkan penghitung pesanan user (best-effort, tidak menggagalkan order).
@@ -255,11 +292,17 @@ export async function POST(req: Request) {
       console.error("[api/orders] gagal kirim notifikasi pesanan:", err),
     );
 
-    // Email konfirmasi ke PEMBELI (best-effort — tidak menggagalkan order).
+    // Email konfirmasi ke PEMBELI (`EM-C2`): status email disimpan ke order,
+    // dengan retry sederhana. Tunggu (await) agar status tercatat sebelum
+    // respons — aman di serverless (tidak bergantung background job).
     if (settings.notifyBuyerOnOrder) {
-      sendOrderConfirmationToBuyer(order).catch((err) =>
-        console.error("[api/orders] gagal kirim konfirmasi ke pembeli:", err),
-      );
+      const result = await sendOrderConfirmationToBuyer(order);
+      await recordOrderEmailStatus(order.id, "confirmation", result);
+      await logOrderEmail(order.id, {
+        kind: "confirmation",
+        to: order.buyerEmail,
+        result,
+      });
     }
 
     return NextResponse.json({

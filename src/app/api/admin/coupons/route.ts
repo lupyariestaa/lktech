@@ -5,9 +5,11 @@ import {
   createCoupon,
   deleteCoupon,
   getCouponsSummary,
+  getCouponStats,
   isCouponCodeTaken,
   listCoupons,
   normalizeCouponCode,
+  restoreCoupon,
   updateCoupon,
   type CouponInput,
 } from "@/lib/coupons";
@@ -35,6 +37,10 @@ export async function GET(req: Request) {
     if (url.searchParams.get("summary") === "1") {
       const summary = await getCouponsSummary();
       return NextResponse.json({ summary }, { headers: { "Cache-Control": "no-store" } });
+    }
+    if (url.searchParams.get("stats") === "1") {
+      const stats = await getCouponStats();
+      return NextResponse.json({ stats }, { headers: { "Cache-Control": "no-store" } });
     }
     const coupons = await listCoupons();
     return NextResponse.json({ coupons }, { headers: { "Cache-Control": "no-store" } });
@@ -127,6 +133,11 @@ export async function POST(req: Request) {
     const coupon = await createCoupon(toInput(parsed.data), check.email);
     return NextResponse.json({ ok: true, coupon });
   } catch (err) {
+    // `KP-H2`: klaim kode atomik bisa gagal karena race → laporkan sebagai 409.
+    const msg = err instanceof Error ? err.message : "";
+    if (/sudah dipakai/i.test(msg)) {
+      return NextResponse.json({ error: msg }, { status: 409 });
+    }
     console.error("[api/admin/coupons] POST gagal:", err);
     return NextResponse.json({ error: "Gagal menyimpan kupon." }, { status: 500 });
   }
@@ -181,22 +192,36 @@ export async function PATCH(req: Request) {
     }
     return NextResponse.json({ ok: true, coupon });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    if (/sudah dipakai/i.test(msg)) {
+      return NextResponse.json({ error: msg }, { status: 409 });
+    }
     console.error("[api/admin/coupons] PATCH gagal:", err);
     return NextResponse.json({ error: "Gagal memperbarui kupon." }, { status: 500 });
   }
 }
 
-/** DELETE /api/admin/coupons?id= — hapus kupon. */
+/** DELETE /api/admin/coupons?id= — arsipkan kupon (soft-delete, `KP-M3`). */
 export async function DELETE(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  const id = new URL(req.url).searchParams.get("id")?.trim();
+  const url = new URL(req.url);
+  const id = url.searchParams.get("id")?.trim();
   if (!id) {
     return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
   }
 
   try {
+    // `?restore=1` memulihkan kupon yang diarsipkan.
+    if (url.searchParams.get("restore") === "1") {
+      const okRestore = await restoreCoupon(id);
+      if (!okRestore) {
+        return NextResponse.json({ error: "Kupon tidak ditemukan." }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true, restored: true });
+    }
+
     const ok = await deleteCoupon(id);
     if (!ok) {
       return NextResponse.json({ error: "Kupon tidak ditemukan." }, { status: 404 });

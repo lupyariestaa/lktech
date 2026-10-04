@@ -44,6 +44,12 @@ export type OrderCoupon = {
   type: "percent" | "amount";
   /** Jumlah diskon (Rupiah) yang diterapkan. */
   discount: number;
+  /**
+   * ID dokumen kupon (`coupons/{id}`) saat checkout — dipakai untuk
+   * mengembalikan kuota bila order dibatalkan/dihapus (KP-C2) & audit.
+   * Opsional untuk order lama yang dibuat sebelum field ini ada.
+   */
+  couponId?: string;
 };
 
 /** Pesanan tersimpan di Firestore (`orders/{id}`). */
@@ -65,6 +71,17 @@ export type Order = {
   /** Pesan WhatsApp kanonik yang dikirim ke admin (untuk audit/ulang kirim). */
   message: string;
   createdAt: string;
+  /* ---- Observability email transaksional (`EM-C2`) ---- */
+  /** Waktu email konfirmasi terakhir dicoba/dikirim (ISO). */
+  confirmationEmailAt?: string;
+  /** Status kirim email konfirmasi: sent | skipped | failed. */
+  confirmationEmailStatus?: string;
+  /** Waktu email update status terakhir dicoba/dikirim (ISO). */
+  lastStatusEmailAt?: string;
+  /** Status kirim email update status: sent | skipped | failed. */
+  lastStatusEmailStatus?: string;
+  /** Status pesanan terakhir yang sudah dinotifikasi ke pembeli (`EM-C3`). */
+  lastNotifiedStatus?: OrderStatus;
 };
 
 function str(v: unknown, fallback = ""): string {
@@ -110,6 +127,7 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
         code,
         type: str(c.type) === "amount" ? "amount" : "percent",
         discount: num(c.discount),
+        couponId: str(c.couponId) || undefined,
       };
     }
   }
@@ -127,6 +145,15 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
     whatsapp: str(data.whatsapp),
     message: str(data.message),
     createdAt: str(data.createdAtISO) || str(data.createdAt),
+    confirmationEmailAt: str(data.confirmationEmailAt) || undefined,
+    confirmationEmailStatus: str(data.confirmationEmailStatus) || undefined,
+    lastStatusEmailAt: str(data.lastStatusEmailAt) || undefined,
+    lastStatusEmailStatus: str(data.lastStatusEmailStatus) || undefined,
+    lastNotifiedStatus: (ORDER_STATUSES as readonly string[]).includes(
+      str(data.lastNotifiedStatus),
+    )
+      ? (data.lastNotifiedStatus as OrderStatus)
+      : undefined,
   };
 }
 

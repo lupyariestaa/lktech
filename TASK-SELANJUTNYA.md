@@ -1,11 +1,67 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Dashboard Analitik Penjualan**.
+> Terakhir diperbarui: sesi **Fase Detail — Konversi & Closing**.
+>
+> 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
+>
+> 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout.
 
 ---
 
-## 🎉 Sesi Terakhir — Dashboard Analitik Penjualan
+## 🎉 Sesi Terakhir — Fase Detail Konversi & Closing
+
+Membuat dokumen fase detail `docs/2026-10-06-fase-konversi-closing.md` (Rencana). Keputusan yang diambil:
+- **Gateway: Mayar.id** (onboarding produksi ringan) — **API V2**, invoice + webhook `payment.received`.
+- **Fulfillment DUA jalur:** produk instan (template/software/ebook) → **unduhan otomatis**; produk **jasa** (website/aplikasi) → **konsultasi/konfirmasi dulu** (bukan invoice otomatis; catatan kepatuhan Mayar MoR yang tak mendukung jasa manusia).
+- Alur checkout baru: INSTAN → `menunggu_bayar` → bayar → `dibayar` → unduhan; JASA → `menunggu_konfirmasi`.
+- 7 fase (P0–P6): fondasi pembayaran, webhook+fulfillment, alur jasa+kedaluwarsa, bundling, urgency, abandoned checkout, QA.
+
+**Tidak ada perubahan kode** — sesi ini perencanaan.
+
+**Langkah manual:** daftar akun Mayar + sandbox, buat API key, lalu eksekusi mulai FASE P0.
+
+---
+
+## 🎉 Sesi Sebelumnya — Roadmap Pengembangan (Konsep & Arah Lanjutan)
+
+Membuat dokumen keputusan pengembangan `docs/2026-10-06-roadmap-pengembangan.md` berdasarkan audit kondisi sistem aktual. Isi: baseline kekuatan & celah, 4 tema (Konversi/Retensi/Kepercayaan/Operasional), matriks nilai-vs-usaha, 4 gelombang eksekusi, dan rekomendasi prioritas.
+
+**Tidak ada perubahan kode** — sesi ini hanya perencanaan (dokumen).
+
+**Rekomendasi urutan:** Pembayaran online (P0) → Ulasan & rating (P0) → Bundling → Loyalitas → Email marketing → CRM lead → Operasional (audit log, Upstash, laporan).
+
+**Langkah manual:** pilih gelombang/inisiatif yang disetujui → buat dokumen fase detail per inisiatif.
+
+---
+
+## 🎉 Sesi Sebelumnya — Remediasi Audit Email/Kupon/Analitik (R0–R7)
+
+Menuntaskan seluruh temuan audit (`docs/2026-10-05-audit-email-kupon-analitik.md`, FASE R0–R7):
+
+| Kode | Temuan | Perbaikan |
+| --- | --- | --- |
+| **AN-C1** | `completionRate` salah (penyebut seluruh riwayat) | Rumus per-jendela `selesai/(total−batal)` di `metrics-spec.ts` |
+| **AN-C2** | Query analitik tarik seluruh koleksi | `where(createdAtISO>=cutoff)` + `.select(...)` |
+| **AN-H1/H2/H4** | Bruto≠netto, definisi ambigu, label kartu | Label eksplisit + spec metrik tunggal |
+| **KP-C1** | Kuota non-atomik + redeem fire-and-forget | Transaksi atomik (reservasi sebelum order + rollback) |
+| **KP-C2** | Kuota tak dikembalikan saat batal/hapus | `restoreCouponUsage` idempoten |
+| **KP-H1/H2/H3** | Batas per-user, kode duplikat, tanggal fail-open | Subkoleksi `redemptions`, penanda `couponCodes/{code}`, schema fail-closed |
+| **EM-C1/C2/C3** | Email gagal senyap/ganda/domain test | Retry+status di order, idempotensi, banner domain |
+| **EM-H3** | Settings async (race serverless) | `after()` dari `next/server` |
+| **XL-1/XL-2/XL-4/XL-5** | Definisi omzet, lifecycle, observability, SITE_URL | Spec metrik, lifecycle batal=restore+email, panel email/kupon, peringatan produksi |
+
+**Fitur baru:** halaman publik **`/promo`** (+ prefill `?promo=` + banner di `/produk`), **delta %** di analitik, **ekspor CSV** analitik, **drill-down** klik batang, **a11y grafik** (tabel sr-only + roving tabindex + sentuh), **kirim ulang + riwayat email** per order, **statistik per kupon**, **soft-delete/restore kupon**.
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (68 halaman) · `npm run test:metrics` lolos ✅ (4 test).
+
+**⚠️ Wajib manual:** publish ulang **Firestore Rules** (koleksi baru: `couponCodes`, subkoleksi `orders/{id}/emails` & `coupons/{id}/redemptions`) + uji browser + deploy.
+
+**Backlog (ditunda):** `AN-P3` (agregasi harian), `KP-P3`/`XL-3` (rate-limit terdistribusi Redis/Upstash), `EM-P2` (outbox + webhook Resend).
+
+---
+
+## 🎉 Sesi Sebelumnya — Dashboard Analitik Penjualan
 
 Halaman analitik penjualan (`docs/2026-10-05-analitik-penjualan.md`, A0–A7):
 
@@ -344,12 +400,17 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 | 34 | Email transaksional ke pembeli: konfirmasi pesanan + update status (template ber-brand, toggle di Pengaturan) | ✅ |
 | 35 | Kupon/diskon: modul admin `/admin/coupons`, validasi & penerapan di keranjang, checkout server-authoritative, diskon tampil di WhatsApp/email/admin | ✅ |
 | 36 | Dashboard analitik penjualan `/admin/analytics`: grafik omzet & tren pesanan (7/30/90 hari), AOV, produk terlaris, distribusi status | ✅ |
+| 37 | Remediasi audit Email/Kupon/Analitik (R0–R7): akurasi completionRate, query terfilter, kuota kupon atomik+restore, email retry+idempotensi+status, observability, konsistensi metrik, halaman `/promo`, delta analitik, drill-down, a11y grafik | ✅ |
 
 ---
 
 ## 🔜 Belum Terselesaikan
 
 ### Prioritas Menengah
+
+#### 0. Remediasi Audit Email/Kupon/Analitik — ✅ SELESAI (R0–R7)
+Lihat `docs/2026-10-05-audit-email-kupon-analitik.md`. Seluruh temuan kritis/mayor ditangani.
+**Backlog opsional (butuh infra):** `AN-P3` agregasi harian `analytics_daily`, `KP-P3`/`XL-3` rate-limit terdistribusi (Redis/Upstash), `EM-P2` outbox + webhook Resend.
 
 #### 1. Analytics & Monitoring
 - [x] Pasang **Vercel Analytics** (`@vercel/analytics` + `<Analytics />` di `layout.tsx`). ⚠️ **Aktifkan di dashboard Vercel** (Project → Analytics) agar data mulai terkumpul.
@@ -435,8 +496,10 @@ LEAD_NOTIFY_EMAILS=lupyariestaa@gmail.com
 
 ### Firestore Security Rules
 - File: `firestore.rules`
-- **PENTING:** setiap ada koleksi baru (`settings`, `projects`, `articles`, `content`), rules harus di-**Publish ulang** di Firebase Console → Firestore → Rules.
-- Koleksi: `leads`, `media`, `settings`, `projects`, `articles`, `content`.
+- **PENTING:** setiap ada koleksi baru, rules harus di-**Publish ulang** di Firebase Console → Firestore → Rules.
+- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`.
+- Subkoleksi: `orders/{id}/emails` (riwayat email), `coupons/{id}/redemptions` (pemakaian per-user).
+- Catatan: rule `match /{document=**}` menolak SEMUA akses klien (termasuk subkoleksi), jadi koleksi baru otomatis terlindungi — publish ulang tetap disarankan.
 
 ### Deploy
 - Repo GitHub: `https://github.com/lupyariestaa/lktech`

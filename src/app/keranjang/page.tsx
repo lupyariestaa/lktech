@@ -9,12 +9,19 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function KeranjangPage() {
+export default async function KeranjangPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ promo?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const promo = Array.isArray(params.promo) ? params.promo[0] : params.promo;
+
   return (
     <>
       <Navbar />
       <main id="konten">
-        <CartView />
+        <CartView promoCode={promo} />
       </main>
       <Footer />
     </>

@@ -12,15 +12,19 @@ import {
   Package,
   RefreshCw,
   Search,
+  Send,
   Trash2,
   X,
 } from "lucide-react";
 import {
   deleteOrderAdmin,
   exportOrdersToCsv,
+  fetchOrderEmails,
   fetchOrdersAdmin,
   fetchOrdersSummary,
+  resendOrderEmail,
   updateOrderStatusAdmin,
+  type OrderEmailLog,
 } from "@/lib/admin-orders-api";
 import {
   ORDER_STATUSES,
@@ -43,7 +47,7 @@ const SUMMARY_CARDS: Array<{ key: keyof OrdersSummary; label: string; accent: st
   { key: "total", label: "Total Pesanan", accent: "bg-primary-50 text-primary" },
   { key: "baru", label: "Baru", accent: "bg-blue-50 text-blue-600" },
   { key: "diproses", label: "Diproses", accent: "bg-amber-50 text-amber-600" },
-  { key: "omzet", label: "Omzet (selesai)", accent: "bg-emerald-50 text-emerald-600" },
+  { key: "omzet", label: "Omzet (selesai, sepanjang waktu)", accent: "bg-emerald-50 text-emerald-600" },
 ];
 
 export function OrdersManager() {
@@ -222,6 +226,16 @@ export function OrdersManager() {
           ))}
         </div>
       )}
+      {summary && (
+        <p className="-mt-2 mb-5 text-[11px] text-muted">
+          Catatan: “Omzet (selesai, sepanjang waktu)” menghitung seluruh pesanan
+          berstatus selesai (setelah diskon). Untuk omzet per periode, lihat{" "}
+          <a href="/admin/analytics" className="font-semibold text-primary">
+            Analitik
+          </a>
+          .
+        </p>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
@@ -340,7 +354,6 @@ export function OrdersManager() {
           onClose={() => setDetail(null)}
         />
       )}
-
       <ConfirmDialog
         open={toDelete !== null}
         title="Hapus pesanan ini?"
@@ -463,7 +476,7 @@ function OrderCard({
   );
 }
 
-/** Dialog detail satu pesanan (item, total, aksi). */
+/** Dialog detail satu pesanan (item, total, status email, aksi). */
 function OrderDetailDialog({
   order,
   copied,
@@ -475,7 +488,10 @@ function OrderDetailDialog({
   onCopy: () => void;
   onClose: () => void;
 }) {
+  const toast = useToast();
   const panelRef = useRef<HTMLDivElement>(null);
+  const [emails, setEmails] = useState<OrderEmailLog[] | null>(null);
+  const [resending, setResending] = useState(false);
 
   // Escape + kunci scroll body + focus trap sederhana.
   useEffect(() => {
@@ -494,6 +510,32 @@ function OrderDetailDialog({
       prevFocus?.focus?.();
     };
   }, [onClose]);
+
+  // Muat riwayat email (`EM-P1`) — best-effort.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const list = await fetchOrderEmails(order.id).catch(() => []);
+      if (active) setEmails(list);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [order.id]);
+
+  const onResend = async () => {
+    setResending(true);
+    try {
+      await resendOrderEmail(order.id);
+      toast.success("Email dikirim ulang ke pembeli.");
+      const list = await fetchOrderEmails(order.id).catch(() => []);
+      setEmails(list);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal mengirim ulang email.");
+    } finally {
+      setResending(false);
+    }
+  };
 
   return (
     <div
@@ -551,6 +593,9 @@ function OrderDetailDialog({
               {order.buyerEmail}
             </a>
           </div>
+
+          {/* Status email (`XL-4`) */}
+          <EmailStatusBlock order={order} />
 
           {/* Item */}
           <p className="mt-5 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
@@ -612,6 +657,12 @@ function OrderDetailDialog({
             )}
           </div>
 
+          {/* Riwayat email (`EM-P1`) */}
+          <p className="mt-5 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+            Riwayat Email
+          </p>
+          <EmailHistory emails={emails} />
+
           {/* Pesan WA kanonik */}
           <p className="mt-5 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
             Pesan WhatsApp
@@ -633,6 +684,15 @@ function OrderDetailDialog({
           </a>
           <button
             type="button"
+            onClick={onResend}
+            disabled={resending}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
+          >
+            {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Kirim ulang email
+          </button>
+          <button
+            type="button"
             onClick={onCopy}
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
           >
@@ -642,5 +702,105 @@ function OrderDetailDialog({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Blok status email konfirmasi & update status (`XL-4`). */
+function EmailStatusBlock({ order }: { order: Order }) {
+  const badge = (status?: string) => {
+    if (!status) return <span className="text-xs text-muted">Belum dikirim</span>;
+    const map: Record<string, string> = {
+      sent: "bg-emerald-50 text-emerald-600",
+      skipped: "bg-slate-100 text-slate-500",
+      failed: "bg-rose-50 text-rose-600",
+    };
+    const label: Record<string, string> = {
+      sent: "Terkirim",
+      skipped: "Dilewati",
+      failed: "Gagal",
+    };
+    return (
+      <span
+        className={cn(
+          "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+          map[status] ?? "bg-slate-100 text-slate-500",
+        )}
+      >
+        {label[status] ?? status}
+      </span>
+    );
+  };
+
+  return (
+    <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="rounded-2xl border border-slate-100 bg-white p-3">
+        <p className="text-[11px] text-muted">Email konfirmasi</p>
+        <div className="mt-1">{badge(order.confirmationEmailStatus)}</div>
+        {order.confirmationEmailAt && (
+          <p className="mt-1 text-[10px] text-muted">
+            {formatDateTime(order.confirmationEmailAt)}
+          </p>
+        )}
+      </div>
+      <div className="rounded-2xl border border-slate-100 bg-white p-3">
+        <p className="text-[11px] text-muted">Email update status</p>
+        <div className="mt-1">{badge(order.lastStatusEmailStatus)}</div>
+        {order.lastStatusEmailAt && (
+          <p className="mt-1 text-[10px] text-muted">
+            {formatDateTime(order.lastStatusEmailAt)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Daftar riwayat email (`EM-P1`). */
+function EmailHistory({ emails }: { emails: OrderEmailLog[] | null }) {
+  if (emails === null) {
+    return (
+      <p className="mt-2 flex items-center gap-2 text-xs text-muted">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Memuat riwayat email…
+      </p>
+    );
+  }
+  if (emails.length === 0) {
+    return (
+      <p className="mt-2 rounded-2xl border border-dashed border-slate-200 bg-surface px-4 py-3 text-xs text-muted">
+        Belum ada riwayat email untuk pesanan ini.
+      </p>
+    );
+  }
+  return (
+    <ul className="mt-2 flex flex-col divide-y divide-slate-100">
+      {emails.map((e) => (
+        <li key={e.id} className="flex items-center justify-between gap-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-secondary capitalize">
+              {e.kind === "resend" ? "Kirim ulang" : e.kind}
+            </p>
+            <p className="truncate text-[11px] text-muted">{e.to}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                e.status === "sent"
+                  ? "bg-emerald-50 text-emerald-600"
+                  : e.status === "failed"
+                    ? "bg-rose-50 text-rose-600"
+                    : "bg-slate-100 text-slate-500",
+              )}
+            >
+              {e.status}
+            </span>
+            <p className="mt-0.5 text-[10px] text-muted">
+              {formatDateTime(e.atISO)}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

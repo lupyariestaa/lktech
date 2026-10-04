@@ -21,6 +21,23 @@ export async function fetchCouponsSummary(): Promise<CouponsSummary> {
   return data.summary;
 }
 
+/** Statistik dampak per-kupon (`KP-M2`): jumlah order & Σ diskon. */
+export type CouponStat = {
+  couponId: string;
+  code: string;
+  orderCount: number;
+  totalDiscount: number;
+  cancelledOrders: number;
+};
+
+/** Ambil statistik per-kupon (dihitung dari pesanan). */
+export async function fetchCouponStats(): Promise<Record<string, CouponStat>> {
+  const data = await adminFetch<{ stats: Record<string, CouponStat> }>(
+    "/api/admin/coupons?stats=1",
+  );
+  return data.stats;
+}
+
 /** Payload form kupon (create/update). */
 export type CouponFormInput = {
   code: string;
@@ -62,6 +79,14 @@ export async function deleteCoupon(id: string): Promise<void> {
   );
 }
 
+/** Pulihkan kupon yang diarsipkan (`KP-M3`). */
+export async function restoreCoupon(id: string): Promise<void> {
+  await adminFetch<{ ok: boolean }>(
+    `/api/admin/coupons?id=${encodeURIComponent(id)}&restore=1`,
+    { method: "DELETE" },
+  );
+}
+
 /** Quote satu sel CSV. */
 function csvCell(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
@@ -75,8 +100,12 @@ export function couponValueLabel(coupon: Coupon): string {
     : formatRupiah(coupon.value);
 }
 
-/** Ekspor daftar kupon ke CSV. */
-export function exportCouponsToCsv(coupons: Coupon[], filename?: string) {
+/** Ekspor daftar kupon ke CSV (opsional menyertakan statistik dampak). */
+export function exportCouponsToCsv(
+  coupons: Coupon[],
+  stats?: Record<string, CouponStat>,
+  filename?: string,
+) {
   const headers = [
     "Kode",
     "Deskripsi",
@@ -90,9 +119,14 @@ export function exportCouponsToCsv(coupons: Coupon[], filename?: string) {
     "Dipakai",
     "Batas/User",
     "Aktif",
+    "Arsip",
+    "Jumlah Order",
+    "Total Diskon",
+    "Order Dibatalkan",
   ];
-  const rows = coupons.map((c) =>
-    [
+  const rows = coupons.map((c) => {
+    const s = stats?.[c.id] ?? stats?.[`code:${c.code}`];
+    return [
       c.code,
       c.description ?? "",
       COUPON_TYPE_LABEL[c.type],
@@ -105,10 +139,14 @@ export function exportCouponsToCsv(coupons: Coupon[], filename?: string) {
       c.usageCount,
       c.limitPerUser,
       c.active ? "Ya" : "Tidak",
+      c.archived ? "Ya" : "Tidak",
+      s?.orderCount ?? 0,
+      s?.totalDiscount ?? 0,
+      s?.cancelledOrders ?? 0,
     ]
       .map(csvCell)
-      .join(","),
-  );
+      .join(",");
+  });
   const csv = "\uFEFF" + [headers.map(csvCell).join(","), ...rows].join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

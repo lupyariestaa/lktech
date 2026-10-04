@@ -26,20 +26,45 @@ const fromEmail = process.env.EMAIL_FROM ?? "LKTech <onboarding@resend.dev>";
 /** Alamat balasan (agar jawaban pembeli masuk ke admin, bukan ke diri sendiri). */
 const replyTo = process.env.ORDER_REPLY_TO || process.env.SMTP_REPLY_TO || undefined;
 
-export type EmailResult = { ok: boolean; skipped?: boolean; error?: string };
+export type EmailResult = {
+  ok: boolean;
+  skipped?: boolean;
+  error?: string;
+  /** Jumlah percobaan kirim (termasuk yang gagal) — untuk observability. */
+  attempts?: number;
+};
 
 /** Apakah pengiriman email dikonfigurasi. */
 export const isBuyerEmailConfigured = Boolean(apiKey);
+
+/**
+ * Apakah `EMAIL_FROM` memakai domain test Resend (`resend.dev`).
+ * Bila ya, email HANYA terkirim ke alamat terdaftar di akun Resend — bukan ke
+ * pembeli umum (`EM-C1`). Dipakai untuk banner peringatan di Pengaturan.
+ */
+export const isBuyerEmailTestOnly = /resend\.dev/i.test(fromEmail);
+
+/** Ambil alamat from saat ini (untuk tampilan peringatan). */
+export function getBuyerEmailFrom(): string {
+  return fromEmail;
+}
 
 function esc(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-/** Kirim satu email via Resend (best-effort). */
+/**
+ * Kirim satu email via Resend (best-effort) dengan RETRY sederhana (`EM-C2`).
+ *
+ * Error network / 5xx / 429 diulang maksimal `maxAttempts` dengan backoff
+ * linear. Error 4xx lain (mis. domain tak terverifikasi) TIDAK diulang karena
+ * tak akan berubah bila dicoba lagi. Tidak pernah melempar.
+ */
 async function sendEmail(params: {
   to: string;
   subject: string;
@@ -49,33 +74,55 @@ async function sendEmail(params: {
   if (!isBuyerEmailConfigured) return { ok: false, skipped: true };
   if (!params.to || !params.to.includes("@")) return { ok: false, skipped: true };
 
-  try {
-    const res = await fetch(RESEND_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [params.to],
-        reply_to: replyTo,
-        subject: params.subject,
-        text: params.text,
-        html: params.html,
-      }),
-    });
+  const maxAttempts = 3;
+  let lastError = "unknown";
 
-    if (!res.ok) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(RESEND_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [params.to],
+          reply_to: replyTo,
+          subject: params.subject,
+          text: params.text,
+          html: params.html,
+        }),
+      });
+
+      if (res.ok) return { ok: true, attempts: attempt };
+
       const errText = await res.text().catch(() => "");
-      console.error("[email-order] Resend gagal:", res.status, errText);
-      return { ok: false, error: `Resend ${res.status}` };
+      lastError = `Resend ${res.status}`;
+      console.error(
+        `[email-order] Resend gagal (attempt ${attempt}/${maxAttempts}):`,
+        res.status,
+        errText,
+      );
+
+      // Error yang tidak akan pulih bila diulang (mis. domain/validation).
+      const retryable = res.status >= 500 || res.status === 429;
+      if (!retryable) return { ok: false, error: lastError, attempts: attempt };
+    } catch (err) {
+      lastError = "network";
+      console.error(
+        `[email-order] gagal mengirim (attempt ${attempt}/${maxAttempts}):`,
+        err,
+      );
     }
-    return { ok: true };
-  } catch (err) {
-    console.error("[email-order] gagal mengirim:", err);
-    return { ok: false, error: "network" };
+
+    if (attempt < maxAttempts) {
+      // Backoff linear: 400ms, 800ms.
+      await new Promise((r) => setTimeout(r, 400 * attempt));
+    }
   }
+
+  return { ok: false, error: lastError, attempts: maxAttempts };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -322,11 +369,18 @@ export async function sendOrderStatusToBuyer(
 ): Promise<EmailResult> {
   if (status === "baru") return { ok: false, skipped: true };
 
-  const copy = STATUS_COPY[status];
+  // `EM-H2`: guard runtime — bila kelak ada status baru tanpa entri
+  // STATUS_COPY, jangan throw; kembalikan error yang tercatat.
+  const copy = STATUS_COPY[status as Exclude<OrderStatus, "baru">];
+  if (!copy) {
+    console.error("[email-order] status tanpa STATUS_COPY:", status);
+    return { ok: false, error: "status_unknown" };
+  }
+
   return sendEmail({
     to: order.buyerEmail,
     subject: `Pesanan ${shortOrderCode(order.id)} ${copy.subject} — ${SITE.name}`,
-    text: statusText(order, status),
-    html: statusHtml(order, status),
+    text: statusText(order, status as Exclude<OrderStatus, "baru">),
+    html: statusHtml(order, status as Exclude<OrderStatus, "baru">),
   });
 }

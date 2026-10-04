@@ -4,6 +4,11 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { getSiteSettings, mergeSettings, SETTINGS_DOC_ID } from "@/lib/settings";
 import { settingsSchema } from "@/lib/api-schemas";
+import {
+  getBuyerEmailFrom,
+  isBuyerEmailConfigured,
+  isBuyerEmailTestOnly,
+} from "@/lib/email-order";
 import type { SiteSettings } from "@/lib/settings-types";
 
 export const runtime = "nodejs";
@@ -14,14 +19,22 @@ export const dynamic = "force-dynamic";
  *
  * Dashboard TIDAK boleh membaca `/api/settings` publik karena risiko cache;
  * endpoint ini selalu `no-store` sehingga form selalu menampilkan data terbaru.
+ *
+ * Ikut mengirim `emailHealth` (`EM-C1`/`EM-H4`): status konfigurasi email
+ * pembeli agar admin tahu bila pengiriman belum siap di produksi.
  */
 export async function GET(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
   const settings = await getSiteSettings();
+  const emailHealth = {
+    configured: isBuyerEmailConfigured,
+    testOnly: isBuyerEmailTestOnly,
+    from: getBuyerEmailFrom(),
+  };
   return NextResponse.json(
-    { settings },
+    { settings, emailHealth },
     { headers: { "Cache-Control": "no-store, max-age=0" } },
   );
 }

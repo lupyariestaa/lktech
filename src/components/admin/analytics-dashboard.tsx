@@ -4,21 +4,33 @@ import { useEffect, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
+  Download,
   Loader2,
+  Minus,
   ReceiptText,
+  TrendingDown,
   TrendingUp,
   Wallet,
+  X,
 } from "lucide-react";
 import Link from "next/link";
-import { fetchSalesAnalytics } from "@/lib/admin-analytics-api";
+import {
+  exportAnalyticsToCsv,
+  fetchSalesAnalytics,
+} from "@/lib/admin-analytics-api";
+import {
+  fetchOrdersByDay,
+} from "@/lib/admin-orders-api";
 import {
   ANALYTICS_RANGES,
   type AnalyticsMode,
   type SalesAnalytics,
 } from "@/lib/sales-analytics-types";
-import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/order-types";
-import { formatRupiah, formatCompactRupiah } from "@/lib/format";
+import { ORDER_STATUS_LABEL, type Order, type OrderStatus } from "@/lib/order-types";
+import { METRIC_HINT, METRIC_LABEL } from "@/lib/metrics-spec";
+import { formatRupiah, formatCompactRupiah, formatDateTime, shortOrderCode } from "@/lib/format";
 import { SalesChart } from "@/components/admin/sales-chart";
+import { useToast } from "@/components/admin/toast";
 import { cn } from "@/lib/utils";
 
 const STATUS_ACCENT: Record<OrderStatus, string> = {
@@ -29,11 +41,13 @@ const STATUS_ACCENT: Record<OrderStatus, string> = {
 };
 
 export function AnalyticsDashboard() {
+  const toast = useToast();
   const [days, setDays] = useState<number>(30);
   const [mode, setMode] = useState<AnalyticsMode>("completed");
   const [data, setData] = useState<SalesAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [drillDate, setDrillDate] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -115,6 +129,19 @@ export function AnalyticsDashboard() {
             ? "Omzet dari pesanan berstatus selesai."
             : "Omzet dari semua pesanan (kecuali dibatalkan)."}
         </p>
+
+        <button
+          onClick={() => {
+            if (!data) return;
+            exportAnalyticsToCsv(data);
+            toast.success("Analitik diekspor ke CSV.");
+          }}
+          disabled={!data}
+          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
+        >
+          <Download className="h-4 w-4" />
+          Ekspor CSV
+        </button>
       </div>
 
       {error ? (
@@ -132,25 +159,31 @@ export function AnalyticsDashboard() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <SummaryCard
               icon={Wallet}
-              label="Omzet Periode"
+              label={METRIC_LABEL.omzetPeriod}
               value={formatRupiah(totals.omzet)}
+              hint={METRIC_HINT.omzetPeriod}
+              delta={data.deltas.omzet}
               accent="bg-primary-50 text-primary"
             />
             <SummaryCard
               icon={ReceiptText}
-              label="Jumlah Pesanan"
+              label={METRIC_LABEL.ordersRevenue}
               value={String(totals.orders)}
+              hint={METRIC_HINT.ordersRevenue}
+              delta={data.deltas.orders}
               accent="bg-blue-50 text-blue-600"
             />
             <SummaryCard
               icon={TrendingUp}
-              label="Rata-rata / Pesanan"
+              label={METRIC_LABEL.aov}
               value={totals.aov > 0 ? formatRupiah(totals.aov) : "—"}
+              hint={METRIC_HINT.aov}
+              delta={data.deltas.aov}
               accent="bg-emerald-50 text-emerald-600"
             />
             <SummaryCard
               icon={CheckCircle2}
-              label="Tingkat Selesai"
+              label={METRIC_LABEL.completion}
               value={`${Math.round(totals.completionRate * 100)}%`}
               hint={`${totals.completed} selesai · ${totals.cancelled} batal`}
               accent="bg-amber-50 text-amber-600"
@@ -160,7 +193,7 @@ export function AnalyticsDashboard() {
           {/* Grafik omzet */}
           <ChartCard
             title={`Omzet Harian (${days} hari terakhir)`}
-            subtitle={`Total ${formatRupiah(totals.omzet)} pada periode ini.`}
+            subtitle={`Total ${formatRupiah(totals.omzet)} pada periode ini. Klik batang untuk melihat pesanan hari itu.`}
             badge={formatCompactRupiah(totals.omzet)}
           >
             <SalesChart
@@ -172,13 +205,14 @@ export function AnalyticsDashboard() {
               formatValue={formatRupiah}
               ariaLabel={`Grafik omzet harian ${days} hari terakhir, total ${formatRupiah(totals.omzet)}.`}
               emptyLabel={`Belum ada omzet pada ${days} hari terakhir.`}
+              onBarClick={(i) => setDrillDate(data.series[i]?.dateISO ?? null)}
             />
           </ChartCard>
 
           {/* Grafik jumlah pesanan */}
           <ChartCard
             title={`Jumlah Pesanan Harian (${days} hari terakhir)`}
-            subtitle={`Total ${totals.orders} pesanan pada periode ini.`}
+            subtitle={`Total ${totals.orders} pesanan penghasil omzet pada periode ini.`}
             badge={`${totals.orders} pesanan`}
           >
             <SalesChart
@@ -199,6 +233,13 @@ export function AnalyticsDashboard() {
             <TopProducts products={data.topProducts} />
             <StatusBreakdown breakdown={data.statusBreakdown} />
           </div>
+
+          {drillDate && (
+            <DrillDownDialog
+              dateISO={drillDate}
+              onClose={() => setDrillDate(null)}
+            />
+          )}
         </>
       ) : null}
     </div>
@@ -210,23 +251,56 @@ function SummaryCard({
   label,
   value,
   hint,
+  delta,
   accent,
 }: {
   icon: typeof Wallet;
   label: string;
   value: string;
   hint?: string;
+  delta?: number | null;
   accent: string;
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <span className={cn("grid h-10 w-10 place-items-center rounded-xl", accent)}>
-        <Icon className="h-5 w-5" />
-      </span>
+      <div className="flex items-start justify-between gap-2">
+        <span className={cn("grid h-10 w-10 place-items-center rounded-xl", accent)}>
+          <Icon className="h-5 w-5" />
+        </span>
+        {delta !== undefined && <DeltaBadge delta={delta} />}
+      </div>
       <p className="mt-3 text-xs font-medium text-muted">{label}</p>
       <p className="mt-0.5 text-xl font-bold text-secondary tabular-nums">{value}</p>
       {hint && <p className="mt-0.5 text-[11px] text-muted">{hint}</p>}
     </div>
+  );
+}
+
+/** Indikator perubahan % vs periode sebelumnya (`AN-P1`). */
+function DeltaBadge({ delta }: { delta: number | null }) {
+  if (delta === null) {
+    return <span className="text-[11px] font-medium text-muted">—</span>;
+  }
+  const pct = Math.round(delta * 100);
+  const up = pct > 0;
+  const flat = pct === 0;
+  const Icon = flat ? Minus : up ? TrendingUp : TrendingDown;
+  return (
+    <span
+      title="Dibanding periode sebelumnya"
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+        flat
+          ? "bg-slate-100 text-slate-500"
+          : up
+            ? "bg-emerald-50 text-emerald-600"
+            : "bg-rose-50 text-rose-600",
+      )}
+    >
+      <Icon className="h-3 w-3" />
+      {pct > 0 ? "+" : ""}
+      {pct}%
+    </span>
   );
 }
 
@@ -265,7 +339,12 @@ function TopProducts({
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-secondary">Produk Terlaris</h2>
+        <div>
+          <h2 className="text-sm font-bold text-secondary">Produk Terlaris</h2>
+          <p className="mt-0.5 text-[11px] text-muted">
+            Omzet bruto (sebelum diskon) — untuk peringkat, bukan rekonsiliasi.
+          </p>
+        </div>
         <Link
           href="/admin/products"
           className="group inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
@@ -323,10 +402,8 @@ function StatusBreakdown({
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6">
-      <h2 className="text-sm font-bold text-secondary">Status Pesanan</h2>
-      <p className="mt-0.5 text-xs text-muted">
-        {total} pesanan dalam periode ini.
-      </p>
+      <h2 className="text-sm font-bold text-secondary">{METRIC_LABEL.ordersTotal}</h2>
+      <p className="mt-0.5 text-xs text-muted">{METRIC_HINT.ordersTotal}</p>
 
       {total === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-slate-200 bg-surface py-8 text-center text-xs text-muted">
@@ -366,6 +443,130 @@ function StatusBreakdown({
           </ul>
         </>
       )}
+    </div>
+  );
+}
+
+/** Dialog drill-down: daftar pesanan satu hari (`AN-P2`). */
+function DrillDownDialog({
+  dateISO,
+  onClose,
+}: {
+  dateISO: string;
+  onClose: () => void;
+}) {
+  const [orders, setOrders] = useState<Order[] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const list = await fetchOrdersByDay(dateISO).catch(() => []);
+      if (active) setOrders(list);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [dateISO]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const dateLabel = new Date(`${dateISO}T00:00:00`).toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const total = (orders ?? []).reduce((s, o) => s + o.total, 0);
+
+  return (
+    <div
+      className="fixed inset-0 z-[13000] flex items-end justify-center p-0 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Pesanan tanggal ${dateISO}`}
+    >
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-xl sm:rounded-3xl">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
+          <div>
+            <h2 className="text-sm font-bold text-secondary">Pesanan Harian</h2>
+            <p className="mt-0.5 text-xs text-muted">{dateLabel}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-surface"
+            aria-label="Tutup"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-5">
+          {orders === null ? (
+            <p className="flex items-center gap-2 py-8 text-sm text-muted">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              Memuat pesanan…
+            </p>
+          ) : orders.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-slate-200 bg-surface py-10 text-center text-sm text-muted">
+              Tidak ada pesanan pada tanggal ini.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-muted">
+                {orders.length} pesanan · total{" "}
+                <span className="font-semibold text-secondary">
+                  {formatRupiah(total)}
+                </span>
+              </p>
+              <ul className="mt-3 flex flex-col divide-y divide-slate-100">
+                {orders.map((o) => (
+                  <li
+                    key={o.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-secondary">
+                        {o.buyerName || o.buyerEmail}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {shortOrderCode(o.id)} · {formatDateTime(o.createdAt)}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-bold text-secondary tabular-nums">
+                        {formatRupiah(o.total)}
+                      </p>
+                      <p className="text-[11px] text-muted">
+                        {ORDER_STATUS_LABEL[o.status]}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+        <div className="border-t border-slate-100 p-5">
+          <Link
+            href="/admin/orders"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+          >
+            Buka halaman Pesanan
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

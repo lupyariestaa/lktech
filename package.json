@@ -12,7 +12,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:metrics": "node --experimental-strip-types --test scripts/metrics-spec.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

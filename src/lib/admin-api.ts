@@ -465,6 +465,23 @@ export async function fetchSettings(): Promise<SiteSettings> {
   return data.settings;
 }
 
+/** Kesehatan konfigurasi email pembeli (`EM-C1`/`EM-H4`). */
+export type EmailHealth = {
+  configured: boolean;
+  testOnly: boolean;
+  from: string;
+};
+
+/** Pengaturan + status kesehatan email (untuk banner peringatan). */
+export async function fetchSettingsWithHealth(): Promise<{
+  settings: SiteSettings;
+  emailHealth: EmailHealth;
+}> {
+  return adminFetch<{ settings: SiteSettings; emailHealth: EmailHealth }>(
+    "/api/admin/settings",
+  );
+}
+
 export async function saveSettings(settings: SiteSettings) {
   return adminFetch<{ ok: boolean; settings: SiteSettings }>(
     "/api/admin/settings",

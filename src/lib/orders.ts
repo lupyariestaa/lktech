@@ -72,7 +72,11 @@ export type OrdersSummary = {
   diproses: number;
   selesai: number;
   dibatalkan: number;
-  /** Total omzet (Rp) untuk pesanan berstatus "selesai". */
+  /**
+   * Total omzet (Rp) untuk pesanan berstatus "selesai" SEPANJANG WAKTU
+   * (netto setelah diskon). Berbeda dari omzet "periode" di Analitik —
+   * lihat spesifikasi metrik di `@/lib/metrics-spec` (`XL-1`).
+   */
   omzet: number;
 };
 
@@ -193,19 +197,29 @@ export async function getOrdersPage(
   return { orders, nextCursor };
 }
 
-/** Mengubah status sebuah pesanan + mencatat updater. */
+/**
+ * Mengubah status sebuah pesanan + mencatat updater.
+ * Mengembalikan status SEBELUMNYA (untuk idempotensi email `EM-C3` &
+ * pengembalian kuota kupon saat transisi ke dibatalkan `KP-C2`).
+ */
 export async function updateOrderStatus(
   id: string,
   status: OrderStatus,
   updatedBy: string,
-): Promise<void> {
+): Promise<{ previousStatus: OrderStatus | null }> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
-  await db.collection(COLLECTION).doc(id).update({
+  const ref = db.collection(COLLECTION).doc(id);
+  const doc = await ref.get();
+  const previousStatus = doc.exists
+    ? normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }).status
+    : null;
+  await ref.update({
     status,
     updatedAtISO: new Date().toISOString(),
     updatedBy,
   });
+  return { previousStatus };
 }
 
 /** Mengambil satu pesanan berdasarkan id (null bila tidak ada). */
@@ -215,6 +229,43 @@ export async function getOrderById(id: string): Promise<Order | null> {
   const doc = await db.collection(COLLECTION).doc(id).get();
   if (!doc.exists) return null;
   return normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) });
+}
+
+/**
+ * Daftar pesanan pada satu hari zona waktu (untuk drill-down analitik `AN-P2`).
+ * `dateKey` = "yyyy-mm-dd" (zona `Asia/Jakarta`). Menyaring di memori agar
+ * tak bergantung index; jumlah order satu hari wajar.
+ */
+export async function getOrdersForDay(dateKey: string): Promise<Order[]> {
+  const db = getAdminDb();
+  if (!db) return [];
+  // Ambil rentang longgar ±1 hari dari tanggal tersebut, lalu saring presisi.
+  const [y, m, d] = dateKey.split("-").map(Number);
+  if (!y || !m || !d) return [];
+  const dayStartMs = Date.UTC(y, m - 1, d) - 86_400_000;
+  const cutoffISO = new Date(dayStartMs).toISOString();
+
+  const snap = await db
+    .collection(COLLECTION)
+    .where("createdAtISO", ">=", cutoffISO)
+    .get();
+
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return snap.docs
+    .map((doc) =>
+      normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
+    )
+    .filter((o) => {
+      const dt = new Date(o.createdAt);
+      return !Number.isNaN(dt.getTime()) && fmt.format(dt) === dateKey;
+    })
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 /** Menghapus pesanan (permanen). */

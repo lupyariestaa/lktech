@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BadgePercent, Check, Loader2, Tag, X } from "lucide-react";
 import { validateCouponRequest } from "@/lib/coupon-api";
 import { formatRupiah } from "@/lib/format";
@@ -24,16 +24,27 @@ export function CartCoupon({
   onApplied,
   onCleared,
   disabled = false,
+  promoCode,
 }: {
   subtotal: number;
   applied: AppliedCoupon | null;
   onApplied: (coupon: AppliedCoupon) => void;
   onCleared: () => void;
   disabled?: boolean;
+  /** Kode dari URL (`?promo=`) untuk di-prefill (`KP-P1`). */
+  promoCode?: string;
 }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const prefilledRef = useRef(false);
+
+  // `KP-P1`: prefill kode dari URL (`/keranjang?promo=LAUNCH`).
+  useEffect(() => {
+    if (prefilledRef.current || !promoCode) return;
+    prefilledRef.current = true;
+    setCode(promoCode.trim().toUpperCase());
+  }, [promoCode]);
 
   const onApply = async (e: React.FormEvent) => {
     e.preventDefault();

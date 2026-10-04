@@ -1,5 +1,6 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import {
   COUPON_TYPES,
   MAX_COUPON_USED_BY,
@@ -9,6 +10,8 @@ import {
 } from "@/lib/coupon-types";
 
 const COLLECTION = "coupons";
+/** Subkoleksi pencatatan pemakaian per user (sumber kebenaran `limitPerUser`). */
+const REDEMPTIONS = "redemptions";
 
 /* -------------------------------------------------------------------------- */
 /* Normalisasi                                                                 */
@@ -63,6 +66,7 @@ export function normalizeCoupon(
         ? data.limitPerUser
         : 1,
     active: data.active !== false,
+    archived: data.archived === true,
     usageCount: num(data.usageCount),
     usedBy,
     createdAtISO: str(data.createdAtISO),
@@ -103,10 +107,14 @@ export type CouponValidation =
 /**
  * Validasi kupon terhadap subtotal & konteks user. Mengembalikan alasan bila
  * gagal. Semua aturan dijalankan di SERVER (klien hanya mengirim kode).
+ *
+ * `userUsageCount` (opsional) = jumlah pemakaian user ini dari subkoleksi
+ * `redemptions` (sumber kebenaran `limitPerUser`; lebih akurat dari `usedBy`
+ * yang dibatasi `MAX_COUPON_USED_BY`). Bila tak diberikan, fallback ke `usedBy`.
  */
 export function validateCoupon(
   coupon: Coupon | null,
-  opts: { subtotal: number; uid?: string; now?: Date },
+  opts: { subtotal: number; uid?: string; now?: Date; userUsageCount?: number },
 ): CouponValidation {
   const now = opts.now ?? new Date();
 
@@ -137,18 +145,20 @@ export function validateCoupon(
     return { ok: false, reason: "Kuota kode promo sudah habis." };
   }
 
-  if (
-    opts.uid &&
-    coupon.limitPerUser > 0 &&
-    coupon.usedBy.filter((u) => u === opts.uid).length >= coupon.limitPerUser
-  ) {
-    return {
-      ok: false,
-      reason:
-        coupon.limitPerUser === 1
-          ? "Anda sudah pernah memakai kode promo ini."
-          : `Kode promo ini maksimal ${coupon.limitPerUser}× per pengguna.`,
-    };
+  if (opts.uid && coupon.limitPerUser > 0) {
+    const usedCount =
+      typeof opts.userUsageCount === "number"
+        ? opts.userUsageCount
+        : coupon.usedBy.filter((u) => u === opts.uid).length;
+    if (usedCount >= coupon.limitPerUser) {
+      return {
+        ok: false,
+        reason:
+          coupon.limitPerUser === 1
+            ? "Anda sudah pernah memakai kode promo ini."
+            : `Kode promo ini maksimal ${coupon.limitPerUser}× per pengguna.`,
+      };
+    }
   }
 
   const discount = computeDiscount(coupon, opts.subtotal);
@@ -163,7 +173,7 @@ export function validateCoupon(
 /* Data layer (I/O)                                                            */
 /* -------------------------------------------------------------------------- */
 
-/** Ambil semua kupon (terbaru lebih dulu). */
+/** Ambil semua kupon (terbaru lebih dulu). Sertakan arsip (soft-deleted). */
 export async function listCoupons(): Promise<Coupon[]> {
   const db = getAdminDb();
   if (!db) return [];
@@ -173,13 +183,30 @@ export async function listCoupons(): Promise<Coupon[]> {
     .sort((a, b) => (b.createdAtISO ?? "").localeCompare(a.createdAtISO ?? ""));
 }
 
-/** Ambil kupon berdasarkan kode (case-insensitive). */
+/**
+ * Ambil kupon berdasarkan kode (case-insensitive).
+ * `KP-H2`: menggunakan koleksi penanda `couponCodes/{code}` untuk lookup unik
+ * atomik (satu kode = satu penanda). Fallback ke query `code ==` untuk data
+ * lama yang belum punya penanda.
+ */
 export async function getCouponByCode(code: string): Promise<Coupon | null> {
   const db = getAdminDb();
   if (!db) return null;
   const normalized = normalizeCouponCode(code);
   if (!normalized) return null;
 
+  // Jalur utama: penanda kode → id dokumen (unik, tanpa duplikat).
+  const marker = await db.collection("couponCodes").doc(normalized).get();
+  const markerId = marker.exists ? (marker.get("couponId") as string) : undefined;
+  if (markerId) {
+    const doc = await db.collection(COLLECTION).doc(markerId).get();
+    if (doc.exists) {
+      const coupon = normalizeCoupon(doc.id, doc.data() as Record<string, unknown>);
+      if (!coupon.archived) return coupon;
+    }
+  }
+
+  // Fallback: query by field (data lama).
   const snap = await db
     .collection(COLLECTION)
     .where("code", "==", normalized)
@@ -187,7 +214,8 @@ export async function getCouponByCode(code: string): Promise<Coupon | null> {
     .get();
   if (snap.empty) return null;
   const doc = snap.docs[0];
-  return normalizeCoupon(doc.id, doc.data() as Record<string, unknown>);
+  const coupon = normalizeCoupon(doc.id, doc.data() as Record<string, unknown>);
+  return coupon.archived ? null : coupon;
 }
 
 /** Apakah kode sudah dipakai kupon lain (selain `exceptId`). */
@@ -200,6 +228,13 @@ export async function isCouponCodeTaken(
   const normalized = normalizeCouponCode(code);
   if (!normalized) return false;
 
+  // Jalur utama: penanda kode.
+  const marker = await db.collection("couponCodes").doc(normalized).get();
+  if (marker.exists) {
+    return (marker.get("couponId") as string) !== exceptId;
+  }
+
+  // Fallback: query by field (data lama).
   const snap = await db
     .collection(COLLECTION)
     .where("code", "==", normalized)
@@ -209,10 +244,14 @@ export async function isCouponCodeTaken(
 
 export type CouponInput = Omit<
   Coupon,
-  "id" | "usageCount" | "usedBy" | "createdAtISO" | "updatedAtISO" | "createdBy"
+  "id" | "usageCount" | "usedBy" | "createdAtISO" | "updatedAtISO" | "createdBy" | "archived"
 >;
 
-/** Buat kupon baru. Kode dinormalisasi & wajib unik. */
+/**
+ * Buat kupon baru. Kode dinormalisasi & wajib unik.
+ * `KP-H2`: klaim penanda `couponCodes/{code}` secara atomik (create-only)
+ * sebelum menulis dokumen kupon, sehingga duplikat tidak mungkin lolos.
+ */
 export async function createCoupon(
   input: CouponInput,
   createdBy: string,
@@ -222,20 +261,35 @@ export async function createCoupon(
 
   const code = normalizeCouponCode(input.code);
   const nowISO = new Date().toISOString();
-  const payload = {
-    ...stripUndefined(input),
-    code,
-    usageCount: 0,
-    usedBy: [],
-    createdAtISO: nowISO,
-    createdBy,
-  };
 
-  const ref = await db.collection(COLLECTION).add(payload);
-  return normalizeCoupon(ref.id, payload);
+  const couponRef = db.collection(COLLECTION).doc();
+  const markerRef = db.collection("couponCodes").doc(code);
+
+  await db.runTransaction(async (tx) => {
+    const marker = await tx.get(markerRef);
+    if (marker.exists) {
+      throw new Error(`Kode "${code}" sudah dipakai kupon lain.`);
+    }
+    const payload = {
+      ...stripUndefined(input),
+      code,
+      usageCount: 0,
+      usedBy: [],
+      createdAtISO: nowISO,
+      createdBy,
+    };
+    tx.set(couponRef, payload);
+    tx.set(markerRef, { couponId: couponRef.id, code, createdAtISO: nowISO });
+  });
+
+  const created = await couponRef.get();
+  return normalizeCoupon(
+    couponRef.id,
+    created.data() as Record<string, unknown>,
+  );
 }
 
-/** Perbarui kupon (partial). Kode (bila diubah) dinormalisasi. */
+/** Perbarui kupon (partial). Kode (bila diubah) dinormalisasi + penanda dipindah. */
 export async function updateCoupon(
   id: string,
   patch: Partial<CouponInput>,
@@ -246,6 +300,7 @@ export async function updateCoupon(
   const ref = db.collection(COLLECTION).doc(id);
   const existing = await ref.get();
   if (!existing.exists) return null;
+  const oldCode = normalizeCouponCode(str(existing.get("code")));
 
   const data: Record<string, unknown> = stripUndefined({
     ...patch,
@@ -253,58 +308,267 @@ export async function updateCoupon(
   });
   data.updatedAtISO = new Date().toISOString();
 
-  await ref.set(data, { merge: true });
+  const newCode = normalizeCouponCode(str(patch.code ?? oldCode));
+
+  if (newCode && newCode !== oldCode) {
+    // Pindahkan penanda kode secara atomik (tolak bila sudah dipakai kupon lain).
+    await db.runTransaction(async (tx) => {
+      const newMarkerRef = db.collection("couponCodes").doc(newCode);
+      const newMarker = await tx.get(newMarkerRef);
+      if (newMarker.exists && (newMarker.get("couponId") as string) !== id) {
+        throw new Error(`Kode "${newCode}" sudah dipakai kupon lain.`);
+      }
+      if (oldCode) tx.delete(db.collection("couponCodes").doc(oldCode));
+      tx.set(newMarkerRef, {
+        couponId: id,
+        code: newCode,
+        createdAtISO: new Date().toISOString(),
+      });
+      tx.set(ref, data, { merge: true });
+    });
+  } else {
+    await ref.set(data, { merge: true });
+  }
+
   const updated = await ref.get();
   return normalizeCoupon(id, updated.data() as Record<string, unknown>);
 }
 
-/** Hapus kupon. */
+/**
+ * Arsipkan kupon (SOFT-DELETE) — `KP-M3`. Dokumen tetap ada agar laporan &
+ * restore tetap utuh; kupon tak lagi bisa dipakai & tak tampil sebagai aktif.
+ */
 export async function deleteCoupon(id: string): Promise<boolean> {
   const db = getAdminDb();
   if (!db) return false;
   const ref = db.collection(COLLECTION).doc(id);
   const existing = await ref.get();
   if (!existing.exists) return false;
-  await ref.delete();
+  await ref.set(
+    {
+      archived: true,
+      active: false,
+      archivedAtISO: new Date().toISOString(),
+    },
+    { merge: true },
+  );
   return true;
 }
 
+/** Pulihkan kupon yang diarsipkan. */
+export async function restoreCoupon(id: string): Promise<boolean> {
+  const db = getAdminDb();
+  if (!db) return false;
+  const ref = db.collection(COLLECTION).doc(id);
+  const existing = await ref.get();
+  if (!existing.exists) return false;
+  await ref.set({ archived: false, updatedAtISO: new Date().toISOString() }, { merge: true });
+  return true;
+}
+
+/** Hasil pemakaian kupon (untuk logging/rekonsiliasi). */
+export type RedeemResult =
+  | { ok: true }
+  | { ok: false; reason: string };
+
 /**
- * Catat pemakaian kupon: `usageCount++` & push uid (dibatasi jumlah).
- * Best-effort dipanggil saat order sukses; tidak melempar bila kupon hilang.
+ * Catat pemakaian kupon secara ATOMIK (`KP-C1`).
+ *
+ * Dalam satu transaksi: baca ulang kupon → cek ulang `usageLimit` & batas
+ * per-user (dari subkoleksi `redemptions/{uid}`) → `increment(1)` +
+ * tulis `redemptions/{uid}` + `arrayUnion(uid)` (bila masih dalam batas).
+ *
+ * Mengembalikan `{ ok:false }` bila kuota/batas terlampaui (dipanggil SEBELUM
+ * `createOrder` sebagai reservasi). Idempoten-aman terhadap concurrency karena
+ * transaksi Firestore mengulang saat ada konflik.
  */
-export async function redeemCoupon(id: string, uid: string): Promise<void> {
+export async function redeemCoupon(
+  id: string,
+  uid: string,
+): Promise<RedeemResult> {
+  const db = getAdminDb();
+  if (!db) return { ok: false, reason: "Admin SDK tidak tersedia." };
+
+  const ref = db.collection(COLLECTION).doc(id);
+  const redemptionRef = ref.collection(REDEMPTIONS).doc(uid);
+
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new Error("coupon_not_found");
+      const coupon = normalizeCoupon(id, snap.data() as Record<string, unknown>);
+      if (coupon.archived) throw new Error("coupon_archived");
+      if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+        throw new Error("usage_limit_reached");
+      }
+
+      const redemption = await tx.get(redemptionRef);
+      const used = redemption.exists ? num(redemption.get("count")) : 0;
+      if (coupon.limitPerUser > 0 && used >= coupon.limitPerUser) {
+        throw new Error("per_user_limit_reached");
+      }
+
+      tx.update(ref, {
+        usageCount: FieldValue.increment(1),
+        usedBy:
+          coupon.usedBy.length < MAX_COUPON_USED_BY
+            ? FieldValue.arrayUnion(uid)
+            : FieldValue.arrayUnion(),
+        updatedAtISO: new Date().toISOString(),
+      });
+      tx.set(
+        redemptionRef,
+        {
+          uid,
+          count: FieldValue.increment(1),
+          lastRedeemedAtISO: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+    });
+    return { ok: true };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "redeem_failed";
+    return { ok: false, reason };
+  }
+}
+
+/**
+ * Kembalikan kuota kupon (`KP-C2`) — dipanggil saat order dibatalkan/dihapus.
+ * Idempoten bila pemanggil hanya memanggil pada transisi status yang tepat
+ * (lihat pemanggilan di API admin). Dekremen `usageCount` (tidak negatif) +
+ * `redemptions/{uid}` (jika ada). Tidak melempar.
+ */
+export async function restoreCouponUsage(
+  id: string,
+  uid: string,
+): Promise<void> {
   const db = getAdminDb();
   if (!db) return;
 
   const ref = db.collection(COLLECTION).doc(id);
-  const existing = await ref.get();
-  if (!existing.exists) return;
+  const redemptionRef = ref.collection(REDEMPTIONS).doc(uid);
 
-  const coupon = normalizeCoupon(id, existing.data() as Record<string, unknown>);
-  const usedBy =
-    coupon.usedBy.length < MAX_COUPON_USED_BY
-      ? [...coupon.usedBy, uid]
-      : coupon.usedBy;
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const coupon = normalizeCoupon(id, snap.data() as Record<string, unknown>);
 
-  await ref.set(
-    {
-      usageCount: coupon.usageCount + 1,
-      usedBy,
-      updatedAtISO: new Date().toISOString(),
-    },
-    { merge: true },
-  );
+      const redemption = await tx.get(redemptionRef);
+      const used = redemption.exists ? num(redemption.get("count")) : 0;
+
+      tx.update(ref, {
+        usageCount: Math.max(0, coupon.usageCount - 1),
+        usedBy: coupon.usedBy.filter((u) => u !== uid),
+        updatedAtISO: new Date().toISOString(),
+      });
+      if (used <= 1) {
+        tx.delete(redemptionRef);
+      } else {
+        tx.set(
+          redemptionRef,
+          { uid, count: used - 1, lastRedeemedAtISO: new Date().toISOString() },
+          { merge: true },
+        );
+      }
+    });
+  } catch (err) {
+    console.error("[coupons] gagal mengembalikan kuota kupon:", err);
+  }
+}
+
+/** Jumlah pemakaian kupon oleh seorang user (dari subkoleksi `redemptions`). */
+export async function getUserCouponUsage(
+  id: string,
+  uid: string,
+): Promise<number> {
+  const db = getAdminDb();
+  if (!db) return 0;
+  try {
+    const doc = await db
+      .collection(COLLECTION)
+      .doc(id)
+      .collection(REDEMPTIONS)
+      .doc(uid)
+      .get();
+    return doc.exists ? num(doc.get("count")) : 0;
+  } catch {
+    return 0;
+  }
 }
 
 /** Ringkasan statistik kupon. */
 export async function getCouponsSummary(): Promise<CouponsSummary> {
   const coupons = await listCoupons();
+  const active = coupons.filter((c) => c.active && !c.archived);
   return {
-    total: coupons.length,
-    active: coupons.filter((c) => c.active).length,
+    total: coupons.filter((c) => !c.archived).length,
+    active: active.length,
     totalUsage: coupons.reduce((sum, c) => sum + c.usageCount, 0),
   };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Statistik per-kupon (`KP-M2`)                                               */
+/* -------------------------------------------------------------------------- */
+
+/** Statistik dampak satu kupon dari pesanan (bukan `ar`/estimasi). */
+export type CouponStat = {
+  couponId: string;
+  code: string;
+  /** Jumlah pesanan yang memakai kupon ini. */
+  orderCount: number;
+  /** Total diskon yang diberikan (Rp). */
+  totalDiscount: number;
+  /** Jumlah pesanan yang dibatalkan (diskon tak jadi). */
+  cancelledOrders: number;
+};
+
+/**
+ * Hitung statistik per-kupon dari koleksi `orders` (agregasi di memori).
+ * Dipakai kartu kupon admin (`KP-M2`) + ekspor CSV. Menyaring order yang
+ * memiliki snapshot `coupon`. Best-effort — mengembalikan map kosong bila
+ * Admin SDK tak tersedia.
+ */
+export async function getCouponStats(): Promise<Record<string, CouponStat>> {
+  const db = getAdminDb();
+  if (!db) return {};
+  try {
+    const snap = await db
+      .collection("orders")
+      .select("status", "coupon")
+      .get();
+
+    const stats: Record<string, CouponStat> = {};
+    snap.forEach((doc) => {
+      const coupon = doc.get("coupon") as Record<string, unknown> | undefined;
+      if (!coupon || typeof coupon !== "object") return;
+      const code = typeof coupon.code === "string" ? coupon.code : "";
+      const couponId =
+        typeof coupon.couponId === "string" ? coupon.couponId : `code:${code}`;
+      const discount =
+        typeof coupon.discount === "number" && Number.isFinite(coupon.discount)
+          ? coupon.discount
+          : 0;
+      const status = doc.get("status") as string;
+
+      const entry =
+        stats[couponId] ??
+        { couponId, code, orderCount: 0, totalDiscount: 0, cancelledOrders: 0 };
+      entry.orderCount += 1;
+      if (status === "dibatalkan") {
+        entry.cancelledOrders += 1;
+      } else {
+        entry.totalDiscount += discount;
+      }
+      stats[couponId] = entry;
+    });
+    return stats;
+  } catch (err) {
+    console.error("[coupons] gagal menghitung statistik kupon:", err);
+    return {};
+  }
 }
 
 /** Buang field `undefined` agar aman ditulis ke Firestore. */

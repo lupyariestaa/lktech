@@ -3,13 +3,18 @@
 import { useEffect, useState } from "react";
 import {
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Loader2,
   Plus,
   Save,
   Trash2,
 } from "lucide-react";
-import { fetchSettings, saveSettings } from "@/lib/admin-api";
+import {
+  fetchSettingsWithHealth,
+  saveSettings,
+  type EmailHealth,
+} from "@/lib/admin-api";
 import { useToast } from "@/components/admin/toast";
 import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import {
@@ -30,14 +35,18 @@ export function SettingsManager() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [emailHealth, setEmailHealth] = useState<EmailHealth | null>(null);
   useRegisterDirty(dirty);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const data = await fetchSettings();
-        if (active) setSettings(data);
+        const data = await fetchSettingsWithHealth();
+        if (active) {
+          setSettings(data.settings);
+          setEmailHealth(data.emailHealth);
+        }
       } catch (err) {
         if (active) {
           setError(err instanceof Error ? err.message : "Gagal memuat.");
@@ -187,6 +196,38 @@ export function SettingsManager() {
           terpisah. (Perlu domain terverifikasi di Resend agar terkirim ke
           semua alamat email.)
         </p>
+
+        {/* Status konfigurasi email (`EM-C1`/`EM-H4`) */}
+        {emailHealth && !emailHealth.configured && (
+          <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              <strong>Email pembeli belum aktif.</strong> Variabel{" "}
+              <code>RESEND_API_KEY</code> belum diisi, sehingga email ke pembeli
+              tidak terkirim (dilewati).
+            </span>
+          </div>
+        )}
+        {emailHealth && emailHealth.configured && emailHealth.testOnly && (
+          <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              <strong>Mode uji Resend.</strong> Pengirim masih{" "}
+              <code>{emailHealth.from}</code> (domain <code>resend.dev</code>),
+              sehingga email HANYA terkirim ke alamat email pemilik akun Resend —
+              bukan ke pembeli umum. Verifikasi domain Anda di Resend lalu ubah{" "}
+              <code>EMAIL_FROM</code> agar email terkirim ke semua pelanggan.
+            </span>
+          </div>
+        )}
+        {emailHealth && emailHealth.configured && !emailHealth.testOnly && (
+          <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Email pembeli siap. Pengirim: <code>{emailHealth.from}</code>.
+            </span>
+          </div>
+        )}
 
         <div className="mt-5 flex flex-col gap-3">
           <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface px-4 py-3.5">

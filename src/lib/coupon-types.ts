@@ -31,6 +31,8 @@ export type Coupon = {
   limitPerUser: number;
   /** Aktif/nonaktif (bisa dimatikan tanpa dihapus). */
   active: boolean;
+  /** Soft-delete: kupon diarsipkan (disembunyikan & tak bisa dipakai). */
+  archived?: boolean;
   /** Jumlah pemakaian (denormalisasi). */
   usageCount: number;
   /** Daftar uid pemakai (dibatasi `MAX_COUPON_USED_BY`). */
@@ -46,6 +48,8 @@ export type OrderCoupon = {
   type: CouponType;
   /** Jumlah diskon (Rupiah) yang diterapkan. */
   discount: number;
+  /** ID dokumen kupon (`coupons/{id}`) — untuk restore kuota & audit. */
+  couponId?: string;
 };
 
 /** Ringkasan statistik kupon untuk kartu/badge dashboard. */

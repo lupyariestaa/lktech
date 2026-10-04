@@ -59,6 +59,44 @@ export async function deleteOrderAdmin(id: string) {
   );
 }
 
+/** Entri riwayat email sebuah order (`EM-P1`). */
+export type OrderEmailLog = {
+  id: string;
+  kind: string;
+  to: string;
+  status: string;
+  error?: string;
+  attempt: number;
+  atISO: string;
+};
+
+/** Riwayat email sebuah pesanan. */
+export async function fetchOrderEmails(orderId: string): Promise<OrderEmailLog[]> {
+  const data = await adminFetch<{ emails: OrderEmailLog[] }>(
+    `/api/admin/orders?emails=${encodeURIComponent(orderId)}`,
+  );
+  return data.emails;
+}
+
+/** Daftar pesanan satu hari (drill-down analitik `AN-P2`). */
+export async function fetchOrdersByDay(dateISO: string): Promise<Order[]> {
+  const data = await adminFetch<{ orders: Order[] }>(
+    `/api/admin/orders?date=${encodeURIComponent(dateISO)}`,
+  );
+  return data.orders;
+}
+
+/** Kirim ulang email ke pembeli (`EM-P1`). */
+export async function resendOrderEmail(
+  id: string,
+  kind?: "confirmation" | "status",
+) {
+  return adminFetch<{ ok: boolean }>("/api/admin/orders", {
+    method: "POST",
+    body: JSON.stringify({ id, kind }),
+  });
+}
+
 /** Bungkus nilai agar aman sebagai sel CSV (quote + escape). */
 function csvCell(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
