@@ -97,6 +97,20 @@ export async function resendOrderEmail(
   });
 }
 
+/**
+ * Buat/segarkan link unduhan untuk order digital yang sudah dibayar.
+ * Mengembalikan URL unduhan (juga dikirim ulang ke email pembeli).
+ */
+export async function fulfillOrderDownload(id: string) {
+  return adminFetch<{ ok: boolean; downloadUrl?: string; files?: number }>(
+    "/api/admin/orders",
+    {
+      method: "POST",
+      body: JSON.stringify({ id, action: "fulfill" }),
+    },
+  );
+}
+
 /** Bungkus nilai agar aman sebagai sel CSV (quote + escape). */
 function csvCell(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);

@@ -23,6 +23,7 @@ import {
   fetchOrderEmails,
   fetchOrdersAdmin,
   fetchOrdersSummary,
+  fulfillOrderDownload,
   resendOrderEmail,
   updateOrderStatusAdmin,
   type OrderEmailLog,
@@ -499,6 +500,17 @@ function OrderDetailDialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const [emails, setEmails] = useState<OrderEmailLog[] | null>(null);
   const [resending, setResending] = useState(false);
+  const [releasing, setReleasing] = useState(false);
+  /** Link unduhan yang baru dibuat (untuk ditampilkan/di-copy admin). */
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+
+  // Apakah tombol "Buat/Kirim ulang unduhan" relevan:
+  // order produk digital (INSTAN) yang sudah dibayar/diproses/selesai.
+  const canReleaseDownload =
+    order.fulfillment === "instan" &&
+    (order.status === "dibayar" ||
+      order.status === "diproses" ||
+      order.status === "selesai");
 
   // Escape + kunci scroll body + focus trap sederhana.
   useEffect(() => {
@@ -541,6 +553,27 @@ function OrderDetailDialog({
       toast.error(err instanceof Error ? err.message : "Gagal mengirim ulang email.");
     } finally {
       setResending(false);
+    }
+  };
+
+  const onReleaseDownload = async () => {
+    setReleasing(true);
+    try {
+      const res = await fulfillOrderDownload(order.id);
+      if (res.downloadUrl) {
+        setDownloadUrl(res.downloadUrl);
+        toast.success(
+          `Link unduhan dibuat (${res.files ?? 0} berkas) & email dikirim ulang.`,
+        );
+      } else {
+        toast.success("Link unduhan dibuat & email dikirim ulang.");
+      }
+      const list = await fetchOrderEmails(order.id).catch(() => []);
+      setEmails(list);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal membuat link unduhan.");
+    } finally {
+      setReleasing(false);
     }
   };
 
@@ -664,6 +697,35 @@ function OrderDetailDialog({
             </div>
           )}
 
+          {/* Link unduhan yang baru dibuat (dari aksi admin) */}
+          {downloadUrl && (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+              <p className="text-[11px] font-semibold tracking-wider text-emerald-700 uppercase">
+                Link Unduhan Dibuat
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  readOnly
+                  value={downloadUrl}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs text-secondary"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(downloadUrl).then(
+                      () => toast.success("Link unduhan disalin."),
+                      () => toast.error("Gagal menyalin."),
+                    );
+                  }}
+                  className="shrink-0 rounded-xl border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                >
+                  Salin
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Status email (`XL-4`) */}
           <EmailStatusBlock order={order} />
 
@@ -752,6 +814,21 @@ function OrderDetailDialog({
             <MessageCircle className="h-4 w-4" />
             Kirim WhatsApp
           </a>
+          {canReleaseDownload && (
+            <button
+              type="button"
+              onClick={onReleaseDownload}
+              disabled={releasing}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
+            >
+              {releasing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Buat / kirim ulang unduhan
+            </button>
+          )}
           <button
             type="button"
             onClick={onResend}

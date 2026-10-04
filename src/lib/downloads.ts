@@ -132,6 +132,77 @@ function normalizeGrant(
 }
 
 /**
+ * Bersihkan daftar berkas: buang `size` yang `undefined` (Firestore menolaknya)
+ * & buang berkas tanpa URL.
+ */
+function cleanFiles(files: DownloadFile[]): Record<string, unknown>[] {
+  return files
+    .filter((f) => f.url && f.url.trim())
+    .map((f) => {
+      const file: Record<string, unknown> = { name: f.name, url: f.url };
+      if (typeof f.size === "number" && Number.isFinite(f.size)) file.size = f.size;
+      return file;
+    });
+}
+
+/**
+ * Memperbarui berkas/pengaturan pada token unduhan yang sudah ada
+ * (token TETAP sama agar link pembeli lama tetap berlaku). Mengembalikan grant.
+ */
+export async function refreshGrant(
+  tokenId: string,
+  patch: {
+    files: DownloadFile[];
+    note?: string;
+    linkDays?: number;
+    maxHits?: number;
+  },
+): Promise<DownloadGrant> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const now = new Date();
+  const update: Record<string, unknown> = {
+    files: cleanFiles(patch.files),
+    updatedAtISO: now.toISOString(),
+  };
+  if (patch.note !== undefined) update.note = patch.note ?? null;
+  if (patch.maxHits && patch.maxHits > 0) update.maxHits = patch.maxHits;
+  if (patch.linkDays && patch.linkDays > 0) {
+    update.expiresAtISO = new Date(
+      now.getTime() + patch.linkDays * 86_400_000,
+    ).toISOString();
+  }
+  const ref = db.collection(COLLECTION).doc(tokenId);
+  await ref.set(update, { merge: true });
+  const doc = await ref.get();
+  return normalizeGrant(tokenId, doc.data() as Record<string, unknown>);
+}
+
+/** Mengambil token unduhan sebuah order (null bila belum ada). */
+export async function getGrantByOrderId(
+  orderId: string,
+): Promise<{ token: string; grant: DownloadGrant } | null> {
+  const db = getAdminDb();
+  if (!db) return null;
+  try {
+    const snap = await db
+      .collection(COLLECTION)
+      .where("orderId", "==", orderId)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    return {
+      token: makeToken(doc.id),
+      grant: normalizeGrant(doc.id, doc.data() as Record<string, unknown>),
+    };
+  } catch (err) {
+    console.error("[downloads] gagal mengambil grant order:", err);
+    return null;
+  }
+}
+
+/**
  * Membuat token unduhan untuk sebuah order (idempoten per order: bila sudah ada
  * token untuk order ini, kembalikan token yang sama).
  * Mengembalikan `{ token, grant }`.
@@ -144,6 +215,12 @@ export async function createDownloadGrant(params: {
   note?: string;
   linkDays?: number;
   maxHits?: number;
+  /**
+   * Bila `true`, dan sudah ada token untuk order ini, PERBARUI berkasnya
+   * (bukan mengembalikan yang lama). Dipakai oleh aksi admin "buat ulang
+   * unduhan" setelah berkas produk ditambahkan/diubah.
+   */
+  refreshExisting?: boolean;
 }): Promise<{ token: string; grant: DownloadGrant } | null> {
   const db = getAdminDb();
   if (!db || !isDownloadConfigured()) return null;
@@ -158,8 +235,18 @@ export async function createDownloadGrant(params: {
       .get();
     if (!existing.empty) {
       const doc = existing.docs[0];
-      const grant = normalizeGrant(doc.id, doc.data() as Record<string, unknown>);
-      return { token: makeToken(doc.id), grant };
+      if (!params.refreshExisting) {
+        const grant = normalizeGrant(doc.id, doc.data() as Record<string, unknown>);
+        return { token: makeToken(doc.id), grant };
+      }
+      // Perbarui berkas & pengaturan pada token yang ada (token tetap valid).
+      const updated = await refreshGrant(doc.id, {
+        files: params.files,
+        note: params.note,
+        linkDays: params.linkDays,
+        maxHits: params.maxHits,
+      });
+      return { token: makeToken(doc.id), grant: updated };
     }
   } catch (err) {
     console.error("[downloads] gagal cek token lama:", err);
@@ -173,11 +260,7 @@ export async function createDownloadGrant(params: {
 
   // Firestore MENOLAK nilai `undefined`. Bersihkan tiap berkas (mis. `size`
   // yang tidak diisi) sebelum menyimpan.
-  const files = params.files.map((f) => {
-    const file: Record<string, unknown> = { name: f.name, url: f.url };
-    if (typeof f.size === "number" && Number.isFinite(f.size)) file.size = f.size;
-    return file;
-  });
+  const files = cleanFiles(params.files);
 
   const payload = {
     orderId: params.orderId,

@@ -218,6 +218,14 @@ Handler:
 > - `/akun` tab Pesanan: tombol **Bayar sekarang** (menunggu bayar) & **Unduh produk** (bila `downloadUrl`).
 > - Aman tanpa kredensial: tanpa `DOWNLOAD_TOKEN_SECRET`/`MAYAR_API_KEY`, unduhan dinonaktifkan (fail-closed); tanpa `MAYAR_WEBHOOK_TOKEN`, verifikasi token dilewati (tetap valid korelasi+idempotensi).
 
+> **P1 — penyempurnaan pasca-uji (verifikasi sandbox lolos):**
+> - **Bug fix:** `mobile` REQUIRED di invoice Mayar → sebelumnya 400 "Validation Error" (checkout jatuh ke WhatsApp). Kini dikirim no. WhatsApp profil / fallback no. situs.
+> - **Bug fix:** `size: undefined` di `files` ditolak Firestore → token unduhan gagal dibuat. Kini berkas dibersihkan sebelum disimpan.
+> - **Aksi admin "Buat / kirim ulang unduhan"** (`POST /api/admin/orders {action:"fulfill"}`): menyegarkan berkas pada token order (mis. berkas produk baru ditambahkan setelah bayar), menampilkan link, & mengirim ulang email. Token tetap sama (link lama tetap valid).
+> - **Diagnostik:** `GET /api/health/payment` (status env Mayar/download/email, tanpa bocorkan kunci).
+> - **UI:** keranjang menampilkan alasan bila jatuh ke WhatsApp (pesan `warning` dari server).
+> - **Catatan email:** tanpa domain Resend terverifikasi, email ke pembeli umum = 403 (dilog, tidak menggagalkan order) — SKIP sampai punya domain (lihat `TASK-SELANJUTNYA.md` §5).
+
 ### FASE P2 — Alur JASA & Kedaluwarsa
 - [ ] Checkout JASA → `menunggu_konfirmasi` + email pembeli & admin.
 - [ ] CTA "Konsultasi dulu" di halaman produk `jasa`.

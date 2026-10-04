@@ -1,6 +1,11 @@
 import "server-only";
 import { getProductsBySlugs } from "@/lib/products";
-import { createDownloadGrant, downloadUrl, type DownloadFile } from "@/lib/downloads";
+import {
+  createDownloadGrant,
+  downloadUrl,
+  getGrantByOrderId,
+  type DownloadFile,
+} from "@/lib/downloads";
 import { getSiteSettings } from "@/lib/settings";
 import { SITE_URL } from "@/lib/site";
 import {
@@ -103,6 +108,9 @@ export async function fulfillOrder(orderId: string): Promise<FulfillResult> {
         note,
         linkDays,
         maxHits,
+        // Bila sudah ada token (mis. fulfillment dijalankan ulang), perbarui
+        // berkasnya agar berkas yang baru ditambahkan ikut tersedia.
+        refreshExisting: true,
       });
       if (grant) {
         downloadLink = downloadUrl(SITE_URL, grant.token);
@@ -134,6 +142,88 @@ export async function fulfillOrder(orderId: string): Promise<FulfillResult> {
   }
 
   return { downloadsReady: Boolean(downloadLink), downloadUrl: downloadLink, emailStatus };
+}
+
+/**
+ * AKSI ADMIN: membuat/menyegarkan ulang link unduhan untuk sebuah order yang
+ * sudah dibayar (mis. bila berkas produk baru ditambahkan setelah pembayaran).
+ *
+ * - Mengumpulkan ulang berkas dari produk (mengikuti perubahan terbaru).
+ * - Bila sudah ada token → berkasnya DIPERBARUI (token tetap sama).
+ * - Menyimpan `downloadTokenId` ke order & mengirim ulang email "pembayaran
+ *   diterima + link unduhan" (best-effort).
+ *
+ * Mengembalikan `{ ok, downloadUrl?, reason? }`.
+ */
+export async function releaseOrderDownload(orderId: string): Promise<{
+  ok: boolean;
+  downloadUrl?: string;
+  files: number;
+  reason?: string;
+}> {
+  const order = await getOrderById(orderId);
+  if (!order) return { ok: false, files: 0, reason: "not_found" };
+
+  const { files, note, linkDays, maxHits } = await collectDownloadFiles(order);
+  if (files.length === 0) {
+    return { ok: false, files: 0, reason: "no_files" };
+  }
+
+  const grant = await createDownloadGrant({
+    orderId: order.id,
+    uid: order.uid,
+    buyerEmail: order.buyerEmail,
+    files,
+    note,
+    linkDays,
+    maxHits,
+    refreshExisting: true,
+  });
+  if (!grant) {
+    return { ok: false, files: files.length, reason: "download_disabled" };
+  }
+
+  const link = downloadUrl(SITE_URL, grant.token);
+  await setOrderDownloadToken(order.id, grant.grant.tokenId);
+
+  // Kirim ulang email berisi link (best-effort; status dicatat).
+  try {
+    const settings = await getSiteSettings();
+    if (settings.notifyBuyerOnOrder) {
+      const result = await sendOrderPaidToBuyer(order, link);
+      await logOrderEmail(order.id, {
+        kind: "download_release",
+        to: order.buyerEmail,
+        result,
+      });
+    }
+  } catch (err) {
+    console.error("[order-payment] gagal kirim email rilis unduhan:", err);
+  }
+
+  return { ok: true, downloadUrl: link, files: files.length };
+}
+
+/**
+ * Info unduhan sebuah order (untuk tampilan admin): link, jumlah berkas,
+ * berapa kali diunduh, batas, & kedaluwarsa. Null bila belum ada token.
+ */
+export async function getOrderDownloadInfo(orderId: string): Promise<{
+  url: string;
+  fileCount: number;
+  hits: number;
+  maxHits: number;
+  expiresAt: string;
+} | null> {
+  const found = await getGrantByOrderId(orderId);
+  if (!found) return null;
+  return {
+    url: downloadUrl(SITE_URL, found.token),
+    fileCount: found.grant.files.length,
+    hits: found.grant.hits,
+    maxHits: found.grant.maxHits,
+    expiresAt: found.grant.expiresAt,
+  };
 }
 
 /**

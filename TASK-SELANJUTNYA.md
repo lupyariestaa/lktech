@@ -1,11 +1,34 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **FASE P1 — Webhook & Fulfillment Otomatis (unduhan)**.
+> Terakhir diperbarui: sesi **P1 — verifikasi sandbox + penyempurnaan fulfillment/unduhan**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
-> 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0 & P1 selesai.**
+> 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0 & P1 selesai (terverifikasi sandbox).**
+
+---
+
+## 🎉 Sesi Terakhir — Verifikasi Sandbox P0–P1 & Penyempurnaan Unduhan
+
+**Hasil uji end-to-end (sandbox Mayar):** checkout → invoice Mayar → bayar → webhook `payment.received` → order **`dibayar`** → tombol **Unduh produk** di `/akun` → halaman `/unduhan/[token]`. **LOLOS.** ✅
+
+**Perbaikan & tambahan (kode, sudah di-commit):**
+
+| Kode | Masalah/Perubahan |
+| --- | --- |
+| **Bugfix mobile** | Invoice Mayar HTTP 400 "Validation Error" karena `mobile` kosong (padahal required) → checkout jatuh ke WhatsApp. Kini dikirim no. WhatsApp profil / fallback no. situs. |
+| **Bugfix file size** | `size: undefined` ditolak Firestore → token unduhan gagal dibuat. Kini berkas dibersihkan sebelum disimpan. |
+| **Aksi admin "Buat / kirim ulang unduhan"** | `POST /api/admin/orders {action:"fulfill"}` + tombol di detail order: segarkan berkas pada token order (mis. berkas baru ditambahkan setelah bayar), tampilkan link, kirim ulang email. |
+| **Diagnostik `/api/health/payment`** | Cek status env Mayar/download/email (tanpa bocorkan kunci). |
+| **UI keranjang** | Tampilkan alasan server saat jatuh ke WhatsApp (pesan `warning`). |
+| **Seed** | `scripts/seed-product-template-katalog.mjs` — produk digital contoh "Template Katalog Produk UMKM" (Rp149rb, kategori `software`). |
+
+**Verifikasi:** `tsc`/`eslint`/`build` bersih ✅ · test (metrics 6 · fulfillment 5 · downloads 5) lolos ✅.
+
+**⚠️ Catatan:** email ke pembeli umum = 403 (domain Resend belum diverifikasi) — **SKIP** (lihat §5). Unduhan tetap bisa via `/akun`.
+
+**Langkah manual tersisa:** daftar akun Mayar **produksi** (`web.mayar.id`) + verifikasi bisnis → set `MAYAR_MODE=production` + `MAYAR_API_KEY` produksi di Vercel → daftarkan webhook produksi → redeploy.
 
 ---
 

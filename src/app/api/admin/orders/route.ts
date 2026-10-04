@@ -20,6 +20,7 @@ import {
 } from "@/lib/email-status";
 import { restoreCouponUsage } from "@/lib/coupons";
 import { getSiteSettings } from "@/lib/settings";
+import { releaseOrderDownload } from "@/lib/order-payment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -210,15 +211,17 @@ export async function PATCH(req: Request) {
 }
 
 /**
- * POST /api/admin/orders — kirim ulang email ke pembeli (`EM-P1`).
- * Body: { id: string, kind?: "confirmation" | "status" }
- * `kind` default menyesuaikan status: "baru" → konfirmasi, selain itu → status.
+ * POST /api/admin/orders — aksi ke pesanan.
+ * Body:
+ *   - { id, kind?: "confirmation" | "status" } — kirim ulang email ke pembeli.
+ *   - { id, action: "fulfill" }                 — buat/segarkan link unduhan
+ *     (untuk order digital yang sudah dibayar; mis. berkas baru ditambahkan).
  */
 export async function POST(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  let body: { id?: string; kind?: string };
+  let body: { id?: string; kind?: string; action?: string };
   try {
     body = await req.json();
   } catch {
@@ -227,6 +230,43 @@ export async function POST(req: Request) {
   const { id } = body;
   if (!id) {
     return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
+  }
+
+  // ===== Aksi: buat/segarkan link unduhan =====
+  if (body.action === "fulfill") {
+    try {
+      const order = await getOrderById(id);
+      if (!order) {
+        return NextResponse.json(
+          { error: "Pesanan tidak ditemukan." },
+          { status: 404 },
+        );
+      }
+      const res = await releaseOrderDownload(id);
+      if (!res.ok) {
+        const msg =
+          res.reason === "no_files"
+            ? "Produk pada pesanan ini belum memiliki berkas unduhan. Isi bagian 'Unduhan Otomatis' di produk terlebih dahulu."
+            : res.reason === "download_disabled"
+              ? "Fitur unduhan belum dikonfigurasi (DOWNLOAD_TOKEN_SECRET/MAYAR_API_KEY kosong)."
+              : "Gagal membuat link unduhan.";
+        return NextResponse.json(
+          { error: msg, code: res.reason },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({
+        ok: true,
+        downloadUrl: res.downloadUrl,
+        files: res.files,
+      });
+    } catch (err) {
+      console.error("[api/admin/orders] fulfill gagal:", err);
+      return NextResponse.json(
+        { error: "Gagal membuat link unduhan." },
+        { status: 500 },
+      );
+    }
   }
 
   try {
