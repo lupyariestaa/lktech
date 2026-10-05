@@ -231,6 +231,7 @@ export const productSchema = z.object({
   featured: z.boolean().optional(),
   active: z.boolean().optional(),
   relatedSlugs: z.array(z.string().trim().max(200)).max(12).optional(),
+  reviewsEnabled: z.boolean().optional(),
   waMessage: z.string().trim().max(1000).optional(),
 });
 

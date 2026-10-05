@@ -110,6 +110,9 @@ export default async function ProdukDetailPage({
   // JSON-LD: produk tunggal → satu Offer; multi-varian → beberapa Offer.
   // FASE R: sisipkan AggregateRating bila produk punya ulasan disetujui.
   const rating = product.ratingSummary;
+  // Ulasan disembunyikan bila admin mematikannya (mis. ulasan masih kosong).
+  const showReviews = product.reviewsEnabled !== false;
+  const showRating = showReviews && rating && rating.count > 0;
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -118,7 +121,7 @@ export default async function ProdukDetailPage({
     image: gallery.length ? gallery : undefined,
     category: PRODUCT_CATEGORY_LABEL[product.category],
     brand: { "@type": "Brand", name: "LKTech" },
-    ...(rating && rating.count > 0
+    ...(showRating
       ? {
           aggregateRating: {
             "@type": "AggregateRating",
@@ -359,8 +362,13 @@ export default async function ProdukDetailPage({
               </section>
             )}
 
-            {/* Ulasan & rating (FASE R) */}
-            <ProductReviews productSlug={product.slug} summary={product.ratingSummary} />
+            {/* Ulasan & rating (FASE R) — disembunyikan bila admin mematikannya */}
+            {showReviews && (
+              <ProductReviews
+                productSlug={product.slug}
+                summary={product.ratingSummary}
+              />
+            )}
           </div>
 
           {/* ===== Sidebar pembelian (desktop/tablet ≥ lg) ===== */}

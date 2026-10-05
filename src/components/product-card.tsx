@@ -88,14 +88,16 @@ export function ProductCard({ product }: { product: Product }) {
             <Tag className="h-3 w-3" />
             {PRODUCT_CATEGORY_LABEL[product.category]}
           </span>
-          {product.ratingSummary && product.ratingSummary.count > 0 && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary">
-              <RatingStars value={product.ratingSummary.avg} size="sm" />
-              <span className="text-muted">
-                {product.ratingSummary.avg.toFixed(1)} ({product.ratingSummary.count})
+          {product.reviewsEnabled !== false &&
+            product.ratingSummary &&
+            product.ratingSummary.count > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary">
+                <RatingStars value={product.ratingSummary.avg} size="sm" />
+                <span className="text-muted">
+                  {product.ratingSummary.avg.toFixed(1)} ({product.ratingSummary.count})
+                </span>
               </span>
-            </span>
-          )}
+            )}
         </div>
 
         <h3 className="mt-3 text-base font-bold text-secondary">

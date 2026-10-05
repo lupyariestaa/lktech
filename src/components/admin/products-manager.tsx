@@ -832,6 +832,11 @@ function ProductForm({
             onChange={(v) => set("featured", v)}
           />
           <Toggle
+            label="Tampilkan ulasan & rating"
+            checked={product.reviewsEnabled !== false}
+            onChange={(v) => set("reviewsEnabled", v ? undefined : false)}
+          />
+          <Toggle
             label="Stok habis"
             checked={product.soldOut}
             onChange={(v) => set("soldOut", v)}

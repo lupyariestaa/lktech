@@ -167,6 +167,14 @@ Pada halaman produk, bila `ratingSummary.count > 0`, tambahkan:
 
 ---
 
+## 10. Tambahan — Toggle Sembunyikan Ulasan per Produk
+- Field produk **`reviewsEnabled?: boolean`** (default tampil/`undefined`; `false` = sembunyikan) — backward-compatible.
+- **Toggle "Tampilkan ulasan & rating"** di editor produk `/admin/products`.
+- Bila dimatikan: section ulasan di halaman detail **tidak dirender**, bintang di kartu & JSON-LD `AggregateRating` (SEO) **ikut disembunyikan** — data ulasan tetap tersimpan (tak hilang).
+- Tujuan: hindari menampilkan ulasan kosong yang bisa mengecoh pembeli; admin bisa mengaktifkan kembali saat ulasan sudah cukup.
+
+---
+
 ## 9. Catatan Implementasi (R1–R5)
 - **Data model:** `reviews/{id}` (`review-types.ts` tipe murni + `reviews.ts` data layer server-only). Idempoten per (orderId, productSlug); selalu `pending` (moderasi wajib).
 - **Agregat:** `products/{slug}.ratingSummary` direcompute dari ulasan `approved` (`recomputeProductRating`) — sumber kebenaran = `reviews`.

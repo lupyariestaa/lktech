@@ -198,6 +198,12 @@ export type Product = {
     count: number;
     distribution: Record<number, number>;
   };
+  /**
+   * Tampilkan section ulasan & rating di halaman produk. Bila `false`,
+   * section ulasan + bintang DISEMBUNYIKAN (mis. saat ulasan masih kosong).
+   * Default: tampil (undefined/true) — backward-compatible.
+   */
+  reviewsEnabled?: boolean;
   /** Pesan WhatsApp khusus (bila kosong, sistem menyusun otomatis). */
   waMessage?: string;
 };

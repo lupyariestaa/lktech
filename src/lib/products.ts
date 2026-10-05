@@ -280,6 +280,8 @@ function normalizeProduct(data: Record<string, unknown>): Product {
     downloadable: normalizeDownloadable(data.downloadable),
     relatedSlugs: normalizeRelatedSlugs(data.relatedSlugs),
     ratingSummary: normalizeProductRatingSummary(data.ratingSummary),
+    // Default: tampil (hanya `false` eksplisit yang menyembunyikan) — backward-compat.
+    reviewsEnabled: data.reviewsEnabled === false ? false : undefined,
     waMessage: str(data.waMessage) || undefined,
   };
 }
@@ -410,6 +412,7 @@ export async function saveProduct(
     "downloadable",
     "relatedSlugs",
     "stock",
+    "reviewsEnabled",
   ]) {
     if (payload[key] === undefined) delete payload[key];
   }

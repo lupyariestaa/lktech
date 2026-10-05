@@ -115,6 +115,7 @@ export async function POST(req: Request) {
           ),
         ).slice(0, 12)
       : undefined,
+    reviewsEnabled: body.reviewsEnabled === false ? false : undefined,
     variants: Array.isArray(body.variants)
       ? body.variants
           .filter((v) => v && v.slug?.trim() && v.name?.trim())
