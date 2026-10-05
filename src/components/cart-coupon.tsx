@@ -25,6 +25,8 @@ export function CartCoupon({
   onCleared,
   disabled = false,
   promoCode,
+  slugs,
+  itemCount,
 }: {
   subtotal: number;
   applied: AppliedCoupon | null;
@@ -33,6 +35,10 @@ export function CartCoupon({
   disabled?: boolean;
   /** Kode dari URL (`?promo=`) untuk di-prefill (`KP-P1`). */
   promoCode?: string;
+  /** Slug produk di keranjang (validasi kupon bundel, FASE P3). */
+  slugs?: string[];
+  /** Total jumlah item (qty) di keranjang (validasi `minItems`). */
+  itemCount?: number;
 }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -53,7 +59,10 @@ export function CartCoupon({
     setBusy(true);
     setError(null);
     try {
-      const result = await validateCouponRequest(value, subtotal);
+      const result = await validateCouponRequest(value, subtotal, {
+        slugs,
+        itemCount,
+      });
       if (!result.valid) {
         setError(result.reason);
         return;

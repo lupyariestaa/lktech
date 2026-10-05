@@ -228,6 +228,7 @@ export const productSchema = z.object({
   soldOut: z.boolean().optional(),
   featured: z.boolean().optional(),
   active: z.boolean().optional(),
+  relatedSlugs: z.array(z.string().trim().max(200)).max(12).optional(),
   waMessage: z.string().trim().max(1000).optional(),
 });
 
@@ -320,6 +321,10 @@ const couponBaseFields = {
   type: z.enum(["percent", "amount"]),
   value: z.number().finite().min(0).max(1_000_000_000),
   minSpend: z.number().finite().min(0).max(1_000_000_000).default(0),
+  /** Kupon bundel (FASE P3): slug produk yang wajib ada di keranjang. */
+  appliesToSlugs: z.array(z.string().trim().max(200)).max(50).optional(),
+  /** Kupon bundel (FASE P3): minimal jumlah item (qty) di keranjang. */
+  minItems: z.number().int().min(0).max(100000).optional(),
   maxDiscount: z.number().finite().min(0).max(1_000_000_000).optional(),
   startsAt: couponDateField,
   endsAt: couponDateField,
@@ -348,6 +353,8 @@ export const couponCreateSchema = refineDateRange(
     type: "percent" | "amount";
     value: number;
     minSpend: number;
+    appliesToSlugs?: string[];
+    minItems?: number;
     maxDiscount?: number;
     startsAt?: string;
     endsAt?: string;
@@ -364,6 +371,8 @@ export const couponUpdateSchema = refineDateRange(
     type: couponBaseFields.type.optional(),
     value: couponBaseFields.value.optional(),
     minSpend: couponBaseFields.minSpend.optional(),
+    appliesToSlugs: couponBaseFields.appliesToSlugs,
+    minItems: couponBaseFields.minItems,
     maxDiscount: couponBaseFields.maxDiscount,
     startsAt: couponBaseFields.startsAt,
     endsAt: couponBaseFields.endsAt,
@@ -376,6 +385,8 @@ export const couponUpdateSchema = refineDateRange(
     type?: "percent" | "amount";
     value?: number;
     minSpend?: number;
+    appliesToSlugs?: string[];
+    minItems?: number;
     maxDiscount?: number;
     startsAt?: string;
     endsAt?: string;

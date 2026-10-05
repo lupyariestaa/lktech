@@ -104,6 +104,15 @@ export async function POST(req: Request) {
           }))
       : [],
     notes: Array.isArray(body.notes) ? body.notes.filter(Boolean) : [],
+    relatedSlugs: Array.isArray(body.relatedSlugs)
+      ? Array.from(
+          new Set(
+            body.relatedSlugs
+              .map((s) => sanitizeSlug(String(s)))
+              .filter((s) => s && s !== slug),
+          ),
+        ).slice(0, 12)
+      : undefined,
     variants: Array.isArray(body.variants)
       ? body.variants
           .filter((v) => v && v.slug?.trim() && v.name?.trim())

@@ -15,6 +15,10 @@ const bodySchema = z.object({
   code: z.string().trim().min(1).max(40),
   /** Subtotal keranjang (dipakai untuk validasi min belanja & hitung diskon). */
   subtotal: z.number().finite().min(0).max(1_000_000_000),
+  /** Slug produk di keranjang (validasi kupon bundel, FASE P3). Opsional. */
+  slugs: z.array(z.string().trim().max(200)).max(50).optional(),
+  /** Total jumlah item (qty) di keranjang (validasi `minItems`). Opsional. */
+  itemCount: z.number().int().min(0).max(100000).optional(),
 });
 
 /**
@@ -53,6 +57,8 @@ export async function POST(req: Request) {
     const result = validateCoupon(coupon, {
       subtotal: parsed.data.subtotal,
       uid: check.uid,
+      slugs: parsed.data.slugs,
+      itemCount: parsed.data.itemCount,
     });
 
     if (!result.ok) {

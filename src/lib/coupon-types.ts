@@ -20,6 +20,16 @@ export type Coupon = {
   value: number;
   /** Minimal subtotal agar kupon berlaku (0 = tanpa syarat). */
   minSpend: number;
+  /**
+   * KUPON BUNDEL (FASE P3): kode hanya berlaku bila KERANJANG memuat minimal
+   * satu produk dari daftar slug ini. Kosong/undefined = berlaku untuk semua.
+   */
+  appliesToSlugs?: string[];
+  /**
+   * KUPON BUNDEL (FASE P3): minimal JUMLAH ITEM (total qty) di keranjang agar
+   * kode berlaku. 0/undefined = tanpa syarat jumlah.
+   */
+  minItems?: number;
   /** Batas maksimum diskon untuk tipe persen (opsional). */
   maxDiscount?: number;
   /** Masa berlaku (ISO). Kosong = tak dibatasi. */

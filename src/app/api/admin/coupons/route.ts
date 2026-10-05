@@ -58,6 +58,8 @@ function toInput(
     type: string;
     value: number;
     minSpend: number;
+    appliesToSlugs?: string[];
+    minItems?: number;
     maxDiscount?: number;
     startsAt?: string;
     endsAt?: string;
@@ -69,12 +71,23 @@ function toInput(
   const type = (COUPON_TYPES as readonly string[]).includes(data.type)
     ? (data.type as CouponInput["type"])
     : "percent";
+  // Kupon bundel (FASE P3): bersihkan slug kosong/duplikat.
+  const appliesToSlugs = Array.isArray(data.appliesToSlugs)
+    ? Array.from(
+        new Set(data.appliesToSlugs.map((s) => s.trim()).filter(Boolean)),
+      )
+    : [];
   return {
     code: normalizeCouponCode(data.code),
     description: data.description,
     type,
     value: data.type === "percent" ? Math.min(100, Math.max(0, data.value)) : Math.max(0, data.value),
     minSpend: Math.max(0, data.minSpend),
+    appliesToSlugs: appliesToSlugs.length ? appliesToSlugs : undefined,
+    minItems:
+      typeof data.minItems === "number" && data.minItems > 0
+        ? Math.floor(data.minItems)
+        : undefined,
     maxDiscount:
       type === "percent" && typeof data.maxDiscount === "number" && data.maxDiscount > 0
         ? data.maxDiscount

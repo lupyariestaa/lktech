@@ -71,6 +71,7 @@ const emptyProduct: Product = {
   featured: false,
   active: true,
   downloadable: undefined,
+  relatedSlugs: [],
   waMessage: undefined,
 };
 
@@ -231,6 +232,7 @@ export function ProductsManager() {
         product={editing}
         isNew={isNew}
         saving={saving}
+        allProducts={items}
         onChange={setEditing}
         onSave={onSave}
         onCancel={() => setEditing(null)}
@@ -392,6 +394,7 @@ function ProductForm({
   product,
   isNew,
   saving,
+  allProducts,
   onChange,
   onSave,
   onCancel,
@@ -400,6 +403,7 @@ function ProductForm({
   product: Product;
   isNew: boolean;
   saving: boolean;
+  allProducts: StoredProduct[];
   onChange: (p: Product) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -805,6 +809,16 @@ function ProductForm({
             className={cn(fieldBase, "resize-none")}
           />
         </Field>
+
+        {/* ===== Produk terkait / sering dibeli bersama (FASE P3) ===== */}
+        <RelatedProductsEditor
+          currentSlug={product.slug}
+          value={product.relatedSlugs ?? []}
+          options={allProducts}
+          onChange={(slugs) =>
+            set("relatedSlugs", slugs.length ? slugs : undefined)
+          }
+        />
 
         <div className="flex flex-wrap gap-5 rounded-2xl border border-slate-200 bg-surface p-5">
           <Toggle
@@ -1335,6 +1349,125 @@ function DownloadableEditor({
             />
           </Field>
         </>
+      )}
+        </div>
+  );
+}
+
+/**
+ * Editor "Produk terkait / sering dibeli bersama" (FASE P3).
+ * Pilih dari produk lain (checkbox, dengan pencarian). Urutan pilih = urutan
+ * tampil. Menyimpan slug saja ke `product.relatedSlugs`.
+ */
+function RelatedProductsEditor({
+  currentSlug,
+  value,
+  options,
+  onChange,
+}: {
+  currentSlug: string;
+  value: string[];
+  options: StoredProduct[];
+  onChange: (slugs: string[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const candidates = options.filter(
+    (p) => p.slug && p.slug !== currentSlug,
+  );
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? candidates.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.slug.toLowerCase().includes(q),
+      )
+    : candidates;
+
+  const toggle = (slug: string) => {
+    if (value.includes(slug)) {
+      onChange(value.filter((s) => s !== slug));
+    } else if (value.length < 12) {
+      onChange([...value, slug]);
+    }
+  };
+
+  const nameFor = (slug: string) =>
+    options.find((p) => p.slug === slug)?.name ?? slug;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-surface p-5">
+      <p className="text-sm font-semibold text-secondary">
+        Sering dibeli bersama (produk terkait)
+      </p>
+      <p className="mt-0.5 text-xs text-muted">
+        Pilih produk yang relevan. Akan tampil sebagai section &quot;Sering
+        dibeli bersama&quot; di halaman produk ini (maks. 12).
+      </p>
+
+      {value.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {value.map((slug) => (
+            <li key={slug}>
+              <button
+                type="button"
+                onClick={() => toggle(slug)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary-100"
+                title="Klik untuk menghapus"
+              >
+                {nameFor(slug)}
+                <X className="h-3 w-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Cari produk…"
+        className={cn(fieldBase, "mt-3")}
+        aria-label="Cari produk terkait"
+      />
+
+      {candidates.length === 0 ? (
+        <p className="mt-3 text-xs text-muted">
+          Belum ada produk lain. Buat produk dulu untuk menautkannya.
+        </p>
+      ) : (
+        <div className="mt-3 max-h-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-3 text-xs text-muted">
+              Tidak ada produk yang cocok.
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {filtered.map((p) => {
+                const checked = value.includes(p.slug);
+                return (
+                  <li key={p.slug}>
+                    <label className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm hover:bg-surface">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggle(p.slug)}
+                        className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/30"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium text-secondary">
+                          {p.name}
+                        </span>
+                        <span className="block truncate text-xs text-muted">
+                          {PRODUCT_CATEGORY_LABEL[p.category]} · {p.slug}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );

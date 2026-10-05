@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **audit QA P2 + remediasi 8 gap**.
+> Terakhir diperbarui: sesi **P3 — bundling & cross-sell (relatedSlugs, kupon bundel)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -53,6 +53,26 @@ Audit QA menyeluruh atas hasil FASE P2 menemukan **8 gap**; semuanya diperbaiki.
 
 ---
 
+## 🎉 Sesi Terakhir — FASE P3: Bundling & Cross-Sell
+
+Fase **P3** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi kode**.
+
+| Kode | Perubahan |
+| --- | --- |
+| **Produk terkait** | Field `relatedSlugs?: string[]` (maks 12) di `Product`; normalisasi backward-compat (`products.ts`), schema API, editor admin **`RelatedProductsEditor`** (cari + checkbox, urutan pilih = urutan tampil). |
+| **"Sering dibeli bersama"** | `getRelatedProducts` (manual + fallback kategori) → section server-rendered di detail produk; "Produk lainnya" dikecualikan dari duplikat. |
+| **Cross-sell keranjang** | Endpoint publik `GET /api/products/related?slugs=` + komponen `cart-cross-sell.tsx` di halaman keranjang (arahan ke halaman produk; aman untuk produk multi-varian). |
+| **Kupon bundel** | `Coupon.appliesToSlugs?` + `minItems?`; logika murni `checkBundleRules` (`coupon-rules.ts`) dipakai `validateCoupon`. |
+| **Server-authoritative** | Checkout API & `/api/coupons/validate` mengirim konteks keranjang (`slugs`, `itemCount`); klien (`coupon-api.ts`, `cart-coupon.tsx`) menyertakannya. |
+| **Admin kupon** | Form kelola menambah seksi **"Kupon Bundel"**; ringkasan kartu menampilkan info bundel; ekspor CSV + kolom "Kupon Bundel"/"Min Item". |
+| **Test** | `npm run test:bundle` (9) — aturan `appliesToSlugs`/`minItems`. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (69 halaman) · test (metrics 6 · fulfillment 5 · downloads 5 · expiry 5 · **bundle 9**) lolos ✅.
+
+**Sisa manual:** uji browser (atur produk terkait di `/admin/products` → cek section "Sering dibeli bersama"; tambah item → cek cross-sell keranjang; buat kupon bundel → uji di keranjang) + deploy.
+
+---
+
 ## 🧭 STATUS & PETA SEKARANG (baca ini dulu)
 
 > Ringkasan kondisi terkini agar sesi berikutnya langsung paham tanpa membaca
@@ -85,18 +105,18 @@ Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
   ✅ P0  Fondasi pembayaran (invoice Mayar, status order, redirect bayar)
   ✅ P1  Webhook + fulfillment otomatis + unduhan /unduhan/[token]
   ✅ P2  Alur JASA & kedaluwarsa (email jasa+admin, invoice manual, cron expire, panel pembayaran)
-  ⏭️ P3  Bundling & cross-sell  ← NEXT
-  ⬜ P4  Urgency & trust
+  ✅ P3  Bundling & cross-sell (relatedSlugs, "Sering dibeli bersama", kupon bundel)
+  ⏭️ P4  Urgency & trust  ← NEXT
   ⬜ P5  Abandoned checkout
   ⬜ P6  QA/observability + docs
 ```
 
-### NEXT TASK (disarankan): FASE P3 — Bundling & Cross-Sell
-Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "FASE P3 — Bundling & Cross-Sell". Inti:
-1. Produk: `relatedSlugs: string[]` (manual, admin) + UI "Sering dibeli bersama" (server-rendered) di detail produk.
-2. Keranjang: saran cross-sell bila relasi ada.
-3. Kupon bundel (`appliesToSlugs`, `minItems`) di `validateCoupon` (server-authoritative).
-- **DoD:** bundel tampil & diskon bundel tervalidasi server.
+### NEXT TASK (disarankan): FASE P4 — Urgency & Trust
+Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "FASE P4 — Urgency & Trust". Inti:
+1. **Badge stok nyata** ("Sisa N" dari kuota varian bila ada / `soldOut`) — tanpa angka palsu.
+2. **Bukti sosial nyata**: "N pembeli minggu ini" (agregat `orders` 7 hari, cache ringan).
+3. **Trust badges**: garansi/kebijakan refund, metode bayar (QRIS/VA/e-wallet), "diproses otomatis".
+- **DoD:** elemen urgency memakai data nyata; label a11y jelas.
 
 ### Langkah manual yang MASIH tertunda (milik pemilik)
 - **FASE P2 — cron:** set `CRON_SECRET` di Vercel (rahasia acak) → jadwalkan pemanggilan dari cron eksternal ke `GET https://<domain>/api/cron/expire-orders?token=<secret>` → `{ ok:true, expired:N }`. (Vercel Cron bawaan butuh plan Pro, jadi pakai cron eksternal gratis.)

@@ -18,6 +18,7 @@ import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
 import { CartCoupon, type AppliedCoupon } from "@/components/cart-coupon";
+import { CartCrossSell } from "@/components/cart-cross-sell";
 import { createOrderRequest } from "@/lib/order-api";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
@@ -309,6 +310,8 @@ export function CartView({ promoCode }: { promoCode?: string }) {
                 onCleared={() => setAppliedCoupon(null)}
                 disabled={Boolean(user) && blocked}
                 promoCode={promoCode}
+                slugs={Array.from(new Set(items.map((it) => it.slug)))}
+                itemCount={items.reduce((n, it) => n + it.qty, 0)}
               />
             </div>
 
@@ -370,6 +373,9 @@ export function CartView({ promoCode }: { promoCode?: string }) {
           </div>
         </aside>
       </div>
+
+      {/* Cross-sell: sering dibeli bersama (FASE P3) */}
+      <CartCrossSell />
     </div>
   );
 }

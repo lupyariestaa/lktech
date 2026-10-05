@@ -1,6 +1,6 @@
 # FASE DETAIL — Konversi & Closing (Pembayaran Online, Bundling, Urgency, Abandoned Checkout)
 
-> **Status:** 🚧 Sedang dikerjakan — **FASE P0, P1 & P2 selesai** (kode; uji sandbox P0/P1 terverifikasi), P3–P6 belum.
+> **Status:** 🚧 Sedang dikerjakan — **FASE P0, P1, P2 & P3 selesai** (kode; uji sandbox P0/P1 terverifikasi), P4–P6 belum.
 > **Panduan operasional setup:** `docs/2026-10-06-setup-pembayaran-mayar.md`.
 > **Disusun:** sesi pasca-Roadmap (`docs/2026-10-06-roadmap-pengembangan.md`, Tema 1).
 > **Gateway terpilih:** **Mayar.id** (Headless API V2) — alasan: onboarding produksi jauh lebih ringan daripada Midtrans/Xendit (verifikasi bisnis ringan, cocok perorangan/UMKM), mendukung QRIS/VA/e-wallet, ada sandbox.
@@ -243,10 +243,18 @@ Handler:
 > - **`/akun`:** tombol "Bayar sekarang" kini muncul untuk order ber-`payUrl` yang belum lunas (termasuk JASA ber-invoice manual), bukan hanya `menunggu_bayar`.
 
 
-### FASE P3 — Bundling & Cross-Sell
-- [ ] `relatedSlugs`/`bundlesWith` + UI "Sering dibeli bersama".
-- [ ] Kupon bundel (`appliesToSlugs`, `minItems`) di `validateCoupon`.
-- **DoD:** bundel tampil & diskon bundel tervalidasi server.
+### FASE P3 — Bundling & Cross-Sell — ✅ SELESAI (kode)
+- [x] `relatedSlugs` (produk) + UI **"Sering dibeli bersama"** (detail produk, server-rendered) + **cross-sell di keranjang**.
+- [x] Kupon bundel (`appliesToSlugs`, `minItems`) tervalidasi server (`validateCoupon`).
+- **DoD:** bundel tampil & diskon bundel tervalidasi server. ✅
+
+> **Catatan implementasi P3:**
+> - **Produk terkait:** field `relatedSlugs?: string[]` (maks 12) di `Product` (+ normalisasi backward-compat di `products.ts`, schema API, editor admin `RelatedProductsEditor`).
+> - **`getRelatedProducts`** (products.ts): ambil `relatedSlugs` (manual, hanya aktif) lalu **fallback** ke produk sekategori bila kurang dari limit → section tak pernah kosong.
+> - **Detail produk:** section "Sering dibeli bersama" (server-rendered) + "Produk lainnya" dikecualikan dari duplikat.
+> - **Keranjang cross-sell:** endpoint publik `GET /api/products/related?slugs=` + komponen `cart-cross-sell.tsx` (arahan ke halaman produk — aman untuk multi-varian).
+> - **Kupon bundel:** `Coupon.appliesToSlugs?` + `Coupon.minItems?`; logika murni `checkBundleRules` (`coupon-rules.ts`, teruji 9 test) dipakai `validateCoupon` & diteruskan dari checkout API + `/api/coupons/validate` (konteks keranjang: `slugs`/`itemCount`). Form admin + ekspor CSV + ringkasan kartu kupon diperluas.
+
 
 ### FASE P4 — Urgency & Trust
 - [ ] Badge stok + bukti sosial nyata (cache) + trust badges.

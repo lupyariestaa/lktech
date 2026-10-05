@@ -8,6 +8,7 @@ import {
   type CouponType,
   type CouponsSummary,
 } from "@/lib/coupon-types";
+import { checkBundleRules } from "@/lib/coupon-rules";
 
 const COLLECTION = "coupons";
 /** Subkoleksi pencatatan pemakaian per user (sumber kebenaran `limitPerUser`). */
@@ -23,6 +24,22 @@ function str(v: unknown, fallback = ""): string {
 
 function num(v: unknown, fallback = 0): number {
   return typeof v === "number" && Number.isFinite(v) ? v : fallback;
+}
+
+/** Normalisasi daftar slug produk untuk kupon bundel (FASE P3). */
+function normalizeSlugList(v: unknown): string[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const x of v) {
+    if (typeof x !== "string") continue;
+    const s = x.trim();
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+    if (out.length >= 50) break;
+  }
+  return out.length ? out : undefined;
 }
 
 /** Normalisasi kode kupon: uppercase, hanya A-Z0-9. */
@@ -54,6 +71,11 @@ export function normalizeCoupon(
     type,
     value: num(data.value),
     minSpend: num(data.minSpend),
+    appliesToSlugs: normalizeSlugList(data.appliesToSlugs),
+    minItems:
+      typeof data.minItems === "number" && data.minItems > 0
+        ? Math.floor(data.minItems)
+        : undefined,
     maxDiscount: typeof data.maxDiscount === "number" ? data.maxDiscount : undefined,
     startsAt: str(data.startsAt) || undefined,
     endsAt: str(data.endsAt) || undefined,
@@ -111,10 +133,21 @@ export type CouponValidation =
  * `userUsageCount` (opsional) = jumlah pemakaian user ini dari subkoleksi
  * `redemptions` (sumber kebenaran `limitPerUser`; lebih akurat dari `usedBy`
  * yang dibatasi `MAX_COUPON_USED_BY`). Bila tak diberikan, fallback ke `usedBy`.
+ *
+ * `slugs` & `itemCount` (opsional) dipakai untuk aturan KUPON BUNDEL (FASE P3):
+ * - `appliesToSlugs`: keranjang wajib memuat ≥1 produk dari daftar.
+ * - `minItems`: total jumlah item (qty) minimal.
  */
 export function validateCoupon(
   coupon: Coupon | null,
-  opts: { subtotal: number; uid?: string; now?: Date; userUsageCount?: number },
+  opts: {
+    subtotal: number;
+    uid?: string;
+    now?: Date;
+    userUsageCount?: number;
+    slugs?: readonly string[];
+    itemCount?: number;
+  },
 ): CouponValidation {
   const now = opts.now ?? new Date();
 
@@ -140,6 +173,13 @@ export function validateCoupon(
       reason: `Minimal belanja Rp${coupon.minSpend.toLocaleString("id-ID")} untuk memakai kode ini.`,
     };
   }
+
+  // ===== Aturan KUPON BUNDEL (FASE P3) — logika murni di coupon-rules.ts =====
+  const bundle = checkBundleRules(coupon, {
+    slugs: opts.slugs,
+    itemCount: opts.itemCount,
+  });
+  if (!bundle.ok) return { ok: false, reason: bundle.reason };
 
   if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
     return { ok: false, reason: "Kuota kode promo sudah habis." };

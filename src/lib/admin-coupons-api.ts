@@ -45,6 +45,10 @@ export type CouponFormInput = {
   type: CouponType;
   value: number;
   minSpend: number;
+  /** Kupon bundel (FASE P3): slug produk yang wajib ada di keranjang. */
+  appliesToSlugs?: string[];
+  /** Kupon bundel (FASE P3): minimal jumlah item (qty) di keranjang. */
+  minItems?: number;
   maxDiscount?: number;
   startsAt?: string;
   endsAt?: string;
@@ -113,6 +117,8 @@ export function exportCouponsToCsv(
     "Nilai",
     "Min Belanja",
     "Maks Diskon",
+    "Kupon Bundel (slug)",
+    "Min Item",
     "Mulai",
     "Berakhir",
     "Kuota",
@@ -133,6 +139,8 @@ export function exportCouponsToCsv(
       c.type === "percent" ? `${c.value}%` : c.value,
       c.minSpend,
       c.maxDiscount ?? "",
+      (c.appliesToSlugs ?? []).join(" | "),
+      c.minItems ?? "",
       c.startsAt ?? "",
       c.endsAt ?? "",
       c.usageLimit ?? "∞",

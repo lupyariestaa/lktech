@@ -173,6 +173,12 @@ export type Product = {
    * produk lama tanpa field ini tetap valid (tidak ada unduhan otomatis).
    */
   downloadable?: ProductDownloadable;
+  /**
+   * Slug produk lain yang relevan / sering dibeli bersama (FASE P3).
+   * Dipakai untuk section "Sering dibeli bersama" & saran cross-sell.
+   * Opsional (produk lama tetap valid).
+   */
+  relatedSlugs?: string[];
   /** Pesan WhatsApp khusus (bila kosong, sistem menyusun otomatis). */
   waMessage?: string;
 };

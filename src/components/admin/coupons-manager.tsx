@@ -41,6 +41,8 @@ const EMPTY_FORM: CouponFormInput = {
   type: "percent",
   value: 10,
   minSpend: 0,
+  appliesToSlugs: undefined,
+  minItems: undefined,
   maxDiscount: undefined,
   startsAt: "",
   endsAt: "",
@@ -331,6 +333,19 @@ export function CouponsManager() {
                 <Info label="Per user" value={`${c.limitPerUser}×`} />
                 <Info label="Mulai" value={c.startsAt ? isoToLocal(c.startsAt).replace("T", " ") : "—"} />
                 <Info label="Berakhir" value={c.endsAt ? isoToLocal(c.endsAt).replace("T", " ") : "—"} />
+                {(c.appliesToSlugs?.length || c.minItems) && (
+                  <Info
+                    label="Bundel"
+                    value={[
+                      c.appliesToSlugs?.length
+                        ? `${c.appliesToSlugs.length} produk`
+                        : null,
+                      c.minItems ? `min ${c.minItems} item` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  />
+                )}
               </dl>
 
               {/* Dampak pemakaian (`KP-M2`) */}
@@ -473,6 +488,8 @@ function CouponFormDialog({
           type: coupon.type,
           value: coupon.value,
           minSpend: coupon.minSpend,
+          appliesToSlugs: coupon.appliesToSlugs,
+          minItems: coupon.minItems,
           maxDiscount: coupon.maxDiscount,
           startsAt: isoToLocal(coupon.startsAt),
           endsAt: isoToLocal(coupon.endsAt),
@@ -510,6 +527,14 @@ function CouponFormDialog({
         code: form.code.trim().toUpperCase(),
         startsAt: localToIso(form.startsAt),
         endsAt: localToIso(form.endsAt),
+        appliesToSlugs:
+          form.appliesToSlugs && form.appliesToSlugs.length
+            ? form.appliesToSlugs
+            : undefined,
+        minItems:
+          typeof form.minItems === "number" && form.minItems > 0
+            ? form.minItems
+            : undefined,
         maxDiscount:
           form.type === "percent" && form.maxDiscount ? form.maxDiscount : undefined,
       };
@@ -678,6 +703,52 @@ function CouponFormDialog({
                 className={field}
               />
             </label>
+          </div>
+
+          {/* ===== Kupon Bundel (FASE P3) ===== */}
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-surface p-4">
+            <p className="text-sm font-semibold text-secondary">
+              Kupon Bundel (opsional)
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
+              Batasi kupon agar hanya berlaku untuk produk/jumlah item tertentu.
+              Kosongkan kedua-duanya bila kupon berlaku umum.
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5">
+                <span className={labelCls}>
+                  Wajib ada produk (slug, 1 per baris)
+                </span>
+                <textarea
+                  rows={3}
+                  value={(form.appliesToSlugs ?? []).join("\n")}
+                  onChange={(e) =>
+                    set(
+                      "appliesToSlugs",
+                      e.target.value
+                        .split("\n")
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    )
+                  }
+                  placeholder={"template-landing-page-bisnis\naplikasi-kasir-sederhana"}
+                  className={cn(field, "resize-none font-mono text-xs")}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className={labelCls}>Minimal jumlah item (qty)</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.minItems ?? ""}
+                  onChange={(e) =>
+                    set("minItems", e.target.value ? Number(e.target.value) : undefined)
+                  }
+                  placeholder="mis. 2"
+                  className={field}
+                />
+              </label>
+            </div>
           </div>
 
           <label className="mt-4 flex items-center gap-2 text-sm text-slate-700">

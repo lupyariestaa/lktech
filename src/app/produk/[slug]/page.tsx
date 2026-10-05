@@ -26,6 +26,7 @@ import {
   getProductBySlug,
   getProducts,
   getProductSlugs,
+  getRelatedProducts,
 } from "@/lib/products";
 import {
   formatPrice,
@@ -77,7 +78,13 @@ export default async function ProdukDetailPage({
   if (!product) notFound();
 
   const all = await getProducts();
-  const others = all.filter((p) => p.slug !== slug).slice(0, 3);
+  // "Sering dibeli bersama" (FASE P3): manual (relatedSlugs) + fallback kategori.
+  const related = await getRelatedProducts(product, { limit: 3 });
+  const relatedSlugs = new Set(related.map((p) => p.slug));
+  // "Produk lainnya": hindari duplikat dengan bagian "sering dibeli bersama".
+  const others = all
+    .filter((p) => p.slug !== slug && !relatedSlugs.has(p.slug))
+    .slice(0, 3);
 
   const multi = hasVariants(product);
   const hasDiscount =
@@ -454,6 +461,29 @@ export default async function ProdukDetailPage({
       {/* Bar pembelian sticky (mobile) */}
       {multi && <ProductPurchaseBar product={product} />}
       </ProductPurchaseProvider>
+
+      {/* Sering dibeli bersama (FASE P3) */}
+      {related.length > 0 && (
+        <section className="bg-white py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <span className="text-xs font-semibold tracking-widest text-primary uppercase">
+              Bundling
+            </span>
+            <h2 className="mt-2 text-2xl font-bold text-secondary sm:text-3xl">
+              Sering dibeli <span className="text-gradient">bersama</span>
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm text-muted">
+              Lengkapi kebutuhan Anda dengan produk yang biasa dipesan bersama
+              item ini.
+            </p>
+            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {related.map((p) => (
+                <ProductCard key={p.slug} product={p} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Produk lain */}
       {others.length > 0 && (

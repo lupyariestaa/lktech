@@ -9,10 +9,14 @@ export type CouponValidationResult =
  * Validasi kode kupon di server untuk subtotal tertentu.
  * Mengembalikan hasil validasi (diskon dihitung server). Melempar bila gagal
  * jaringan/sesi; mengembalikan `{ valid: false, reason }` bila kode tak sah.
+ *
+ * `context` (opsional, FASE P3) membawa isi keranjang agar kupon BUNDEL
+ * (`appliesToSlugs`/`minItems`) ikut divalidasi dengan benar.
  */
 export async function validateCouponRequest(
   code: string,
   subtotal: number,
+  context?: { slugs?: string[]; itemCount?: number },
 ): Promise<CouponValidationResult> {
   const token = await getIdToken();
   if (!token) throw new Error("Masuk untuk memakai kode promo.");
@@ -23,7 +27,12 @@ export async function validateCouponRequest(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ code, subtotal }),
+    body: JSON.stringify({
+      code,
+      subtotal,
+      slugs: context?.slugs,
+      itemCount: context?.itemCount,
+    }),
   });
 
   const data = await res.json().catch(() => ({}));

@@ -259,8 +259,29 @@ function normalizeProduct(data: Record<string, unknown>): Product {
     featured: Boolean(data.featured),
     active: data.active === undefined ? true : Boolean(data.active),
     downloadable: normalizeDownloadable(data.downloadable),
+    relatedSlugs: normalizeRelatedSlugs(data.relatedSlugs),
     waMessage: str(data.waMessage) || undefined,
   };
+}
+
+/**
+ * Normalisasi daftar `relatedSlugs` (FASE P3): buang nilai kosong/duplikat,
+ * batasi jumlah, dan JANGAN sertakan slug diri sendiri (dicek oleh pemanggil
+ * di UI). Mengembalikan `undefined` bila kosong agar produk lama tetap ringkas.
+ */
+function normalizeRelatedSlugs(v: unknown): string[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const x of v) {
+    if (typeof x !== "string") continue;
+    const s = x.trim();
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+    if (out.length >= 12) break;
+  }
+  return out.length ? out : undefined;
 }
 
 /** Produk yang tampil di publik (aktif), urut: unggulan dulu lalu nama. */
@@ -367,6 +388,7 @@ export async function saveProduct(
     "delivery",
     "waMessage",
     "downloadable",
+    "relatedSlugs",
   ]) {
     if (payload[key] === undefined) delete payload[key];
   }
@@ -428,4 +450,49 @@ export async function getProductsBySlugs(
   }
 
   return result;
+}
+
+/**
+ * Mengambil produk TERKAIT (FASE P3) untuk section "Sering dibeli bersama".
+ *
+ * Sumber berurutan:
+ * 1. `relatedSlugs` milik produk (manual, admin) — hanya yang AKTIF.
+ * 2. Bila kurang dari `limit` → lengkapi dengan produk lain sekategori
+ *    (fallback otomatis, agar section tidak pernah kosong), kecuali `exclude`.
+ *
+ * Mengembalikan maksimal `limit` produk, tanpa duplikat, tanpa produk yang
+ * dikecualikan (mis. produk itu sendiri / yang sudah ada di keranjang).
+ */
+export async function getRelatedProducts(
+  product: Pick<Product, "slug" | "category" | "relatedSlugs">,
+  opts: { limit?: number; exclude?: Iterable<string> } = {},
+): Promise<Product[]> {
+  const limit = Math.max(1, opts.limit ?? 3);
+  const exclude = new Set<string>([product.slug, ...(opts.exclude ?? [])]);
+
+  const all = await getProducts(); // hanya aktif, urut unggulan→nama
+  const bySlug = new Map(all.map((p) => [p.slug, p]));
+
+  const picked: Product[] = [];
+  const push = (p: Product | undefined) => {
+    if (!p || exclude.has(p.slug) || picked.some((x) => x.slug === p.slug)) return;
+    if (picked.length < limit) picked.push(p);
+  };
+
+  // 1) Manual (urutan sesuai `relatedSlugs`).
+  for (const slug of product.relatedSlugs ?? []) {
+    push(bySlug.get(slug));
+    if (picked.length >= limit) break;
+  }
+
+  // 2) Fallback: kategori sama.
+  if (picked.length < limit) {
+    for (const p of all) {
+      if (p.category !== product.category) continue;
+      push(p);
+      if (picked.length >= limit) break;
+    }
+  }
+
+  return picked;
 }

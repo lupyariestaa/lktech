@@ -223,6 +223,9 @@ export async function POST(req: Request) {
         subtotal,
         uid: check.uid,
         userUsageCount,
+        // Kupon bundel (FASE P3): saring berdasarkan isi keranjang.
+        slugs: items.map((it) => it.slug),
+        itemCount: items.reduce((n, it) => n + it.qty, 0),
       });
       if (!result.ok) {
         return NextResponse.json(
