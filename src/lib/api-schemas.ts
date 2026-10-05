@@ -296,6 +296,23 @@ export const userBlockSchema = z.object({
   blocked: z.boolean(),
 });
 
+// ===== Draft keranjang server-side (FASE P5) =====
+
+/** Satu item draft keranjang yang dikirim klien untuk sinkronisasi. */
+export const cartDraftItemSchema = z.object({
+  slug: z.string().trim().min(1).max(200),
+  name: z.string().trim().max(300).optional(),
+  price: z.number().finite().min(0).max(1_000_000_000),
+  qty: z.number().int().min(1).max(999),
+  variantSlug: z.string().trim().max(200).optional(),
+});
+
+/** Body sinkronisasi draft keranjang. */
+export const cartDraftSchema = z.object({
+  items: z.array(cartDraftItemSchema).max(100),
+  subtotal: z.number().finite().min(0).max(1_000_000_000),
+});
+
 // ===== Kupon =====
 /**
  * Tanggal ISO opsional — FAIL-CLOSED (`KP-H3`): string kosong → undefined;

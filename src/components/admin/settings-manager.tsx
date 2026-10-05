@@ -264,6 +264,24 @@ export function SettingsManager() {
               </span>
             </span>
           </label>
+
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface px-4 py-3.5">
+            <input
+              type="checkbox"
+              checked={settings.notifyCartReminders}
+              onChange={(e) => update("notifyCartReminders", e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/30"
+            />
+            <span>
+              <span className="block text-sm font-medium text-secondary">
+                Pengingat keranjang terbengkalai
+              </span>
+              <span className="mt-0.5 block text-xs text-muted">
+                Kirim email pengingat H+1 ke pembeli yang meninggalkan keranjang
+                (butuh cron kedaluwarsa/pengingat). Pembeli bisa berhenti kapan saja.
+              </span>
+            </span>
+          </label>
         </div>
       </div>
 

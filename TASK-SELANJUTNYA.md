@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **audit QA P3/P4 + remediasi gap (stok mengikat, kupon bundel re-validate)**.
+> Terakhir diperbarui: sesi **P5 — abandoned checkout (draft server, email pengingat H+1, opt-out, tracking recovery)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -109,6 +109,26 @@ Audit QA atas hasil P3 & P4 menemukan **5 gap**; **3 diperbaiki** (2 backlog/cat
 
 ---
 
+## 🎉 Sesi Terakhir — FASE P5: Abandoned Checkout Recovery
+
+Fase **P5** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi kode**.
+
+| Kode | Perubahan |
+| --- | --- |
+| **Draft server** | Koleksi `carts/{uid}` (`cart-draft.ts` + tipe/logika murni `cart-draft-pure.ts`). Klien `CartDraftSync` (di layout) sinkron draft saat keranjang user berubah (debounce 1,5 dtk). API `POST/DELETE /api/cart/draft`. |
+| **Email pengingat H+1** | `sendCartReminders` (`cart-reminder.ts`) + template (`email-cart.ts`): rincian keranjang + tombol "Lanjutkan Checkout" (`/keranjang?ref=reminder`) + tautan berhenti. Cron `/api/cron/cart-reminders` (fail-closed `CRON_SECRET`). |
+| **Opt-out** | Tautan bertanda tangan HMAC (`CART_UNSUB_SECRET`/fallback) → `/api/cart/unsubscribe` set `optedOut`. Fail-closed tanpa secret. |
+| **Pengaturan** | Toggle `notifyCartReminders` di `/admin/settings` (default aktif). |
+| **Tracking** | `cart_abandoned_recovered` dikirim saat checkout dari `?ref=reminder`. |
+| **Env** | `.env.example`: `CART_UNSUB_SECRET` + catatan cron pengingat. |
+| **Test** | `npm run test:cart` (10) — `shouldRemind` & normalisasi draft. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (69 halaman; +3 route) · test (metrics 6 · fulfillment 5 · downloads 5 · expiry 5 · bundle 9 · stock 12 · **cart 10**) lolos ✅.
+
+**Langkah manual:** set `CART_UNSUB_SECRET` (opsional; fallback ke secret lain) di Vercel; jadwalkan cron eksternal `GET /api/cron/cart-reminders?token=<CRON_SECRET>` (mis. tiap 3 jam). Catatan: email ke pembeli umum tetap butuh domain Resend terverifikasi.
+
+---
+
 ## 🧭 STATUS & PETA SEKARANG (baca ini dulu)
 
 > Ringkasan kondisi terkini agar sesi berikutnya langsung paham tanpa membaca
@@ -143,16 +163,17 @@ Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
   ✅ P2  Alur JASA & kedaluwarsa (email jasa+admin, invoice manual, cron expire, panel pembayaran)
   ✅ P3  Bundling & cross-sell (relatedSlugs, "Sering dibeli bersama", kupon bundel)
   ✅ P4  Urgency & trust (badge stok nyata, bukti sosial 7 hari, trust badges)
-  ⏭️ P5  Abandoned checkout  ← NEXT
-  ⬜ P6  QA/observability + docs
+  ✅ P5  Abandoned checkout (draft server, email pengingat H+1, opt-out, tracking recovery)
+  ⏭️ P6  QA/observability + docs  ← NEXT & TERAKHIR
 ```
 
-### NEXT TASK (disarankan): FASE P5 — Abandoned Checkout
-Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §6 & §7 → "FASE P5 — Abandoned Checkout". Inti:
-1. **Draft keranjang server-side** (`carts/{uid}`) — simpan keranjang user login saat berubah.
-2. **Email pengingat H+1** bila belum checkout (deep-link kembali ke keranjang); hormati preferensi notifikasi + cara berhenti.
-3. **Ukur**: event `cart_abandoned_recovered`.
-- **DoD:** keranjang terbengkalai terkirim pengingat; terukur. (Ketergantungan: cron eksternal untuk menjadwalkan pengingat — lihat P2.)
+### NEXT TASK (disarankan): FASE P6 — QA, Observability & Docs
+Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "FASE P6 — QA, Observability & Docs". Inti:
+1. **Event tracking** (`payment_initiated`, `payment_received`, `abandoned_recovered`) — lengkapi di titik yang belum.
+2. **Status pembayaran di analitik** (konversi checkout → bayar).
+3. **`tsc`/`lint`/`build` bersih + unit test** (kalkulasi & transisi status).
+4. **Update `TASK-SELANJUTNYA.md`, `docs/README.md`, roadmap**.
+- **DoD:** semua checklist §9 lolos.
 
 ### Langkah manual yang MASIH tertunda (milik pemilik)
 - **FASE P2 — cron:** set `CRON_SECRET` di Vercel (rahasia acak) → jadwalkan pemanggilan dari cron eksternal ke `GET https://<domain>/api/cron/expire-orders?token=<secret>` → `{ ok:true, expired:N }`. (Vercel Cron bawaan butuh plan Pro, jadi pakai cron eksternal gratis.)
@@ -753,7 +774,7 @@ CRON_SECRET=                      # kosong → endpoint cron NONAKTIF (503, fail
 ### Firestore Security Rules
 - File: `firestore.rules`
 - **PENTING:** setiap ada koleksi baru, rules harus di-**Publish ulang** di Firebase Console → Firestore → Rules.
-- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`, `downloads`.
+- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`, `downloads`, `carts`.
 - Subkoleksi: `orders/{id}/emails` (riwayat email), `coupons/{id}/redemptions` (pemakaian per-user).
 - Catatan: rule `match /{document=**}` menolak SEMUA akses klien (termasuk subkoleksi), jadi koleksi baru otomatis terlindungi — publish ulang tetap disarankan.
 

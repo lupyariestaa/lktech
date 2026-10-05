@@ -12,6 +12,7 @@ import { ContentProvider } from "@/components/content-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { AccountStatusProvider } from "@/components/account-status-provider";
 import { CartProvider } from "@/components/cart-provider";
+import { CartDraftSync } from "@/components/cart-draft-sync";
 import { WishlistProvider } from "@/components/wishlist-provider";
 
 const inter = Inter({
@@ -113,6 +114,7 @@ export default async function RootLayout({
                 <WishlistProvider>
                   <CartProvider>
                     {children}
+                    <CartDraftSync />
                     <StructuredData settings={settings} />
                   </CartProvider>
                 </WishlistProvider>

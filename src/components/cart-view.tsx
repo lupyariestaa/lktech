@@ -22,6 +22,7 @@ import { CartCrossSell } from "@/components/cart-cross-sell";
 import { TrustBadges } from "@/components/trust-badges";
 import { createOrderRequest } from "@/lib/order-api";
 import { validateCouponRequest } from "@/lib/coupon-api";
+import { getIdToken } from "@/lib/auth";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
 import { formatRupiah } from "@/lib/format";
@@ -46,6 +47,17 @@ export function CartView({ promoCode }: { promoCode?: string }) {
   const [doneKind, setDoneKind] = useState<"bayar" | "jasa" | "wa">("wa");
   /** Alasan server saat checkout jatuh ke fallback WhatsApp (bila ada). */
   const [fallbackWarning, setFallbackWarning] = useState<string | null>(null);
+
+  // FASE P5: deteksi bila pembeli datang dari email pengingat keranjang
+  // (`/keranjang?ref=reminder`) untuk mengukur pemulihan.
+  const recoveredFromReminder = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return new URLSearchParams(window.location.search).get("ref") === "reminder";
+    } catch {
+      return false;
+    }
+  }, []);
 
   // GAP-P3-3: re-validasi kupon bila isi keranjang berubah (mis. item syarat
   // kupon bundel dihapus) agar diskon yang ditampilkan tetap akurat & jujur.
@@ -130,6 +142,27 @@ export function CartView({ promoCode }: { promoCode?: string }) {
       if (appliedCoupon) {
         trackEvent("coupon_applied", { code: appliedCoupon.code });
       }
+
+      // FASE P5: jika sesi ini datang dari email pengingat, catat pemulihan.
+      if (recoveredFromReminder) {
+        trackEvent("cart_abandoned_recovered", {
+          source: "email_reminder",
+          items: items.reduce((n, it) => n + it.qty, 0),
+          total: order.total,
+        });
+      }
+
+      // FASE P5: keranjang terisi → draft server ditandai pulih (dihapus).
+      getIdToken()
+        .then((token) =>
+          token
+            ? fetch("/api/cart/draft", {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              })
+            : null,
+        )
+        .catch(() => {});
 
       clear();
       setAppliedCoupon(null);

@@ -30,6 +30,10 @@ export function mergeSettings(data: Partial<SiteSettings> | undefined): SiteSett
       typeof data?.notifyBuyerOnStatus === "boolean"
         ? data.notifyBuyerOnStatus
         : DEFAULT_SETTINGS.notifyBuyerOnStatus,
+    notifyCartReminders:
+      typeof data?.notifyCartReminders === "boolean"
+        ? data.notifyCartReminders
+        : DEFAULT_SETTINGS.notifyCartReminders,
   };
 }
 

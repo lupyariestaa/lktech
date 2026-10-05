@@ -18,7 +18,8 @@
     "test:downloads": "node --experimental-strip-types --test scripts/download-token.test.ts",
     "test:expiry": "node --experimental-strip-types --test scripts/order-expiry.test.ts",
     "test:bundle": "node --experimental-strip-types --test scripts/coupon-bundle.test.ts",
-    "test:stock": "node --experimental-strip-types --test scripts/product-stock.test.ts"
+    "test:stock": "node --experimental-strip-types --test scripts/product-stock.test.ts",
+    "test:cart": "node --experimental-strip-types --test scripts/cart-reminder.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

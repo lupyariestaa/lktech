@@ -14,6 +14,8 @@ export type SiteSettings = {
   notifyBuyerOnOrder: boolean;
   /** Kirim email update status pesanan ke pembeli (default: aktif). */
   notifyBuyerOnStatus: boolean;
+  /** Kirim email pengingat keranjang terbengkalai (FASE P5, default: aktif). */
+  notifyCartReminders: boolean;
 };
 
 /** Nilai default (dipakai bila Firestore kosong / belum dikonfigurasi). */
@@ -24,4 +26,5 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   socials: [],
   notifyBuyerOnOrder: true,
   notifyBuyerOnStatus: true,
+  notifyCartReminders: true,
 };

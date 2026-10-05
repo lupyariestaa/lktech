@@ -1,6 +1,6 @@
 # FASE DETAIL — Konversi & Closing (Pembayaran Online, Bundling, Urgency, Abandoned Checkout)
 
-> **Status:** 🚧 Sedang dikerjakan — **FASE P0–P4 selesai** (kode; uji sandbox P0/P1 terverifikasi), P5–P6 belum.
+> **Status:** 🚧 Sedang dikerjakan — **FASE P0–P5 selesai** (kode; uji sandbox P0/P1 terverifikasi), P6 belum.
 > **Panduan operasional setup:** `docs/2026-10-06-setup-pembayaran-mayar.md`.
 > **Disusun:** sesi pasca-Roadmap (`docs/2026-10-06-roadmap-pengembangan.md`, Tema 1).
 > **Gateway terpilih:** **Mayar.id** (Headless API V2) — alasan: onboarding produksi jauh lebih ringan daripada Midtrans/Xendit (verifikasi bisnis ringan, cocok perorangan/UMKM), mendukung QRIS/VA/e-wallet, ada sandbox.
@@ -270,9 +270,20 @@ Handler:
 > - **Remediasi audit QA P4 (`GAP-P4-1`):** stok kini MENGIKAT bila diisi — `isStockOut` (soldOut **atau** `stock ≤ 0`) & `effectiveStock`. Checkout server MENOLAK `qty > stock` (kode `*_insufficient_stock`) & `stock ≤ 0` (`*_out_of_stock`); badge "Stok habis" konsisten dengan kelayakan beli. `productTotalStock` dipakai (badge ringkas multi-varian). `GAP-P3-3`: kupon bundel di keranjang **re-validasi otomatis** saat isi keranjang berubah.
 
 
-### FASE P5 — Abandoned Checkout
-- [ ] Draft keranjang server + email pengingat H+1 + tracking recovery.
-- **DoD:** keranjang terbengkalai terkirim pengingat; terukur.
+### FASE P5 — Abandoned Checkout — ✅ SELESAI (kode)
+- [x] Draft keranjang server (`carts/{uid}`) + sinkron dari klien (debounce).
+- [x] Email pengingat H+1 (cron `/api/cron/cart-reminders`) + deep-link kembali + opt-out.
+- [x] Ukur pemulihan: event `cart_abandoned_recovered` (dari `?ref=reminder`).
+- **DoD:** keranjang terbengkalai terkirim pengingat; terukur. ✅
+
+> **Catatan implementasi P5:**
+> - **Draft server:** `carts/{uid}` (tipe & logika murni `cart-draft-pure.ts`; data layer `cart-draft.ts`). Klien `CartDraftSync` (di layout) menyimpan draft saat keranjang user berubah (debounce 1,5 dtk, best-effort) via `POST /api/cart/draft`; keranjang kosong → `DELETE`. Checkout sukses → draft dihapus (pulih).
+> - **Pengingat:** `sendCartReminders` (`cart-reminder.ts`) memakai `shouldRemind` (H+1, cooldown 24 jam, maks 14 hari, hormati opt-out) → email (`email-cart.ts`) berisi rincian + tombol "Lanjutkan Checkout" (`/keranjang?ref=reminder`) + tautan **berhenti diingatkan**. Cron `/api/cron/cart-reminders` (fail-closed `CRON_SECRET`, cron eksternal).
+> - **Opt-out:** tautan bertanda tangan HMAC (`CART_UNSUB_SECRET`, fallback `DOWNLOAD_TOKEN_SECRET`/`MAYAR_API_KEY`) → `/api/cart/unsubscribe` menyetel `optedOut`. Fail-closed bila tanpa secret.
+> - **Pengaturan:** toggle `notifyCartReminders` di `/admin/settings` (default aktif).
+> - **Pengukuran:** halaman keranjang mendeteksi `?ref=reminder` → event `cart_abandoned_recovered` saat checkout berhasil.
+> - **Backward-compatible:** tanpa Admin SDK/email → semua best-effort (no-op), tak mengganggu UX.
+
 
 ### FASE P6 — QA, Observability & Docs
 - [ ] Event tracking (`payment_initiated`, `payment_received`, `abandoned_recovered`).
