@@ -313,6 +313,22 @@ export const cartDraftSchema = z.object({
   subtotal: z.number().finite().min(0).max(1_000_000_000),
 });
 
+// ===== Ulasan & Rating produk (FASE R) =====
+
+/** Kirim ulasan produk (verified purchase diperiksa server). */
+export const reviewSubmitSchema = z.object({
+  rating: z.number().int().min(1, "Beri rating 1–5").max(5, "Rating maksimal 5"),
+  title: z.string().trim().max(120).optional(),
+  body: z.string().trim().max(2000).optional(),
+});
+
+/** Moderasi ulasan (admin): approve/reject/hapus. */
+export const reviewModerateSchema = z.object({
+  id: z.string().trim().min(1, "id wajib diisi").max(200),
+  status: z.enum(["approved", "rejected"]),
+  reason: z.string().trim().max(300).optional(),
+});
+
 // ===== Kupon =====
 /**
  * Tanggal ISO opsional — FAIL-CLOSED (`KP-H3`): string kosong → undefined;

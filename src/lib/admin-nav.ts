@@ -13,6 +13,7 @@ import {
   Percent,
   ReceiptText,
   Settings,
+  Star,
   Tags,
   Users,
 } from "lucide-react";
@@ -129,6 +130,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/orders",
         icon: ReceiptText,
         badge: "newOrders",
+      },
+      {
+        label: "Ulasan",
+        title: "Ulasan & Rating",
+        href: "/admin/reviews",
+        icon: Star,
       },
       {
         label: "Kupon",

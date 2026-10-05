@@ -189,6 +189,15 @@ export type Product = {
    * Opsional (produk lama tetap valid).
    */
   relatedSlugs?: string[];
+  /**
+   * Ringkasan rating ulasan (FASE R). Denormalisasi dari ulasan `approved`.
+   * Opsional — produk tanpa ulasan tetap valid.
+   */
+  ratingSummary?: {
+    avg: number;
+    count: number;
+    distribution: Record<number, number>;
+  };
   /** Pesan WhatsApp khusus (bila kosong, sistem menyusun otomatis). */
   waMessage?: string;
 };

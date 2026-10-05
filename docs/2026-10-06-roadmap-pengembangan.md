@@ -41,7 +41,7 @@ Tiga tema besar:
 | Sumbu | Kondisi sekarang | Dampak bisnis |
 | --- | --- | --- |
 | **Pembayaran** | Checkout via WhatsApp (manual) | Friksi tinggi, tak bisa jualan saat admin tidur, sulit skala |
-| **Bukti sosial** | Testimoni statis/placeholder | Kurang meyakinkan pembeli baru |
+| **Bukti sosial** | Testimoni statis/placeholder + **ulasan & rating produk** (verified purchase, moderasi, JSON-LD) | ✅ Ulasan selesai; testimoni masih placeholder |
 | **Retensi** | Tak ada kanal kembali (email marketing, notif) | Sekali beli, lalu hilang |
 | **Konversi produk** | Hanya halaman detail + CTA | Tak ada bundling, upsell, urgency |
 | **Operasional** | Admin hapus kupon = arsip; lead manual | Beban manual, laporan belum otomatis |
@@ -157,8 +157,10 @@ Mengubah pembeli sekali menjadi pelanggan berulang, dan pengunjung menjadi audie
 
 ## 6. TEMA 3 — Kepercayaan & Skala 🛡️
 
-### 3.1 [P0] Ulasan & Rating Produk
+### 3.1 [P0] Ulasan & Rating Produk — ✅ SELESAI
 **Kenapa menarik:** bukti sosial = penggerak konversi terbesar untuk jualan online.
+
+> **✅ Selesai (kode, R0–R6):** `docs/2026-10-05-ulasan-rating-produk.md` — ulasan verified-purchase (hanya order `selesai`), moderasi admin (`/admin/reviews`), agregat rating di kartu/detail, **JSON-LD `AggregateRating`** (SEO).
 
 **Rancangan:**
 - Hanya pembeli berstatus `selesai` boleh mengulas (verified purchase).

@@ -328,6 +328,31 @@ export async function getOrderById(id: string): Promise<Order | null> {
 }
 
 /**
+ * Cari order MILIK `uid` berstatus `selesai` yang memuat produk `slug`
+ * (FASE R — verifikasi pembelian untuk ulasan). Mengembalikan order pertama
+ * yang cocok, atau null. Menyaring di memori (jumlah order per user kecil).
+ */
+export async function findCompletedOrderForProduct(
+  uid: string,
+  productSlug: string,
+): Promise<Order | null> {
+  const db = getAdminDb();
+  if (!db) return null;
+  const snap = await db
+    .collection(COLLECTION)
+    .where("uid", "==", uid)
+    .where("status", "==", "selesai")
+    .get();
+  const orders = snap.docs
+    .map((doc) =>
+      normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
+    )
+    .filter((o) => o.items.some((it) => it.slug === productSlug))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  return orders[0] ?? null;
+}
+
+/**
  * Daftar pesanan pada satu hari zona waktu (untuk drill-down analitik `AN-P2`).
  * `dateKey` = "yyyy-mm-dd" (zona `Asia/Jakarta`). Menyaring di memori agar
  * tak bergantung index; jumlah order satu hari wajar.

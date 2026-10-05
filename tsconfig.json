@@ -44,6 +44,7 @@
     "scripts/coupon-bundle.test.ts",
     "scripts/product-stock.test.ts",
     "scripts/cart-reminder.test.ts",
-    "scripts/order-status.test.ts"
+    "scripts/order-status.test.ts",
+    "scripts/review-rating.test.ts"
   ]
 }

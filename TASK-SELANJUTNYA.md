@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **P6 — QA, observability & docs (penutup P0–P6)**.
+> Terakhir diperbarui: sesi **Ulasan & Rating Produk (R0–R6)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -147,6 +147,26 @@ Fase **P6** — sekaligus **menutup seluruh rangkaian P0–P6** Konversi & Closi
 
 ---
 
+## 🎉 Sesi Terakhir — Ulasan & Rating Produk (R0–R6)
+
+Inisiatif baru (Tema 3 Kepercayaan): **ulasan + rating bintang** dari pembeli terverifikasi, dengan moderasi admin & SEO. Dokumen fase: `docs/2026-10-05-ulasan-rating-produk.md`.
+
+| Kode | Perubahan |
+| --- | --- |
+| **Data model** | `reviews/{id}` (tipe murni `review-types.ts` + data layer `reviews.ts`). Idempoten per (orderId, productSlug); selalu `pending`. |
+| **Agregat** | `products/{slug}.ratingSummary` (avg/count/distribution) di-recompute dari ulasan `approved`; `Product.ratingSummary?` (backward-compat). |
+| **API publik** | `GET /api/products/[slug]/reviews` (approved, nama disamarkan) & `POST` (verified purchase + rate-limit + idempoten). |
+| **Halaman produk** | Section ulasan (`product-reviews`, `review-form`, `rating-stars` a11y); bintang ringkas di kartu produk. |
+| **Admin** | `/admin/reviews` (`reviews-manager`) + `GET/PATCH/DELETE /api/admin/reviews` + menu **"Ulasan"** (grup Toko). |
+| **SEO** | JSON-LD `AggregateRating` di halaman produk (bila ada ulasan disetujui). |
+| **Test** | `npm run test:reviews` (9) — agregat/normalisasi rating. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (70 halaman) · test (metrics 10 · fulfillment 5 · downloads 5 · expiry 5 · bundle 9 · stock 12 · cart 10 · status 11 · **reviews 9**) lolos ✅.
+
+**Sisa manual:** uji browser (selesaikan pesanan → tulis ulasan di `/produk/[slug]` → setujui di `/admin/reviews` → cek bintang + JSON-LD) + publish ulang Firestore Rules (koleksi `reviews` — catch-all sudah menolak klien).
+
+---
+
 ## 🧭 STATUS & PETA SEKARANG (baca ini dulu)
 
 > Ringkasan kondisi terkini agar sesi berikutnya langsung paham tanpa membaca
@@ -186,10 +206,15 @@ Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
 ```
 
 ### FASE KONVERSI & CLOSING — ✅ SELESAI (kode, P0–P6)
-Seluruh fase P0–P6 tuntas di sisi kode. **NEXT TASK = pilihan pemilik:**
+Seluruh fase P0–P6 tuntas di sisi kode.
+
+### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
+Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
+
+**NEXT TASK = pilihan pemilik:**
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
-- **Inisiatif roadmap berikutnya** (lihat `docs/2026-10-06-roadmap-pengembangan.md` Tema 2–4): Retensi (loyalitas/email marketing), Kepercayaan (ulasan & rating), Operasional (audit log, laporan).
+- **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).
 
 ### DoD Global (§9) — status
 1. ✅ `tsc`/`lint`/`build` bersih + unit test transisi status & kalkulasi bundel.
@@ -800,7 +825,7 @@ CRON_SECRET=                      # kosong → endpoint cron NONAKTIF (503, fail
 ### Firestore Security Rules
 - File: `firestore.rules`
 - **PENTING:** setiap ada koleksi baru, rules harus di-**Publish ulang** di Firebase Console → Firestore → Rules.
-- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`, `downloads`, `carts`.
+- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`, `downloads`, `carts`, `reviews`.
 - Subkoleksi: `orders/{id}/emails` (riwayat email), `coupons/{id}/redemptions` (pemakaian per-user).
 - Catatan: rule `match /{document=**}` menolak SEMUA akses klien (termasuk subkoleksi), jadi koleksi baru otomatis terlindungi — publish ulang tetap disarankan.
 

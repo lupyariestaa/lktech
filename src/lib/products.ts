@@ -9,6 +9,14 @@ import type {
   ProductVariant,
   StoredProduct,
 } from "@/lib/product-types";
+import { normalizeRatingSummary } from "@/lib/review-types";
+
+/** Normalisasi `ratingSummary` produk (FASE R) — re-export tipe aman-klien. */
+function normalizeProductRatingSummary(
+  v: unknown,
+): Product["ratingSummary"] {
+  return normalizeRatingSummary(v);
+}
 
 export type {
   Product,
@@ -271,6 +279,7 @@ function normalizeProduct(data: Record<string, unknown>): Product {
     active: data.active === undefined ? true : Boolean(data.active),
     downloadable: normalizeDownloadable(data.downloadable),
     relatedSlugs: normalizeRelatedSlugs(data.relatedSlugs),
+    ratingSummary: normalizeProductRatingSummary(data.ratingSummary),
     waMessage: str(data.waMessage) || undefined,
   };
 }

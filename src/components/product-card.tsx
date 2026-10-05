@@ -8,6 +8,7 @@ import { PRODUCT_CATEGORY_LABEL } from "@/lib/product-types";
 import { formatPrice, hasVariants, productPriceLabel, stockBadge, productTotalStock, LOW_STOCK_THRESHOLD } from "@/lib/product-format";
 import { ProductBuyActions } from "@/components/product-buy-actions";
 import { FavoriteButton } from "@/components/favorite-button";
+import { RatingStars } from "@/components/rating-stars";
 import { cn } from "@/lib/utils";
 
 /** Kartu produk untuk daftar `/produk`. */
@@ -87,6 +88,14 @@ export function ProductCard({ product }: { product: Product }) {
             <Tag className="h-3 w-3" />
             {PRODUCT_CATEGORY_LABEL[product.category]}
           </span>
+          {product.ratingSummary && product.ratingSummary.count > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary">
+              <RatingStars value={product.ratingSummary.avg} size="sm" />
+              <span className="text-muted">
+                {product.ratingSummary.avg.toFixed(1)} ({product.ratingSummary.count})
+              </span>
+            </span>
+          )}
         </div>
 
         <h3 className="mt-3 text-base font-bold text-secondary">

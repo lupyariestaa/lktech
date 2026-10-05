@@ -15,6 +15,7 @@ import { ProductBuyActions } from "@/components/product-buy-actions";
 import { ProductVariantPicker } from "@/components/product-variant-picker";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductCard } from "@/components/product-card";
+import { ProductReviews } from "@/components/product-reviews";
 import {
   ProductPurchaseProvider,
 } from "@/components/product-purchase-context";
@@ -107,6 +108,8 @@ export default async function ProdukDetailPage({
   }));
 
   // JSON-LD: produk tunggal → satu Offer; multi-varian → beberapa Offer.
+  // FASE R: sisipkan AggregateRating bila produk punya ulasan disetujui.
+  const rating = product.ratingSummary;
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -115,6 +118,17 @@ export default async function ProdukDetailPage({
     image: gallery.length ? gallery : undefined,
     category: PRODUCT_CATEGORY_LABEL[product.category],
     brand: { "@type": "Brand", name: "LKTech" },
+    ...(rating && rating.count > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: rating.avg,
+            reviewCount: rating.count,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
     offers: multi
       ? product.variants.map((v) => ({
           "@type": "Offer",
@@ -344,6 +358,9 @@ export default async function ProdukDetailPage({
                 </div>
               </section>
             )}
+
+            {/* Ulasan & rating (FASE R) */}
+            <ProductReviews productSlug={product.slug} summary={product.ratingSummary} />
           </div>
 
           {/* ===== Sidebar pembelian (desktop/tablet ≥ lg) ===== */}
