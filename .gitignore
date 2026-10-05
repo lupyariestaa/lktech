@@ -31,3 +31,7 @@ next-env.d.ts
 .sentryclirc
 .sentry/
 sentry-auth-token.txt
+
+# File referensi/desain lokal (tidak untuk repo)
+referensi-design-*.jpg
+referensi-design-*.png
