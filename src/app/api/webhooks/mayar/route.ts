@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { getOrderById, markOrderPaid } from "@/lib/orders";
 import { fulfillOrder } from "@/lib/order-payment";
+import { obs } from "@/lib/observability";
 import { rateLimit } from "@/lib/rate-limit";
 import type { OrderStatus } from "@/lib/order-types";
 
@@ -79,6 +80,7 @@ export async function POST(req: Request) {
       console.error(
         `[webhook/mayar] payment_mismatch order=${orderId} received=${amount} expected=${order.total}`,
       );
+      obs.paymentMismatch({ orderId, received: amount, expected: order.total });
       await db
         .collection("orders")
         .doc(orderId)
@@ -110,6 +112,11 @@ export async function POST(req: Request) {
     }
 
     // ===== 5. Fulfillment best-effort (unduhan + email) =====
+    obs.paymentReceived({
+      orderId,
+      amount: typeof amount === "number" ? amount : order.total,
+      method,
+    });
     try {
       await fulfillOrder(orderId);
     } catch (err) {

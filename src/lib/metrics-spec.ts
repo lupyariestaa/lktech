@@ -45,6 +45,8 @@ export const METRIC_LABEL = {
   aov: "Rata-rata / Pesanan",
   /** Tingkat penyelesaian. */
   completion: "Tingkat Penyelesaian",
+  /** Konversi pembayaran online (FASE P6). */
+  paymentConversion: "Konversi Pembayaran",
 } as const;
 
 /** Penjelasan singkat rumus metrik (untuk tooltip/hint UI). */
@@ -59,6 +61,8 @@ export const METRIC_HINT = {
   aov: "Omzet periode dibagi jumlah pesanan penghasil omzet.",
   completion:
     "Pesanan selesai ÷ (semua pesanan periode − dibatalkan). Dibulatkan ke persen.",
+  paymentConversion:
+    "Pesanan dibayar ÷ (dibayar + kedaluwarsa) pada periode ini. Pesanan yang masih menunggu bayar tidak dihitung.",
 } as const;
 
 /**
@@ -79,4 +83,48 @@ export function computeCompletionRate(
   const denominator = total - excluded;
   if (denominator <= 0) return 0;
   return selesai / denominator;
+}
+
+/**
+ * Status yang menandakan order SUDAH DIBAYAR (uang masuk) — terminal positif.
+ * Dipakai untuk metrik konversi pembayaran (FASE P6).
+ */
+export const PAID_ORDER_STATUSES = ["dibayar", "diproses", "selesai"] as const;
+
+/** Status yang menandakan order MASUK jalur pembayaran online (INSTAN). */
+export const PAYABLE_ORDER_STATUSES = [
+  "menunggu_bayar",
+  "dibayar",
+  "diproses",
+  "selesai",
+  "kedaluwarsa",
+  "dibatalkan",
+] as const;
+
+/** Ringkasan konversi pembayaran (FASE P6). */
+export type PaymentConversion = {
+  /** Order yang masuk jalur pembayaran online (menunggu_bayar dll.). */
+  initiated: number;
+  /** Order yang sudah dibayar (dibayar/diproses/selesai). */
+  paid: number;
+  /** Order yang kedaluwarsa tanpa dibayar. */
+  expired: number;
+  /** Konversi (0..1) = paid ÷ (paid + expired); instan belum-final tak dihitung. */
+  rate: number;
+};
+
+/**
+ * Hitung konversi pembayaran dari distribusi status (jendela yang sama).
+ * Rumus: `paid ÷ (paid + expired)`. Order yang MASIH menunggu (`menunggu_bayar`)
+ * tidak dihitung di penyebut agar tidak menghukum pembayaran yang masih berjalan.
+ */
+export function computePaymentConversion(
+  breakdown: Record<string, number>,
+): PaymentConversion {
+  const paid = PAID_ORDER_STATUSES.reduce((n, s) => n + (breakdown[s] ?? 0), 0);
+  const expired = breakdown.kedaluwarsa ?? 0;
+  const initiated = PAYABLE_ORDER_STATUSES.reduce((n, s) => n + (breakdown[s] ?? 0), 0);
+  const denominator = paid + expired;
+  const rate = denominator > 0 ? paid / denominator : 0;
+  return { initiated, paid, expired, rate };
 }

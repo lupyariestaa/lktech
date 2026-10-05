@@ -19,6 +19,7 @@ import {
   listOrderEmails,
 } from "@/lib/email-status";
 import { restoreCouponUsage } from "@/lib/coupons";
+import { shouldRestoreCoupon } from "@/lib/order-status-pure";
 import { getSiteSettings } from "@/lib/settings";
 import { releaseOrderDownload, createManualOrderInvoice } from "@/lib/order-payment";
 
@@ -167,10 +168,7 @@ export async function PATCH(req: Request) {
 
     // `KP-C2`: transisi → dibatalkan/kedaluwarsa mengembalikan kuota kupon
     // (sekali saja, karena hanya terjadi pada transisi status).
-    if (
-      (status === "dibatalkan" || status === "kedaluwarsa") &&
-      previousStatus !== status
-    ) {
+    if (shouldRestoreCoupon(previousStatus ?? "", status)) {
       const order = await getOrderById(id);
       if (order?.coupon?.couponId) {
         await restoreCouponUsage(order.coupon.couponId, order.uid);

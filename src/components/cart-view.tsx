@@ -26,7 +26,7 @@ import { getIdToken } from "@/lib/auth";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
 import { formatRupiah } from "@/lib/format";
-import { trackCheckout, trackEvent } from "@/lib/analytics";
+import { trackCheckout, trackEvent, trackPaymentInitiated, trackAbandonedRecovered } from "@/lib/analytics";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
@@ -145,10 +145,10 @@ export function CartView({ promoCode }: { promoCode?: string }) {
 
       // FASE P5: jika sesi ini datang dari email pengingat, catat pemulihan.
       if (recoveredFromReminder) {
-        trackEvent("cart_abandoned_recovered", {
-          source: "email_reminder",
+        trackAbandonedRecovered({
           items: items.reduce((n, it) => n + it.qty, 0),
           total: order.total,
+          source: "email_reminder",
         });
       }
 
@@ -169,6 +169,12 @@ export function CartView({ promoCode }: { promoCode?: string }) {
 
       // INSTAN + invoice tersedia → arahkan ke halaman pembayaran online.
       if (order.payUrl) {
+        // FASE P6: ukur pembayaran yang dimulai (sebelum redirect ke gateway).
+        trackPaymentInitiated({
+          orderId: order.id,
+          total: order.total,
+          provider: order.payment?.provider ?? "mayar",
+        });
         setDoneKind("bayar");
         setDone(true);
         window.location.href = order.payUrl;

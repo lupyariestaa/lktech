@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
+  CreditCard,
   Download,
   Loader2,
   Minus,
@@ -160,7 +161,7 @@ export function AnalyticsDashboard() {
       ) : data && totals ? (
         <>
           {/* Kartu ringkasan */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <SummaryCard
               icon={Wallet}
               label={METRIC_LABEL.omzetPeriod}
@@ -191,6 +192,17 @@ export function AnalyticsDashboard() {
               value={`${Math.round(totals.completionRate * 100)}%`}
               hint={`${totals.completed} selesai · ${totals.cancelled} batal`}
               accent="bg-amber-50 text-amber-600"
+            />
+            <SummaryCard
+              icon={CreditCard}
+              label={METRIC_LABEL.paymentConversion}
+              value={
+                data.payment.paid + data.payment.expired > 0
+                  ? `${Math.round(data.payment.rate * 100)}%`
+                  : "—"
+              }
+              hint={`${data.payment.paid} dibayar · ${data.payment.expired} kedaluwarsa`}
+              accent="bg-purple-50 text-purple-600"
             />
           </div>
 

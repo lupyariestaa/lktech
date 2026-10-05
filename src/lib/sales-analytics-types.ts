@@ -58,5 +58,15 @@ export type SalesAnalytics = {
     aov: number | null;
   };
   statusBreakdown: Record<OrderStatus, number>;
+  /**
+   * Konversi pembayaran online (FASE P6): berapa order yang dibayar vs
+   * kedaluwarsa, & tingkat konversinya (dalam jendela periode).
+   */
+  payment: {
+    initiated: number;
+    paid: number;
+    expired: number;
+    rate: number;
+  };
   topProducts: TopProduct[];
 };

@@ -79,3 +79,32 @@ export function trackCheckout(props: { items: number; total: number }): void {
 export function trackPackageClick(service: string, pkg: string): void {
   trackEvent("package_click", { service, package: pkg });
 }
+
+/** Pembayaran online dimulai (pembeli diarahkan ke halaman bayar — FASE P0/P6). */
+export function trackPaymentInitiated(props: {
+  orderId?: string;
+  total: number;
+  provider?: string;
+}): void {
+  trackEvent("payment_initiated", {
+    order: props.orderId ?? null,
+    total: props.total,
+    provider: props.provider ?? null,
+  });
+}
+
+/**
+ * Pemulihan keranjang terbengkalai (FASE P5/P6): checkout berhasil pada sesi
+ * yang datang dari email pengingat (`?ref=reminder`).
+ */
+export function trackAbandonedRecovered(props: {
+  items: number;
+  total: number;
+  source?: string;
+}): void {
+  trackEvent("cart_abandoned_recovered", {
+    items: props.items,
+    total: props.total,
+    source: props.source ?? "email_reminder",
+  });
+}

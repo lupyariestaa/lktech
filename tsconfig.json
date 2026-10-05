@@ -43,6 +43,7 @@
     "scripts/order-expiry.test.ts",
     "scripts/coupon-bundle.test.ts",
     "scripts/product-stock.test.ts",
-    "scripts/cart-reminder.test.ts"
+    "scripts/cart-reminder.test.ts",
+    "scripts/order-status.test.ts"
   ]
 }

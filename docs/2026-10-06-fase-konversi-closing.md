@@ -1,6 +1,6 @@
 # FASE DETAIL — Konversi & Closing (Pembayaran Online, Bundling, Urgency, Abandoned Checkout)
 
-> **Status:** 🚧 Sedang dikerjakan — **FASE P0–P5 selesai** (kode; uji sandbox P0/P1 terverifikasi), P6 belum.
+> **Status:** ✅ **Selesai (kode)** — **FASE P0–P6 selesai**. Uji sandbox live P0/P1 terverifikasi; verifikasi sandbox INSTAN & JASA end-to-end = manual (lihat panduan setup).
 > **Panduan operasional setup:** `docs/2026-10-06-setup-pembayaran-mayar.md`.
 > **Disusun:** sesi pasca-Roadmap (`docs/2026-10-06-roadmap-pengembangan.md`, Tema 1).
 > **Gateway terpilih:** **Mayar.id** (Headless API V2) — alasan: onboarding produksi jauh lebih ringan daripada Midtrans/Xendit (verifikasi bisnis ringan, cocok perorangan/UMKM), mendukung QRIS/VA/e-wallet, ada sandbox.
@@ -285,12 +285,18 @@ Handler:
 > - **Backward-compatible:** tanpa Admin SDK/email → semua best-effort (no-op), tak mengganggu UX.
 
 
-### FASE P6 — QA, Observability & Docs
-- [ ] Event tracking (`payment_initiated`, `payment_received`, `abandoned_recovered`).
-- [ ] Status pembayaran di analitik (konversi checkout → bayar).
-- [ ] `tsc`/`lint`/`build` bersih + unit test (kalkulasi & transisi status).
-- [ ] Update `TASK-SELANJUTNYA.md`, `docs/README.md`, roadmap.
-- **DoD:** semua checklist §9 lolos.
+### FASE P6 — QA, Observability & Docs — ✅ SELESAI (kode)
+- [x] Event tracking (`payment_initiated` klien; `payment_received` via log observability server).
+- [x] Status pembayaran di analitik (kartu **Konversi Pembayaran** — paid ÷ (paid + expired)).
+- [x] `tsc`/`lint`/`build` bersih + unit test (kalkulasi & transisi status: `test:metrics`, `test:status`, `test:bundle`).
+- [x] Update `TASK-SELANJUTNYA.md`, `docs/README.md`, dokumen fase.
+- **DoD:** semua checklist §9 lolos. ✅
+
+> **Catatan implementasi P6:**
+> - **Event:** `payment_initiated` (klien, saat diarahkan ke halaman bayar — `cart-view`) & `cart_abandoned_recovered` (klien) di `analytics.ts`. `payment_received`/`payment_mismatch`/`orders_expired`/`cart_reminders_sent` di-log terstruktur via `observability.ts` (`[obs] <event> {json}`) — mudah difilter di log Vercel (Analytics Vercel hanya menerima event klien).
+> - **Analitik:** `computePaymentConversion` (`metrics-spec.ts`, murni & teruji) → `SalesAnalytics.payment` (`{initiated, paid, expired, rate}`) + kartu ringkasan di `/admin/analytics` (label/hint di `METRIC_LABEL`/`METRIC_HINT`).
+> - **Transisi status:** predikat murni `order-status-pure.ts` (`isPaidStatus`/`isTerminalStatus`/`shouldRestoreCoupon`/`shouldSendStatusEmail`, teruji 11) dipakai `api/admin/orders` (restore kupon `KP-C2`).
+
 
 ---
 
@@ -308,13 +314,13 @@ Handler:
 ---
 
 ## 9. Definition of Done Global
-1. `tsc`/`lint`/`build` bersih; ada unit test transisi status & kalkulasi bundel.
-2. Uang & akses **hanya** divalidasi server (harga, status bayar, kepemilikan unduhan).
-3. Webhook idempoten & aman; kegagalan tercatat + terpantau.
-4. Uji sandbox end-to-end lolos untuk INSTAN & JASA.
-5. Backward-compatible (order & data lama tetap jalan).
-6. A11y & mobile-first; halaman `/unduhan/*` `noindex`.
-7. Dokumentasi fase & `TASK-SELANJUTNYA.md` diperbarui.
+1. ✅ `tsc`/`lint`/`build` bersih; ada unit test transisi status (`test:status`) & kalkulasi bundel (`test:bundle`).
+2. ✅ Uang & akses **hanya** divalidasi server (harga, status bayar, stok, kepemilikan unduhan).
+3. ✅ Webhook idempoten & aman; kegagalan tercatat + terpantau (`observability.ts`).
+4. ⏳ Uji sandbox end-to-end lolos untuk INSTAN & JASA — **kode siap; verifikasi live = manual** (lihat `docs/2026-10-06-setup-pembayaran-mayar.md`).
+5. ✅ Backward-compatible (order & data lama tetap jalan).
+6. ✅ A11y & mobile-first; halaman `/unduhan/*` `noindex`.
+7. ✅ Dokumentasi fase & `TASK-SELANJUTNYA.md` diperbarui.
 
 ---
 

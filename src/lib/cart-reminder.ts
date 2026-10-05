@@ -4,6 +4,7 @@ import { SITE_URL } from "@/lib/site";
 import { getSiteSettings } from "@/lib/settings";
 import { listRemindableCarts, markCartReminded } from "@/lib/cart-draft";
 import { sendCartReminderEmail, unsubscribeUrl } from "@/lib/email-cart";
+import { obs } from "@/lib/observability";
 
 /**
  * ORKESTRASI pengingat keranjang (FASE P5).
@@ -84,5 +85,8 @@ export async function sendCartReminders(
     }
   }
 
+  if (result.reminded > 0 || result.failed > 0) {
+    obs.cartReminded({ count: result.reminded, failed: result.failed });
+  }
   return result;
 }

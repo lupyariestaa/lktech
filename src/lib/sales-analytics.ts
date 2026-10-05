@@ -14,7 +14,7 @@ import {
   type SalesPoint,
   type TopProduct,
 } from "@/lib/sales-analytics-types";
-import { ANALYTICS_TIMEZONE, computeCompletionRate } from "@/lib/metrics-spec";
+import { ANALYTICS_TIMEZONE, computeCompletionRate, computePaymentConversion } from "@/lib/metrics-spec";
 
 export type {
   AnalyticsMode,
@@ -121,6 +121,7 @@ export async function getSalesAnalytics(opts?: {
       totals: { omzet: 0, orders: 0, aov: 0, completed: 0, cancelled: 0, completionRate: 0 },
       deltas: { omzet: null, orders: null, aov: null },
       statusBreakdown: emptyStatusBreakdown(),
+      payment: { initiated: 0, paid: 0, expired: 0, rate: 0 },
       topProducts: [],
     };
   }
@@ -238,6 +239,7 @@ export async function getSalesAnalytics(opts?: {
       aov: pct(aov, prevAov),
     },
     statusBreakdown,
+    payment: computePaymentConversion(statusBreakdown),
     topProducts,
   };
 }

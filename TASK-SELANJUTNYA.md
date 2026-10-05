@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **P5 — abandoned checkout (draft server, email pengingat H+1, opt-out, tracking recovery)**.
+> Terakhir diperbarui: sesi **P6 — QA, observability & docs (penutup P0–P6)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -129,6 +129,24 @@ Fase **P5** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi ko
 
 ---
 
+## 🎉 Sesi Terakhir — FASE P6: QA, Observability & Docs (FASE TERAKHIR)
+
+Fase **P6** — sekaligus **menutup seluruh rangkaian P0–P6** Konversi & Closing.
+
+| Kode | Perubahan |
+| --- | --- |
+| **Event tracking** | `payment_initiated` & `cart_abandoned_recovered` (klien, `analytics.ts`); event server terstruktur `payment_received`/`payment_mismatch`/`orders_expired`/`cart_reminders_sent` via `observability.ts` (`[obs] <event> {json}`). |
+| **Konversi pembayaran di analitik** | `computePaymentConversion` (`metrics-spec.ts`) → `SalesAnalytics.payment` + kartu **"Konversi Pembayaran"** di `/admin/analytics`. |
+| **Transisi status (murni)** | `order-status-pure.ts` (`isPaidStatus`/`isTerminalStatus`/`shouldRestoreCoupon`/`shouldSendStatusEmail`) dipakai `api/admin/orders` (restore kupon `KP-C2`). |
+| **Test** | `npm run test:status` (11) transisi status; `test:metrics` diperluas (10) termasuk konversi pembayaran. **Total 67 test.** |
+| **Docs** | §9 DoD ditandai; status dokumen fase → "P0–P6 selesai"; `docs/README.md` & `TASK-SELANJUTNYA.md` diperbarui. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (69 halaman) · test (metrics 10 · fulfillment 5 · downloads 5 · expiry 5 · bundle 9 · stock 12 · cart 10 · status 11) lolos ✅.
+
+**Status akhir:** ✅ **FASE KONVERSI & CLOSING (P0–P6) SELESAI (kode).** Sisa = langkah manual pemilik (cron eksternal, akun Mayar produksi, domain/Resend, uji sandbox live).
+
+---
+
 ## 🧭 STATUS & PETA SEKARANG (baca ini dulu)
 
 > Ringkasan kondisi terkini agar sesi berikutnya langsung paham tanpa membaca
@@ -164,19 +182,27 @@ Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
   ✅ P3  Bundling & cross-sell (relatedSlugs, "Sering dibeli bersama", kupon bundel)
   ✅ P4  Urgency & trust (badge stok nyata, bukti sosial 7 hari, trust badges)
   ✅ P5  Abandoned checkout (draft server, email pengingat H+1, opt-out, tracking recovery)
-  ⏭️ P6  QA/observability + docs  ← NEXT & TERAKHIR
+  ✅ P6  QA/observability + docs (event tracking, konversi pembayaran di analitik, test transisi status)
 ```
 
-### NEXT TASK (disarankan): FASE P6 — QA, Observability & Docs
-Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "FASE P6 — QA, Observability & Docs". Inti:
-1. **Event tracking** (`payment_initiated`, `payment_received`, `abandoned_recovered`) — lengkapi di titik yang belum.
-2. **Status pembayaran di analitik** (konversi checkout → bayar).
-3. **`tsc`/`lint`/`build` bersih + unit test** (kalkulasi & transisi status).
-4. **Update `TASK-SELANJUTNYA.md`, `docs/README.md`, roadmap**.
-- **DoD:** semua checklist §9 lolos.
+### FASE KONVERSI & CLOSING — ✅ SELESAI (kode, P0–P6)
+Seluruh fase P0–P6 tuntas di sisi kode. **NEXT TASK = pilihan pemilik:**
+- **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
+- **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
+- **Inisiatif roadmap berikutnya** (lihat `docs/2026-10-06-roadmap-pengembangan.md` Tema 2–4): Retensi (loyalitas/email marketing), Kepercayaan (ulasan & rating), Operasional (audit log, laporan).
+
+### DoD Global (§9) — status
+1. ✅ `tsc`/`lint`/`build` bersih + unit test transisi status & kalkulasi bundel.
+2. ✅ Uang & akses hanya divalidasi server.
+3. ✅ Webhook idempoten & aman; kegagalan terpantau (`observability.ts`).
+4. ⏳ Uji sandbox end-to-end INSTAN & JASA (kode siap; verifikasi live = manual).
+5. ✅ Backward-compatible.
+6. ✅ A11y & mobile-first; `/unduhan/*` noindex.
+7. ✅ Dokumentasi fase & `TASK-SELANJUTNYA.md` diperbarui.
 
 ### Langkah manual yang MASIH tertunda (milik pemilik)
 - **FASE P2 — cron:** set `CRON_SECRET` di Vercel (rahasia acak) → jadwalkan pemanggilan dari cron eksternal ke `GET https://<domain>/api/cron/expire-orders?token=<secret>` → `{ ok:true, expired:N }`. (Vercel Cron bawaan butuh plan Pro, jadi pakai cron eksternal gratis.)
+- **FASE P5 — cron pengingat + opt-out:** set `CART_UNSUB_SECRET` (opsional; fallback ke secret lain) → jadwalkan `GET /api/cron/cart-reminders?token=<CRON_SECRET>` (mis. tiap 3 jam).
 - **Produksi Mayar:** daftar `web.mayar.id` → verifikasi bisnis → buat API key produksi → set `MAYAR_MODE=production` + `MAYAR_API_KEY` di Vercel → daftarkan webhook produksi (`.../api/webhooks/mayar?token=<MAYAR_WEBHOOK_TOKEN>`) → redeploy.
 - **Domain sendiri:** belum dibeli (SKIP) → memblokir verifikasi email Resend & domain kustom.
 - **Isi data asli:** portofolio, testimoni, logo klien (SKIP, manual via dashboard).
@@ -184,7 +210,7 @@ Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "F
 ### Konvensi kerja proyek ini (WAJIB diikuti)
 1. **Dokumentasi dulu → baru kode.** Setiap inisiatif besar punya `docs/YYYY-MM-DD-<slug>.md` dengan checklist fase.
 2. **Pola sehat:** server-authoritative (harga/status/akses hanya di server), observability (log + status tersimpan), a11y, mobile-first, **backward-compatible** (data lama tetap jalan).
-3. **QA tiap fase:** `npx tsc --noEmit` bersih · `npx eslint .` bersih · `npm run build` sukses · unit test (`npm run test:metrics` / `test:fulfillment` / `test:downloads`).
+3. **QA tiap fase:** `npx tsc --noEmit` bersih · `npx eslint .` bersih · `npm run build` sukses · unit test (`npm run test:metrics` / `test:fulfillment` / `test:downloads` / `test:expiry` / `test:bundle` / `test:stock` / `test:cart` / `test:status`).
 4. **Aman tanpa kredensial:** fitur gateway harus fail-safe (fallback / nonaktif) bila env kosong.
 5. **Perubahan rules/env:** update `.env.example` + catat di dokumen (Firestore Rules perlu publish ulang manual).
 6. **Git:** commit dengan pesan konvensional (`feat|fix|docs|chore(...)`), push ke `main` → Vercel auto-deploy.

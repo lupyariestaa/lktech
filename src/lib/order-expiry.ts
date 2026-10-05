@@ -7,6 +7,7 @@ import { restoreCouponUsage } from "@/lib/coupons";
 import { sendOrderStatusToBuyer } from "@/lib/email-order";
 import { recordStatusEmail, logOrderEmail } from "@/lib/email-status";
 import { getSiteSettings } from "@/lib/settings";
+import { obs } from "@/lib/observability";
 
 /**
  * KEDALUWARSA OTOMATIS order `menunggu_bayar` (FASE P2).
@@ -94,5 +95,8 @@ export async function expirePendingOrders(
     }
   }
 
+  if (result.expired > 0) {
+    obs.orderExpired({ count: result.expired, couponsRestored: result.couponsRestored });
+  }
   return result;
 }
