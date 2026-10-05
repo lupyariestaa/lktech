@@ -1,6 +1,16 @@
 export const LEAD_STATUSES = ["baru", "diproses", "selesai", "arsip"] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
+/** Satu entri timeline aktivitas lead (CRM mini, Tema 3.2). */
+export type LeadActivity = {
+  id: string;
+  /** Jenis aktivitas. */
+  type: "catatan" | "status" | "panggilan" | "email" | "wa" | "sistem";
+  note: string;
+  actor: string;
+  atISO: string;
+};
+
 /** Lead yang tersimpan di Firestore (dengan id & status pengelolaan). */
 export type StoredLead = {
   id: string;
@@ -13,6 +23,15 @@ export type StoredLead = {
   createdAt: string | null;
   source?: string;
   userAgent?: string;
+  /* ===== CRM mini (Tema 3.2) — semua OPSIONAL (backward-compatible) ===== */
+  /** Skor potensi 0..100 (dihitung otomatis). */
+  score?: number;
+  /** Tahapan pipeline (lebi kaya dari `status`). */
+  stage?: string;
+  /** Timeline aktivitas (dibatasi jumlah). */
+  activities?: LeadActivity[];
+  /** Waktu aktivitas terakhir (ISO) untuk pengurutan/peringatan. */
+  lastActivityAtISO?: string;
 };
 
 export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = {

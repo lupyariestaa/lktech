@@ -22,6 +22,25 @@ export async function updateLeadStatus(id: string, status: LeadStatus) {
   });
 }
 
+/** Ubah tahap pipeline lead (CRM mini, Tema 3.2). */
+export async function updateLeadStage(id: string, stage: string) {
+  return adminFetch<{ ok: boolean; stage?: string }>("/api/admin/leads", {
+    method: "PATCH",
+    body: JSON.stringify({ id, stage }),
+  });
+}
+
+/** Tambah aktivitas timeline lead (catatan/panggilan/email/wa). */
+export async function addLeadActivity(
+  id: string,
+  activity: { type: string; note: string },
+) {
+  return adminFetch<{ ok: boolean }>("/api/admin/leads", {
+    method: "PATCH",
+    body: JSON.stringify({ id, activity }),
+  });
+}
+
 export async function deleteLead(id: string) {
   return adminFetch<{ ok: boolean }>(
     `/api/admin/leads?id=${encodeURIComponent(id)}`,

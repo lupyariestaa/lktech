@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Operasional & Kualitas Teknis (Tema 4, O1–O5)**.
+> Terakhir diperbarui: sesi **Laporan & CRM Mini — L1 (scoring & model lead)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -184,6 +184,22 @@ Inisiatif Tema 4 (Operasional). Dokumen fase: `docs/2026-10-05-operasional-tema4
 **Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (71 halaman) · **10 suite test** (79 test) lolos ✅.
 
 **Langkah manual:** publish ulang Firestore Rules (koleksi `admin_audit`); (opsional) isi `UPSTASH_REDIS_REST_URL`/`_TOKEN` di Vercel untuk rate-limit terdistribusi; CI aktif otomatis setelah push.
+
+---
+
+## 🎉 Sesi Terakhir — Laporan & CRM Mini (L1)
+
+Inisiatif Tema 3 (lanjutan). Dokumen fase: `docs/2026-10-05-laporan-crm-mini.md`.
+
+**L1 selesai** — model & scoring lead (murni) + data layer:
+- `lead-scoring-pure.ts`: `computeLeadScore` (0..100 dari data nyata), `scoreTier`, pemetaan `statusToStage`/`stageToStatus` (teruji 10).
+- `lead-types.ts`: field opsional baru `score`/`stage`/`activities`/`lastActivityAtISO` (backward-compat).
+- `lead-crm.ts`: `recomputeLeadScore`, `updateLeadStage` (+ sinkron `status` + aktivitas), `addLeadActivity`/`listLeadActivities`.
+- `POST /api/lead` menghitung skor saat create; `PATCH /api/admin/leads` menerima `status`/`stage`/`activity`; klien `updateLeadStage`/`addLeadActivity`.
+
+**Verifikasi:** `tsc`/`eslint`/`build` bersih (71 halaman) · **11 suite test** (89 test) lolos ✅.
+
+**Lanjut (L2–L6):** Kanban pipeline, timeline aktivitas, laporan mingguan otomatis (cron), kesehatan bisnis di dashboard.
 
 ---
 

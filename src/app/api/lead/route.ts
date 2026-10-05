@@ -3,6 +3,7 @@ import { leadSchema } from "@/lib/lead-schema";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { sendLeadNotification } from "@/lib/email";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { computeLeadScore } from "@/lib/lead-scoring-pure";
 import { waLink } from "@/lib/whatsapp";
 
 export const runtime = "nodejs";
@@ -95,6 +96,8 @@ export async function POST(req: Request) {
     const ref = await db.collection("leads").add({
       ...lead,
       status: "baru",
+      stage: "baru",
+      score: computeLeadScore({ ...lead, stage: "baru" }),
       source: "website-contact-form",
       userAgent: req.headers.get("user-agent") ?? undefined,
       createdAtISO: now,
