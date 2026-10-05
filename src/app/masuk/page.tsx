@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Heart, PackageCheck, Sparkles } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { UserLoginForm } from "@/components/auth/user-login-form";
+import { LoginStepsCarousel } from "@/components/auth/login-steps-carousel";
 import { Logo } from "@/components/logo";
 import { safeRedirectPath } from "@/lib/redirect";
 
@@ -11,24 +12,6 @@ export const metadata: Metadata = {
     "Masuk ke akun LKTech Anda dengan Google untuk membeli produk dan mengelola pesanan.",
   robots: { index: false, follow: false },
 };
-
-const STEPS = [
-  {
-    icon: PackageCheck,
-    title: "Kelola pesanan",
-    desc: "Riwayat, status, & unduhan produk digital Anda.",
-  },
-  {
-    icon: Heart,
-    title: "Favorit & alert",
-    desc: "Simpan produk, dapat notifikasi harga turun/restock.",
-  },
-  {
-    icon: Sparkles,
-    title: "Poin & kupon",
-    desc: "Kumpulkan poin tiap pembelian, tukar jadi kupon.",
-  },
-];
 
 export default async function MasukPage({
   searchParams,
@@ -83,31 +66,8 @@ export default async function MasukPage({
               </p>
             </div>
 
-            {/* Kartu langkah/keunggulan (vertikal, full-width) */}
-            <div className="relative flex flex-col gap-3">
-              {STEPS.map((s, i) => {
-                const Icon = s.icon;
-                return (
-                  <div
-                    key={s.title}
-                    className="flex w-full items-center gap-4 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur transition-colors hover:bg-white/15"
-                  >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-sm font-bold text-primary">
-                      {i + 1}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 text-sm font-bold">
-                        <Icon className="h-3.5 w-3.5 text-emerald-300" />
-                        {s.title}
-                      </p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-white/75">
-                        {s.desc}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {/* Kartu keunggulan bergantian (stack) */}
+            <LoginStepsCarousel className="relative" />
           </aside>
 
           {/* ===== KANAN: Form ===== */}
