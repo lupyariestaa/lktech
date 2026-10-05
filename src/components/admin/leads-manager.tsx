@@ -121,11 +121,18 @@ export function LeadsManager() {
     const prev = leads;
     setBusyIds((s) => new Set(s).add(id));
     setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, stage } : l)));
+    // Sinkronkan dialog detail (bila terbuka) agar highlight tahap terbarui.
+    setDetail((d) => (d && d.id === id ? { ...d, stage } : d));
     try {
       await updateLeadStage(id, stage);
       toast.success(`Tahap: ${PIPELINE_STAGE_LABEL[stage]}.`);
       // Segarkan agar skor (dihitung ulang server) ikut terbarui.
-      fetchLeads().then(setLeads).catch(() => {});
+      fetchLeads()
+        .then((list) => {
+          setLeads(list);
+          setDetail((d) => (d ? list.find((l) => l.id === d.id) ?? d : d));
+        })
+        .catch(() => {});
     } catch (err) {
       setLeads(prev);
       const msg = err instanceof Error ? err.message : "Gagal memindahkan.";

@@ -169,18 +169,22 @@ Mengubah pembeli sekali menjadi pelanggan berulang, dan pengunjung menjadi audie
 - Agregat rating di kartu produk + markah **JSON-LD `AggregateRating`** (SEO bintang di Google).
 - Endpoint: `GET/POST /api/products/[slug]/reviews`, `PATCH /api/admin/reviews`.
 
-### 3.2 [P1] Lead Scoring & Pipeline CRM Mini
+### 3.2 [P1] Lead Scoring & Pipeline CRM Mini — ✅ SELESAI
 **Rancangan:**
 - Skor lead dari sumber (form vs WA), layanan yang diminta, panjang pesan, waktu respons.
 - **Kanban pipeline** sederhana (Baru → Dihubungi → Proposal → Menang/Kalah) di `/admin/leads`.
 - Catatan aktivitas per lead (timeline).
 - Sinkron dengan order bila lead jadi pembeli (konversi terlacak).
 
-### 3.3 [P1] Laporan & Ekspor Otomatis
+> **✅ Selesai (L1–L3):** `docs/2026-10-05-laporan-crm-mini.md` — skor otomatis + Kanban + timeline.
+
+### 3.3 [P1] Laporan & Ekspor Otomatis — ✅ SELESAI
 **Rancangan:**
 - **Laporan mingguan** (email otomatis ke admin): omzet, order, lead, kupon terpakai, produk terlaris.
 - **Ekspor** jadwal manual → PDF/CSV (analitik, order, kupon).
 - Ringkasan "kesehatan bisnis" di dashboard (KPI vs minggu lalu — memanfaatkan `deltas` yang sudah ada).
+
+> **✅ Selesai (L4–L5):** email laporan mingguan (cron) + panel Kesehatan Bisnis (KPI 30 hari vs periode lalu). Ekspor PDF terjadwal & CSV sudah tersedia di halaman masing-masing.
 
 ### 3.4 [P2] Multi-bahasa & Multi-currency
 **Rancangan:**

@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **CRM Mini — L5 (kesehatan bisnis di dashboard)**.
+> Terakhir diperbarui: sesi **CRM Mini — L6 (QA & finalisasi; inisiatif selesai)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -187,7 +187,21 @@ Inisiatif Tema 4 (Operasional). Dokumen fase: `docs/2026-10-05-operasional-tema4
 
 ---
 
-## 🎉 Sesi Terakhir — CRM Mini L5: Kesehatan Bisnis di Dashboard
+## 🎉 Sesi Terakhir — CRM Mini L6: QA & Finalisasi (menutup inisiatif)
+
+**QA penuh:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (71 halaman) · **12 suite / 98 test** lolos ✅.
+
+**Perbaikan konsistensi (audit L1–L5):**
+- Perubahan **status lama** (dropdown) kini juga **menyinkronkan `stage`** pipeline (dua arah) — `PATCH /api/admin/leads`.
+- Dialog detail lead ikut memperbarui tahap & skor setelah perubahan.
+
+**Inisiatif Laporan & CRM Mini — ✅ SELESAI (L1–L6).** Dokumen: `docs/2026-10-05-laporan-crm-mini.md`.
+
+**Hasil:** skor lead otomatis + Kanban pipeline + timeline aktivitas + email laporan mingguan (cron) + panel Kesehatan Bisnis di dashboard.
+
+---
+
+## 🎉 Sesi Sebelumnya — CRM Mini L5: Kesehatan Bisnis di Dashboard
 
 | Kode | Perubahan |
 | --- | --- |

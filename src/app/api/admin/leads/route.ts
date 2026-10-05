@@ -160,7 +160,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  // ===== Ubah STATUS lama =====
+  // ===== Ubah STATUS lama (juga sinkronkan `stage` pipeline) =====
   const { status } = body;
   if (!status) {
     return NextResponse.json(
@@ -175,6 +175,8 @@ export async function PATCH(req: Request) {
   try {
     await db.collection("leads").doc(id).update({
       status,
+      // Sinkronkan tahap pipeline dari status lama agar konsisten (Tema 3.2).
+      stage: statusToStage(status),
       updatedAtISO: new Date().toISOString(),
       updatedBy: check.email,
     });

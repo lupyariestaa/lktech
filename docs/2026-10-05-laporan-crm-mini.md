@@ -1,6 +1,6 @@
 # FASE DETAIL — Laporan Otomatis & CRM Mini (Tema 3 lanjutan)
 
-> **Status:** 🚧 Sedang dikerjakan — **L1–L5 selesai**; L6 belum.
+> **Status:** ✅ **Selesai (kode) — L1–L6.**
 > **Disusun:** sesi pasca-Operasional (Tema 4) — rekomendasi roadmap.
 > **Tema roadmap:** **Tema 3 — Kepercayaan & Skala → 3.2 Lead Scoring & Pipeline CRM mini** + **3.3 Laporan & Ekspor Otomatis** (`docs/2026-10-06-roadmap-pengembangan.md`).
 > **Prasyarat baca:** `docs/2026-10-06-roadmap-pengembangan.md`, `docs/2026-10-02-orders-admin-module.md`, `docs/2026-10-05-analitik-penjualan.md`, `TASK-SELANJUTNYA.md`.
@@ -137,6 +137,18 @@ Skor 0..100 dari **data nyata** (tanpa ML):
 ### FASE L6 — QA & dokumentasi
 - `tsc`/`lint`/`build` bersih; unit test scoring & pemetaan.
 - Update `TASK-SELANJUTNYA.md`, `docs/README.md`, roadmap.
+
+> **Status L6:** ✅ QA penuh: `tsc`/`eslint`/`build` bersih (71 halaman); **12 suite / 98 test** lolos.
+> Perbaikan konsistensi saat audit: perubahan **status lama** kini juga menyinkronkan `stage` pipeline
+> (dua arah), & dialog detail ikut memperbarui tahap/skor. Dokumentasi fase, README, roadmap, `TASK` diperbarui.
+
+---
+
+## 8. Hasil Akhir (L1–L6) — ✅ SELESAI (kode)
+- **CRM mini:** skor lead otomatis + **Kanban pipeline** (5 tahap) + **timeline aktivitas** (catatan/panggilan/email/WA), dialog detail.
+- **Laporan:** **email laporan mingguan otomatis** (cron fail-closed) + panel **Kesehatan Bisnis** (KPI 30 hari vs periode lalu) di Ringkasan admin.
+- **Kualitas:** murni & teruji (scoring 10 · report 9), audit log mencatat aksi lead (status/delete), CI hijau, backward-compatible.
+- **Tidak ada langkah manual baru** selain menjadwalkan cron `weekly-report` (reuse `CRON_SECRET`).
 
 ---
 
