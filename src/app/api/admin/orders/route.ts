@@ -246,9 +246,11 @@ export async function POST(req: Request) {
               ? "Pesanan ini sudah dibayar."
               : res.reason === "not_found"
                 ? "Pesanan tidak ditemukan."
-                : res.reason === "no_amount"
-                  ? "Total pesanan 0 — tidak bisa dibuat invoice."
-                  : "Gagal membuat invoice manual.";
+                : res.reason === "final_status"
+                  ? "Pesanan sudah final (dibatalkan/kedaluwarsa/selesai) — tidak bisa dibuat invoice."
+                  : res.reason === "no_amount"
+                    ? "Total pesanan 0 — tidak bisa dibuat invoice."
+                    : "Gagal membuat invoice manual.";
         const status = res.reason === "not_found" ? 404 : 409;
         return NextResponse.json({ error: msg, code: res.reason }, { status });
       }
@@ -257,6 +259,7 @@ export async function POST(req: Request) {
         payUrl: res.payUrl,
         invoiceId: res.invoiceId,
         expiresAt: res.expiresAt,
+        reused: res.reused ?? false,
       });
     } catch (err) {
       console.error("[api/admin/orders] invoice manual gagal:", err);

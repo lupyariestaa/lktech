@@ -517,12 +517,13 @@ function OrderDetailDialog({
       order.status === "diproses" ||
       order.status === "selesai");
 
-  // Apakah invoice manual relevan: order yang BELUM dibayar (JASA umumnya).
+  // Apakah invoice manual relevan: order yang BELUM dibayar & belum final.
   const canCreateInvoice =
     order.payment?.status !== "dibayar" &&
     order.status !== "dibayar" &&
     order.status !== "dibatalkan" &&
     order.status !== "kedaluwarsa" &&
+    order.status !== "selesai" &&
     order.total > 0;
 
   // Escape + kunci scroll body + focus trap sederhana.
@@ -596,7 +597,11 @@ function OrderDetailDialog({
       const res = await createOrderInvoiceManual(order.id);
       if (res.payUrl) {
         setManualPayUrl(res.payUrl);
-        toast.success("Invoice manual dibuat. Kirim tautan ini ke pembeli.");
+        toast.success(
+          res.reused
+            ? "Invoice yang menunggu sudah ada — tautan lama dipakai."
+            : "Invoice manual dibuat. Kirim tautan ini ke pembeli.",
+        );
       } else {
         toast.success("Invoice manual dibuat.");
       }

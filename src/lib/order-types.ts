@@ -55,12 +55,12 @@ export const ORDER_STATUS_STYLE: Record<OrderStatus, string> = {
 };
 
 /**
- * Status yang menandakan order "menunggu" (bukan uang/klaim final) —
- * dipakai UI untuk CTA "Bayar" dan kalkulasi kedaluwarsa.
+ * Status yang menandakan order "menunggu bayar" (bukan uang/klaim final).
+ * Dipakai untuk gating alur pembayaran & kalkulasi kedaluwarsa.
+ * (Sebelumnya berupa array `PENDING_PAYMENT_STATUSES`; kini cukup konstanta
+ * tunggal agar tidak ada ekspor mati.)
  */
-export const PENDING_PAYMENT_STATUSES: readonly OrderStatus[] = [
-  "menunggu_bayar",
-];
+export const PENDING_PAYMENT_STATUS: OrderStatus = "menunggu_bayar";
 
 /** Satu item pesanan dengan harga yang SUDAH diverifikasi server. */
 export type OrderItem = {

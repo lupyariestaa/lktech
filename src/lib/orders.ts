@@ -406,6 +406,11 @@ export async function getExpiredPendingOrders(
  * Menandai order sebagai `kedaluwarsa` (idempoten): hanya berlaku bila order
  * masih `menunggu_bayar`. Mengembalikan `{ applied, order }`.
  * Memperbarui `payment.status` = `kedaluwarsa` agar panel pembayaran konsisten.
+ *
+ * ATOMIK (GAP-1): dijalankan dalam **transaksi Firestore** dengan RE-CHECK
+ * status di dalam transaksi. Ini mencegah balapan dengan webhook/pembayaran:
+ * bila order sudah berpindah dari `menunggu_bayar` (mis. baru saja `dibayar`),
+ * transaksi dibatalkan dan TIDAK menimpa status final (uang masuk tetap aman).
  */
 export async function markOrderExpired(
   id: string,
@@ -413,33 +418,45 @@ export async function markOrderExpired(
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
   const ref = db.collection(COLLECTION).doc(id);
-  const doc = await ref.get();
-  if (!doc.exists) return { applied: false, order: null };
 
-  const current = normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) });
-  if (current.status !== "menunggu_bayar") {
-    return { applied: false, order: current };
+  try {
+    return await db.runTransaction(async (tx) => {
+      const doc = await tx.get(ref);
+      if (!doc.exists) return { applied: false, order: null };
+
+      const current = normalizeOrder({
+        id: doc.id,
+        ...(doc.data() as Record<string, unknown>),
+      });
+      // Re-check di dalam transaksi: hanya `menunggu_bayar` yang boleh expire.
+      if (current.status !== "menunggu_bayar") {
+        return { applied: false, order: current };
+      }
+
+      const atISO = new Date().toISOString();
+      const payment = current.payment
+        ? { ...current.payment, status: "kedaluwarsa" as const }
+        : undefined;
+
+      tx.update(ref, {
+        status: "kedaluwarsa",
+        ...(payment ? { payment } : {}),
+        updatedAtISO: atISO,
+        updatedBy: "system:expire",
+      });
+
+      return {
+        applied: true,
+        order: normalizeOrder({
+          id: doc.id,
+          ...(doc.data() as Record<string, unknown>),
+          status: "kedaluwarsa",
+          ...(payment ? { payment } : {}),
+        }),
+      };
+    });
+  } catch (err) {
+    console.error("[orders] markOrderExpired gagal:", id, err);
+    throw err;
   }
-
-  const atISO = new Date().toISOString();
-  const payment = current.payment
-    ? { ...current.payment, status: "kedaluwarsa" as const }
-    : undefined;
-
-  await ref.update({
-    status: "kedaluwarsa",
-    ...(payment ? { payment } : {}),
-    updatedAtISO: atISO,
-    updatedBy: "system:expire",
-  });
-
-  return {
-    applied: true,
-    order: normalizeOrder({
-      id: doc.id,
-      ...(doc.data() as Record<string, unknown>),
-      status: "kedaluwarsa",
-      ...(payment ? { payment } : {}),
-    }),
-  };
 }

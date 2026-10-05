@@ -147,7 +147,7 @@ Handler:
 > **Kepatuhan restore kupon (`KP-C2`):** saat order → `kedaluwarsa` atau `dibatalkan`, panggil `restoreCouponUsage` (reuse modul yang sudah ada).
 
 ### 3.5 Kedaluwarsa otomatis
-- `expiredAt` invoice ikut disimpan. Task terjadwal (Vercel Cron via `vercel.json` ATAU endpoint `/api/cron/expire-orders` dilindungi secret) menandai order `menunggu_bayar` yang lewat `expiresAt` → `kedaluwarsa` + restore kupon.
+- `expiredAt` invoice ikut disimpan. Endpoint `/api/cron/expire-orders` (dilindungi `CRON_SECRET`) menandai order `menunggu_bayar` yang lewat `expiresAt` → `kedaluwarsa` + restore kupon. **Dijadwalkan dari cron eksternal** (cron-job.org / GitHub Actions) — fitur Vercel Cron bawaan (`vercel.json`) butuh plan Pro dan membuat deploy GAGAL di plan Hobby.
 - Alternatif ringan: periksa saat admin membuka daftar (lazy) — tapi cron lebih benar.
 
 ---

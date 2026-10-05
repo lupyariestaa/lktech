@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **P2 — alur JASA, invoice manual, cron kedaluwarsa**.
+> Terakhir diperbarui: sesi **audit QA P2 + remediasi 8 gap**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -29,6 +29,27 @@ Fase **P2** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi ko
 **Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ · test (metrics 6 · fulfillment 5 · downloads 5 · **expiry 5**) lolos ✅.
 
 **⚠️ Langkah manual:** set `CRON_SECRET` di Vercel (agar cron aktif; tanpa itu endpoint balas 503). Jadwalkan pemanggilan dari **cron eksternal** ke `GET /api/cron/expire-orders?token=<secret>` (Vercel Cron bawaan butuh plan Pro).
+
+---
+
+## 🎉 Sesi Terakhir — Audit QA P2 & Remediasi (GAP-1…GAP-8)
+
+Audit QA menyeluruh atas hasil FASE P2 menemukan **8 gap**; semuanya diperbaiki.
+
+| Gap | Temuan | Perbaikan |
+| --- | --- | --- |
+| **GAP-1** (kritis) | `markOrderExpired` baca-lalu-update **non-atomik** → balapan dengan webhook: order yang baru dibayar bisa ditimpa jadi `kedaluwarsa` + kuota kupon bocor | `markOrderExpired` kini **transaksional** (`runTransaction`) dengan **re-check status** di dalam transaksi → tak menimpa status final |
+| **GAP-2** (kritis) | Order JASA memicu **email ganda** ke pembeli & admin (konfirmasi umum + notif jasa) | Untuk JASA, checkout hanya mengirim **satu** email pembeli & **satu** email admin (khusus jasa); email generik dilewati |
+| **GAP-3** (mayor) | `docs/README.md` belum menandai P2 selesai | Status diperbarui → "P0, P1 & P2 selesai" |
+| **GAP-4** (mayor) | API `action:"invoice"` tak menolak order berstatus final | `createManualOrderInvoice` menolak `dibatalkan`/`kedaluwarsa`/`selesai` (`final_status`); UI & API diselaraskan |
+| **GAP-5** (mayor) | Invoice manual bisa dibuat **dobel** (dua tautan bayar) | Bila sudah ada invoice **menunggu** ber-tautan → tautan lama dikembalikan (`reused:true`), tak buat baru |
+| **GAP-6** (minor) | `PENDING_PAYMENT_STATUSES` jadi ekspor mati | Diganti konstanta `PENDING_PAYMENT_STATUS` (tanpa array mati) |
+| **GAP-7** (minor) | Ternary sia-sia `isJasa ? "Mulai dari" : "Mulai dari"`; email admin JASA membungkus HTML penuh (nesting) | Ternary dibersihkan; badan email diekstrak (`orderHtmlBody`) & dipakai ulang tanpa nesting |
+| **GAP-8** (minor) | Doc arsitektur §3.5 menyebut Vercel Cron sebagai opsi | Diselaraskan → cron eksternal (Vercel Cron butuh plan Pro) |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (69 halaman) · test (metrics 6 · fulfillment 5 · downloads 5 · expiry 5) lolos ✅.
+
+**Tidak ada langkah manual baru.**
 
 ---
 

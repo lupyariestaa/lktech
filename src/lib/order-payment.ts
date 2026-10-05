@@ -268,7 +268,9 @@ export async function notifyOrderAwaitingConfirmation(
  *   akan menandai order lunas otomatis (jalur yang sama seperti checkout).
  * - Menyimpan `payment` (status `menunggu`, payUrl, invoiceId, expiresAt) ke order
  *   TANPA mengubah status order (biarkan `menunggu_konfirmasi`/`menunggu_bayar`).
- * - Bila invoice sebelumnya ada & masih menunggu, cukup dibuat ulang.
+ * - **Idempoten (GAP-5):** bila sudah ada invoice MENUNGGU dengan tautan, tautan
+ *   itu dikembalikan (`reused: true`) — tidak membuat invoice baru (cegah dobel).
+ * - **GAP-4:** menolak order berstatus final (`dibatalkan`/`kedaluwarsa`/`selesai`).
  *
  * Mengembalikan `{ ok, payUrl?, reason? }`. Tidak melempar (dipanggil API admin).
  */
@@ -277,6 +279,8 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
   payUrl?: string;
   invoiceId?: string;
   expiresAt?: string;
+  /** True bila tautan lama dipakai ulang (tidak membuat invoice baru). */
+  reused?: boolean;
   reason?: string;
 }> {
   if (!isMayarConfigured()) {
@@ -287,6 +291,25 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
   if (!order) return { ok: false, reason: "not_found" };
   if (order.payment?.status === "dibayar") {
     return { ok: false, reason: "already_paid" };
+  }
+  // GAP-4: tolak order yang sudah final (tidak masuk akal ditagih lagi).
+  if (
+    order.status === "dibatalkan" ||
+    order.status === "kedaluwarsa" ||
+    order.status === "selesai"
+  ) {
+    return { ok: false, reason: "final_status" };
+  }
+  // GAP-5: cegah invoice DOBEL — bila sudah ada invoice yang menunggu bayar
+  // dengan tautan, kembalikan tautan itu (jangan buat invoice baru).
+  if (order.payment?.payUrl && order.payment.status === "menunggu") {
+    return {
+      ok: true,
+      payUrl: order.payment.payUrl,
+      invoiceId: order.payment.invoiceId,
+      expiresAt: order.payment.expiresAt,
+      reused: true,
+    };
   }
   if (order.total <= 0) {
     return { ok: false, reason: "no_amount" };

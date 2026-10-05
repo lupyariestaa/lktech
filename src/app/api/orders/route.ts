@@ -366,27 +366,31 @@ export async function POST(req: Request) {
       console.error("[api/orders] gagal menaikkan orderCount:", err),
     );
 
-    // Notifikasi email ke admin (best-effort — tidak menggagalkan order).
-    sendOrderNotification(order).catch((err) =>
-      console.error("[api/orders] gagal kirim notifikasi pesanan:", err),
-    );
-
-    // Email konfirmasi ke PEMBELI (`EM-C2`): status email disimpan ke order,
-    // dengan retry sederhana. Tunggu (await) agar status tercatat sebelum
-    // respons — aman di serverless (tidak bergantung background job).
-    if (settings.notifyBuyerOnOrder) {
-      const result = await sendOrderConfirmationToBuyer(order);
-      await recordOrderEmailStatus(order.id, "confirmation", result);
-      await logOrderEmail(order.id, {
-        kind: "confirmation",
-        to: order.buyerEmail,
-        result,
-      });
-    }
-
-    // JASA (FASE P1): beri tahu pembeli bahwa order menunggu konfirmasi.
+    // ===== Email (GAP-2: hindari email ganda untuk JASA) =====
+    // - INSTAN: email konfirmasi pembeli + notifikasi admin umum.
+    // - JASA: hanya SATU email pembeli ("menunggu konfirmasi") & SATU email admin
+    //   (khusus jasa) — via `notifyOrderAwaitingConfirmation`. Tidak ada email
+    //   konfirmasi/umum tambahan agar tidak dobel & membingungkan.
     if (fulfillment === "jasa") {
       await notifyOrderAwaitingConfirmation(order);
+    } else {
+      // Notifikasi email ke admin (best-effort — tidak menggagalkan order).
+      sendOrderNotification(order).catch((err) =>
+        console.error("[api/orders] gagal kirim notifikasi pesanan:", err),
+      );
+
+      // Email konfirmasi ke PEMBELI (`EM-C2`): status email disimpan ke order,
+      // dengan retry sederhana. Tunggu (await) agar status tercatat sebelum
+      // respons — aman di serverless (tidak bergantung background job).
+      if (settings.notifyBuyerOnOrder) {
+        const result = await sendOrderConfirmationToBuyer(order);
+        await recordOrderEmailStatus(order.id, "confirmation", result);
+        await logOrderEmail(order.id, {
+          kind: "confirmation",
+          to: order.buyerEmail,
+          result,
+        });
+      }
     }
 
     return NextResponse.json({

@@ -152,7 +152,10 @@ export async function sendOrderAwaitingConfirmationToAdmin(
             </div>
             <div style="padding:24px">
               <p style="margin:0 0 12px;color:#334155;font-size:14px;line-height:1.6">Pesanan ini adalah <strong>jasa</strong>. Hubungi pembeli untuk konfirmasi &amp; kesepakatan, lalu (opsional) buat <strong>invoice manual</strong> dari dashboard Pesanan.</p>
-              ${buildOrderHtml(order)}
+              ${orderHtmlBody(order)}
+            </div>
+            <div style="padding:16px 24px;background:#f8fafc;color:#94a3b8;font-size:12px">
+              Dikirim otomatis dari website LKTech · ${new Date().toLocaleString("id-ID")}
             </div>
           </div>
         </div>`,
@@ -284,6 +287,28 @@ function buildOrderText(order: Order): string {
 }
 
 function buildOrderHtml(order: Order): string {
+  return `<div style="font-family:Arial,Helvetica,sans-serif;background:#f8fafc;padding:24px">
+    <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+      <div style="background:linear-gradient(135deg,#004EDF,#003BB3);padding:24px">
+        <h1 style="margin:0;color:#ffffff;font-size:20px">🛒 Pesanan Baru — LKTech</h1>
+        <p style="margin:6px 0 0;color:#dbe6ff;font-size:13px">${shortOrderCode(order.id)} · ${formatRupiah(order.total)}</p>
+      </div>
+      <div style="padding:24px">
+        ${orderHtmlBody(order)}
+      </div>
+      <div style="padding:16px 24px;background:#f8fafc;color:#94a3b8;font-size:12px">
+        Dikirim otomatis dari website LKTech · ${new Date().toLocaleString("id-ID")}
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
+ * Badan email (HTML) berisi ringkasan pesanan: pembeli, item, total. HANYA isi
+ * (tanpa bungkus/shell), agar dapat dipakai ulang di dalam template mana pun
+ * (mis. notifikasi admin umum & notifikasi JASA) tanpa HTML bersarang.
+ */
+function orderHtmlBody(order: Order): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -297,29 +322,16 @@ function buildOrderHtml(order: Order): string {
     })
     .join("");
 
-  return `<div style="font-family:Arial,Helvetica,sans-serif;background:#f8fafc;padding:24px">
-    <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
-      <div style="background:linear-gradient(135deg,#004EDF,#003BB3);padding:24px">
-        <h1 style="margin:0;color:#ffffff;font-size:20px">🛒 Pesanan Baru — LKTech</h1>
-        <p style="margin:6px 0 0;color:#dbe6ff;font-size:13px">${shortOrderCode(order.id)} · ${formatRupiah(order.total)}</p>
-      </div>
-      <div style="padding:24px">
-        <table style="width:100%;border-collapse:collapse">
-          <tr><td style="padding:6px 0;color:#64748b;font-size:14px;width:90px">Pembeli</td><td style="padding:6px 0;color:#0a0f1e;font-size:14px;font-weight:600">${esc(order.buyerName || "-")}</td></tr>
-          <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Email</td><td style="padding:6px 0;color:#0a0f1e;font-size:14px;font-weight:600">${esc(order.buyerEmail)}</td></tr>
-        </table>
-        <div style="margin-top:16px;padding:8px 0;border-top:1px solid #e2e8f0">
-          <table style="width:100%;border-collapse:collapse">${itemRows}</table>
-        </div>
-        <div style="margin-top:8px;padding-top:12px;border-top:2px solid #004EDF;display:flex;justify-content:space-between">
-          <strong style="color:#0a0f1e;font-size:15px">Total</strong>
-          <strong style="color:#004EDF;font-size:15px;float:right">${formatRupiah(order.total)}</strong>
-        </div>
-        <p style="margin:20px 0 0;color:#64748b;font-size:13px">Kelola pesanan ini di dashboard: <strong>Pesanan</strong>.</p>
-      </div>
-      <div style="padding:16px 24px;background:#f8fafc;color:#94a3b8;font-size:12px">
-        Dikirim otomatis dari website LKTech · ${new Date().toLocaleString("id-ID")}
-      </div>
+  return `<table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:6px 0;color:#64748b;font-size:14px;width:90px">Pembeli</td><td style="padding:6px 0;color:#0a0f1e;font-size:14px;font-weight:600">${esc(order.buyerName || "-")}</td></tr>
+      <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Email</td><td style="padding:6px 0;color:#0a0f1e;font-size:14px;font-weight:600">${esc(order.buyerEmail)}</td></tr>
+    </table>
+    <div style="margin-top:16px;padding:8px 0;border-top:1px solid #e2e8f0">
+      <table style="width:100%;border-collapse:collapse">${itemRows}</table>
     </div>
-  </div>`;
+    <div style="margin-top:8px;padding-top:12px;border-top:2px solid #004EDF;display:flex;justify-content:space-between">
+      <strong style="color:#0a0f1e;font-size:15px">Total</strong>
+      <strong style="color:#004EDF;font-size:15px;float:right">${formatRupiah(order.total)}</strong>
+    </div>
+    <p style="margin:20px 0 0;color:#64748b;font-size:13px">Kelola pesanan ini di dashboard: <strong>Pesanan</strong>.</p>`;
 }

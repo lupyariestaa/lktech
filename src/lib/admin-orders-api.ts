@@ -121,6 +121,7 @@ export async function createOrderInvoiceManual(id: string) {
     payUrl?: string;
     invoiceId?: string;
     expiresAt?: string;
+    reused?: boolean;
   }>("/api/admin/orders", {
     method: "POST",
     body: JSON.stringify({ id, action: "invoice" }),

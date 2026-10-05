@@ -201,9 +201,7 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
   const consultMessage = `Halo LKTech! Saya ingin berkonsultasi tentang paket layanan "${product.name}". Boleh dibantu?`;
   return (
     <div className="rounded-3xl border border-slate-200 bg-surface p-6">
-      <p className="text-xs font-medium text-muted">
-        {isJasa ? "Mulai dari" : "Mulai dari"}
-      </p>
+      <p className="text-xs font-medium text-muted">Mulai dari</p>
       <div className="mt-1 flex items-end gap-2">
         <span className="text-2xl font-bold text-secondary">
           {productPriceLabel(product)}
