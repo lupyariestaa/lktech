@@ -30,7 +30,7 @@ import {
 import { ORDER_STATUS_LABEL, type Order, type OrderStatus } from "@/lib/order-types";
 import { METRIC_HINT, METRIC_LABEL } from "@/lib/metrics-spec";
 import { formatRupiah, formatCompactRupiah, formatDateTime, shortOrderCode } from "@/lib/format";
-import { SalesChart } from "@/components/admin/sales-chart";
+import { LineChart } from "@/components/admin/line-chart";
 import { useToast } from "@/components/admin/toast";
 import { cn } from "@/lib/utils";
 
@@ -209,10 +209,10 @@ export function AnalyticsDashboard() {
           {/* Grafik omzet */}
           <ChartCard
             title={`Omzet Harian (${days} hari terakhir)`}
-            subtitle={`Total ${formatRupiah(totals.omzet)} pada periode ini. Klik batang untuk melihat pesanan hari itu.`}
+            subtitle={`Total ${formatRupiah(totals.omzet)} pada periode ini. Klik titik untuk melihat pesanan hari itu.`}
             badge={formatCompactRupiah(totals.omzet)}
           >
-            <SalesChart
+            <LineChart
               points={data.series.map((s) => ({
                 label: s.label,
                 full: s.full,
@@ -221,7 +221,8 @@ export function AnalyticsDashboard() {
               formatValue={formatRupiah}
               ariaLabel={`Grafik omzet harian ${days} hari terakhir, total ${formatRupiah(totals.omzet)}.`}
               emptyLabel={`Belum ada omzet pada ${days} hari terakhir.`}
-              onBarClick={(i) => setDrillDate(data.series[i]?.dateISO ?? null)}
+              accent="#004EDF"
+              onPointClick={(i) => setDrillDate(data.series[i]?.dateISO ?? null)}
             />
           </ChartCard>
 
@@ -231,14 +232,14 @@ export function AnalyticsDashboard() {
             subtitle={`Total ${totals.orders} pesanan penghasil omzet pada periode ini.`}
             badge={`${totals.orders} pesanan`}
           >
-            <SalesChart
+            <LineChart
               points={data.series.map((s) => ({
                 label: s.label,
                 full: s.full,
                 value: s.orders,
               }))}
               formatValue={(v) => `${v} pesanan`}
-              accent="from-secondary to-primary"
+              accent="#7C3AED"
               ariaLabel={`Grafik jumlah pesanan harian ${days} hari terakhir, total ${totals.orders} pesanan.`}
               emptyLabel={`Belum ada pesanan pada ${days} hari terakhir.`}
             />

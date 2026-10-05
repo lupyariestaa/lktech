@@ -51,6 +51,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-06 | [Fase Detail — Konversi & Closing (Mayar.id, bundling, urgency, abandoned checkout)](2026-10-06-fase-konversi-closing.md) | ✅ P0–P6 selesai (kode) |
 | 2026-10-06 | [Setup Pembayaran Online & Unduhan (Mayar.id) — Panduan Operasional](2026-10-06-setup-pembayaran-mayar.md) | 🔧 Setup (aktif) |
 | 2026-10-05 | [Ulasan & Rating Produk (verified purchase + moderasi + JSON-LD)](2026-10-05-ulasan-rating-produk.md) | ✅ Selesai (R0–R6) |
+| 2026-10-05 | [Operasional & Kualitas Teknis (Tema 4: audit log, rate-limit, env, CI, visual)](2026-10-05-operasional-tema4.md) | ✅ Selesai (O1–O5) |
 
 ### Dokumen pendukung (referensi & setup)
 

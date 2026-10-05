@@ -4,6 +4,7 @@ import { getAdminDb } from "@/lib/firebase-admin";
 import { deleteUserProfile, setUserBlocked } from "@/lib/user-profile";
 import { getAdminUsersSummary, listAdminUsers, type AdminUsersFilter } from "@/lib/admin-users";
 import { userBlockSchema } from "@/lib/api-schemas";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,6 +99,12 @@ export async function PATCH(req: Request) {
         { status: 404 },
       );
     }
+    await recordAdminAudit({
+      action: "user.block",
+      actor: check.email,
+      target: parsed.data.id,
+      meta: { blocked: parsed.data.blocked },
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/users] PATCH gagal:", err);
@@ -129,6 +136,11 @@ export async function DELETE(req: Request) {
         { status: 404 },
       );
     }
+    await recordAdminAudit({
+      action: "user.delete",
+      actor: check.email,
+      target: id,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/users] DELETE gagal:", err);

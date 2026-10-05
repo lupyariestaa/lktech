@@ -22,6 +22,7 @@ import { restoreCouponUsage } from "@/lib/coupons";
 import { shouldRestoreCoupon } from "@/lib/order-status-pure";
 import { getSiteSettings } from "@/lib/settings";
 import { releaseOrderDownload, createManualOrderInvoice } from "@/lib/order-payment";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -166,6 +167,13 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ ok: true, unchanged: true });
     }
 
+    await recordAdminAudit({
+      action: "order.status",
+      actor: check.email,
+      target: id,
+      meta: { from: previousStatus, to: status },
+    });
+
     // `KP-C2`: transisi → dibatalkan/kedaluwarsa mengembalikan kuota kupon
     // (sekali saja, karena hanya terjadi pada transisi status).
     if (shouldRestoreCoupon(previousStatus ?? "", status)) {
@@ -252,6 +260,12 @@ export async function POST(req: Request) {
         const status = res.reason === "not_found" ? 404 : 409;
         return NextResponse.json({ error: msg, code: res.reason }, { status });
       }
+      await recordAdminAudit({
+        action: "order.invoice",
+        actor: check.email,
+        target: id,
+        meta: { reused: res.reused ?? false },
+      });
       return NextResponse.json({
         ok: true,
         payUrl: res.payUrl,
@@ -291,6 +305,12 @@ export async function POST(req: Request) {
           { status: 409 },
         );
       }
+      await recordAdminAudit({
+        action: "order.fulfill",
+        actor: check.email,
+        target: id,
+        meta: { files: res.files },
+      });
       return NextResponse.json({
         ok: true,
         downloadUrl: res.downloadUrl,
@@ -350,6 +370,12 @@ export async function POST(req: Request) {
         { status: 502 },
       );
     }
+    await recordAdminAudit({
+      action: "order.resend_email",
+      actor: check.email,
+      target: id,
+      meta: { kind, attempt },
+    });
     return NextResponse.json({ ok: true, result });
   } catch (err) {
     console.error("[api/admin/orders] POST resend gagal:", err);
@@ -407,6 +433,13 @@ export async function DELETE(req: Request) {
     if (order.coupon?.couponId) {
       await restoreCouponUsage(order.coupon.couponId, order.uid);
     }
+
+    await recordAdminAudit({
+      action: "order.delete",
+      actor: check.email,
+      target: id,
+      meta: { status: order.status },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

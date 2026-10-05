@@ -10,6 +10,7 @@ import {
   isBuyerEmailTestOnly,
 } from "@/lib/email-order";
 import type { SiteSettings } from "@/lib/settings-types";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,6 +90,12 @@ export async function PUT(req: Request) {
     revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/kontak");
+
+    await recordAdminAudit({
+      action: "settings.update",
+      actor: check.email,
+      target: "site",
+    });
 
     return NextResponse.json({ ok: true, settings });
   } catch (err) {

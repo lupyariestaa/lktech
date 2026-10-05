@@ -1,12 +1,15 @@
-import "server-only";
-
 /**
- * Rate limiter in-memory sederhana (per-instance).
+ * Rate limiter — DUA mode (Tema 4.2):
  *
- * Cukup untuk skala saat ini (satu instance serverless) sebagai lapisan anti
- * spam dasar pada endpoint publik. Catatan: pada lingkungan multi-instance,
- * hitungan tidak dibagi antar instance — untuk skala besar gunakan penyimpanan
- * terdistribusi (mis. Redis/Upstash).
+ * 1. **Terdistribusi (Upstash Redis)** bila `UPSTASH_REDIS_REST_URL` &
+ *    `UPSTASH_REDIS_REST_TOKEN` diisi → benar di lingkungan multi-instance
+ *    serverless. Memakai endpoint REST Upstash via `fetch` (tanpa dependensi).
+ * 2. **In-memory (fallback)** bila env Upstash kosong → perilaku lama
+ *    (per-instance). Aman: tak ada error, hanya kurang akurat antar-instance.
+ *
+ * `checkRateLimit` = versi ASYNC yang memilih mode otomatis (dipakai endpoint
+ * publik). `rateLimit` = versi sinkron in-memory lama (dipakai alur server-only
+ * yang tidak ingin menambah latency jaringan, mis. webhook).
  */
 
 type Bucket = { count: number; resetAt: number };
@@ -28,8 +31,16 @@ export type RateLimitResult = {
   retryAfter: number;
 };
 
+/** Apakah rate-limit terdistribusi (Upstash) dikonfigurasi. */
+export function isDistributedRateLimitConfigured(): boolean {
+  return Boolean(
+    (process.env.UPSTASH_REDIS_REST_URL ?? "").trim() &&
+      (process.env.UPSTASH_REDIS_REST_TOKEN ?? "").trim(),
+  );
+}
+
 /**
- * Cek & tambah hitungan untuk `key`.
+ * Cek & tambah hitungan untuk `key` (IN-MEMORY, sinkron).
  *
  * @param key       Pengenal unik (mis. `lead:<ip>`).
  * @param limit     Jumlah maksimum permintaan per jendela.
@@ -59,6 +70,67 @@ export function rateLimit(
     };
   }
   return { ok: true, remaining: limit - bucket.count, retryAfter: 0 };
+}
+
+/**
+ * Rate-limit terdistribusi via Upstash REST (INCR + EXPIRE).
+ * Mengembalikan `null` bila tidak dikonfigurasi/gagal → pemanggil fallback.
+ */
+async function rateLimitUpstash(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitResult | null> {
+  const url = (process.env.UPSTASH_REDIS_REST_URL ?? "").trim().replace(/\/+$/, "");
+  const token = (process.env.UPSTASH_REDIS_REST_TOKEN ?? "").trim();
+  if (!url || !token) return null;
+
+  const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
+  const redisKey = `rl:${key}`;
+
+  try {
+    // Pipeline: INCR, lalu EXPIRE hanya jika 1 (pertama kali) — 2 perintah.
+    const res = await fetch(`${url}/pipeline`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([
+        ["INCR", redisKey],
+        ["EXPIRE", redisKey, String(windowSec), "NX"],
+      ]),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as Array<{ result?: number }>;
+    const count = Number(data?.[0]?.result ?? 0);
+    if (!Number.isFinite(count) || count <= 0) return null;
+
+    if (count > limit) {
+      return { ok: false, remaining: 0, retryAfter: windowSec };
+    }
+    return { ok: true, remaining: Math.max(0, limit - count), retryAfter: 0 };
+  } catch (err) {
+    console.error("[rate-limit] Upstash gagal, fallback in-memory:", err);
+    return null;
+  }
+}
+
+/**
+ * Cek rate-limit ASYNC — otomatis memakai Upstash bila dikonfigurasi,
+ * jika tidak/gagal → fallback in-memory. Selalu mengembalikan hasil.
+ */
+export async function checkRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  if (isDistributedRateLimitConfigured()) {
+    const distributed = await rateLimitUpstash(key, limit, windowMs);
+    if (distributed) return distributed;
+  }
+  return rateLimit(key, limit, windowMs);
 }
 
 /**

@@ -9,6 +9,7 @@ import {
 } from "@/lib/reviews";
 import { REVIEW_STATUSES, type ReviewStatus } from "@/lib/review-types";
 import { reviewModerateSchema } from "@/lib/api-schemas";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,6 +82,12 @@ export async function PATCH(req: Request) {
     }
     revalidatePath(`/produk/${review.productSlug}`);
     revalidatePath("/produk");
+    await recordAdminAudit({
+      action: "review.moderate",
+      actor: check.email,
+      target: review.productSlug,
+      meta: { status: parsed.data.status },
+    });
     return NextResponse.json({ ok: true, review });
   } catch (err) {
     console.error("[api/admin/reviews] PATCH gagal:", err);
@@ -104,6 +111,11 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Ulasan tidak ditemukan." }, { status: 404 });
     }
     revalidatePath("/produk");
+    await recordAdminAudit({
+      action: "review.delete",
+      actor: check.email,
+      target: id,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/reviews] DELETE gagal:", err);

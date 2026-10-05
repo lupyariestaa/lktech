@@ -4,7 +4,7 @@ import { getProductsBySlugs } from "@/lib/products";
 import { findCompletedOrderForProduct } from "@/lib/orders";
 import { createReview, listProductReviews } from "@/lib/reviews";
 import { reviewSubmitSchema } from "@/lib/api-schemas";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { Review } from "@/lib/review-types";
 
 export const runtime = "nodejs";
@@ -71,7 +71,7 @@ export async function POST(
     return NextResponse.json({ error: "Produk tidak valid." }, { status: 400 });
   }
 
-  const rl = rateLimit(`review:${check.uid}`, 5, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`review:${check.uid}`, 5, 10 * 60 * 1000);
   if (!rl.ok) {
     return NextResponse.json(
       { error: "Terlalu banyak percobaan. Coba lagi nanti." },

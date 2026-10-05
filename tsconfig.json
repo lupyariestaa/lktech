@@ -45,6 +45,7 @@
     "scripts/product-stock.test.ts",
     "scripts/cart-reminder.test.ts",
     "scripts/order-status.test.ts",
-    "scripts/review-rating.test.ts"
+    "scripts/review-rating.test.ts",
+    "scripts/admin-audit.test.ts"
   ]
 }

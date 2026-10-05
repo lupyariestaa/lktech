@@ -15,6 +15,7 @@ import {
 } from "@/lib/coupons";
 import { couponCreateSchema, couponUpdateSchema } from "@/lib/api-schemas";
 import { COUPON_TYPES } from "@/lib/coupon-types";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -144,6 +145,12 @@ export async function POST(req: Request) {
       );
     }
     const coupon = await createCoupon(toInput(parsed.data), check.email);
+    await recordAdminAudit({
+      action: "coupon.save",
+      actor: check.email,
+      target: coupon.code,
+      meta: { created: true },
+    });
     return NextResponse.json({ ok: true, coupon });
   } catch (err) {
     // `KP-H2`: klaim kode atomik bisa gagal karena race → laporkan sebagai 409.
@@ -203,6 +210,12 @@ export async function PATCH(req: Request) {
     if (!coupon) {
       return NextResponse.json({ error: "Kupon tidak ditemukan." }, { status: 404 });
     }
+    await recordAdminAudit({
+      action: "coupon.save",
+      actor: check.email,
+      target: coupon.code,
+      meta: { created: false },
+    });
     return NextResponse.json({ ok: true, coupon });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
@@ -232,6 +245,11 @@ export async function DELETE(req: Request) {
       if (!okRestore) {
         return NextResponse.json({ error: "Kupon tidak ditemukan." }, { status: 404 });
       }
+      await recordAdminAudit({
+        action: "coupon.restore",
+        actor: check.email,
+        target: id,
+      });
       return NextResponse.json({ ok: true, restored: true });
     }
 
@@ -239,6 +257,11 @@ export async function DELETE(req: Request) {
     if (!ok) {
       return NextResponse.json({ error: "Kupon tidak ditemukan." }, { status: 404 });
     }
+    await recordAdminAudit({
+      action: "coupon.delete",
+      actor: check.email,
+      target: id,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/coupons] DELETE gagal:", err);

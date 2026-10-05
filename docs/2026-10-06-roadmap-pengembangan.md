@@ -197,26 +197,25 @@ Mengubah pembeli sekali menjadi pelanggan berulang, dan pengunjung menjadi audie
 
 ## 7. TEMA 4 — Operasional & Kualitas Teknis ⚙️
 
-### 4.1 [P1] Audit Log Admin Global
-- Catat aksi admin penting (ubah status order, hapus/produk, ubah pengaturan, blokir user) ke `admin_audit/{id}`.
+### 4.1 [P1] Audit Log Admin Global — ✅ SELESAI
+- Catat aksi admin penting (ubah status order, hapus/produk, ubah pengaturan, blokir user, moderasi ulasan) ke `admin_audit/{id}`.
 - Halaman `/admin/audit` dengan filter. (Pola sudah ada di `media_audit`.)
 
-### 4.2 [P1] Rate-limit Terdistribusi + Webhook Email
-- Ganti `rate-limit.ts` in-memory → **Upstash Redis** (benar di multi-instance serverless).
-- **Webhook Resend** (`delivered/bounced/complained`) → update status email & tandai bounce (backlog `EM-P2`).
+### 4.2 [P1] Rate-limit Terdistribusi + Webhook Email — ✅ (rate-limit) / ⏳ (webhook)
+- ✅ `rate-limit.ts` kini mendukung **Upstash Redis** (opsional, fail-safe → fallback in-memory).
+- ⏳ **Webhook Resend** (`delivered/bounced/complained`) — ditunda (butuh domain terverifikasi, backlog `EM-P2`).
 
-### 4.3 [P2] Agregasi Harian Analitik
-- `analytics_daily/{date}` di-update pada transisi order → analitik O(1) tanpa scan (backlog `AN-P3`).
+### 4.3 [P2] Agregasi Harian Analitik — ⏭️ DITUNDA
+- `analytics_daily/{date}` (backlog `AN-P3`) — optimasi skala; belum diperlukan kini.
 
-### 4.4 [P3] Uji Otomatis & CI
-- Unit test rumus & util (sudah dimulai: `npm run test:metrics`).
-- E2E Playwright untuk alur kritis: checkout, kupon, order admin, login.
-- CI GitHub Actions: `tsc` + `lint` + `test` + `build` per PR.
+### 4.4 [P3] Uji Otomatis & CI — ✅ CI
+- Unit test rumus & util (10 suite, `npm run test:*`).
+- ✅ **CI GitHub Actions** (`tsc` + `lint` + `test` + `build` per push/PR).
+- E2E Playwright — ditunda.
 
-### 4.5 [P3] Pengerasan & DX
-- Validasi env "fail loud" saat startup (lanjutan `XL-5`).
-- Feature flags ringan untuk rilis bertahap.
-- Storybook/komponen katalog (opsional).
+### 4.5 [P3] Pengerasan & DX — ✅ (env fail-loud)
+- ✅ Validasi env "fail loud" saat startup (`env-check.ts` + `instrumentation.ts`).
+- Feature flags / Storybook — ditunda.
 
 ---
 

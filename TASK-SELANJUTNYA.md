@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Ulasan & Rating Produk (R0–R6)**.
+> Terakhir diperbarui: sesi **Operasional & Kualitas Teknis (Tema 4, O1–O5)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -164,6 +164,26 @@ Inisiatif baru (Tema 3 Kepercayaan): **ulasan + rating bintang** dari pembeli te
 **Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (70 halaman) · test (metrics 10 · fulfillment 5 · downloads 5 · expiry 5 · bundle 9 · stock 12 · cart 10 · status 11 · **reviews 9**) lolos ✅.
 
 **Sisa manual:** uji browser (selesaikan pesanan → tulis ulasan di `/produk/[slug]` → setujui di `/admin/reviews` → cek bintang + JSON-LD) + publish ulang Firestore Rules (koleksi `reviews` — catch-all sudah menolak klien).
+
+---
+
+## 🎉 Sesi Terakhir — Operasional & Kualitas Teknis (Tema 4, O1–O5)
+
+Inisiatif Tema 4 (Operasional). Dokumen fase: `docs/2026-10-05-operasional-tema4.md`.
+
+| Kode | Perubahan |
+| --- | --- |
+| **O1 Audit Log** | `admin_audit/{id}` (`admin-audit.ts` + `admin-audit-types.ts` aman-klien); dicatat pada aksi order/produk/kupon/user/settings/review; `GET /api/admin/audit` + halaman **`/admin/audit`** + menu. |
+| **O2 Rate-limit terdistribusi** | `rate-limit.ts`: `checkRateLimit()` upstash (opsional, fail-safe → fallback in-memory); dipakai `coupons/validate` & `reviews` POST. Webhook Resend ditunda. |
+| **O3 Env fail-loud** | `env-check.ts` + `instrumentation.ts` — log status env saat startup (tak crash). |
+| **O4 CI** | `.github/workflows/ci.yml` — `tsc`+`lint`+semua test+`build` per push/PR ke `main`. |
+| **O5 Visual dashboard** | **Grafik garis** (`line-chart.tsx`, SVG + a11y) menggantikan grafik batang (omzet, pesanan, tren lead); KPI hero Row Ringkasan dipoles. |
+| **O6 Agregasi harian** | ⏭️ Ditunda (optimasi skala `AN-P3`). |
+| **Test** | `npm run test:audit` (3). |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (71 halaman) · **10 suite test** (79 test) lolos ✅.
+
+**Langkah manual:** publish ulang Firestore Rules (koleksi `admin_audit`); (opsional) isi `UPSTASH_REDIS_REST_URL`/`_TOKEN` di Vercel untuk rate-limit terdistribusi; CI aktif otomatis setelah push.
 
 ---
 
@@ -825,7 +845,7 @@ CRON_SECRET=                      # kosong → endpoint cron NONAKTIF (503, fail
 ### Firestore Security Rules
 - File: `firestore.rules`
 - **PENTING:** setiap ada koleksi baru, rules harus di-**Publish ulang** di Firebase Console → Firestore → Rules.
-- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`, `downloads`, `carts`, `reviews`.
+- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`, `downloads`, `carts`, `reviews`, `admin_audit`.
 - Subkoleksi: `orders/{id}/emails` (riwayat email), `coupons/{id}/redemptions` (pemakaian per-user).
 - Catatan: rule `match /{document=**}` menolak SEMUA akses klien (termasuk subkoleksi), jadi koleksi baru otomatis terlindungi — publish ulang tetap disarankan.
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireActiveUser } from "@/lib/admin-guard";
 import { getCouponByCode, validateCoupon } from "@/lib/coupons";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   const check = await requireActiveUser(req);
   if (!check.ok) return check.response;
 
-  const rl = rateLimit(`coupon:${check.uid}`, RATE_LIMIT, RATE_WINDOW_MS);
+  const rl = await checkRateLimit(`coupon:${check.uid}`, RATE_LIMIT, RATE_WINDOW_MS);
   if (!rl.ok) {
     return NextResponse.json(
       { error: "Terlalu banyak percobaan. Coba lagi nanti." },

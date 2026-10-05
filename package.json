@@ -21,7 +21,8 @@
     "test:stock": "node --experimental-strip-types --test scripts/product-stock.test.ts",
     "test:cart": "node --experimental-strip-types --test scripts/cart-reminder.test.ts",
     "test:status": "node --experimental-strip-types --test scripts/order-status.test.ts",
-    "test:reviews": "node --experimental-strip-types --test scripts/review-rating.test.ts"
+    "test:reviews": "node --experimental-strip-types --test scripts/review-rating.test.ts",
+    "test:audit": "node --experimental-strip-types --test scripts/admin-audit.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Batalkan job lama untuk ref yang sama (hemat runner).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint · Typecheck · Test · Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: |
+          npm run test:metrics
+          npm run test:fulfillment
+          npm run test:downloads
+          npm run test:expiry
+          npm run test:bundle
+          npm run test:stock
+          npm run test:cart
+          npm run test:status
+          npm run test:reviews
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build tidak boleh butuh kredensial asli — env dummy agar fail-safe
+          # (fitur gateway/DB nonaktif bila kosong, build tetap sukses).
+          NEXT_TELEMETRY_DISABLED: "1"

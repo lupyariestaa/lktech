@@ -14,6 +14,7 @@ import {
 } from "@/lib/product-types";
 import { productSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -170,6 +171,12 @@ export async function POST(req: Request) {
     await saveProduct(product, check.email);
     revalidatePath("/produk");
     revalidatePath(`/produk/${product.slug}`);
+    await recordAdminAudit({
+      action: "product.save",
+      actor: check.email,
+      target: product.slug,
+      meta: { name: product.name },
+    });
     return NextResponse.json({ ok: true, product });
   } catch (err) {
     console.error("[api/admin/products] POST gagal:", err);
@@ -190,6 +197,11 @@ export async function DELETE(req: Request) {
   try {
     await deleteProductBySlug(slug);
     revalidatePath("/produk");
+    await recordAdminAudit({
+      action: "product.delete",
+      actor: check.email,
+      target: slug,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/products] DELETE gagal:", err);

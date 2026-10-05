@@ -23,6 +23,7 @@ import type { AdminUsersSummary } from "@/lib/user-types";
 import { formatRupiah } from "@/lib/format";
 import { LEAD_STATUS_LABEL, type StoredLead } from "@/lib/lead-types";
 import { useAsyncList } from "@/components/admin/use-async-list";
+import { LineChart } from "@/components/admin/line-chart";
 import { cn } from "@/lib/utils";
 
 export function DashboardOverview() {
@@ -80,27 +81,29 @@ export function DashboardOverview() {
   ];
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex flex-col gap-6">
+      {/* Baris KPI utama */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => {
           const Icon = s.icon;
           return (
             <div
               key={s.label}
-              className="rounded-2xl border border-slate-200 bg-white p-5"
+              className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-lg hover:shadow-slate-900/5"
             >
               <span
                 className={cn(
-                  "grid h-10 w-10 place-items-center rounded-xl",
+                  "grid h-11 w-11 place-items-center rounded-2xl",
                   s.color,
                 )}
               >
                 <Icon className="h-5 w-5" />
               </span>
-              <p className="mt-4 text-2xl font-bold text-secondary">
+              <p className="mt-4 text-3xl font-bold tracking-tight text-secondary tabular-nums">
                 {s.value}
               </p>
-              <p className="mt-0.5 text-xs text-muted">{s.label}</p>
+              <p className="mt-1 text-xs font-medium text-muted">{s.label}</p>
+              <span className="pointer-events-none absolute -right-6 -bottom-6 h-24 w-24 rounded-full bg-gradient-to-br from-primary/5 to-transparent" />
             </div>
           );
         })}
@@ -205,7 +208,6 @@ function dayKey(d: Date): string {
 function LeadTrendChart({ leads }: { leads: StoredLead[] }) {
   const data = buildTrend(leads);
   const total = data.reduce((sum, d) => sum + d.count, 0);
-  const max = Math.max(1, ...data.map((d) => d.count));
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6">
@@ -223,44 +225,16 @@ function LeadTrendChart({ leads }: { leads: StoredLead[] }) {
         </span>
       </div>
 
-      {total === 0 ? (
-        <p className="mt-6 py-8 text-center text-sm text-muted">
-          Belum ada lead pada {TREND_DAYS} hari terakhir.
-        </p>
-      ) : (
-        <div
-          className="mt-6 flex items-end gap-1.5 sm:gap-2"
-          role="img"
-          aria-label={`Grafik tren lead ${TREND_DAYS} hari terakhir, total ${total} lead.`}
-        >
-          {data.map((d) => {
-            const height = d.count === 0 ? 4 : Math.round((d.count / max) * 100);
-            return (
-              <div
-                key={d.key}
-                className="group relative flex flex-1 flex-col items-center gap-1.5"
-                title={`${d.full}: ${d.count} lead`}
-              >
-                <span className="text-[10px] font-semibold text-secondary opacity-0 transition-opacity group-hover:opacity-100">
-                  {d.count}
-                </span>
-                <div className="flex h-32 w-full items-end">
-                  <div
-                    className={cn(
-                      "w-full rounded-t-md transition-colors",
-                      d.count === 0
-                        ? "bg-slate-100"
-                        : "bg-gradient-to-t from-primary to-primary-light group-hover:from-primary-dark",
-                    )}
-                    style={{ height: `${height}%` }}
-                  />
-                </div>
-                <span className="text-[10px] text-muted">{d.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <div className="mt-6">
+        <LineChart
+          points={data.map((d) => ({ label: d.label, full: d.full, value: d.count }))}
+          formatValue={(v) => `${v} lead`}
+          ariaLabel={`Grafik tren lead ${TREND_DAYS} hari terakhir, total ${total} lead.`}
+          emptyLabel={`Belum ada lead pada ${TREND_DAYS} hari terakhir.`}
+          accent="#004EDF"
+          height={200}
+        />
+      </div>
     </div>
   );
 }
