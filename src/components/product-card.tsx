@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ArrowUpRight, Layers, Package, Tag } from "lucide-react";
 import type { Product } from "@/lib/product-types";
 import { PRODUCT_CATEGORY_LABEL } from "@/lib/product-types";
-import { formatPrice, hasVariants, productPriceLabel, stockBadge } from "@/lib/product-format";
+import { formatPrice, hasVariants, productPriceLabel, stockBadge, productTotalStock, LOW_STOCK_THRESHOLD } from "@/lib/product-format";
 import { ProductBuyActions } from "@/components/product-buy-actions";
 import { FavoriteButton } from "@/components/favorite-button";
 import { cn } from "@/lib/utils";
@@ -17,9 +17,19 @@ export function ProductCard({ product }: { product: Product }) {
     !multi &&
     product.originalPrice != null &&
     product.originalPrice > product.price;
-  // Badge stok nyata (FASE P4). Untuk multi-varian, cukup tampilkan bila SEMUA
-  // varian habis (soldOut produk) — detail per-varian ditampilkan di halaman produk.
-  const stock = stockBadge(product);
+  // Badge stok nyata (FASE P4). Untuk multi-varian, tampilkan total "Sisa N"
+  // bila stok menipis (agregat varian) / "Stok habis" bila semua varian habis.
+  const stock = multi
+    ? (() => {
+        const out = product.soldOut || product.variants.every((v) => v.soldOut);
+        if (out) return { label: "Stok habis", kind: "out" as const };
+        const total = productTotalStock(product);
+        if (total !== null && total <= LOW_STOCK_THRESHOLD) {
+          return { label: `Sisa ${total}`, kind: "low" as const };
+        }
+        return null;
+      })()
+    : stockBadge(product);
 
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5">

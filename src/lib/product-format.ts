@@ -73,12 +73,16 @@ export function productPriceLabel(
   return formatPrice(min.price);
 }
 
-/** Apakah produk (atau varian) bisa dibeli online. */
+/**
+ * Apakah produk (atau varian) bisa dibeli online.
+ * Stok dianggap mengikat bila diisi (`stock ≤ 0` → habis) — GAP-P4-1.
+ */
 export function isPurchasable(target: {
   price: number;
   soldOut: boolean;
+  stock?: number;
 }): boolean {
-  return target.price > 0 && !target.soldOut;
+  return target.price > 0 && !isStockOut(target);
 }
 
 /**
@@ -86,7 +90,7 @@ export function isPurchasable(target: {
  * Untuk produk tunggal, cek harga & stok produk.
  */
 export function productIsPurchasable(
-  product: Pick<Product, "variants" | "price" | "soldOut">,
+  product: Pick<Product, "variants" | "price" | "soldOut" | "stock">,
 ): boolean {
   if (!hasVariants(product)) return isPurchasable(product);
   return product.variants.some((v) => isPurchasable(v));
@@ -100,8 +104,23 @@ export function productIsPurchasable(
 export const LOW_STOCK_THRESHOLD = 5;
 
 /**
- * Label badge stok JUJUR (FASE P4) untuk sebuah produk/varian:
- * - `soldOut` → "Stok habis".
+ * Apakah target (produk/varian) benar-benar HABIS:
+ * - `soldOut` true, ATAU
+ * - `stock` diisi & ≤ 0 (stok mengikat saat diisi — GAP-P4-1).
+ * `stock` yang tidak diisi (undefined) = tak dibatasi/unknown → tidak dianggap habis.
+ */
+export function isStockOut(target: { soldOut: boolean; stock?: number }): boolean {
+  if (target.soldOut) return true;
+  return (
+    typeof target.stock === "number" &&
+    Number.isFinite(target.stock) &&
+    target.stock <= 0
+  );
+}
+
+/**
+ * Label badge stok JUJUR (FASE P4, diselaraskan GAP-P4-1):
+ * - habis (`soldOut` atau `stock ≤ 0`) → "Stok habis".
  * - `stock` diisi & ≤ `threshold` (default 5) → "Sisa N".
  * - Sisanya → null (tak ada badge; TIDAK menampilkan angka palsu).
  */
@@ -109,11 +128,10 @@ export function stockBadge(
   target: { soldOut: boolean; stock?: number },
   threshold = LOW_STOCK_THRESHOLD,
 ): { label: string; kind: "out" | "low" } | null {
-  if (target.soldOut) return { label: "Stok habis", kind: "out" };
+  if (isStockOut(target)) return { label: "Stok habis", kind: "out" };
   if (
     typeof target.stock === "number" &&
     Number.isFinite(target.stock) &&
-    target.stock >= 0 &&
     target.stock <= threshold
   ) {
     return { label: `Sisa ${target.stock}`, kind: "low" };
@@ -122,9 +140,20 @@ export function stockBadge(
 }
 
 /**
- * Stok gabungan suatu produk (FASE P4):
- * - multi-varian → jumlah `stock` varian yang memiliki stok (stok terbatas);
- *   null bila tak ada varian yang menetapkan `stock`.
+ * Sisa stok efektif untuk pembelian (GAP-P4-1):
+ * - `null` → stok tak dibatasi / tidak diketahui (boleh beli berapa pun).
+ * - angka ≥ 0 → batas stok nyata (checkout menolak qty > nilai ini).
+ */
+export function effectiveStock(target: { stock?: number }): number | null {
+  return typeof target.stock === "number" && Number.isFinite(target.stock)
+    ? Math.max(0, Math.floor(target.stock))
+    : null;
+}
+
+/**
+ * Stok gabungan suatu produk (FASE P4) — dipakai untuk badge ringkas "Sisa N"
+ * di kartu produk multi-varian:
+ * - multi-varian → Σ `stock` varian yang menetapkan `stock`; null bila tak ada.
  * - tunggal → `product.stock` (bila ada).
  */
 export function productTotalStock(

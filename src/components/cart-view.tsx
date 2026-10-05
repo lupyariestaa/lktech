@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowRight,
@@ -21,6 +21,7 @@ import { CartCoupon, type AppliedCoupon } from "@/components/cart-coupon";
 import { CartCrossSell } from "@/components/cart-cross-sell";
 import { TrustBadges } from "@/components/trust-badges";
 import { createOrderRequest } from "@/lib/order-api";
+import { validateCouponRequest } from "@/lib/coupon-api";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
 import { formatRupiah } from "@/lib/format";
@@ -45,6 +46,53 @@ export function CartView({ promoCode }: { promoCode?: string }) {
   const [doneKind, setDoneKind] = useState<"bayar" | "jasa" | "wa">("wa");
   /** Alasan server saat checkout jatuh ke fallback WhatsApp (bila ada). */
   const [fallbackWarning, setFallbackWarning] = useState<string | null>(null);
+
+  // GAP-P3-3: re-validasi kupon bila isi keranjang berubah (mis. item syarat
+  // kupon bundel dihapus) agar diskon yang ditampilkan tetap akurat & jujur.
+  // Checkout tetap memvalidasi ulang di server (safety net).
+  const cartSignature = useMemo(
+    () =>
+      [
+        subtotal,
+        items.reduce((n, it) => n + it.qty, 0),
+        Array.from(new Set(items.map((it) => it.slug))).sort().join(","),
+      ].join("|"),
+    [items, subtotal],
+  );
+
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    let active = true;
+    (async () => {
+      try {
+        const slugs = Array.from(new Set(items.map((it) => it.slug)));
+        const itemCount = items.reduce((n, it) => n + it.qty, 0);
+        const res = await validateCouponRequest(appliedCoupon.code, subtotal, {
+          slugs,
+          itemCount,
+        });
+        if (!active) return;
+        if (res.valid) {
+          // Perbarui diskon (mis. subtotal berubah) bila masih berlaku.
+          setAppliedCoupon((prev) =>
+            prev ? { ...prev, discount: res.discount } : prev,
+          );
+        } else {
+          // Tak lagi memenuhi syarat → cabut & beri tahu alasan.
+          setAppliedCoupon(null);
+          setError(res.reason);
+        }
+      } catch {
+        // Best-effort: biarkan; checkout server tetap memvalidasi ulang.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // Sengaja bergantung pada `cartSignature` (bukan `appliedCoupon`) agar tidak
+    // memicu loop ketika diskon di-set ulang.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartSignature]);
 
   const onCheckout = async () => {
     setError(null);

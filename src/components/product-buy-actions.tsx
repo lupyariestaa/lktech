@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, MessageCircle, ShoppingBag, ShoppingCart, Zap } from "lucide-react";
 import type { Product } from "@/lib/product-types";
 import { cartItemKey, toCartItem } from "@/lib/cart";
-import { hasVariants, productIsPurchasable } from "@/lib/product-format";
+import { hasVariants, productIsPurchasable, isStockOut } from "@/lib/product-format";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
@@ -37,7 +37,7 @@ export function ProductBuyActions({
   const { add, has } = useCart();
   const [added, setAdded] = useState(false);
 
-  const soldOut = product.soldOut;
+  const soldOut = isStockOut(product);
   const needsConsultation = !hasVariants(product) && !productIsPurchasable(product);
   const disabled = soldOut || (Boolean(user) && blocked);
 

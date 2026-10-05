@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type { Product } from "@/lib/product-types";
 import { cardItemForVariant } from "@/lib/cart";
-import { formatPrice, productPriceLabel } from "@/lib/product-format";
+import { formatPrice, productPriceLabel, isStockOut } from "@/lib/product-format";
 import { waLink } from "@/lib/whatsapp";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
@@ -33,19 +33,20 @@ export function VariantPickerList({ product }: { product: Product }) {
     <div className="flex flex-col gap-2">
       {variants.map((v) => {
         const isSel = v.slug === selectedVariantSlug;
+        const out = isStockOut(v);
         return (
           <button
             key={v.slug}
             type="button"
             onClick={() => selectVariant(isSel ? null : v.slug)}
-            disabled={v.soldOut}
+            disabled={out}
             aria-pressed={isSel}
             className={cn(
               "flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors",
               isSel
                 ? "border-primary bg-primary-50"
                 : "border-slate-200 bg-white hover:border-primary/40",
-              v.soldOut && "cursor-not-allowed opacity-50",
+              out && "cursor-not-allowed opacity-50",
             )}
           >
             <span className="flex min-w-0 items-center gap-2.5">
@@ -73,7 +74,7 @@ export function VariantPickerList({ product }: { product: Product }) {
                     {v.tagline}
                   </span>
                 )}
-                {v.soldOut && (
+                {out && (
                   <span className="text-xs text-muted">Stok habis</span>
                 )}
               </span>
@@ -113,7 +114,7 @@ export function useBuySelectedVariant(product: Product) {
   };
 
   const run = (buyNow: boolean) => {
-    if (!selected || selected.soldOut || blocked) return;
+    if (!selected || isStockOut(selected) || blocked) return;
     if (!requireLogin()) return;
     setBusy(buyNow ? "buy" : "cart");
     add(cardItemForVariant(product, selected, 1));

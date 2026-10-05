@@ -4,6 +4,7 @@ import { getAdminDb } from "@/lib/firebase-admin";
 import { checkoutSchema } from "@/lib/order-schema";
 import { createOrder, getOrdersByUser, updateOrderPayment } from "@/lib/orders";
 import { getProductsBySlugs } from "@/lib/products";
+import { isStockOut, effectiveStock } from "@/lib/product-format";
 import { getSiteSettings } from "@/lib/settings";
 import { incrementUserOrderCount, getUserProfile } from "@/lib/user-profile";
 import { buildOrderMessage } from "@/lib/cart";
@@ -148,6 +149,30 @@ export async function POST(req: Request) {
             { status: 409 },
           );
         }
+        // GAP-P4-1: stok mengikat bila diisi (≤0 habis; qty melebihi stok ditolak).
+        if (isStockOut(variant) || isStockOut(product)) {
+          return NextResponse.json(
+            {
+              error: `Paket "${variant.name}" sedang stok habis.`,
+              code: "variant_out_of_stock",
+              slug: product.slug,
+              variantSlug,
+            },
+            { status: 409 },
+          );
+        }
+        const variantStock = effectiveStock(variant);
+        if (variantStock !== null && reqItem.qty > variantStock) {
+          return NextResponse.json(
+            {
+              error: `Stok paket "${variant.name}" tersisa ${variantStock}. Silakan kurangi jumlah.`,
+              code: "variant_insufficient_stock",
+              slug: product.slug,
+              variantSlug,
+            },
+            { status: 409 },
+          );
+        }
         if (variant.price <= 0) {
           return NextResponse.json(
             {
@@ -189,6 +214,28 @@ export async function POST(req: Request) {
           {
             error: `Produk "${product.name}" belum bisa dipesan online (harga belum tersedia).`,
             code: "product_no_price",
+            slug: product.slug,
+          },
+          { status: 409 },
+        );
+      }
+      // GAP-P4-1: stok mengikat bila diisi (≤0 habis; qty melebihi stok ditolak).
+      if (isStockOut(product)) {
+        return NextResponse.json(
+          {
+            error: `Produk "${product.name}" sedang stok habis.`,
+            code: "product_out_of_stock",
+            slug: product.slug,
+          },
+          { status: 409 },
+        );
+      }
+      const productStock = effectiveStock(product);
+      if (productStock !== null && reqItem.qty > productStock) {
+        return NextResponse.json(
+          {
+            error: `Stok "${product.name}" tersisa ${productStock}. Silakan kurangi jumlah.`,
+            code: "product_insufficient_stock",
             slug: product.slug,
           },
           { status: 409 },

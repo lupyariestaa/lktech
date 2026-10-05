@@ -267,6 +267,7 @@ Handler:
 > - **Bukti sosial:** `getSocialProof` (`social-proof.ts`, server-only) menghitung jumlah pesanan (bukan dibatalkan) dalam 7 hari; **cache ringan 10 menit** + `revalidate` halaman; **hanya tampil bila ≥ 3** (hindari angka kecil/palsu). Komponen server `SocialProof` — etika: tanpa angka karangan.
 > - **Trust badges:** komponen `TrustBadges` (varian instan/jasa/compact) di sidebar detail produk + keranjang. Klaim jujur (metode bayar, proses otomatis, konfirmasi manual jasa). `refundNote` opsional tersedia.
 > - **Tanpa countdown palsu** (sesuai prinsip §5): semua indikator berbasis data nyata.
+> - **Remediasi audit QA P4 (`GAP-P4-1`):** stok kini MENGIKAT bila diisi — `isStockOut` (soldOut **atau** `stock ≤ 0`) & `effectiveStock`. Checkout server MENOLAK `qty > stock` (kode `*_insufficient_stock`) & `stock ≤ 0` (`*_out_of_stock`); badge "Stok habis" konsisten dengan kelayakan beli. `productTotalStock` dipakai (badge ringkas multi-varian). `GAP-P3-3`: kupon bundel di keranjang **re-validasi otomatis** saat isi keranjang berubah.
 
 
 ### FASE P5 — Abandoned Checkout

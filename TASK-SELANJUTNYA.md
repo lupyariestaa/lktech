@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **P4 — urgency & trust (stok nyata, bukti sosial, trust badges)**.
+> Terakhir diperbarui: sesi **audit QA P3/P4 + remediasi gap (stok mengikat, kupon bundel re-validate)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -88,6 +88,24 @@ Fase **P4** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi ko
 **Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (69 halaman) · test (metrics 6 · fulfillment 5 · downloads 5 · expiry 5 · bundle 9 · **stock 9**) lolos ✅.
 
 **Sisa manual:** uji browser (isi stok produk/varian di `/admin/products` → cek badge "Sisa N"; cek trust badges di detail & keranjang) + deploy.
+
+---
+
+## 🎉 Sesi Terakhir — Audit QA P3/P4 & Remediasi Gap
+
+Audit QA atas hasil P3 & P4 menemukan **5 gap**; **3 diperbaiki** (2 backlog/catatan).
+
+| Gap | Temuan | Status |
+| --- | --- | --- |
+| **P4-1** | Stok vs kelayakan beli tak konsisten (`stock:0` masih bisa dibeli) | ✅ **Diperbaiki** — stok MENGIKAT bila diisi: `isStockOut` (soldOut atau `stock ≤ 0`) & `effectiveStock`; checkout tolak `qty > stock` (`*_insufficient_stock`) & `stock ≤ 0` (`*_out_of_stock`); badge "Stok habis" konsisten |
+| **P4-2** | Dead export `productTotalStock` | ✅ **Diperbaiki** — dipakai untuk badge ringkas "Sisa N" multi-varian di kartu produk |
+| **P3-3** | Kupon bundel tak dicabut saat syarat hilang dari keranjang | ✅ **Diperbaiki** — re-validasi otomatis saat isi keranjang berubah (best-effort; checkout tetap safety net di server) |
+| **P3-2** | Diskon bundel atas seluruh subtotal (`eligibleSubtotal`) | ⏸️ **Backlog** (`KP-P2`) — sesuai dokumen §4 |
+| **P4-3** | `social-proof.tsx` + `server-only` | 🔵 **Catatan** (aman, hanya dipakai server) |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (69 halaman) · test (metrics 6 · fulfillment 5 · downloads 5 · expiry 5 · bundle 9 · **stock 12**) lolos ✅.
+
+**Sisa manual:** uji browser (set stok 0 pada produk → pastikan tak bisa dibeli; uji kupon bundel lalu hapus item syarat → kupon tercabut) + deploy.
 
 ---
 

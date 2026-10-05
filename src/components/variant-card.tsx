@@ -8,7 +8,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { ProductVariant } from "@/lib/product-types";
-import { formatPrice, stockBadge } from "@/lib/product-format";
+import { formatPrice, stockBadge, isStockOut } from "@/lib/product-format";
 import { useProductPurchase } from "@/components/product-purchase-context";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ export function VariantCard({
   const { selectedVariantSlug, selectVariant } = useProductPurchase();
   const hasDiscount =
     variant.originalPrice != null && variant.originalPrice > variant.price;
-  const disabled = variant.soldOut;
+  const disabled = isStockOut(variant);
   const isSelected = selectedVariantSlug === variant.slug;
   // Badge stok nyata (FASE P4) — "Sisa N" / "Stok habis" (data nyata).
   const stock = stockBadge(variant);

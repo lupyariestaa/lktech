@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import type { Product, ProductVariant } from "@/lib/product-types";
 import { cardItemForVariant } from "@/lib/cart";
+import { isStockOut } from "@/lib/product-format";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
@@ -44,7 +45,7 @@ export function ProductVariantPicker({
   };
 
   const pick = (variant: ProductVariant, buyNow: boolean) => {
-    if (variant.soldOut || blocked || busySlug) return;
+    if (isStockOut(variant) || blocked || busySlug) return;
     if (!requireLogin()) return;
     setBusySlug(variant.slug);
     add(cardItemForVariant(product, variant, 1));
