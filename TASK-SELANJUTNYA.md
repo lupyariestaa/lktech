@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Laporan & CRM Mini — L1 (scoring & model lead)**.
+> Terakhir diperbarui: sesi **CRM Mini — L2–L3 (pipeline Kanban & timeline aktivitas)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -187,7 +187,21 @@ Inisiatif Tema 4 (Operasional). Dokumen fase: `docs/2026-10-05-operasional-tema4
 
 ---
 
-## 🎉 Sesi Terakhir — Laporan & CRM Mini (L1)
+## 🎉 Sesi Terakhir — CRM Mini (L2–L3: Pipeline Kanban & Timeline)
+
+| Kode | Perubahan |
+| --- | --- |
+| **L2 Pipeline** | `lead-pipeline-board.tsx` — Kanban 5 kolom (Baru→Dihubungi→Proposal→Menang→Kalah), drag&drop + tombol ‹ ›, a11y `role="list"`; toggle **Daftar ⇄ Pipeline** di `leads-manager`; `lead-score-badge.tsx`. |
+| **L3 Timeline** | `GET /api/admin/leads/[id]/activities` + `lead-timeline.tsx` (muat + tambah catatan/panggilan/email/wa), di dialog detail lead. Perubahan tahap otomatis tercatat aktivitas. |
+| **Dialog detail** | `LeadDetailDialog` — info + ubah tahap + timeline. |
+
+**Verifikasi:** `tsc`/`eslint`/`build` bersih (71 halaman; +1 route) · 11 suite (89 test) lolos.
+
+**Lanjut (L4–L6):** laporan mingguan otomatis (cron + email), kesehatan bisnis di dashboard, QA/docs.
+
+---
+
+## 🎉 Sesi Sebelumnya — Laporan & CRM Mini (L1)
 
 Inisiatif Tema 3 (lanjutan). Dokumen fase: `docs/2026-10-05-laporan-crm-mini.md`.
 

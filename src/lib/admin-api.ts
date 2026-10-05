@@ -41,6 +41,16 @@ export async function addLeadActivity(
   });
 }
 
+/** Ambil timeline aktivitas lead. */
+export async function fetchLeadActivities(
+  id: string,
+): Promise<import("@/lib/lead-types").LeadActivity[]> {
+  const data = await adminFetch<{
+    activities: import("@/lib/lead-types").LeadActivity[];
+  }>(`/api/admin/leads/${encodeURIComponent(id)}/activities`);
+  return data.activities;
+}
+
 export async function deleteLead(id: string) {
   return adminFetch<{ ok: boolean }>(
     `/api/admin/leads?id=${encodeURIComponent(id)}`,

@@ -1,6 +1,6 @@
 # FASE DETAIL — Laporan Otomatis & CRM Mini (Tema 3 lanjutan)
 
-> **Status:** 🚧 Sedang dikerjakan — **L1 selesai**; L2–L6 belum.
+> **Status:** 🚧 Sedang dikerjakan — **L1–L3 selesai**; L4–L6 belum.
 > **Disusun:** sesi pasca-Operasional (Tema 4) — rekomendasi roadmap.
 > **Tema roadmap:** **Tema 3 — Kepercayaan & Skala → 3.2 Lead Scoring & Pipeline CRM mini** + **3.3 Laporan & Ekspor Otomatis** (`docs/2026-10-06-roadmap-pengembangan.md`).
 > **Prasyarat baca:** `docs/2026-10-06-roadmap-pengembangan.md`, `docs/2026-10-02-orders-admin-module.md`, `docs/2026-10-05-analitik-penjualan.md`, `TASK-SELANJUTNYA.md`.
@@ -115,8 +115,14 @@ Skor 0..100 dari **data nyata** (tanpa ML):
 ### FASE L2 — Pipeline Kanban
 - Board + API patch stage; sinkron `status` pendamping.
 
+> **Status L2:** ✅ `lead-pipeline-board.tsx` (5 kolom, drag&drop + tombol ‹ ›, a11y `role="list"`),
+> toggle tampilan **Daftar ⇄ Pipeline** di `leads-manager`, `lead-score-badge.tsx`, dialog detail lead.
+
 ### FASE L3 — Timeline aktivitas
 - API aktivitas + UI timeline + form catatan.
+
+> **Status L3:** ✅ `GET /api/admin/leads/[id]/activities` + `lead-timeline.tsx` (muat + tambah catatan/panggilan/email/wa),
+> terpasang di dialog detail lead. Perubahan tahap otomatis tercatat aktivitas (`updateLeadStage`).
 
 ### FASE L4 — Laporan mingguan otomatis
 - `weekly-report.ts` + `email-report.ts` + `/api/cron/weekly-report` (fail-closed CRON_SECRET).

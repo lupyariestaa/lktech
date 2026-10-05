@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import {
   AlertCircle,
   Download,
+  LayoutGrid,
+  List,
   Loader2,
   Mail,
   MessageCircle,
@@ -11,12 +13,14 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   deleteLead,
   exportLeadsToCsv,
   fetchLeads,
   updateLeadStatus,
+  updateLeadStage,
 } from "@/lib/admin-api";
 import {
   LEAD_STATUSES,
@@ -25,6 +29,15 @@ import {
   type LeadStatus,
   type StoredLead,
 } from "@/lib/lead-types";
+import {
+  PIPELINE_ORDER,
+  PIPELINE_STAGE_LABEL,
+  statusToStage,
+  type PipelineStage,
+} from "@/lib/lead-scoring-pure";
+import { LeadPipelineBoard } from "@/components/admin/lead-pipeline-board";
+import { LeadTimeline } from "@/components/admin/lead-timeline";
+import { LeadScoreBadge } from "@/components/admin/lead-score-badge";
 import { waLink } from "@/lib/whatsapp";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
@@ -43,6 +56,10 @@ export function LeadsManager() {
   } = useAsyncList<StoredLead>(fetchLeads, "Gagal memuat lead.");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<LeadStatus | "semua">("semua");
+  /** Tampilan: daftar (list) atau papan pipeline (kanban). */
+  const [view, setView] = useState<"list" | "pipeline">("list");
+  /** Lead yang sedang dibuka pada dialog detail (L3 timeline). */
+  const [detail, setDetail] = useState<StoredLead | null>(null);
   // ID lead yang statusnya sedang disinkronkan (cegah double-submit/race).
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [toDelete, setToDelete] = useState<StoredLead | null>(null);
@@ -98,6 +115,31 @@ export function LeadsManager() {
     exportLeadsToCsv(filtered);
   };
 
+  /** Pindah tahap pipeline (Kanban). Optimistik + rollback. */
+  const onStage = async (id: string, stage: PipelineStage) => {
+    if (busyIds.has(id)) return;
+    const prev = leads;
+    setBusyIds((s) => new Set(s).add(id));
+    setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, stage } : l)));
+    try {
+      await updateLeadStage(id, stage);
+      toast.success(`Tahap: ${PIPELINE_STAGE_LABEL[stage]}.`);
+      // Segarkan agar skor (dihitung ulang server) ikut terbarui.
+      fetchLeads().then(setLeads).catch(() => {});
+    } catch (err) {
+      setLeads(prev);
+      const msg = err instanceof Error ? err.message : "Gagal memindahkan.";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setBusyIds((s) => {
+        const next = new Set(s);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
   const confirmDelete = async () => {
     const target = toDelete;
     if (!target) return;
@@ -145,6 +187,36 @@ export function LeadsManager() {
             </option>
           ))}
         </select>
+
+        {/* Toggle tampilan: Daftar / Pipeline (Kanban) */}
+        <div
+          role="group"
+          aria-label="Mode tampilan"
+          className="flex items-center rounded-full border border-slate-200 bg-white p-1"
+        >
+          <button
+            onClick={() => setView("list")}
+            aria-pressed={view === "list"}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
+              view === "list" ? "bg-secondary text-white" : "text-slate-500 hover:text-secondary",
+            )}
+          >
+            <List className="h-3.5 w-3.5" />
+            Daftar
+          </button>
+          <button
+            onClick={() => setView("pipeline")}
+            aria-pressed={view === "pipeline"}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
+              view === "pipeline" ? "bg-secondary text-white" : "text-slate-500 hover:text-secondary",
+            )}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Pipeline
+          </button>
+        </div>
 
         <button
           onClick={onExport}
@@ -195,6 +267,13 @@ export function LeadsManager() {
               : "Coba ubah kata kunci atau filter."}
           </p>
         </div>
+      ) : view === "pipeline" ? (
+        <LeadPipelineBoard
+          leads={filtered}
+          busyIds={busyIds}
+          onStageChange={onStage}
+          onOpen={setDetail}
+        />
       ) : (
         <div className="mt-5 grid gap-4">
           {filtered.map((lead) => (
@@ -218,14 +297,17 @@ export function LeadsManager() {
                   </div>
                 </div>
 
-                <span
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-semibold",
-                    LEAD_STATUS_STYLE[lead.status],
-                  )}
-                >
-                  {LEAD_STATUS_LABEL[lead.status]}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <LeadScoreBadge score={lead.score} />
+                  <span
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-semibold",
+                      LEAD_STATUS_STYLE[lead.status],
+                    )}
+                  >
+                    {LEAD_STATUS_LABEL[lead.status]}
+                  </span>
+                </div>
               </div>
 
               <p className="mt-4 rounded-xl bg-surface px-4 py-3 text-sm leading-relaxed text-slate-700">
@@ -279,6 +361,13 @@ export function LeadsManager() {
                 </a>
 
                 <button
+                  onClick={() => setDetail(lead)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-100"
+                >
+                  Detail &amp; Aktivitas
+                </button>
+
+                <button
                   onClick={() => setToDelete(lead)}
                   className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
                 >
@@ -291,6 +380,14 @@ export function LeadsManager() {
         </div>
       )}
 
+      {detail && (
+        <LeadDetailDialog
+          lead={detail}
+          onClose={() => setDetail(null)}
+          onStageChange={onStage}
+        />
+      )}
+
       <ConfirmDialog
         open={toDelete !== null}
         title="Hapus lead ini?"
@@ -300,6 +397,104 @@ export function LeadsManager() {
         onConfirm={confirmDelete}
         onCancel={() => setToDelete(null)}
       />
+    </div>
+  );
+}
+
+/**
+ * Dialog detail lead: info lengkap + ubah tahap pipeline + timeline aktivitas (L3).
+ */
+function LeadDetailDialog({
+  lead,
+  onClose,
+  onStageChange,
+}: {
+  lead: StoredLead;
+  onClose: () => void;
+  onStageChange: (id: string, stage: PipelineStage) => void;
+}) {
+  const currentStage =
+    (lead.stage as PipelineStage) || statusToStage(lead.status);
+
+  return (
+    <div
+      className="fixed inset-0 z-[13000] flex items-end justify-center p-0 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Detail lead ${lead.name}`}
+    >
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-xl sm:rounded-3xl">
+        <header className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-secondary">{lead.name}</h2>
+            <p className="mt-0.5 text-xs text-muted">
+              {lead.service} · {formatDate(lead.createdAt)}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <LeadScoreBadge score={lead.score} />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Tutup detail"
+              className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-surface"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          {/* Tahap pipeline */}
+          <div className="rounded-2xl border border-slate-200 p-4">
+            <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+              Tahap Pipeline
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {PIPELINE_ORDER.map((stage) => (
+                <button
+                  key={stage}
+                  type="button"
+                  onClick={() => onStageChange(lead.id, stage)}
+                  aria-pressed={stage === currentStage}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                    stage === currentStage
+                      ? "border-primary bg-primary-50 text-primary"
+                      : "border-slate-200 text-slate-600 hover:border-primary/30 hover:text-primary",
+                  )}
+                >
+                  {PIPELINE_STAGE_LABEL[stage]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Kontak */}
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted">
+            <a href={`mailto:${lead.email}`} className="inline-flex items-center gap-1.5 hover:text-primary">
+              <Mail className="h-3.5 w-3.5" />
+              {lead.email || "—"}
+            </a>
+            <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-1.5 hover:text-primary">
+              <Phone className="h-3.5 w-3.5" />
+              {lead.phone || "—"}
+            </a>
+          </div>
+
+          <p className="mt-3 rounded-xl bg-surface px-4 py-3 text-sm leading-relaxed whitespace-pre-line text-slate-700">
+            {lead.message}
+          </p>
+
+          {/* Timeline aktivitas (L3) */}
+          <LeadTimeline leadId={lead.id} />
+        </div>
+      </div>
     </div>
   );
 }
