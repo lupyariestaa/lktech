@@ -1,4 +1,5 @@
 ﻿import { DashboardOverview } from "@/components/admin/dashboard-overview";
+import { BusinessHealth } from "@/components/admin/business-health";
 
 import type { Metadata } from "next";
 
@@ -16,7 +17,10 @@ export default function AdminHomePage() {
           Statistik singkat lead &amp; aktivitas terbaru.
         </p>
       </div>
-      <DashboardOverview />
+      <div className="flex flex-col gap-6">
+        <BusinessHealth />
+        <DashboardOverview />
+      </div>
     </div>
   );
 }

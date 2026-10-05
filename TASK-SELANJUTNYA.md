@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **CRM Mini — L4 (laporan mingguan otomatis)**.
+> Terakhir diperbarui: sesi **CRM Mini — L5 (kesehatan bisnis di dashboard)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -187,7 +187,19 @@ Inisiatif Tema 4 (Operasional). Dokumen fase: `docs/2026-10-05-operasional-tema4
 
 ---
 
-## 🎉 Sesi Terakhir — CRM Mini L4: Laporan Mingguan Otomatis
+## 🎉 Sesi Terakhir — CRM Mini L5: Kesehatan Bisnis di Dashboard
+
+| Kode | Perubahan |
+| --- | --- |
+| **Kesehatan bisnis** | `business-health.tsx` (server component) — KPI **30 hari** (omzet, pesanan, AOV, konversi pembayaran) + **delta vs 30 hari sebelumnya**, dipasang di halaman Ringkasan `/admin`. Reuse `getSalesAnalytics` + `getOrdersSummary` (metrik resmi `metrics-spec`). |
+
+**Verifikasi:** `tsc`/`eslint`/`build` bersih (71 halaman) · **12 suite (98 test)** lolos.
+
+**Lanjut (L6):** QA menyeluruh + finalisasi dokumentasi (tutup inisiatif Laporan & CRM Mini).
+
+---
+
+## 🎉 Sesi Sebelumnya — CRM Mini L4: Laporan Mingguan Otomatis
 
 | Kode | Perubahan |
 | --- | --- |

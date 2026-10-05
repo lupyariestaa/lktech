@@ -1,6 +1,6 @@
 # FASE DETAIL — Laporan Otomatis & CRM Mini (Tema 3 lanjutan)
 
-> **Status:** 🚧 Sedang dikerjakan — **L1–L4 selesai**; L5–L6 belum.
+> **Status:** 🚧 Sedang dikerjakan — **L1–L5 selesai**; L6 belum.
 > **Disusun:** sesi pasca-Operasional (Tema 4) — rekomendasi roadmap.
 > **Tema roadmap:** **Tema 3 — Kepercayaan & Skala → 3.2 Lead Scoring & Pipeline CRM mini** + **3.3 Laporan & Ekspor Otomatis** (`docs/2026-10-06-roadmap-pengembangan.md`).
 > **Prasyarat baca:** `docs/2026-10-06-roadmap-pengembangan.md`, `docs/2026-10-02-orders-admin-module.md`, `docs/2026-10-05-analitik-penjualan.md`, `TASK-SELANJUTNYA.md`.
@@ -131,6 +131,8 @@ Skor 0..100 dari **data nyata** (tanpa ML):
 
 ### FASE L5 — Kesehatan bisnis di dashboard
 - `business-health.tsx` (KPI vs periode lalu; reuse `getSalesAnalytics` deltas).
+
+> **Status L5:** ✅ `business-health.tsx` (server component) — KPI 30 hari (omzet, pesanan, AOV, konversi pembayaran) + **delta vs 30 hari sebelumnya**, dipasang di halaman Ringkasan (`/admin`). Memakai agregasi analitik terverifikasi (`metrics-spec`).
 
 ### FASE L6 — QA & dokumentasi
 - `tsc`/`lint`/`build` bersih; unit test scoring & pemetaan.
