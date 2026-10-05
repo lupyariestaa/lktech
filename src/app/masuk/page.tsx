@@ -56,8 +56,8 @@ export default async function MasukPage({
             <div className="pointer-events-none absolute -right-16 bottom-0 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
 
             <div className="relative flex items-center justify-between">
-              <span className="inline-flex items-center rounded-2xl bg-white px-3.5 py-2">
-                <Logo variant="full" href={null} height={26} />
+              <span className="inline-flex items-center rounded-2xl bg-white px-3 py-2.5">
+                <Logo variant="mark" href={null} height={26} />
               </span>
               <Link
                 href="/"
@@ -81,25 +81,27 @@ export default async function MasukPage({
               </p>
             </div>
 
-            {/* Kartu langkah/keunggulan */}
-            <div className="relative mt-10 grid gap-3 sm:grid-cols-3 lg:mt-0">
+            {/* Kartu langkah/keunggulan (vertikal, full-width) */}
+            <div className="relative mt-10 flex flex-col gap-3">
               {STEPS.map((s, i) => {
                 const Icon = s.icon;
                 return (
                   <div
                     key={s.title}
-                    className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur transition-colors hover:bg-white/15"
+                    className="flex w-full items-center gap-3.5 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur transition-colors hover:bg-white/15"
                   >
-                    <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-sm font-bold text-primary">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-sm font-bold text-primary">
                       {i + 1}
                     </span>
-                    <p className="mt-3 flex items-center gap-1.5 text-sm font-bold">
-                      <Icon className="h-3.5 w-3.5 text-emerald-300" />
-                      {s.title}
-                    </p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-white/75">
-                      {s.desc}
-                    </p>
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 text-sm font-bold">
+                        <Icon className="h-3.5 w-3.5 text-emerald-300" />
+                        {s.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-white/75">
+                        {s.desc}
+                      </p>
+                    </div>
                   </div>
                 );
               })}

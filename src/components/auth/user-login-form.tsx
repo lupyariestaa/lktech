@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowRight, Loader2, Mail, ShieldCheck } from "lucide-react";
+import { AlertCircle, Loader2, Mail, ShieldCheck } from "lucide-react";
 import {
   getClientAuth,
   getIdToken,
@@ -14,15 +14,11 @@ import { useAuth } from "@/components/auth-provider";
 import { GoogleIcon } from "@/components/auth/google-icon";
 import { cn } from "@/lib/utils";
 
-const fieldBase =
-  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30";
-
 /**
  * Form login USER — khusus akun Google.
  *
- * Tidak ada registrasi email/password. Tombol utama membuka pemilih akun
- * Google; kolom email manual hanya mengarahkan (login hint) ke akun Google
- * tersebut, bukan membuat akun password.
+ * Tidak ada registrasi email/password. Satu tombol utama membuka pemilih akun
+ * Google.
  */
 export function UserLoginForm({
   redirectTo = "/akun",
@@ -31,7 +27,6 @@ export function UserLoginForm({
 }) {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,28 +61,17 @@ export function UserLoginForm({
     router.replace(redirectTo);
   };
 
-  const onGoogle = async (emailHint?: string) => {
+  const onGoogle = async () => {
     setError(null);
     setBusy(true);
     try {
-      await signInWithGoogle(emailHint);
+      await signInWithGoogle();
       await finish();
     } catch (err) {
       setError(normalizeAuthError(err));
     } finally {
       setBusy(false);
     }
-  };
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      setError("Masukkan email Google Anda.");
-      return;
-    }
-    // Arahkan ke alur Google untuk email tersebut (login hint), bukan
-    // email/password. Pemisahan kode ini menegaskan akun user selalu Google.
-    await onGoogle(email);
   };
 
   return (
@@ -103,55 +87,20 @@ export function UserLoginForm({
 
       {/* Aksi utama: Google (full-width) */}
       <button
-        onClick={() => onGoogle()}
+        onClick={onGoogle}
         disabled={busy}
         className="mt-7 inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-60"
       >
-        {busy ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <GoogleIcon />
-        )}
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
         Lanjutkan dengan Google
       </button>
 
-      <div className="my-6 flex items-center gap-3">
-        <span className="h-px flex-1 bg-slate-200" />
-        <span className="text-xs text-muted">atau ketik email Google Anda</span>
-        <span className="h-px flex-1 bg-slate-200" />
-      </div>
-
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-secondary">
-            Email Google
-          </span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="nama@gmail.com"
-            autoComplete="email"
-            className={fieldBase}
-          />
-        </label>
-
-        {error && (
-          <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-70"
-        >
-          <ArrowRight className="h-4 w-4" />
-          Lanjutkan
-        </button>
-      </form>
+      {error && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
 
       <div className="mt-5 flex flex-col gap-3">
         <a
@@ -166,14 +115,19 @@ export function UserLoginForm({
           Lupa password? Pulihkan lewat Google
         </a>
 
-        <p className="flex items-start gap-2 rounded-2xl bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
-          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-          Akun user hanya untuk pelanggan. Login admin terpisah di{" "}
-          <a href="/admin/login" className="font-semibold text-primary">
-            /admin/login
+        {/* Catatan admin (revisi: teks di atas, tautan di bawah) */}
+        <div className="rounded-2xl bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
+          <p className="flex items-start gap-2">
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+            Akun user hanya untuk pelanggan. Login admin terpisah:
+          </p>
+          <a
+            href="/admin/login"
+            className="mt-2 inline-flex items-center gap-1.5 font-semibold text-primary hover:underline"
+          >
+            Masuk sebagai admin →
           </a>
-          .
-        </p>
+        </div>
       </div>
     </div>
   );
