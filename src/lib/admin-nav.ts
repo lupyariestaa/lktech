@@ -7,6 +7,7 @@ import {
   Image as ImageIcon,
   Inbox,
   LayoutDashboard,
+  Mail,
   Newspaper,
   Package,
   PanelsTopLeft,
@@ -137,6 +138,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         title: "Ulasan & Rating",
         href: "/admin/reviews",
         icon: Star,
+      },
+      {
+        label: "Broadcast",
+        title: "Newsletter & Broadcast",
+        href: "/admin/broadcast",
+        icon: Mail,
       },
       {
         label: "Kupon",

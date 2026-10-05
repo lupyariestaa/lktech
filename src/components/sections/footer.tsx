@@ -6,6 +6,7 @@ import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import { Icon } from "@/components/icon";
 import { Logo } from "@/components/logo";
+import { NewsletterForm } from "@/components/newsletter-form";
 import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
 
@@ -104,6 +105,21 @@ export function Footer() {
                 {settings.location}
               </li>
             </ul>
+          </div>
+        </div>
+
+        {/* Newsletter opt-in (Tema 2.2) */}
+        <div className="mt-12 rounded-3xl border border-slate-200 bg-white p-6">
+          <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <h2 className="text-sm font-bold text-secondary">
+                Dapatkan promo &amp; tips teknologi
+              </h2>
+              <p className="mt-0.5 text-xs text-muted">
+                Berlangganan newsletter — tanpa spam, bisa berhenti kapan saja.
+              </p>
+            </div>
+            <NewsletterForm source="footer" className="md:w-[420px]" />
           </div>
         </div>
 

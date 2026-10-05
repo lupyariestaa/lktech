@@ -329,6 +329,26 @@ export const reviewModerateSchema = z.object({
   reason: z.string().trim().max(300).optional(),
 });
 
+// ===== Newsletter & Broadcast (FASE R2) =====
+
+/** Daftar newsletter (opt-in publik). */
+export const newsletterSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Email tidak valid").max(200),
+  name: z.string().trim().max(80).optional(),
+  source: z.string().trim().max(40).optional(),
+  /** Honeypot anti-bot. */
+  website: z.string().max(200).optional(),
+});
+
+/** Kirim broadcast (admin). */
+export const broadcastSchema = z.object({
+  subject: z.string().trim().min(3, "Subjek minimal 3 karakter").max(150),
+  body: z.string().trim().min(3, "Isi minimal 3 karakter").max(8000),
+  segment: z.enum(["semua", "beli", "belum"]).default("semua"),
+  ctaLabel: z.string().trim().max(60).optional(),
+  ctaUrl: z.string().trim().url("URL tombol tidak valid").max(500).optional(),
+});
+
 // ===== Kupon =====
 /**
  * Tanggal ISO opsional — FAIL-CLOSED (`KP-H3`): string kosong → undefined;
