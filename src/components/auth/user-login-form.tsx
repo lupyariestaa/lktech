@@ -12,6 +12,7 @@ import {
 import { normalizeAuthError } from "@/lib/auth-errors";
 import { useAuth } from "@/components/auth-provider";
 import { GoogleIcon } from "@/components/auth/google-icon";
+import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
@@ -93,9 +94,9 @@ export function UserLoginForm({
   return (
     <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-900/5">
       <div className="text-center">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary text-lg font-bold text-white shadow-lg shadow-primary/30">
-          LK
-        </span>
+        <div className="mx-auto flex justify-center">
+          <Logo variant="full" href={null} height={40} />
+        </div>
         <h1 className="mt-5 text-xl font-bold text-secondary">
           Masuk ke Akun Anda
         </h1>

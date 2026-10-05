@@ -6,6 +6,37 @@ import type { User } from "firebase/auth";
 import { cn } from "@/lib/utils";
 
 /**
+ * Avatar bulat admin: foto Google bila ada, fallback inisial.
+ * `size` = kelas dimensi (mis. "h-9 w-9").
+ */
+function AdminAvatar({ user, size }: { user: User | null; size: string }) {
+  const photo = user?.photoURL;
+  const name = user?.displayName ?? user?.email ?? "Admin";
+  const initial = name.charAt(0).toUpperCase();
+  if (photo) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photo}
+        alt={name}
+        referrerPolicy="no-referrer"
+        className={cn("shrink-0 rounded-full object-cover", size)}
+      />
+    );
+  }
+  return (
+    <span
+      className={cn(
+        "grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-light text-sm font-bold text-white",
+        size,
+      )}
+    >
+      {initial}
+    </span>
+  );
+}
+
+/**
  * Menu akun di footer sidebar (pola dashboard modern: Linear/Vercel/Supabase).
  *
  * Aksesibel: tombol `aria-haspopup="menu"` + `aria-expanded`; menu `role="menu"`
@@ -81,7 +112,6 @@ export function UserMenu({
   };
 
   const name = user?.displayName ?? user?.email ?? "Admin";
-  const initial = name.charAt(0).toUpperCase();
 
   // ── Mode rail: hanya avatar bulat ─────────────────────────────────
   if (rail) {
@@ -96,9 +126,9 @@ export function UserMenu({
           aria-controls={open ? menuId : undefined}
           aria-label={`Menu akun: ${name}`}
           title={name}
-          className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-light text-sm font-bold text-white transition-transform hover:scale-105"
+          className="mx-auto grid h-10 w-10 place-items-center overflow-hidden rounded-full transition-transform hover:scale-105"
         >
-          {initial}
+          <AdminAvatar user={user} size="h-10 w-10" />
         </button>
         {open && (
           <div
@@ -127,9 +157,7 @@ export function UserMenu({
         aria-controls={open ? menuId : undefined}
         className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-surface"
       >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-light text-sm font-bold text-white">
-          {initial}
-        </span>
+        <AdminAvatar user={user} size="h-9 w-9" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-secondary">
             {name}
@@ -176,11 +204,14 @@ function UserMenuBody({
 }) {
   return (
     <div>
-      <div className="border-b border-slate-100 px-4 py-3">
-        <p className="truncate text-sm font-semibold text-secondary">
-          {user?.displayName ?? "Admin"}
-        </p>
-        <p className="truncate text-xs text-muted">{user?.email ?? "—"}</p>
+      <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+        <AdminAvatar user={user} size="h-9 w-9" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-secondary">
+            {user?.displayName ?? "Admin"}
+          </p>
+          <p className="truncate text-xs text-muted">{user?.email ?? "—"}</p>
+        </div>
       </div>
       <div className="p-1.5">
         <a

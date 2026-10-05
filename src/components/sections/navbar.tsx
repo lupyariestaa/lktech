@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Menu, X, MessageCircle, ShoppingCart, UserRound } from "lucide-react";
+import { Menu, X, MessageCircle, ShoppingCart, UserRound, LayoutDashboard } from "lucide-react";
 import { NAV_LINKS, PAGE_NAV_LINKS } from "@/lib/content";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
+import { getIdToken } from "@/lib/auth";
 import { ButtonAnchor } from "@/components/ui/button";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { Logo } from "@/components/logo";
@@ -28,6 +29,36 @@ export function Navbar() {
   const links = isLanding ? NAV_LINKS : PAGE_NAV_LINKS;
   // Intro loader hanya ada di landing; halaman dalam tampil langsung.
   const base = isLanding ? introDelay(reduced) : 0;
+
+  // Apakah user yang login punya akses admin? Bila ya, ikon profil di navbar
+  // diganti menjadi tautan ke dashboard admin (bukan profil user).
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!user) {
+        if (active) setIsAdmin(false);
+        return;
+      }
+      try {
+        const token = await getIdToken();
+        if (!token) {
+          if (active) setIsAdmin(false);
+          return;
+        }
+        const res = await fetch("/api/admin/me", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (active) setIsAdmin(res.ok);
+      } catch {
+        if (active) setIsAdmin(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -82,13 +113,24 @@ export function Navbar() {
             )}
           </Link>
 
-          <Link
-            href={user ? "/akun" : "/masuk"}
-            className="hidden h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:grid"
-            aria-label={user ? "Akun saya" : "Masuk akun"}
-          >
-            <UserRound className="h-5 w-5" aria-hidden="true" />
-          </Link>
+          {isAdmin ? (
+            <Link
+              href="/admin"
+              className="hidden h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:grid"
+              aria-label="Dashboard admin"
+              title="Dashboard admin"
+            >
+              <LayoutDashboard className="h-5 w-5" aria-hidden="true" />
+            </Link>
+          ) : (
+            <Link
+              href={user ? "/akun" : "/masuk"}
+              className="hidden h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:grid"
+              aria-label={user ? "Akun saya" : "Masuk akun"}
+            >
+              <UserRound className="h-5 w-5" aria-hidden="true" />
+            </Link>
+          )}
 
           <ButtonAnchor
             href="/kontak"
@@ -142,14 +184,25 @@ export function Navbar() {
             ))}
           </ul>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <Link
-              href={user ? "/akun" : "/masuk"}
-              onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
-            >
-              <UserRound className="h-4 w-4" />
-              {user ? "Akun Saya" : "Masuk"}
-            </Link>
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </Link>
+            ) : (
+              <Link
+                href={user ? "/akun" : "/masuk"}
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                <UserRound className="h-4 w-4" />
+                {user ? "Akun Saya" : "Masuk"}
+              </Link>
+            )}
             <Link
               href="/keranjang"
               onClick={() => setOpen(false)}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { User } from "firebase/auth";
 import { ExternalLink, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/logo";
 import { SidebarNav } from "./sidebar-nav";
 import { UserMenu } from "./user-menu";
 import type { SidebarBadges, SidebarVariant } from "./sidebar-item";
@@ -57,11 +58,10 @@ export function SidebarContent({
           }}
           className={cn("flex items-center gap-2.5 rounded-xl", rail && "mx-auto")}
         >
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-sm font-bold text-white">
-            LK
-          </span>
-          {!rail && (
-            <span className="text-sm font-bold text-secondary">Admin Panel</span>
+          {rail ? (
+            <Logo variant="mark" href={null} height={32} />
+          ) : (
+            <Logo variant="full" href={null} height={30} />
           )}
         </Link>
 
