@@ -25,7 +25,8 @@
     "test:audit": "node --experimental-strip-types --test scripts/admin-audit.test.ts",
     "test:leads": "node --experimental-strip-types --test scripts/lead-scoring.test.ts",
     "test:report": "node --experimental-strip-types --test scripts/weekly-report.test.ts",
-    "test:loyalty": "node --experimental-strip-types --test scripts/loyalty.test.ts"
+    "test:loyalty": "node --experimental-strip-types --test scripts/loyalty.test.ts",
+    "test:wishlist": "node --experimental-strip-types --test scripts/wishlist-alert.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
