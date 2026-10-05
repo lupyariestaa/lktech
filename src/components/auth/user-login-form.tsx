@@ -12,7 +12,6 @@ import {
 import { normalizeAuthError } from "@/lib/auth-errors";
 import { useAuth } from "@/components/auth-provider";
 import { GoogleIcon } from "@/components/auth/google-icon";
-import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
@@ -92,24 +91,21 @@ export function UserLoginForm({
   };
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-900/5">
-      <div className="text-center">
-        <div className="mx-auto flex justify-center">
-          <Logo variant="full" href={null} height={40} />
-        </div>
-        <h1 className="mt-5 text-xl font-bold text-secondary">
-          Masuk ke Akun Anda
+    <div className="w-full">
+      <div className="text-center lg:text-left">
+        <h1 className="text-2xl font-bold text-secondary sm:text-3xl">
+          Masuk ke Akun
         </h1>
-        <p className="mt-1.5 text-sm text-muted">
-          Gunakan akun Google untuk melanjutkan pembelian &amp; mengelola
-          akun.
+        <p className="mt-2 text-sm text-muted">
+          Gunakan akun Google untuk melanjutkan pembelian &amp; mengelola akun.
         </p>
       </div>
 
+      {/* Aksi utama: Google (full-width) */}
       <button
         onClick={() => onGoogle()}
         disabled={busy}
-        className="mt-7 inline-flex w-full items-center justify-center gap-2.5 rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-secondary transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md disabled:opacity-60"
+        className="mt-7 inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-60"
       >
         {busy ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -150,7 +146,7 @@ export function UserLoginForm({
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-70"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-70"
         >
           <ArrowRight className="h-4 w-4" />
           Lanjutkan
