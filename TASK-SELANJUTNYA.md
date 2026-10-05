@@ -1,11 +1,11 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **CRM Mini — L2–L3 (pipeline Kanban & timeline aktivitas)**.
+> Terakhir diperbarui: sesi **CRM Mini — L4 (laporan mingguan otomatis)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
-> 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0 & P1 selesai (terverifikasi sandbox).**
+> 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 
 ---
@@ -187,7 +187,25 @@ Inisiatif Tema 4 (Operasional). Dokumen fase: `docs/2026-10-05-operasional-tema4
 
 ---
 
-## 🎉 Sesi Terakhir — CRM Mini (L2–L3: Pipeline Kanban & Timeline)
+## 🎉 Sesi Terakhir — CRM Mini L4: Laporan Mingguan Otomatis
+
+| Kode | Perubahan |
+| --- | --- |
+| **Agregat murni** | `report-pure.ts` — `aggregateOrders` (omzet/paid/produk terlaris/kupon), `percentDelta`, `isPaidStatus` (teruji 9). |
+| **Penyusun laporan** | `weekly-report.ts` (server-only) — kumpulkan order/lead/kupon/produk 7 hari + pembanding 7 hari sebelumnya (`deltas`). |
+| **Email laporan** | `email-report.ts` — template HTML+teks ber-brand dikirim ke `LEAD_NOTIFY_EMAILS` via Resend. |
+| **Cron** | `/api/cron/weekly-report` (fail-closed `CRON_SECRET`; `?days=7..90` opsional). Observability `weekly_report_sent`. |
+| **Test** | `npm run test:report` (9). |
+
+**Verifikasi:** `tsc`/`eslint`/`build` bersih (71 halaman, +1 route) · **12 suite (98 test)** lolos.
+
+**Langkah manual:** jadwalkan cron eksternal `GET /api/cron/weekly-report?token=<CRON_SECRET>` (mis. tiap Senin 08:00).
+
+**Lanjut (L5–L6):** kesehatan bisnis di dashboard (KPI vs periode lalu), QA/docs.
+
+---
+
+## 🎉 Sesi Sebelumnya — CRM Mini (L2–L3: Pipeline Kanban & Timeline)
 
 | Kode | Perubahan |
 | --- | --- |

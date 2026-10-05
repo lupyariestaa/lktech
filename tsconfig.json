@@ -47,6 +47,7 @@
     "scripts/order-status.test.ts",
     "scripts/review-rating.test.ts",
     "scripts/admin-audit.test.ts",
-    "scripts/lead-scoring.test.ts"
+    "scripts/lead-scoring.test.ts",
+    "scripts/weekly-report.test.ts"
   ]
 }

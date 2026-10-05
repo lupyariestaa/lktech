@@ -1,6 +1,6 @@
 # FASE DETAIL — Laporan Otomatis & CRM Mini (Tema 3 lanjutan)
 
-> **Status:** 🚧 Sedang dikerjakan — **L1–L3 selesai**; L4–L6 belum.
+> **Status:** 🚧 Sedang dikerjakan — **L1–L4 selesai**; L5–L6 belum.
 > **Disusun:** sesi pasca-Operasional (Tema 4) — rekomendasi roadmap.
 > **Tema roadmap:** **Tema 3 — Kepercayaan & Skala → 3.2 Lead Scoring & Pipeline CRM mini** + **3.3 Laporan & Ekspor Otomatis** (`docs/2026-10-06-roadmap-pengembangan.md`).
 > **Prasyarat baca:** `docs/2026-10-06-roadmap-pengembangan.md`, `docs/2026-10-02-orders-admin-module.md`, `docs/2026-10-05-analitik-penjualan.md`, `TASK-SELANJUTNYA.md`.
@@ -126,6 +126,8 @@ Skor 0..100 dari **data nyata** (tanpa ML):
 
 ### FASE L4 — Laporan mingguan otomatis
 - `weekly-report.ts` + `email-report.ts` + `/api/cron/weekly-report` (fail-closed CRON_SECRET).
+
+> **Status L4:** ✅ `report-pure.ts` (agregat murni + delta, teruji 9), `weekly-report.ts` (kumpulkan order/lead/kupon/produk 7 hari + pembanding), `email-report.ts` (template HTML+teks, kirim ke `LEAD_NOTIFY_EMAILS`), `/api/cron/weekly-report` (fail-closed, `?days=` opsional). Dijadwalkan dari cron eksternal (mis. tiap Senin).
 
 ### FASE L5 — Kesehatan bisnis di dashboard
 - `business-health.tsx` (KPI vs periode lalu; reuse `getSalesAnalytics` deltas).

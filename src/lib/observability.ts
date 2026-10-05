@@ -57,4 +57,16 @@ export const obs = {
     }),
   cartReminded: (props: { count: number; failed: number }) =>
     logEvent("cart_reminders_sent", { count: props.count, failed: props.failed }),
+  weeklyReport: (props: {
+    ok: boolean;
+    skipped: boolean;
+    revenue: number;
+    orders: number;
+  }) =>
+    logEvent("weekly_report_sent", {
+      ok: props.ok,
+      skipped: props.skipped,
+      revenue: props.revenue,
+      orders: props.orders,
+    }),
 };
