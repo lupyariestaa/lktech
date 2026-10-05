@@ -41,28 +41,10 @@ export function ProductBuyActions({
   const needsConsultation = !hasVariants(product) && !productIsPurchasable(product);
   const disabled = soldOut || (Boolean(user) && blocked);
 
-  // Produk tanpa harga → arahkan ke WhatsApp untuk konsultasi.
-  if (needsConsultation) {
-    const message =
-      product.waMessage?.trim() ||
-      `Halo LKTech! Saya tertarik dengan produk "${product.name}". Boleh dibantu info harga & cara pesan?`;
-    return (
-      <div className={cn("flex gap-3", className)}>
-        <a
-          href={waLink(message)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(
-            "inline-flex items-center justify-center gap-2 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark",
-            compact ? "w-full px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
-          )}
-        >
-          <MessageCircle className="h-4 w-4" />
-          Hubungi kami
-        </a>
-      </div>
-    );
-  }
+  // ===== Produk JASA (FASE P2) =====
+  // Layanan manusia → dorong "Konsultasi dulu" (WhatsApp) SEBELUM checkout;
+  // checkout tetap tersedia sebagai opsi sekunder (order → menunggu_konfirmasi).
+  const isJasa = product.category === "jasa";
 
   const requireLogin = (): boolean => {
     if (!user) {
@@ -91,6 +73,71 @@ export function ProductBuyActions({
   };
 
   const inCart = has(cartItemKey({ slug: product.slug }));
+
+  // Produk tanpa harga → arahkan ke WhatsApp untuk konsultasi.
+  if (needsConsultation) {
+    const message =
+      product.waMessage?.trim() ||
+      `Halo LKTech! Saya tertarik dengan produk "${product.name}". Boleh dibantu info harga & cara pesan?`;
+    return (
+      <div className={cn("flex gap-3", className)}>
+        <a
+          href={waLink(message)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "inline-flex items-center justify-center gap-2 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark",
+            compact ? "w-full px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
+          )}
+        >
+          <MessageCircle className="h-4 w-4" />
+          Hubungi kami
+        </a>
+      </div>
+    );
+  }
+
+  // Produk JASA: CTA utama konsultasi, checkout sebagai opsi sekunder.
+  if (isJasa) {
+    const consultMessage =
+      product.waMessage?.trim() ||
+      `Halo LKTech! Saya ingin berkonsultasi tentang layanan "${product.name}". Boleh dibantu?`;
+    return (
+      <div className={cn("flex flex-col gap-3", className)}>
+        <a
+          href={waLink(consultMessage)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "inline-flex items-center justify-center gap-2 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark",
+            compact ? "w-full px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
+          )}
+        >
+          <MessageCircle className="h-4 w-4" />
+          Konsultasi dulu
+        </a>
+        <button
+          onClick={onBuyNow}
+          disabled={disabled}
+          title={blocked ? "Akun Anda sedang diblokir." : undefined}
+          className={cn(
+            "inline-flex items-center justify-center gap-2 rounded-full border font-semibold transition-all",
+            compact ? "w-full px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
+            disabled
+              ? "cursor-not-allowed border-slate-200 text-slate-400"
+              : "border-slate-200 bg-white text-secondary hover:border-primary/40 hover:text-primary",
+          )}
+        >
+          <ShoppingBag className="h-4 w-4" />
+          Pesan &amp; bayar setelah kesepakatan
+        </button>
+        <p className="text-xs leading-relaxed text-muted">
+          Pesanan jasa dikonfirmasi manual oleh tim kami. Anda akan dihubungi
+          sebelum pembayaran.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex gap-3", compact ? "flex-col" : "flex-wrap", className)}>

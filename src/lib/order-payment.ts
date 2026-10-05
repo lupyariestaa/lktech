@@ -12,8 +12,10 @@ import {
   sendOrderPaidToBuyer,
   sendOrderStatusToBuyer,
 } from "@/lib/email-order";
+import { sendOrderAwaitingConfirmationToAdmin } from "@/lib/email";
 import { recordStatusEmail, logOrderEmail } from "@/lib/email-status";
-import { getOrderById, setOrderDownloadToken } from "@/lib/orders";
+import { getOrderById, setOrderDownloadToken, updateOrderPayment } from "@/lib/orders";
+import { createInvoice, isMayarConfigured } from "@/lib/mayar";
 import type { Order } from "@/lib/order-types";
 
 /**
@@ -228,6 +230,8 @@ export async function getOrderDownloadInfo(orderId: string): Promise<{
 
 /**
  * Kirim email "menunggu konfirmasi" untuk order JASA (dipanggil dari checkout).
+ * - Ke PEMBELI: status `menunggu_konfirmasi` (bila `notifyBuyerOnOrder`).
+ * - Ke ADMIN: peringatan bahwa pesanan jasa butuh tindak lanjut manual (FASE P2).
  * Best-effort — tidak melempar.
  */
 export async function notifyOrderAwaitingConfirmation(
@@ -235,15 +239,98 @@ export async function notifyOrderAwaitingConfirmation(
 ): Promise<void> {
   try {
     const settings = await getSiteSettings();
-    if (!settings.notifyBuyerOnOrder) return;
-    const result = await sendOrderStatusToBuyer(order, "menunggu_konfirmasi");
-    await recordStatusEmail(order.id, "menunggu_konfirmasi", result);
-    await logOrderEmail(order.id, {
-      kind: "status",
-      to: order.buyerEmail,
-      result,
-    });
+    if (settings.notifyBuyerOnOrder) {
+      const result = await sendOrderStatusToBuyer(order, "menunggu_konfirmasi");
+      await recordStatusEmail(order.id, "menunggu_konfirmasi", result);
+      await logOrderEmail(order.id, {
+        kind: "status",
+        to: order.buyerEmail,
+        result,
+      });
+    }
   } catch (err) {
-    console.error("[order-payment] gagal kirim email konfirmasi jasa:", err);
+    console.error("[order-payment] gagal kirim email konfirmasi jasa (pembeli):", err);
   }
+
+  // Notifikasi admin (best-effort, terpisah agar kegagalan satu tak memblok lain).
+  try {
+    await sendOrderAwaitingConfirmationToAdmin(order);
+  } catch (err) {
+    console.error("[order-payment] gagal kirim email konfirmasi jasa (admin):", err);
+  }
+}
+
+/**
+ * AKSI ADMIN (FASE P2): buat **invoice manual** via Mayar untuk sebuah order
+ * (umumnya JASA setelah kesepakatan, atau INSTAN yang gagal invoice otomatis).
+ *
+ * - Membuat invoice Mayar dengan `extraData.orderId` → webhook `payment.received`
+ *   akan menandai order lunas otomatis (jalur yang sama seperti checkout).
+ * - Menyimpan `payment` (status `menunggu`, payUrl, invoiceId, expiresAt) ke order
+ *   TANPA mengubah status order (biarkan `menunggu_konfirmasi`/`menunggu_bayar`).
+ * - Bila invoice sebelumnya ada & masih menunggu, cukup dibuat ulang.
+ *
+ * Mengembalikan `{ ok, payUrl?, reason? }`. Tidak melempar (dipanggil API admin).
+ */
+export async function createManualOrderInvoice(orderId: string): Promise<{
+  ok: boolean;
+  payUrl?: string;
+  invoiceId?: string;
+  expiresAt?: string;
+  reason?: string;
+}> {
+  if (!isMayarConfigured()) {
+    return { ok: false, reason: "mayar_disabled" };
+  }
+
+  const order = await getOrderById(orderId);
+  if (!order) return { ok: false, reason: "not_found" };
+  if (order.payment?.status === "dibayar") {
+    return { ok: false, reason: "already_paid" };
+  }
+  if (order.total <= 0) {
+    return { ok: false, reason: "no_amount" };
+  }
+
+  // `mobile` WAJIB Mayar: pakai nomor WhatsApp situs (kontak admin) sebagai
+  // fallback karena invoice manual dipicu admin, bukan pembeli.
+  const settings = await getSiteSettings();
+  const mobile = settings.whatsapp || "";
+
+  const invoice = await createInvoice({
+    name: order.buyerName || "Pembeli LKTech",
+    email: order.buyerEmail,
+    mobile,
+    description: `Pesanan LKTech ${order.id}`,
+    items:
+      order.coupon && order.coupon.discount > 0
+        ? [
+            { quantity: 1, rate: order.subtotal, description: "Subtotal pesanan" },
+            {
+              quantity: 1,
+              rate: -order.coupon.discount,
+              description: `Diskon ${order.coupon.code}`,
+            },
+          ]
+        : [{ quantity: 1, rate: order.total, description: "Total pesanan" }],
+    extraData: { orderId: order.id },
+  });
+
+  const expiresAt = new Date(invoice.expiredAt).toISOString();
+  await updateOrderPayment(order.id, {
+    provider: "mayar",
+    status: "menunggu",
+    invoiceId: invoice.invoiceId,
+    transactionId: invoice.transactionId,
+    payUrl: invoice.payUrl,
+    expiresAt,
+    manual: true,
+  } as NonNullable<Order["payment"]>);
+
+  return {
+    ok: true,
+    payUrl: invoice.payUrl,
+    invoiceId: invoice.invoiceId,
+    expiresAt,
+  };
 }

@@ -1,12 +1,34 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **P1 — verifikasi sandbox + penyempurnaan fulfillment/unduhan**.
+> Terakhir diperbarui: sesi **P2 — alur JASA, invoice manual, cron kedaluwarsa**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0 & P1 selesai (terverifikasi sandbox).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
+
+---
+
+## 🎉 Sesi Terakhir — FASE P2: Alur JASA & Kedaluwarsa
+
+Fase **P2** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi kode**.
+
+| Kode | Perubahan |
+| --- | --- |
+| **JASA + email admin** | Checkout JASA → `menunggu_konfirmasi`; email pembeli (`sendOrderStatusToBuyer`) **dan** admin (`sendOrderAwaitingConfirmationToAdmin` baru di `email.ts`) — terpisah agar satu gagal tak memblok lain. |
+| **CTA "Konsultasi dulu"** | Halaman produk `jasa` (tunggal & multi-varian): `ProductBuyActions`, `ProductPurchasePanel`, `ProductPurchaseBar` (bottom sheet mobile) — CTA WhatsApp utama, checkout sebagai opsi sekunder. |
+| **Invoice manual (Mayar)** | `createManualOrderInvoice` (`order-payment.ts`) + `POST /api/admin/orders {action:"invoice"}` + tombol "Buat invoice manual" di detail order (mis. JASA setelah kesepakatan). Ber-`extraData.orderId` → webhook tetap menandai lunas otomatis. |
+| **Cron kedaluwarsa** | `GET/POST /api/cron/expire-orders` (dilindungi `CRON_SECRET`, **fail-closed**) → `markOrderExpired` + restore kupon (`KP-C2`) + email "kedaluwarsa". Jadwal via `vercel.json` (`0 * * * *`). |
+| **Panel pembayaran admin** | Badge status bayar, nominal, kedaluwarsa, tautan bayar, penanda **manual**, tombol invoice; tampilkan `payUrl` hasil invoice manual untuk disalin. |
+| **`/akun`** | Tombol **Bayar sekarang** kini muncul untuk order ber-`payUrl` yang belum lunas (termasuk JASA ber-invoice manual), bukan hanya `menunggu_bayar`. |
+| **Env/konfig** | `.env.example`: `CRON_SECRET`; `vercel.json` baru (cron). |
+| **Tipe** | `OrderPayment.manual?: boolean` (+ normalizer & `markOrderPaid`). |
+| **Test** | `npm run test:expiry` (5) — logika `isOrderExpired` (murni, `order-expiry-pure.ts`). |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ · test (metrics 6 · fulfillment 5 · downloads 5 · **expiry 5**) lolos ✅.
+
+**⚠️ Langkah manual:** set `CRON_SECRET` di Vercel (agar cron aktif; tanpa itu endpoint balas 503). Uji: `GET /api/cron/expire-orders?token=<secret>`.
 
 ---
 
@@ -41,22 +63,22 @@ Produk contoh untuk uji: **Template Katalog Produk UMKM** (`template-katalog-umk
 Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
   ✅ P0  Fondasi pembayaran (invoice Mayar, status order, redirect bayar)
   ✅ P1  Webhook + fulfillment otomatis + unduhan /unduhan/[token]
-  ⏭️ P2  Alur JASA & kedaluwarsa (invoice manual admin, cron expire, restore kupon)  ← NEXT
-  ⬜ P3  Bundling & cross-sell
+  ✅ P2  Alur JASA & kedaluwarsa (email jasa+admin, invoice manual, cron expire, panel pembayaran)
+  ⏭️ P3  Bundling & cross-sell  ← NEXT
   ⬜ P4  Urgency & trust
   ⬜ P5  Abandoned checkout
   ⬜ P6  QA/observability + docs
 ```
 
-### NEXT TASK (disarankan): FASE P2
-Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "FASE P2 — Alur JASA & Kedaluwarsa". Inti:
-1. Checkout JASA → `menunggu_konfirmasi` + email pembeli & admin (partial sudah ada: `notifyOrderAwaitingConfirmation`).
-2. CTA "Konsultasi dulu" di halaman produk kategori `jasa`.
-3. Admin: buat invoice manual (Mayar) & ubah status.
-4. **Cron kedaluwarsa** order `menunggu_bayar` → `kedaluwarsa` + restore kuota kupon (`KP-C2`).
-5. Panel pembayaran di detail order admin (sudah ada versi dasarnya).
+### NEXT TASK (disarankan): FASE P3 — Bundling & Cross-Sell
+Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "FASE P3 — Bundling & Cross-Sell". Inti:
+1. Produk: `relatedSlugs: string[]` (manual, admin) + UI "Sering dibeli bersama" (server-rendered) di detail produk.
+2. Keranjang: saran cross-sell bila relasi ada.
+3. Kupon bundel (`appliesToSlugs`, `minItems`) di `validateCoupon` (server-authoritative).
+- **DoD:** bundel tampil & diskon bundel tervalidasi server.
 
 ### Langkah manual yang MASIH tertunda (milik pemilik)
+- **FASE P2 — cron:** set `CRON_SECRET` di Vercel (rahasia acak) → `vercel.json` sudah berisi cron `/api/cron/expire-orders` (jam). Uji manual: `GET https://<domain>/api/cron/expire-orders?token=<secret>` → `{ ok:true, expired:N }`.
 - **Produksi Mayar:** daftar `web.mayar.id` → verifikasi bisnis → buat API key produksi → set `MAYAR_MODE=production` + `MAYAR_API_KEY` di Vercel → daftarkan webhook produksi (`.../api/webhooks/mayar?token=<MAYAR_WEBHOOK_TOKEN>`) → redeploy.
 - **Domain sendiri:** belum dibeli (SKIP) → memblokir verifikasi email Resend & domain kustom.
 - **Isi data asli:** portofolio, testimoni, logo klien (SKIP, manual via dashboard).
@@ -646,6 +668,9 @@ MAYAR_WEBHOOK_TOKEN=              # opsional (disarankan): verifikasi webhook
 DOWNLOAD_TOKEN_SECRET=            # kosong → fallback MAYAR_API_KEY; keduanya kosong = unduhan off
 DOWNLOAD_LINK_DAYS=30
 DOWNLOAD_MAX_HITS=5
+
+# Kedaluwarsa Order Otomatis (FASE P2)
+CRON_SECRET=                      # kosong → endpoint cron NONAKTIF (503, fail-closed)
 ```
 
 ### Firestore Security Rules

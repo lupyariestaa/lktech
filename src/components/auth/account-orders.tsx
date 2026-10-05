@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, Clock, Download, RefreshCw, ShoppingBag } from "lucide-react";
 import {
   ORDER_STATUS_LABEL,
-  PENDING_PAYMENT_STATUSES,
   type Order,
 } from "@/lib/order-types";
 import type { MyOrder } from "@/lib/order-api";
@@ -81,8 +80,11 @@ export function AccountOrders({
         const open = openId === order.id;
         const itemCount = order.items.reduce((n, it) => n + it.qty, 0);
         const pendingPayment =
-          PENDING_PAYMENT_STATUSES.includes(order.status) &&
-          Boolean(order.payment?.payUrl);
+          Boolean(order.payment?.payUrl) &&
+          order.payment?.status !== "dibayar" &&
+          order.status !== "dibatalkan" &&
+          order.status !== "kedaluwarsa" &&
+          order.status !== "selesai";
         return (
           <li
             key={order.id}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronUp, ShieldCheck, X } from "lucide-react";
+import { ChevronUp, MessageCircle, ShieldCheck, X } from "lucide-react";
 import type { Product } from "@/lib/product-types";
 import { productPriceLabel } from "@/lib/product-format";
+import { waLink } from "@/lib/whatsapp";
 import { useProductPurchase } from "@/components/product-purchase-context";
 import {
   SelectedVariantActions,
@@ -127,9 +128,24 @@ function ProductPurchaseSheet({
             product={product}
             className={cn(selectedVariantSlug ? "" : "opacity-100")}
           />
+          {product.category === "jasa" && (
+            <a
+              href={waLink(
+                `Halo LKTech! Saya ingin berkonsultasi tentang paket layanan "${product.name}". Boleh dibantu?`,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2.5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Konsultasi dulu
+            </a>
+          )}
           <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-muted">
             <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
-            Login akun Google diperlukan. Checkout via WhatsApp.
+            {product.category === "jasa"
+              ? "Layanan jasa dikonfirmasi manual. Konsultasi dulu sebelum pembayaran."
+              : "Login akun Google diperlukan. Produk digital dibayar online & diunduh otomatis."}
           </p>
         </div>
       </div>

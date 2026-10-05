@@ -2,6 +2,7 @@ import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
 import type { Query } from "firebase-admin/firestore";
 import {
+  isOrderExpired,
   normalizeOrder,
   ORDER_STATUSES,
   type Order,
@@ -303,6 +304,7 @@ export async function markOrderPaid(
     method: info.method ?? current.payment?.method,
     amount: typeof info.amount === "number" ? info.amount : current.payment?.amount,
     paidAt: at,
+    ...(current.payment?.manual ? { manual: true } : {}),
   };
 
   await ref.update({
@@ -367,4 +369,77 @@ export async function deleteOrder(id: string): Promise<void> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
   await db.collection(COLLECTION).doc(id).delete();
+}
+
+// ===== Kedaluwarsa otomatis (FASE P2) =====
+
+/**
+ * Ambil order berstatus `menunggu_bayar` yang sudah melewati `expiresAt`
+ * (dari `payment.expiresAt`, atau fallback `paymentTtlMs` sejak `createdAt`
+ * bila invoice tak punya waktu kedaluwarsa). Menyaring di MEMORI agar tak
+ * bergantung composite index; hanya mengambil status yang menunggu bayar.
+ *
+ * Aman tanpa Admin SDK → mengembalikan daftar kosong.
+ */
+export async function getExpiredPendingOrders(
+  now: Date = new Date(),
+  fallbackTtlMs = 24 * 60 * 60 * 1000,
+  maxScan = 500,
+): Promise<Order[]> {
+  const db = getAdminDb();
+  if (!db) return [];
+
+  const snap = await db
+    .collection(COLLECTION)
+    .where("status", "==", "menunggu_bayar")
+    .limit(maxScan)
+    .get();
+
+  return snap.docs
+    .map((doc) =>
+      normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
+    )
+    .filter((o) => isOrderExpired(o, now, fallbackTtlMs));
+}
+
+/**
+ * Menandai order sebagai `kedaluwarsa` (idempoten): hanya berlaku bila order
+ * masih `menunggu_bayar`. Mengembalikan `{ applied, order }`.
+ * Memperbarui `payment.status` = `kedaluwarsa` agar panel pembayaran konsisten.
+ */
+export async function markOrderExpired(
+  id: string,
+): Promise<{ applied: boolean; order: Order | null }> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const ref = db.collection(COLLECTION).doc(id);
+  const doc = await ref.get();
+  if (!doc.exists) return { applied: false, order: null };
+
+  const current = normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) });
+  if (current.status !== "menunggu_bayar") {
+    return { applied: false, order: current };
+  }
+
+  const atISO = new Date().toISOString();
+  const payment = current.payment
+    ? { ...current.payment, status: "kedaluwarsa" as const }
+    : undefined;
+
+  await ref.update({
+    status: "kedaluwarsa",
+    ...(payment ? { payment } : {}),
+    updatedAtISO: atISO,
+    updatedBy: "system:expire",
+  });
+
+  return {
+    applied: true,
+    order: normalizeOrder({
+      id: doc.id,
+      ...(doc.data() as Record<string, unknown>),
+      status: "kedaluwarsa",
+      ...(payment ? { payment } : {}),
+    }),
+  };
 }

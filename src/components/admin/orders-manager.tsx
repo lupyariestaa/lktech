@@ -7,6 +7,7 @@ import {
   Copy,
   Download,
   ExternalLink,
+  FileText,
   Loader2,
   Mail,
   MessageCircle,
@@ -24,6 +25,7 @@ import {
   fetchOrdersAdmin,
   fetchOrdersSummary,
   fulfillOrderDownload,
+  createOrderInvoiceManual,
   resendOrderEmail,
   updateOrderStatusAdmin,
   type OrderEmailLog,
@@ -501,8 +503,11 @@ function OrderDetailDialog({
   const [emails, setEmails] = useState<OrderEmailLog[] | null>(null);
   const [resending, setResending] = useState(false);
   const [releasing, setReleasing] = useState(false);
+  const [invoicing, setInvoicing] = useState(false);
   /** Link unduhan yang baru dibuat (untuk ditampilkan/di-copy admin). */
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  /** Pay URL hasil pembuatan invoice manual (FASE P2). */
+  const [manualPayUrl, setManualPayUrl] = useState<string | null>(null);
 
   // Apakah tombol "Buat/Kirim ulang unduhan" relevan:
   // order produk digital (INSTAN) yang sudah dibayar/diproses/selesai.
@@ -511,6 +516,14 @@ function OrderDetailDialog({
     (order.status === "dibayar" ||
       order.status === "diproses" ||
       order.status === "selesai");
+
+  // Apakah invoice manual relevan: order yang BELUM dibayar (JASA umumnya).
+  const canCreateInvoice =
+    order.payment?.status !== "dibayar" &&
+    order.status !== "dibayar" &&
+    order.status !== "dibatalkan" &&
+    order.status !== "kedaluwarsa" &&
+    order.total > 0;
 
   // Escape + kunci scroll body + focus trap sederhana.
   useEffect(() => {
@@ -574,6 +587,23 @@ function OrderDetailDialog({
       toast.error(err instanceof Error ? err.message : "Gagal membuat link unduhan.");
     } finally {
       setReleasing(false);
+    }
+  };
+
+  const onCreateInvoice = async () => {
+    setInvoicing(true);
+    try {
+      const res = await createOrderInvoiceManual(order.id);
+      if (res.payUrl) {
+        setManualPayUrl(res.payUrl);
+        toast.success("Invoice manual dibuat. Kirim tautan ini ke pembeli.");
+      } else {
+        toast.success("Invoice manual dibuat.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal membuat invoice.");
+    } finally {
+      setInvoicing(false);
     }
   };
 
@@ -656,6 +686,7 @@ function OrderDetailDialog({
                   <dd className="font-medium text-secondary">
                     {order.payment.provider}
                     {order.payment.method ? ` · ${order.payment.method}` : ""}
+                    {order.payment.manual ? " · manual" : ""}
                   </dd>
                 </div>
                 {typeof order.payment.amount === "number" && (
@@ -719,6 +750,38 @@ function OrderDetailDialog({
                     );
                   }}
                   className="shrink-0 rounded-xl border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                >
+                  Salin
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Invoice manual yang baru dibuat (FASE P2) */}
+          {manualPayUrl && (
+            <div className="mt-4 rounded-2xl border border-primary/20 bg-primary-50/60 p-4">
+              <p className="text-[11px] font-semibold tracking-wider text-primary uppercase">
+                Invoice Manual Dibuat
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                Kirim tautan ini ke pembeli (mis. via WhatsApp) untuk pembayaran.
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  readOnly
+                  value={manualPayUrl}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="w-full rounded-xl border border-primary/20 bg-white px-3 py-2 text-xs text-secondary"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(manualPayUrl).then(
+                      () => toast.success("Tautan invoice disalin."),
+                      () => toast.error("Gagal menyalin."),
+                    );
+                  }}
+                  className="shrink-0 rounded-xl border border-primary/20 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-100"
                 >
                   Salin
                 </button>
@@ -814,6 +877,21 @@ function OrderDetailDialog({
             <MessageCircle className="h-4 w-4" />
             Kirim WhatsApp
           </a>
+          {canCreateInvoice && (
+            <button
+              type="button"
+              onClick={onCreateInvoice}
+              disabled={invoicing}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
+            >
+              {invoicing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
+              Buat invoice manual
+            </button>
+          )}
           {canReleaseDownload && (
             <button
               type="button"

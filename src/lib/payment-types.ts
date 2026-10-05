@@ -64,6 +64,8 @@ export type OrderPayment = {
   method?: string;
   /** Waktu pembayaran diterima (ISO). */
   paidAt?: string;
+  /** Invoice dibuat manual oleh admin (FASE P2), bukan dari checkout. */
+  manual?: boolean;
 };
 
 /** Jenis fulfillment order: INSTAN (unduh) atau JASA (konsultasi). */

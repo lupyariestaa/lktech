@@ -111,6 +111,22 @@ export async function fulfillOrderDownload(id: string) {
   );
 }
 
+/**
+ * Buat invoice manual (Mayar) untuk sebuah order (FASE P2) — umumnya JASA.
+ * Mengembalikan URL pembayaran yang bisa dikirim ke pembeli.
+ */
+export async function createOrderInvoiceManual(id: string) {
+  return adminFetch<{
+    ok: boolean;
+    payUrl?: string;
+    invoiceId?: string;
+    expiresAt?: string;
+  }>("/api/admin/orders", {
+    method: "POST",
+    body: JSON.stringify({ id, action: "invoice" }),
+  });
+}
+
 /** Bungkus nilai agar aman sebagai sel CSV (quote + escape). */
 function csvCell(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);

@@ -1,6 +1,6 @@
 # FASE DETAIL — Konversi & Closing (Pembayaran Online, Bundling, Urgency, Abandoned Checkout)
 
-> **Status:** 🚧 Sedang dikerjakan — **FASE P0 & P1 selesai** (terverifikasi sandbox), P2–P6 belum.
+> **Status:** 🚧 Sedang dikerjakan — **FASE P0, P1 & P2 selesai** (kode; uji sandbox P0/P1 terverifikasi), P3–P6 belum.
 > **Panduan operasional setup:** `docs/2026-10-06-setup-pembayaran-mayar.md`.
 > **Disusun:** sesi pasca-Roadmap (`docs/2026-10-06-roadmap-pengembangan.md`, Tema 1).
 > **Gateway terpilih:** **Mayar.id** (Headless API V2) — alasan: onboarding produksi jauh lebih ringan daripada Midtrans/Xendit (verifikasi bisnis ringan, cocok perorangan/UMKM), mendukung QRIS/VA/e-wallet, ada sandbox.
@@ -227,13 +227,21 @@ Handler:
 > - **UI:** keranjang menampilkan alasan bila jatuh ke WhatsApp (pesan `warning` dari server).
 > - **Catatan email:** tanpa domain Resend terverifikasi, email ke pembeli umum = 403 (dilog, tidak menggagalkan order) — SKIP sampai punya domain (lihat `TASK-SELANJUTNYA.md` §5).
 
-### FASE P2 — Alur JASA & Kedaluwarsa
-- [ ] Checkout JASA → `menunggu_konfirmasi` + email pembeli & admin.
-- [ ] CTA "Konsultasi dulu" di halaman produk `jasa`.
-- [ ] Admin: buat invoice manual (Mayar) & ubah status.
-- [ ] Cron kedaluwarsa → `kedaluwarsa` + restore kupon (`KP-C2`).
-- [ ] Panel pembayaran di detail order admin.
-- **DoD:** jasa punya alur konfirmasi; order tak dibayar kedaluwarsa & kuota kembali.
+### FASE P2 — Alur JASA & Kedaluwarsa — ✅ SELESAI (kode)
+- [x] Checkout JASA → `menunggu_konfirmasi` + email pembeli (`sendOrderStatusToBuyer`) & **admin** (`sendOrderAwaitingConfirmationToAdmin`).
+- [x] CTA "Konsultasi dulu" di halaman produk `jasa` (tunggal & multi-varian; sidebar, panel, bottom sheet mobile).
+- [x] Admin: **buat invoice manual** (Mayar) via `POST /api/admin/orders {action:"invoice"}` + tombol di detail order.
+- [x] **Cron kedaluwarsa** (`/api/cron/expire-orders`, dilindungi `CRON_SECRET`) → `kedaluwarsa` + restore kupon (`KP-C2`) + email pembeli.
+- [x] Panel pembayaran di detail order admin (badge status, nominal, expiresAt, tautan bayar, badge "manual", tombol invoice).
+- **DoD:** jasa punya alur konfirmasi; order tak dibayar kedaluwarsa & kuota kembali. ✅
+
+> **Catatan implementasi P2:**
+> - **Kedaluwarsa:** logika murni `isOrderExpired` (`order-expiry-pure.ts`, teruji 5 test) + `getExpiredPendingOrders`/`markOrderExpired` (`orders.ts`, idempoten) + orkestrasi `expirePendingOrders` (`order-expiry.ts`: tandai → restore kupon `KP-C2` → email "kedaluwarsa").
+> - **Cron:** `GET/POST /api/cron/expire-orders`. **Fail-closed**: tanpa `CRON_SECRET` → 503 (tak bisa dipicu orang lain). Verifikasi `Authorization: Bearer <secret>` (dikirim Vercel Cron) atau `?token=`. Jadwal `0 * * * *` via `vercel.json`.
+> - **Invoice manual:** `createManualOrderInvoice` (order-payment.ts) — buat invoice Mayar ber-`extraData.orderId` (webhook menandai lunas otomatis), simpan `payment` (`manual:true`) tanpa ubah status. Dipakai untuk JASA setelah kesepakatan / INSTAN gagal invoice otomatis.
+> - **Email admin JASA:** `sendOrderAwaitingConfirmationToAdmin` (`email.ts`) — terpisah dari email konfirmasi pembeli agar kegagalan salah satu tak memblok yang lain.
+> - **`/akun`:** tombol "Bayar sekarang" kini muncul untuk order ber-`payUrl` yang belum lunas (termasuk JASA ber-invoice manual), bukan hanya `menunggu_bayar`.
+
 
 ### FASE P3 — Bundling & Cross-Sell
 - [ ] `relatedSlugs`/`bundlesWith` + UI "Sering dibeli bersama".

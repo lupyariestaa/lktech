@@ -222,3 +222,48 @@ Invoke-RestMethod -Uri "https://<domain>/api/webhooks/mayar?token=<MAYAR_WEBHOOK
 | Admin order (aksi fulfill/dll) | `src/app/api/admin/orders/route.ts`, `src/components/admin/orders-manager.tsx` |
 | Diagnostik | `src/app/api/health/payment/route.ts` |
 | Seed produk contoh | `scripts/seed-product-template-katalog.mjs` |
+
+---
+
+## 11. Kedaluwarsa order otomatis (FASE P2)
+
+Order `menunggu_bayar` yang melewati `payment.expiresAt` otomatis menjadi
+`kedaluwarsa` + kuota kupon dikembalikan (`KP-C2`) + email pemberitahuan ke pembeli.
+
+### Aktifkan cron
+1. Set env **`CRON_SECRET`** (nilai acak) di Vercel → redeploy.
+   ```powershell
+   # contoh membuat secret acak (PowerShell)
+   [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Max 256 }))
+   ```
+2. `vercel.json` sudah memuat jadwal cron tiap jam:
+   ```json
+   { "crons": [{ "path": "/api/cron/expire-orders", "schedule": "0 * * * *" }] }
+   ```
+   Vercel otomatis memanggil endpoint ini dengan header
+   `Authorization: Bearer <CRON_SECRET>`.
+3. Uji manual (mis. dari browser/curl):
+   ```
+   GET https://<domain>/api/cron/expire-orders?token=<CRON_SECRET>
+   → { "ok": true, "scanned": N, "expired": N, "couponsRestored": N, "emailsSent": N, ... }
+   ```
+
+> **Fail-closed:** bila `CRON_SECRET` kosong, endpoint membalas **503** (`cron_disabled`)
+> dan TIDAK memproses apa pun — mencegah penyalahgunaan oleh pihak lain.
+
+### Invoice manual (untuk order JASA)
+Di `/admin/orders` → Detail pesanan → tombol **Buat invoice manual**. Membuat
+invoice Mayar ber-`extraData.orderId` (webhook tetap menandai lunas otomatis),
+menyimpan tautan bayar ke order (`payment.manual = true`), lalu admin mengirim
+tautan (mis. via WhatsApp) ke pembeli. Relevan untuk order JASA setelah
+kesepakatan, atau order INSTAN yang gagal invoice otomatis.
+
+### Referensi tambahan (P2)
+| Kebutuhan | Lokasi |
+| --- | --- |
+| Logika kedaluwarsa (murni) | `src/lib/order-expiry-pure.ts` |
+| Orkestrasi kedaluwarsa | `src/lib/order-expiry.ts` |
+| Endpoint cron | `src/app/api/cron/expire-orders/route.ts` |
+| Email admin JASA | `sendOrderAwaitingConfirmationToAdmin` (`src/lib/email.ts`) |
+| Invoice manual | `createManualOrderInvoice` (`src/lib/order-payment.ts`) |
+

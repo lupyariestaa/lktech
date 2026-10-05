@@ -39,6 +39,7 @@
     "node_modules",
     "scripts/metrics-spec.test.ts",
     "scripts/order-fulfillment.test.ts",
-    "scripts/download-token.test.ts"
+    "scripts/download-token.test.ts",
+    "scripts/order-expiry.test.ts"
   ]
 }

@@ -335,7 +335,9 @@ export default async function ProdukDetailPage({
                 <ProductPurchasePanel product={product} />
               ) : (
                 <div className="rounded-3xl border border-slate-200 bg-surface p-6">
-                  <p className="text-xs font-medium text-muted">Harga</p>
+                  <p className="text-xs font-medium text-muted">
+                    {product.category === "jasa" ? "Estimasi biaya" : "Harga"}
+                  </p>
                   <div className="mt-1 flex items-end gap-2">
                     <span className="text-2xl font-bold text-secondary">
                       {formatPrice(product.price)}
@@ -349,8 +351,20 @@ export default async function ProdukDetailPage({
                   <ProductBuyActions product={product} compact className="mt-5" />
                   <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
                     <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                    Pembelian memerlukan login akun Google. Checkout &amp; konfirmasi
-                    dilakukan via WhatsApp.
+                    {product.category === "jasa" ? (
+                      <>
+                        Layanan jasa dikonfirmasi manual.{" "}
+                        <strong className="font-semibold text-secondary">
+                          Konsultasi dulu
+                        </strong>{" "}
+                        via WhatsApp sebelum pembayaran.
+                      </>
+                    ) : (
+                      <>
+                        Pembelian memerlukan login akun Google. Produk digital
+                        dibayar online &amp; diunduh otomatis setelah lunas.
+                      </>
+                    )}
                   </p>
                 </div>
               )}

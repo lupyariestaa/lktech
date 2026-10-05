@@ -151,6 +151,7 @@ export function normalizeOrderPayment(v: unknown): OrderPayment | undefined {
     amount: typeof d.amount === "number" && Number.isFinite(d.amount) ? d.amount : undefined,
     method: str(d.method) || undefined,
     paidAt: str(d.paidAt) || undefined,
+    manual: d.manual === true ? true : undefined,
   };
 }
 
@@ -235,4 +236,8 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
       : undefined,
   };
 }
+
+// Logika kedaluwarsa dipindah ke modul murni (bebas impor runtime) agar dapat
+// diuji Node tanpa resolver alias — lihat `@/lib/order-expiry-pure`.
+export { isOrderExpired, DEFAULT_EXPIRY_TTL_MS } from "@/lib/order-expiry-pure";
 

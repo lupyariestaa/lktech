@@ -6,6 +6,7 @@ import {
   Check,
   Layers,
   Loader2,
+  MessageCircle,
   ShieldCheck,
   ShoppingCart,
   Zap,
@@ -13,6 +14,7 @@ import {
 import type { Product } from "@/lib/product-types";
 import { cardItemForVariant } from "@/lib/cart";
 import { formatPrice, productPriceLabel } from "@/lib/product-format";
+import { waLink } from "@/lib/whatsapp";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
@@ -195,9 +197,13 @@ export function SelectedVariantActions({
  * baru AKTIF setelah paket dipilih.
  */
 export function ProductPurchasePanel({ product }: { product: Product }) {
+  const isJasa = product.category === "jasa";
+  const consultMessage = `Halo LKTech! Saya ingin berkonsultasi tentang paket layanan "${product.name}". Boleh dibantu?`;
   return (
     <div className="rounded-3xl border border-slate-200 bg-surface p-6">
-      <p className="text-xs font-medium text-muted">Mulai dari</p>
+      <p className="text-xs font-medium text-muted">
+        {isJasa ? "Mulai dari" : "Mulai dari"}
+      </p>
       <div className="mt-1 flex items-end gap-2">
         <span className="text-2xl font-bold text-secondary">
           {productPriceLabel(product)}
@@ -218,6 +224,18 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
 
       <SelectedVariantActions product={product} className="mt-4" />
 
+      {isJasa && (
+        <a
+          href={waLink(consultMessage)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+        >
+          <MessageCircle className="h-4 w-4" />
+          Konsultasi dulu
+        </a>
+      )}
+
       <a
         href="#paket"
         className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
@@ -228,8 +246,18 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
 
       <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
         <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-        Pembelian memerlukan login akun Google. Checkout &amp; konfirmasi via
-        WhatsApp.
+        {isJasa ? (
+          <>
+            Layanan jasa dikonfirmasi manual oleh tim kami.{" "}
+            <strong className="font-semibold text-secondary">Konsultasi dulu</strong>{" "}
+            sebelum pembayaran.
+          </>
+        ) : (
+          <>
+            Pembelian memerlukan login akun Google. Produk digital dibayar
+            online &amp; diunduh otomatis setelah lunas.
+          </>
+        )}
       </p>
     </div>
   );

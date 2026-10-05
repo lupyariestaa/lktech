@@ -110,6 +110,66 @@ export async function sendOrderNotification(
   }
 }
 
+/**
+ * Notifikasi ADMIN: pesanan JASA baru yang menunggu konfirmasi (FASE P2).
+ * Berbeda dari `sendOrderNotification` (pesanan umum) — menegaskan bahwa
+ * pesanan ini butuh tindak lanjut MANUSIA (hubungi pembeli, sepakati, lalu
+ * (opsional) buat invoice manual). Best-effort — tidak melempar error.
+ */
+export async function sendOrderAwaitingConfirmationToAdmin(
+  order: Order,
+): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  if (!isEmailConfigured) return { ok: false, skipped: true };
+
+  const recipients = getNotifyRecipients();
+  if (recipients.length === 0) return { ok: false, skipped: true };
+
+  const subject = `📩 Pesanan JASA menunggu konfirmasi ${shortOrderCode(order.id)} — ${formatRupiah(order.total)}`;
+
+  try {
+    const res = await fetch(RESEND_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: recipients,
+        reply_to: order.buyerEmail || undefined,
+        subject,
+        text: [
+          buildOrderText(order),
+          "",
+          "Pesanan ini adalah JASA — hubungi pembeli via WhatsApp untuk konfirmasi,",
+          "lalu (opsional) buat invoice manual dari dashboard Pesanan.",
+        ].join("\n"),
+        html: `<div style="font-family:Arial,Helvetica,sans-serif;background:#f8fafc;padding:24px">
+          <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+            <div style="background:linear-gradient(135deg,#7C3AED,#5B21B6);padding:24px">
+              <h1 style="margin:0;color:#ffffff;font-size:20px">📩 Pesanan JASA — Perlu Konfirmasi</h1>
+              <p style="margin:6px 0 0;color:#ede9fe;font-size:13px">${shortOrderCode(order.id)} · ${formatRupiah(order.total)}</p>
+            </div>
+            <div style="padding:24px">
+              <p style="margin:0 0 12px;color:#334155;font-size:14px;line-height:1.6">Pesanan ini adalah <strong>jasa</strong>. Hubungi pembeli untuk konfirmasi &amp; kesepakatan, lalu (opsional) buat <strong>invoice manual</strong> dari dashboard Pesanan.</p>
+              ${buildOrderHtml(order)}
+            </div>
+          </div>
+        </div>`,
+      }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error("[email] Resend (jasa confirm) gagal:", res.status, errText);
+      return { ok: false, error: `Resend ${res.status}` };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error("[email] gagal mengirim notifikasi jasa:", err);
+    return { ok: false, error: "network" };
+  }
+}
+
 /** Email percobaan (untuk tombol test di dashboard). */
 export async function sendTestEmail(  to: string,
 ): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {

@@ -200,7 +200,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
         Keranjang <span className="text-gradient">Belanja</span>
       </h1>
       <p className="mt-2 text-sm text-muted">
-        Tinjau produk lalu lanjutkan checkout via WhatsApp.
+        Tinjau produk lalu lanjutkan ke pembayaran.
       </p>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_340px]">
@@ -357,15 +357,15 @@ export function CartView({ promoCode }: { promoCode?: string }) {
                 </>
               ) : (
                 <>
-                  {user ? "Checkout via WhatsApp" : "Masuk untuk Checkout"}
+                  {user ? "Lanjutkan Checkout" : "Masuk untuk Checkout"}
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </button>
 
             <p className="mt-3 text-center text-[11px] leading-relaxed text-muted">
-              Pesanan diteruskan ke WhatsApp dengan detail produk &amp; data
-              akun Anda.
+              Produk digital: bayar online &amp; unduh otomatis. Layanan jasa:
+              konfirmasi via WhatsApp lebih dulu.
             </p>
           </div>
         </aside>

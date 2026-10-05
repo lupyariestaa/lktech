@@ -20,7 +20,7 @@ import {
 } from "@/lib/email-status";
 import { restoreCouponUsage } from "@/lib/coupons";
 import { getSiteSettings } from "@/lib/settings";
-import { releaseOrderDownload } from "@/lib/order-payment";
+import { releaseOrderDownload, createManualOrderInvoice } from "@/lib/order-payment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -216,6 +216,8 @@ export async function PATCH(req: Request) {
  *   - { id, kind?: "confirmation" | "status" } — kirim ulang email ke pembeli.
  *   - { id, action: "fulfill" }                 — buat/segarkan link unduhan
  *     (untuk order digital yang sudah dibayar; mis. berkas baru ditambahkan).
+ *   - { id, action: "invoice" }                 — buat invoice manual Mayar
+ *     (FASE P2; umumnya order JASA setelah kesepakatan).
  */
 export async function POST(req: Request) {
   const check = await requireAdmin(req);
@@ -230,6 +232,39 @@ export async function POST(req: Request) {
   const { id } = body;
   if (!id) {
     return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
+  }
+
+  // ===== Aksi: buat invoice manual (Mayar) — FASE P2 (umumnya JASA) =====
+  if (body.action === "invoice") {
+    try {
+      const res = await createManualOrderInvoice(id);
+      if (!res.ok) {
+        const msg =
+          res.reason === "mayar_disabled"
+            ? "Gateway pembayaran (Mayar) belum dikonfigurasi. Isi MAYAR_API_KEY."
+            : res.reason === "already_paid"
+              ? "Pesanan ini sudah dibayar."
+              : res.reason === "not_found"
+                ? "Pesanan tidak ditemukan."
+                : res.reason === "no_amount"
+                  ? "Total pesanan 0 — tidak bisa dibuat invoice."
+                  : "Gagal membuat invoice manual.";
+        const status = res.reason === "not_found" ? 404 : 409;
+        return NextResponse.json({ error: msg, code: res.reason }, { status });
+      }
+      return NextResponse.json({
+        ok: true,
+        payUrl: res.payUrl,
+        invoiceId: res.invoiceId,
+        expiresAt: res.expiresAt,
+      });
+    } catch (err) {
+      console.error("[api/admin/orders] invoice manual gagal:", err);
+      return NextResponse.json(
+        { error: "Gagal membuat invoice manual (Mayar)." },
+        { status: 500 },
+      );
+    }
   }
 
   // ===== Aksi: buat/segarkan link unduhan =====
