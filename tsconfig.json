@@ -41,6 +41,7 @@
     "scripts/order-fulfillment.test.ts",
     "scripts/download-token.test.ts",
     "scripts/order-expiry.test.ts",
-    "scripts/coupon-bundle.test.ts"
+    "scripts/coupon-bundle.test.ts",
+    "scripts/product-stock.test.ts"
   ]
 }

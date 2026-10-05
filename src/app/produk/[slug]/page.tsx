@@ -32,9 +32,13 @@ import {
   formatPrice,
   hasVariants,
   productPriceLabel,
+  stockBadge,
 } from "@/lib/product-format";
 import { PRODUCT_CATEGORY_LABEL } from "@/lib/product-types";
+import { TrustBadges } from "@/components/trust-badges";
+import { SocialProof } from "@/components/social-proof";
 import { SITE } from "@/lib/site";
+import { cn } from "@/lib/utils";
 
 type Params = { slug: string };
 
@@ -91,6 +95,8 @@ export default async function ProdukDetailPage({
     !multi &&
     product.originalPrice != null &&
     product.originalPrice > product.price;
+  // Badge stok nyata (FASE P4): hanya produk tunggal (multi per-varian).
+  const stock = multi ? null : stockBadge(product);
   const gallery = [product.cover, ...product.gallery].filter(
     (url) => url && url !== "default",
   );
@@ -169,9 +175,14 @@ export default async function ProdukDetailPage({
               {product.variants.length} paket
             </span>
           )}
-          {product.soldOut && (
-            <span className="rounded-full bg-slate-800/80 px-3 py-1 text-xs font-semibold text-white">
-              Stok habis
+          {stock && (
+            <span
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-semibold text-white",
+                stock.kind === "out" ? "bg-slate-800/80" : "bg-rose-500",
+              )}
+            >
+              {stock.label}
             </span>
           )}
           <FavoriteButton slug={product.slug} />
@@ -375,6 +386,14 @@ export default async function ProdukDetailPage({
                   </p>
                 </div>
               )}
+
+              {/* Bukti sosial nyata + trust badges (FASE P4) */}
+              <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                <SocialProof className="mb-3 flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700" />
+                <TrustBadges
+                  variant={product.category === "jasa" ? "jasa" : "instan"}
+                />
+              </div>
 
               {product.delivery && (
                 <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-5">

@@ -19,6 +19,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
 import { CartCoupon, type AppliedCoupon } from "@/components/cart-coupon";
 import { CartCrossSell } from "@/components/cart-cross-sell";
+import { TrustBadges } from "@/components/trust-badges";
 import { createOrderRequest } from "@/lib/order-api";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
@@ -370,6 +371,11 @@ export function CartView({ promoCode }: { promoCode?: string }) {
               Produk digital: bayar online &amp; unduh otomatis. Layanan jasa:
               konfirmasi via WhatsApp lebih dulu.
             </p>
+
+            {/* Trust badges (FASE P4) */}
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <TrustBadges variant="compact" className="justify-center" />
+            </div>
           </div>
         </aside>
       </div>

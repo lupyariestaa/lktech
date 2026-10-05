@@ -8,7 +8,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { ProductVariant } from "@/lib/product-types";
-import { formatPrice } from "@/lib/product-format";
+import { formatPrice, stockBadge } from "@/lib/product-format";
 import { useProductPurchase } from "@/components/product-purchase-context";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +37,8 @@ export function VariantCard({
     variant.originalPrice != null && variant.originalPrice > variant.price;
   const disabled = variant.soldOut;
   const isSelected = selectedVariantSlug === variant.slug;
+  // Badge stok nyata (FASE P4) — "Sisa N" / "Stok habis" (data nyata).
+  const stock = stockBadge(variant);
 
   return (
     <div
@@ -63,11 +65,25 @@ export function VariantCard({
 
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-base font-bold text-secondary">{variant.name}</h3>
-        {variant.badge && !variant.highlight && (
-          <span className="rounded-full bg-primary-50 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-            {variant.badge}
-          </span>
-        )}
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          {variant.badge && !variant.highlight && (
+            <span className="rounded-full bg-primary-50 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+              {variant.badge}
+            </span>
+          )}
+          {stock && (
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                stock.kind === "out"
+                  ? "bg-slate-100 text-slate-500"
+                  : "bg-rose-50 text-rose-600",
+              )}
+            >
+              {stock.label}
+            </span>
+          )}
+        </div>
       </div>
       {variant.tagline && (
         <p className="mt-1.5 text-sm leading-relaxed text-muted">

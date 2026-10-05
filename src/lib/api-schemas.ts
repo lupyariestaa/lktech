@@ -178,6 +178,7 @@ export const productVariantSchema = z.object({
   badge: z.string().trim().max(40).optional(),
   highlight: z.boolean().optional(),
   soldOut: z.boolean().optional(),
+  stock: z.number().int().min(0).max(1_000_000).optional(),
   features: z.array(productFeatureSchema).max(30).optional(),
   specs: z.array(productSpecSchema).max(40).optional(),
   includes: z.array(z.string().trim().max(200)).max(30).optional(),
@@ -226,6 +227,7 @@ export const productSchema = z.object({
     })
     .optional(),
   soldOut: z.boolean().optional(),
+  stock: z.number().int().min(0).max(1_000_000).optional(),
   featured: z.boolean().optional(),
   active: z.boolean().optional(),
   relatedSlugs: z.array(z.string().trim().max(200)).max(12).optional(),

@@ -1,6 +1,6 @@
 # FASE DETAIL — Konversi & Closing (Pembayaran Online, Bundling, Urgency, Abandoned Checkout)
 
-> **Status:** 🚧 Sedang dikerjakan — **FASE P0, P1, P2 & P3 selesai** (kode; uji sandbox P0/P1 terverifikasi), P4–P6 belum.
+> **Status:** 🚧 Sedang dikerjakan — **FASE P0–P4 selesai** (kode; uji sandbox P0/P1 terverifikasi), P5–P6 belum.
 > **Panduan operasional setup:** `docs/2026-10-06-setup-pembayaran-mayar.md`.
 > **Disusun:** sesi pasca-Roadmap (`docs/2026-10-06-roadmap-pengembangan.md`, Tema 1).
 > **Gateway terpilih:** **Mayar.id** (Headless API V2) — alasan: onboarding produksi jauh lebih ringan daripada Midtrans/Xendit (verifikasi bisnis ringan, cocok perorangan/UMKM), mendukung QRIS/VA/e-wallet, ada sandbox.
@@ -256,9 +256,18 @@ Handler:
 > - **Kupon bundel:** `Coupon.appliesToSlugs?` + `Coupon.minItems?`; logika murni `checkBundleRules` (`coupon-rules.ts`, teruji 9 test) dipakai `validateCoupon` & diteruskan dari checkout API + `/api/coupons/validate` (konteks keranjang: `slugs`/`itemCount`). Form admin + ekspor CSV + ringkasan kartu kupon diperluas.
 
 
-### FASE P4 — Urgency & Trust
-- [ ] Badge stok + bukti sosial nyata (cache) + trust badges.
-- **DoD:** elemen urgency memakai data nyata; a11y label jelas.
+### FASE P4 — Urgency & Trust — ✅ SELESAI (kode)
+- [x] Badge stok nyata ("Sisa N" dari `stock` produk/varian; `soldOut` → "Stok habis").
+- [x] Bukti sosial nyata (agregat `orders` 7 hari, cache ringan) — tanpa angka palsu.
+- [x] Trust badges (pembayaran aman, diproses otomatis, konfirmasi manual untuk jasa).
+- **DoD:** elemen urgency memakai data nyata; label a11y jelas. ✅
+
+> **Catatan implementasi P4:**
+> - **Stok nyata:** field `stock?: number` di `Product` & `ProductVariant` (opsional, backward-compat). Helper murni `stockBadge`/`productTotalStock` (`product-format.ts`, teruji 9 test) → badge "Sisa N" hanya bila `stock` diisi & ≤ ambang (5), "Stok habis" bila `soldOut`. Tampil di kartu produk, hero detail, kartu varian; editor admin menambah input stok (produk & varian).
+> - **Bukti sosial:** `getSocialProof` (`social-proof.ts`, server-only) menghitung jumlah pesanan (bukan dibatalkan) dalam 7 hari; **cache ringan 10 menit** + `revalidate` halaman; **hanya tampil bila ≥ 3** (hindari angka kecil/palsu). Komponen server `SocialProof` — etika: tanpa angka karangan.
+> - **Trust badges:** komponen `TrustBadges` (varian instan/jasa/compact) di sidebar detail produk + keranjang. Klaim jujur (metode bayar, proses otomatis, konfirmasi manual jasa). `refundNote` opsional tersedia.
+> - **Tanpa countdown palsu** (sesuai prinsip §5): semua indikator berbasis data nyata.
+
 
 ### FASE P5 — Abandoned Checkout
 - [ ] Draft keranjang server + email pengingat H+1 + tracking recovery.

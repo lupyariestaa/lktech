@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **P3 — bundling & cross-sell (relatedSlugs, kupon bundel)**.
+> Terakhir diperbarui: sesi **P4 — urgency & trust (stok nyata, bukti sosial, trust badges)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -73,6 +73,24 @@ Fase **P3** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi ko
 
 ---
 
+## 🎉 Sesi Terakhir — FASE P4: Urgency & Trust
+
+Fase **P4** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi kode**.
+
+| Kode | Perubahan |
+| --- | --- |
+| **Stok nyata** | Field `stock?: number` (produk & varian, backward-compat); helper murni `stockBadge`/`productTotalStock` (`product-format.ts`). Badge **"Sisa N"** (bila `stock` ≤ 5) / **"Stok habis"** (`soldOut`) di kartu produk, hero detail, kartu varian. Editor admin: input stok produk + per-varian. |
+| **Bukti sosial nyata** | `getSocialProof` (`social-proof.ts`) — hitung pesanan (bukan dibatalkan) 7 hari; **cache 10 menit**; tampil hanya bila ≥ 3. Komponen server `SocialProof` di sidebar detail produk. |
+| **Trust badges** | Komponen `TrustBadges` (instan/jasa/compact) — pembayaran aman, diproses otomatis, konfirmasi manual (jasa). Di sidebar detail produk + keranjang. `refundNote` opsional. |
+| **Etika** | Tanpa countdown/angka palsu — semua indikator dari data nyata (§5). |
+| **Test** | `npm run test:stock` (9) — `stockBadge`/`productTotalStock`. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (69 halaman) · test (metrics 6 · fulfillment 5 · downloads 5 · expiry 5 · bundle 9 · **stock 9**) lolos ✅.
+
+**Sisa manual:** uji browser (isi stok produk/varian di `/admin/products` → cek badge "Sisa N"; cek trust badges di detail & keranjang) + deploy.
+
+---
+
 ## 🧭 STATUS & PETA SEKARANG (baca ini dulu)
 
 > Ringkasan kondisi terkini agar sesi berikutnya langsung paham tanpa membaca
@@ -106,17 +124,17 @@ Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
   ✅ P1  Webhook + fulfillment otomatis + unduhan /unduhan/[token]
   ✅ P2  Alur JASA & kedaluwarsa (email jasa+admin, invoice manual, cron expire, panel pembayaran)
   ✅ P3  Bundling & cross-sell (relatedSlugs, "Sering dibeli bersama", kupon bundel)
-  ⏭️ P4  Urgency & trust  ← NEXT
-  ⬜ P5  Abandoned checkout
+  ✅ P4  Urgency & trust (badge stok nyata, bukti sosial 7 hari, trust badges)
+  ⏭️ P5  Abandoned checkout  ← NEXT
   ⬜ P6  QA/observability + docs
 ```
 
-### NEXT TASK (disarankan): FASE P4 — Urgency & Trust
-Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "FASE P4 — Urgency & Trust". Inti:
-1. **Badge stok nyata** ("Sisa N" dari kuota varian bila ada / `soldOut`) — tanpa angka palsu.
-2. **Bukti sosial nyata**: "N pembeli minggu ini" (agregat `orders` 7 hari, cache ringan).
-3. **Trust badges**: garansi/kebijakan refund, metode bayar (QRIS/VA/e-wallet), "diproses otomatis".
-- **DoD:** elemen urgency memakai data nyata; label a11y jelas.
+### NEXT TASK (disarankan): FASE P5 — Abandoned Checkout
+Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §6 & §7 → "FASE P5 — Abandoned Checkout". Inti:
+1. **Draft keranjang server-side** (`carts/{uid}`) — simpan keranjang user login saat berubah.
+2. **Email pengingat H+1** bila belum checkout (deep-link kembali ke keranjang); hormati preferensi notifikasi + cara berhenti.
+3. **Ukur**: event `cart_abandoned_recovered`.
+- **DoD:** keranjang terbengkalai terkirim pengingat; terukur. (Ketergantungan: cron eksternal untuk menjadwalkan pengingat — lihat P2.)
 
 ### Langkah manual yang MASIH tertunda (milik pemilik)
 - **FASE P2 — cron:** set `CRON_SECRET` di Vercel (rahasia acak) → jadwalkan pemanggilan dari cron eksternal ke `GET https://<domain>/api/cron/expire-orders?token=<secret>` → `{ ok:true, expired:N }`. (Vercel Cron bawaan butuh plan Pro, jadi pakai cron eksternal gratis.)

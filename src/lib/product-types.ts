@@ -67,6 +67,11 @@ export type ProductVariant = {
   highlight: boolean;
   /** Tidak tersedia bila true. */
   soldOut: boolean;
+  /**
+   * Sisa stok paket (FASE P4). Bila diisi & kecil, UI menampilkan badge
+   * "Sisa N" yang JUJUR (data nyata, bukan angka palsu). Kosong = unknown/tak dibatasi.
+   */
+  stock?: number;
   /** Keunggulan paket (poin). */
   features: ProductFeature[];
   /** Spesifikasi teknis (label → nilai). */
@@ -164,6 +169,11 @@ export type Product = {
   variants: ProductVariant[];
   /** Tampilkan sebagai "tidak tersedia" bila true (produk tunggal). */
   soldOut: boolean;
+  /**
+   * Sisa stok produk tunggal (FASE P4). Bila diisi & kecil → badge "Sisa N"
+   * (data nyata). Untuk produk multi-varian, stok ada di tiap varian.
+   */
+  stock?: number;
   /** Tampilkan sebagai produk unggulan di daftar. */
   featured: boolean;
   /** Aktif/nonaktif produk di halaman publik. */

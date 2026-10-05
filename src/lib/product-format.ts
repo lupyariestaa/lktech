@@ -91,3 +91,53 @@ export function productIsPurchasable(
   if (!hasVariants(product)) return isPurchasable(product);
   return product.variants.some((v) => isPurchasable(v));
 }
+
+/* -------------------------------------------------------------------------- */
+/* Stok nyata (FASE P4)                                                        */
+/* -------------------------------------------------------------------------- */
+
+/** Ambang "stok menipis" agar badge "Sisa N" ditampilkan (data nyata). */
+export const LOW_STOCK_THRESHOLD = 5;
+
+/**
+ * Label badge stok JUJUR (FASE P4) untuk sebuah produk/varian:
+ * - `soldOut` → "Stok habis".
+ * - `stock` diisi & ≤ `threshold` (default 5) → "Sisa N".
+ * - Sisanya → null (tak ada badge; TIDAK menampilkan angka palsu).
+ */
+export function stockBadge(
+  target: { soldOut: boolean; stock?: number },
+  threshold = LOW_STOCK_THRESHOLD,
+): { label: string; kind: "out" | "low" } | null {
+  if (target.soldOut) return { label: "Stok habis", kind: "out" };
+  if (
+    typeof target.stock === "number" &&
+    Number.isFinite(target.stock) &&
+    target.stock >= 0 &&
+    target.stock <= threshold
+  ) {
+    return { label: `Sisa ${target.stock}`, kind: "low" };
+  }
+  return null;
+}
+
+/**
+ * Stok gabungan suatu produk (FASE P4):
+ * - multi-varian → jumlah `stock` varian yang memiliki stok (stok terbatas);
+ *   null bila tak ada varian yang menetapkan `stock`.
+ * - tunggal → `product.stock` (bila ada).
+ */
+export function productTotalStock(
+  product: Pick<Product, "variants" | "stock">,
+): number | null {
+  if (hasVariants(product)) {
+    const known = product.variants.filter(
+      (v) => typeof v.stock === "number" && Number.isFinite(v.stock),
+    );
+    if (known.length === 0) return null;
+    return known.reduce((sum, v) => sum + (v.stock ?? 0), 0);
+  }
+  return typeof product.stock === "number" && Number.isFinite(product.stock)
+    ? product.stock
+    : null;
+}

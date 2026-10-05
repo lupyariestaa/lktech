@@ -91,6 +91,7 @@ export async function POST(req: Request) {
     includes: Array.isArray(body.includes) ? body.includes.filter(Boolean) : [],
     delivery: body.delivery?.trim() || undefined,
     soldOut: Boolean(body.soldOut),
+    stock: typeof body.stock === "number" && body.stock >= 0 ? Math.floor(body.stock) : undefined,
     featured: Boolean(body.featured),
     active: body.active === undefined ? true : Boolean(body.active),
     waMessage: body.waMessage?.trim() || undefined,
@@ -128,6 +129,7 @@ export async function POST(req: Request) {
             badge: v.badge?.trim() || undefined,
             highlight: Boolean(v.highlight),
             soldOut: Boolean(v.soldOut),
+            stock: typeof v.stock === "number" && v.stock >= 0 ? Math.floor(v.stock) : undefined,
             features: Array.isArray(v.features)
               ? v.features.filter((f) => f && f.title?.trim())
               : [],

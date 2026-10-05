@@ -836,6 +836,24 @@ function ProductForm({
             checked={product.soldOut}
             onChange={(v) => set("soldOut", v)}
           />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-slate-600">
+              Sisa stok produk tunggal (opsional)
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={product.stock ?? ""}
+              onChange={(e) =>
+                set("stock", e.target.value === "" ? undefined : Number(e.target.value))
+              }
+              placeholder="mis. 3 → badge 'Sisa 3'"
+              className={cn(fieldBase, "sm:w-52")}
+            />
+            <span className="text-[11px] text-muted">
+              Kosongkan bila tak terbatas. Untuk multi-varian, isi stok di tiap paket.
+            </span>
+          </label>
         </div>
       </div>
 
@@ -1226,6 +1244,23 @@ function VariantCard({
           checked={variant.soldOut}
           onChange={(v) => onChange({ soldOut: v })}
         />
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-slate-600">
+            Sisa stok paket (opsional)
+          </span>
+          <input
+            type="number"
+            min={0}
+            value={variant.stock ?? ""}
+            onChange={(e) =>
+              onChange({
+                stock: e.target.value === "" ? undefined : Number(e.target.value),
+              })
+            }
+            placeholder="mis. 3"
+            className={cn(fieldBase, "w-32")}
+          />
+        </label>
       </div>
     </div>
   );

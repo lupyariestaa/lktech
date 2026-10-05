@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ArrowUpRight, Layers, Package, Tag } from "lucide-react";
 import type { Product } from "@/lib/product-types";
 import { PRODUCT_CATEGORY_LABEL } from "@/lib/product-types";
-import { formatPrice, hasVariants, productPriceLabel } from "@/lib/product-format";
+import { formatPrice, hasVariants, productPriceLabel, stockBadge } from "@/lib/product-format";
 import { ProductBuyActions } from "@/components/product-buy-actions";
 import { FavoriteButton } from "@/components/favorite-button";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,9 @@ export function ProductCard({ product }: { product: Product }) {
     !multi &&
     product.originalPrice != null &&
     product.originalPrice > product.price;
+  // Badge stok nyata (FASE P4). Untuk multi-varian, cukup tampilkan bila SEMUA
+  // varian habis (soldOut produk) — detail per-varian ditampilkan di halaman produk.
+  const stock = stockBadge(product);
 
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5">
@@ -51,9 +54,14 @@ export function ProductCard({ product }: { product: Product }) {
               {product.variants.length} paket
             </span>
           )}
-          {product.soldOut && (
-            <span className="rounded-full bg-slate-800/80 px-3 py-1 text-[11px] font-semibold text-white">
-              Stok habis
+          {stock && (
+            <span
+              className={cn(
+                "rounded-full px-3 py-1 text-[11px] font-semibold text-white shadow",
+                stock.kind === "out" ? "bg-slate-800/80" : "bg-rose-500/90",
+              )}
+            >
+              {stock.label}
             </span>
           )}
         </div>

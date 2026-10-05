@@ -137,6 +137,15 @@ function num(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/**
+ * Normalisasi sisa stok (FASE P4). Menerima angka ≥ 0; selain itu → undefined
+ * (stok tak diketahui / tak dibatasi). Dibulatkan ke bawah.
+ */
+function normalizeStock(v: unknown): number | undefined {
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return undefined;
+  return Math.floor(v);
+}
+
 /** Normalisasi daftar fitur `{ title, description }`. */
 function normalizeFeatures(v: unknown): ProductFeature[] {
   return Array.isArray(v)
@@ -192,6 +201,7 @@ function normalizeVariant(raw: unknown): ProductVariant | null {
     badge: str(d.badge) || undefined,
     highlight: Boolean(d.highlight),
     soldOut: Boolean(d.soldOut),
+    stock: normalizeStock(d.stock),
     features: normalizeFeatures(d.features),
     specs: normalizeSpecs(d.specs),
     includes: strArr(d.includes),
@@ -256,6 +266,7 @@ function normalizeProduct(data: Record<string, unknown>): Product {
     notes: strArr(data.notes),
     variants,
     soldOut: Boolean(data.soldOut),
+    stock: normalizeStock(data.stock),
     featured: Boolean(data.featured),
     active: data.active === undefined ? true : Boolean(data.active),
     downloadable: normalizeDownloadable(data.downloadable),
@@ -353,7 +364,7 @@ export async function saveProduct(
   // Varian juga perlu dibersihkan (field opsional bertingkat).
   const cleanVariants = product.variants.map((v) => {
     const vv: Record<string, unknown> = { ...v };
-    for (const key of ["tagline", "originalPrice", "badge", "delivery", "waMessage"]) {
+    for (const key of ["tagline", "originalPrice", "badge", "delivery", "waMessage", "stock"]) {
       if (vv[key] === undefined) delete vv[key];
     }
     return vv;
@@ -389,6 +400,7 @@ export async function saveProduct(
     "waMessage",
     "downloadable",
     "relatedSlugs",
+    "stock",
   ]) {
     if (payload[key] === undefined) delete payload[key];
   }
