@@ -35,3 +35,7 @@ sentry-auth-token.txt
 # File referensi/desain lokal (tidak untuk repo)
 referensi-design-*.jpg
 referensi-design-*.png
+
+# Screenshot lokal
+Screenshot *.png
+Screenshot*.png
