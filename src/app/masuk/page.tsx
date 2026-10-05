@@ -50,45 +50,47 @@ export default async function MasukPage({
       <div className="relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
         <div className="grid lg:grid-cols-2">
           {/* ===== KIRI: Branding (gradient) ===== */}
-          <aside className="relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-primary via-primary to-primary-dark p-8 text-white sm:p-10">
-            {/* dekorasi glow */}
-            <div className="pointer-events-none absolute -top-20 -left-16 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
-            <div className="pointer-events-none absolute -right-16 bottom-0 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+          <aside className="relative flex flex-col gap-8 overflow-hidden bg-gradient-to-br from-primary via-primary to-primary-dark p-8 text-white sm:p-10 lg:justify-center">
+            {/* dekorasi glow halus */}
+            <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-20 -bottom-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
 
+            {/* Header panel: logo + tautan website */}
             <div className="relative flex items-center justify-between">
-              <span className="inline-flex items-center rounded-2xl bg-white px-3 py-2.5">
+              <span className="inline-flex items-center rounded-2xl bg-white px-3 py-2.5 shadow-lg shadow-black/10">
                 <Logo variant="mark" href={null} height={26} />
               </span>
               <Link
                 href="/"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-white/80 transition-colors hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur transition-colors hover:bg-white/20 hover:text-white"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 Website
               </Link>
             </div>
 
-            <div className="relative mt-10 lg:mt-0">
+            {/* Judul */}
+            <div className="relative">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-semibold backdrop-blur">
                 ✨ Akun pelanggan LKTech
               </span>
-              <h2 className="mt-5 text-3xl leading-tight font-bold sm:text-4xl">
+              <h2 className="mt-4 text-3xl leading-[1.15] font-bold sm:text-4xl">
                 Mulai perjalanan digital Anda
               </h2>
-              <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/80">
+              <p className="mt-3 max-w-md text-sm leading-relaxed text-white/80">
                 Satu akun untuk semua — cepat &amp; aman dengan Google, tanpa
                 perlu bikin password baru.
               </p>
             </div>
 
             {/* Kartu langkah/keunggulan (vertikal, full-width) */}
-            <div className="relative mt-10 flex flex-col gap-3">
+            <div className="relative flex flex-col gap-3">
               {STEPS.map((s, i) => {
                 const Icon = s.icon;
                 return (
                   <div
                     key={s.title}
-                    className="flex w-full items-center gap-3.5 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur transition-colors hover:bg-white/15"
+                    className="flex w-full items-center gap-4 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur transition-colors hover:bg-white/15"
                   >
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-sm font-bold text-primary">
                       {i + 1}
@@ -98,7 +100,7 @@ export default async function MasukPage({
                         <Icon className="h-3.5 w-3.5 text-emerald-300" />
                         {s.title}
                       </p>
-                      <p className="mt-0.5 text-[11px] leading-relaxed text-white/75">
+                      <p className="mt-0.5 text-xs leading-relaxed text-white/75">
                         {s.desc}
                       </p>
                     </div>
@@ -109,8 +111,10 @@ export default async function MasukPage({
           </aside>
 
           {/* ===== KANAN: Form ===== */}
-          <div className="flex items-center p-8 sm:p-12">
-            <UserLoginForm redirectTo={redirectTo} />
+          <div className="flex items-center justify-center p-8 sm:p-12 lg:p-14">
+            <div className="w-full max-w-sm">
+              <UserLoginForm redirectTo={redirectTo} />
+            </div>
           </div>
         </div>
       </div>
