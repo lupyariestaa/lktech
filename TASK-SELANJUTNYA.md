@@ -7,6 +7,8 @@
 >
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
+>
+> 🎯 **NEXT TASK (disiapkan):** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
 
 ---
 
