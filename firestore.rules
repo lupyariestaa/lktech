@@ -15,6 +15,7 @@ rules_version = '2';
 // Koleksi yang dipakai aplikasi (semua via Admin SDK): leads, media,
 // media_collections, media_audit, settings, projects, articles, content, users,
 // products, orders, coupons, couponCodes, downloads, carts, reviews, admin_audit.
+// Subkoleksi: users/{uid}/points (ledger poin loyalitas).
 // Subkoleksi: orders/{id}/emails (riwayat email), coupons/{id}/redemptions (per-user).
 // Karena `match /{document=**}` menolak SEMUA akses klien (termasuk subkoleksi),
 // koleksi baru otomatis ikut terlindungi — tidak perlu rule terpisah.

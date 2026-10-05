@@ -24,6 +24,7 @@ import type { SavedAddress, UserProfile } from "@/lib/user-types";
 import { AccountTabs, type AccountTab } from "@/components/auth/account-tabs";
 import { AccountOverview } from "@/components/auth/account-overview";
 import { AccountOrders } from "@/components/auth/account-orders";
+import { AccountPoints } from "@/components/auth/account-points";
 import { AccountWishlist } from "@/components/auth/account-wishlist";
 import { AccountAddresses } from "@/components/auth/account-addresses";
 import { AccountProfile } from "@/components/auth/account-profile";
@@ -334,6 +335,12 @@ export function UserAccount() {
               onReorder={onReorder}
               reordering={reordering}
             />
+          </div>
+        )}
+
+        {tab === "poin" && (
+          <div role="tabpanel" id="panel-poin" aria-labelledby="tab-poin">
+            <AccountPoints />
           </div>
         )}
 

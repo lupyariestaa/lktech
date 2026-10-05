@@ -117,6 +117,13 @@ export async function POST(req: Request) {
       amount: typeof amount === "number" ? amount : order.total,
       method,
     });
+    // Poin loyalitas (Tema 2.1) — best-effort, idempoten per order.
+    try {
+      const { awardOrderPoints } = await import("@/lib/loyalty");
+      await awardOrderPoints(order.uid, orderId, order.total);
+    } catch (err) {
+      console.error("[webhook/mayar] gagal memberi poin:", err);
+    }
     try {
       await fulfillOrder(orderId);
     } catch (err) {

@@ -88,6 +88,15 @@ export async function PATCH(req: Request) {
       target: review.productSlug,
       meta: { status: parsed.data.status },
     });
+    // Poin bonus saat ulasan DISETUJUI (Tema 2.1) — idempoten per review.
+    if (parsed.data.status === "approved") {
+      try {
+        const { awardReviewPoints } = await import("@/lib/loyalty");
+        await awardReviewPoints(review.uid, review.id);
+      } catch (err) {
+        console.error("[api/admin/reviews] gagal memberi poin ulasan:", err);
+      }
+    }
     return NextResponse.json({ ok: true, review });
   } catch (err) {
     console.error("[api/admin/reviews] PATCH gagal:", err);
