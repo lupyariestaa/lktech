@@ -10,7 +10,8 @@ import {
   getOrdersSummary,
   updateOrderStatus,
 } from "@/lib/orders";
-import { ORDER_STATUSES, type OrderStatus } from "@/lib/order-types";
+import { ORDER_STATUSES, ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/order-types";
+import { shortOrderCode } from "@/lib/format";
 import { sendOrderStatusToBuyer, sendOrderConfirmationToBuyer } from "@/lib/email-order";
 import {
   recordStatusEmail,
@@ -203,6 +204,30 @@ export async function PATCH(req: Request) {
         });
       } catch (err) {
         console.error("[api/admin/orders] gagal kirim email status:", err);
+      }
+
+      // Notifikasi WhatsApp (Tema 2.3) — OPSIONAL & fail-safe. Aktif hanya bila
+      // WhatsApp Cloud API dikonfigurasi & pembeli punya nomor WA.
+      try {
+        const { isWhatsAppConfigured, notifyWhatsAppOrderStatus } = await import(
+          "@/lib/whatsapp-notify"
+        );
+        if (isWhatsAppConfigured()) {
+          const { getUserProfile } = await import("@/lib/user-profile");
+          const fresh = await getOrderById(id);
+          const profile = fresh ? await getUserProfile(fresh.uid).catch(() => null) : null;
+          const phone = profile?.whatsapp ?? "";
+          if (fresh && phone) {
+            await notifyWhatsAppOrderStatus(
+              phone,
+              shortOrderCode(fresh.id),
+              ORDER_STATUS_LABEL[status as OrderStatus],
+              fresh.total,
+            );
+          }
+        }
+      } catch (err) {
+        console.error("[api/admin/orders] gagal kirim WhatsApp:", err);
       }
     });
 
