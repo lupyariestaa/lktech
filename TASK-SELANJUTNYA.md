@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **CRM Mini — L6 (QA & finalisasi; inisiatif selesai)**.
+> Terakhir diperbarui: sesi **Tema 2 — Retensi & Engagement (R1–R5 selesai)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -187,7 +187,25 @@ Inisiatif Tema 4 (Operasional). Dokumen fase: `docs/2026-10-05-operasional-tema4
 
 ---
 
-## 🎉 Sesi Terakhir — CRM Mini L6: QA & Finalisasi (menutup inisiatif)
+## 🎉 Sesi Terakhir — Tema 2 Retensi & Engagement (R1–R5) — ✅ SELESAI
+
+Inisiatif Retensi. Dokumen: `docs/2026-10-05-retensi-tema2.md`.
+
+| Fase | Hasil |
+| --- | --- |
+| **R1 Loyalitas/Poin** | Poin dari pembelian & ulasan, tier (Bronze/Silver/Gold), tukar poin → kupon, tab **Poin** di `/akun`. Ledger `users/{uid}/points`; poin otomatis saat order lunas & ulasan disetujui. |
+| **R2 Email Marketing** | Newsletter opt-in (footer), **broadcast admin** per segmen (semua/pernah beli/belum), unsubscribe bertoken HMAC, `/admin/broadcast`. |
+| **R3 Alert Wishlist** | Cron `/api/cron/wishlist-alerts` — email "harga turun"/"kembali tersedia" (cooldown 72 jam). |
+| **R4 Notifikasi WA** | `whatsapp-notify.ts` opsional & **fail-safe** (aktif bila env diisi). Web Push ditunda. |
+| **R5 QA & Docs** | QA penuh + dokumentasi. |
+
+**Verifikasi:** `tsc`/`eslint`/`build` bersih ✅ (72 halaman) · **14 suite / 117 test** lolos ✅.
+
+**Langkah manual:** set `NEWSLETTER_UNSUB_SECRET`; (opsional) `WHATSAPP_ACCESS_TOKEN`+`WHATSAPP_PHONE_NUMBER_ID`; jadwalkan cron eksternal `GET /api/cron/wishlist-alerts?token=<CRON_SECRET>`; publish ulang Firestore Rules (koleksi `subscribers`, subkoleksi `users/{uid}/points`).
+
+---
+
+## 🎉 Sesi Sebelumnya — CRM Mini L6: QA & Finalisasi (menutup inisiatif)
 
 **QA penuh:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (71 halaman) · **12 suite / 98 test** lolos ✅.
 
@@ -919,7 +937,7 @@ CRON_SECRET=                      # kosong → endpoint cron NONAKTIF (503, fail
 ### Firestore Security Rules
 - File: `firestore.rules`
 - **PENTING:** setiap ada koleksi baru, rules harus di-**Publish ulang** di Firebase Console → Firestore → Rules.
-- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`, `downloads`, `carts`, `reviews`, `admin_audit`.
+- Koleksi: `leads`, `media`, `media_collections`, `media_audit`, `settings`, `projects`, `articles`, `content`, `users`, `products`, `orders`, `coupons`, `couponCodes`, `downloads`, `carts`, `reviews`, `admin_audit`, `subscribers`, `product_alerts_state`, `wishlist_alerts_log`.
 - Subkoleksi: `orders/{id}/emails` (riwayat email), `coupons/{id}/redemptions` (pemakaian per-user).
 - Catatan: rule `match /{document=**}` menolak SEMUA akses klien (termasuk subkoleksi), jadi koleksi baru otomatis terlindungi — publish ulang tetap disarankan.
 

@@ -128,30 +128,38 @@ Memperpendek jalan dari minat → pembayaran, dan memungkinkan penjualan tanpa k
 ### 🎯 Tujuan
 Mengubah pembeli sekali menjadi pelanggan berulang, dan pengunjung menjadi audiens.
 
-### 2.1 [P1] Program Loyalitas / Poin
+### 2.1 [P1] Program Loyalitas / Poin — ✅ SELESAI
 **Rancangan:**
 - Poin dari pembelian (rasio Rp tertentu) & aksi (ulasan, referral).
 - **Tier** (Bronze/Silver/Gold) dengan benefit (diskon, akses promo awal).
 - Tukar poin → kupon otomatis (integrasi erat dengan modul kupon).
 - Tampil di `/akun` (tab "Poin") + ringkasan di admin.
 
-### 2.2 [P1] Email Marketing Ringan
+> **✅ Selesai (R1):** `docs/2026-10-05-retensi-tema2.md` — poin dari pembelian & ulasan, tier, tukar poin→kupon, tab Poin.
+
+### 2.2 [P1] Email Marketing Ringan — ✅ SELESAI
 **Rancangan:**
 - **Newsletter** opt-in (form footer + halaman promo).
 - **Broadcast** dari admin (kirim promo/konten) via Resend, dengan template & segmentasi sederhana (semua / pernah beli / belum pernah).
 - **Unsubscribe** patuh (token), log pengiriman.
 - Integrasi: kupon berbatas waktu → broadcast otomatis.
 
-### 2.3 [P2] Notifikasi Kanal Sekunder
+> **✅ Selesai (R2):** opt-in footer, broadcast admin per segmen, unsubscribe HMAC.
+
+### 2.3 [P2] Notifikasi Kanal Sekunder — ✅ (WhatsApp opsional) / ⏳ (Web Push)
 **Rancangan:**
 - **WhatsApp Cloud API** (pesan konfirmasi/status) sebagai pelengkap email.
 - **Web Push** (PWA) untuk promo & restock.
 - Prioritas: WhatsApp (relevan pasar Indonesia) > Web Push.
 
-### 2.4 [P2] Alert Wishlist
+> **✅ WhatsApp (R4):** abstraksi fail-safe (aktif bila env diisi). **⏳ Web Push:** ditunda (butuh service worker).
+
+### 2.4 [P2] Alert Wishlist — ✅ SELESAI
 **Rancangan:**
 - "Harga turun" & "kembali tersedia" untuk item di wishlist → email/push.
 - Memanfaatkan `WishlistProvider` + koleksi `users/*/wishlist` yang sudah ada.
+
+> **✅ Selesai (R3):** cron alert harga/stok + email (cooldown).
 
 ---
 

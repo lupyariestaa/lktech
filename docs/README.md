@@ -53,6 +53,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-05 | [Ulasan & Rating Produk (verified purchase + moderasi + JSON-LD)](2026-10-05-ulasan-rating-produk.md) | ✅ Selesai (R0–R6) |
 | 2026-10-05 | [Operasional & Kualitas Teknis (Tema 4: audit log, rate-limit, env, CI, visual)](2026-10-05-operasional-tema4.md) | ✅ Selesai (O1–O5) |
 | 2026-10-05 | [Laporan Otomatis & CRM Mini (Tema 3 lanjutan)](2026-10-05-laporan-crm-mini.md) | ✅ Selesai (L1–L6) |
+| 2026-10-05 | [Retensi & Engagement (Tema 2: loyalitas/poin, newsletter, alert wishlist, WA)](2026-10-05-retensi-tema2.md) | ✅ Selesai (R1–R5) |
 
 ### Dokumen pendukung (referensi & setup)
 

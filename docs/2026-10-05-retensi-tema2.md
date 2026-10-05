@@ -1,6 +1,6 @@
 # FASE DETAIL — Retensi & Engagement (Tema 2)
 
-> **Status:** 🚧 Sedang dikerjakan (R1–R4).
+> **Status:** ✅ **Selesai (kode) — R1–R5** (Web Push ditunda).
 > **Disusun:** sesi pasca-Laporan & CRM Mini.
 > **Tema roadmap:** **Tema 2 — Retensi & Engagement** (`docs/2026-10-06-roadmap-pengembangan.md`).
 > **Prasyarat baca:** `docs/2026-10-06-roadmap-pengembangan.md`, `docs/2026-10-05-kupon-diskon.md`, `docs/2026-10-05-portal-akun-pengguna.md`, `docs/2026-10-05-email-transaksional-pembeli.md`, `TASK-SELANJUTNYA.md`.
@@ -70,25 +70,44 @@ Mengubah pembeli sekali menjadi **pelanggan berulang** dan pengunjung menjadi au
 
 ## 4. Fase Eksekusi
 
-### FASE R1 — Program Loyalitas/Poin ✅/🚧
+### FASE R1 — Program Loyalitas/Poin ✅
 - `loyalty-pure.ts` (aturan poin/tier) + test.
 - `loyalty.ts` (ledger, saldo, tukar → kupon).
 - API `/api/user/points` + tab **Poin** di `/akun`.
 - Poin otomatis saat order lunas.
 
-### FASE R2 — Email marketing & newsletter
+> **Status R1:** ✅ `loyalty-pure.ts` (tier/progres/paket tukar, teruji 10), `loyalty.ts` (ledger `users/{uid}/points`, saldo+lifetime idempoten, `redeemPoints`→kupon), poin otomatis dari order lunas (webhook) & ulasan disetujui; API `/api/user/points`; tab **Poin** di `/akun` (saldo, tier, tukar, riwayat).
+
+### FASE R2 — Email marketing & newsletter ✅
 - Opt-in publik + verifikasi/no-verify, `subscribers`.
 - Broadcast admin (segmentasi) + unsubscribe bertoken + log.
 
-### FASE R3 — Alert wishlist
+> **Status R2:** ✅ `newsletter.ts`+`newsletter-types.ts` (`subscribers`, segmen semua/pernah-beli/belum, unsubscribe HMAC), `email-broadcast.ts`; API `POST /api/newsletter` (honeypot+rate-limit) & `/api/newsletter/unsubscribe` (fail-closed); admin `GET/POST /api/admin/broadcast` + `/admin/broadcast`; form newsletter di footer.
+
+### FASE R3 — Alert wishlist ✅
 - Cron `/api/cron/wishlist-alerts` + email alert (cooldown).
 
-### FASE R4 — Notifikasi kanal sekunder (fail-safe)
+> **Status R3:** ✅ `wishlist-alert-pure.ts` (`diffProductAlerts`, teruji 9), `wishlist-alert.ts` (banding snapshot `product_alerts_state`, kirim ke pemilik wishlist, cooldown 72 jam), `email-wishlist.ts`, cron `/api/cron/wishlist-alerts` (fail-closed).
+
+### FASE R4 — Notifikasi kanal sekunder (fail-safe) ✅
 - `notifyWhatsApp()` opsional (env kosong = nonaktif). Web Push ditunda.
 
-### FASE R5 — QA & dokumentasi
+> **Status R4:** ✅ `whatsapp-notify.ts` (WA Cloud API; **fail-safe**: nonaktif bila env kosong), dipanggil best-effort saat status pesanan berubah. Web Push ditunda (butuh service worker).
+
+### FASE R5 — QA & dokumentasi ✅
 - `tsc`/`lint`/`build` bersih; unit test aturan poin/tier/segmentasi.
 - Update `TASK-SELANJUTNYA.md`, `docs/README.md`, roadmap.
+
+> **Status R5:** ✅ `tsc`/`eslint`/`build` bersih (72 halaman); **14 suite / 117 test** lolos. Dokumentasi diperbarui.
+
+---
+
+## 7. Hasil Akhir (R1–R5) — ✅ SELESAI (kode)
+- **Loyalitas/poin:** poin dari pembelian & ulasan, tier (Bronze/Silver/Gold), tukar poin → kupon, tab **Poin** di `/akun`.
+- **Email marketing:** opt-in newsletter (footer), broadcast admin per segmen, unsubscribe patuh.
+- **Alert wishlist:** email otomatis "harga turun"/"kembali tersedia" (cron).
+- **Notifikasi WA:** opsional & fail-safe (aktif bila env diisi).
+- **Web Push (2.3):** ditunda (butuh service worker).
 
 ---
 
