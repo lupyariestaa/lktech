@@ -236,12 +236,16 @@ Order `menunggu_bayar` yang melewati `payment.expiresAt` otomatis menjadi
    # contoh membuat secret acak (PowerShell)
    [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Max 256 }))
    ```
-2. `vercel.json` sudah memuat jadwal cron tiap jam:
-   ```json
-   { "crons": [{ "path": "/api/cron/expire-orders", "schedule": "0 * * * *" }] }
+2. Panggil endpoint secara berkala dari **cron eksternal** (mis. cron-job.org,
+   GitHub Actions, UptimeRobot) ke salah satu bentuk:
    ```
-   Vercel otomatis memanggil endpoint ini dengan header
-   `Authorization: Bearer <CRON_SECRET>`.
+   GET https://<domain>/api/cron/expire-orders?token=<CRON_SECRET>
+   atau header: Authorization: Bearer <CRON_SECRET>
+   ```
+   > **Catatan:** fitur **Vercel Cron bawaan (`vercel.json`)** memerlukan plan
+   > **Pro**; pada plan **Hobby** deployment akan GAGAL. Karena itu cron
+   > dijadwalkan dari layanan eksternal (gratis), bukan `vercel.json`.
+   Rekomendasi jadwal: tiap jam.
 3. Uji manual (mis. dari browser/curl):
    ```
    GET https://<domain>/api/cron/expire-orders?token=<CRON_SECRET>

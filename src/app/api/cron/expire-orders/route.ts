@@ -11,12 +11,14 @@ export const dynamic = "force-dynamic";
  *
  * KEAMANAN: endpoint ini mengubah data, jadi WAJIB dilindungi.
  * - Bila `CRON_SECRET` diisi → verifikasi header `Authorization: Bearer <secret>`
- *   (dikirim otomatis oleh Vercel Cron) ATAU query `?token=<secret>`.
+ *   ATAU query `?token=<secret>`.
  * - Bila `CRON_SECRET` KOSONG → endpoint NONAKTIF (fail-closed, balas 503)
  *   agar tidak bisa dipicu sembarang orang. Ini disengaja.
  *
- * Jadwal disarankan: setiap jam (`0 * * * *`) via `vercel.json`:
- *   { "crons": [{ "path": "/api/cron/expire-orders", "schedule": "0 * * * *" }] }
+ * PENJADWALAN: panggil berkala dari cron EKSTERNAL (mis. cron-job.org,
+ * GitHub Actions, UptimeRobot) tiap jam. CATATAN: fitur Vercel Cron bawaan
+ * (`vercel.json` → `crons`) memerlukan plan Pro; pada plan Hobby deployment
+ * akan GAGAL, jadi sengaja TIDAK memakai `vercel.json`.
  */
 async function run(req: Request) {
   const secret = process.env.CRON_SECRET?.trim();

@@ -237,7 +237,7 @@ Handler:
 
 > **Catatan implementasi P2:**
 > - **Kedaluwarsa:** logika murni `isOrderExpired` (`order-expiry-pure.ts`, teruji 5 test) + `getExpiredPendingOrders`/`markOrderExpired` (`orders.ts`, idempoten) + orkestrasi `expirePendingOrders` (`order-expiry.ts`: tandai → restore kupon `KP-C2` → email "kedaluwarsa").
-> - **Cron:** `GET/POST /api/cron/expire-orders`. **Fail-closed**: tanpa `CRON_SECRET` → 503 (tak bisa dipicu orang lain). Verifikasi `Authorization: Bearer <secret>` (dikirim Vercel Cron) atau `?token=`. Jadwal `0 * * * *` via `vercel.json`.
+> - **Cron:** `GET/POST /api/cron/expire-orders`. **Fail-closed**: tanpa `CRON_SECRET` → 503 (tak bisa dipicu orang lain). Verifikasi `Authorization: Bearer <secret>` atau `?token=`. **Dijadwalkan dari cron eksternal** (mis. cron-job.org / GitHub Actions) — fitur Vercel Cron bawaan (`vercel.json`) butuh plan Pro dan membuat deploy GAGAL di plan Hobby.
 > - **Invoice manual:** `createManualOrderInvoice` (order-payment.ts) — buat invoice Mayar ber-`extraData.orderId` (webhook menandai lunas otomatis), simpan `payment` (`manual:true`) tanpa ubah status. Dipakai untuk JASA setelah kesepakatan / INSTAN gagal invoice otomatis.
 > - **Email admin JASA:** `sendOrderAwaitingConfirmationToAdmin` (`email.ts`) — terpisah dari email konfirmasi pembeli agar kegagalan salah satu tak memblok yang lain.
 > - **`/akun`:** tombol "Bayar sekarang" kini muncul untuk order ber-`payUrl` yang belum lunas (termasuk JASA ber-invoice manual), bukan hanya `menunggu_bayar`.

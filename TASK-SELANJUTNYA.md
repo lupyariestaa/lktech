@@ -19,16 +19,16 @@ Fase **P2** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi ko
 | **JASA + email admin** | Checkout JASA → `menunggu_konfirmasi`; email pembeli (`sendOrderStatusToBuyer`) **dan** admin (`sendOrderAwaitingConfirmationToAdmin` baru di `email.ts`) — terpisah agar satu gagal tak memblok lain. |
 | **CTA "Konsultasi dulu"** | Halaman produk `jasa` (tunggal & multi-varian): `ProductBuyActions`, `ProductPurchasePanel`, `ProductPurchaseBar` (bottom sheet mobile) — CTA WhatsApp utama, checkout sebagai opsi sekunder. |
 | **Invoice manual (Mayar)** | `createManualOrderInvoice` (`order-payment.ts`) + `POST /api/admin/orders {action:"invoice"}` + tombol "Buat invoice manual" di detail order (mis. JASA setelah kesepakatan). Ber-`extraData.orderId` → webhook tetap menandai lunas otomatis. |
-| **Cron kedaluwarsa** | `GET/POST /api/cron/expire-orders` (dilindungi `CRON_SECRET`, **fail-closed**) → `markOrderExpired` + restore kupon (`KP-C2`) + email "kedaluwarsa". Jadwal via `vercel.json` (`0 * * * *`). |
+| **Cron kedaluwarsa** | `GET/POST /api/cron/expire-orders` (dilindungi `CRON_SECRET`, **fail-closed**) → `markOrderExpired` + restore kupon (`KP-C2`) + email "kedaluwarsa". Dijadwalkan dari **cron eksternal** (cron-job.org / GitHub Actions) — Vercel Cron bawaan butuh plan Pro. |
 | **Panel pembayaran admin** | Badge status bayar, nominal, kedaluwarsa, tautan bayar, penanda **manual**, tombol invoice; tampilkan `payUrl` hasil invoice manual untuk disalin. |
 | **`/akun`** | Tombol **Bayar sekarang** kini muncul untuk order ber-`payUrl` yang belum lunas (termasuk JASA ber-invoice manual), bukan hanya `menunggu_bayar`. |
-| **Env/konfig** | `.env.example`: `CRON_SECRET`; `vercel.json` baru (cron). |
+| **Env/konfig** | `.env.example`: `CRON_SECRET`. (Tanpa `vercel.json` — Vercel Cron butuh plan Pro.) |
 | **Tipe** | `OrderPayment.manual?: boolean` (+ normalizer & `markOrderPaid`). |
 | **Test** | `npm run test:expiry` (5) — logika `isOrderExpired` (murni, `order-expiry-pure.ts`). |
 
 **Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ · test (metrics 6 · fulfillment 5 · downloads 5 · **expiry 5**) lolos ✅.
 
-**⚠️ Langkah manual:** set `CRON_SECRET` di Vercel (agar cron aktif; tanpa itu endpoint balas 503). Uji: `GET /api/cron/expire-orders?token=<secret>`.
+**⚠️ Langkah manual:** set `CRON_SECRET` di Vercel (agar cron aktif; tanpa itu endpoint balas 503). Jadwalkan pemanggilan dari **cron eksternal** ke `GET /api/cron/expire-orders?token=<secret>` (Vercel Cron bawaan butuh plan Pro).
 
 ---
 
@@ -78,7 +78,7 @@ Lihat checklist lengkap di `docs/2026-10-06-fase-konversi-closing.md` §7 → "F
 - **DoD:** bundel tampil & diskon bundel tervalidasi server.
 
 ### Langkah manual yang MASIH tertunda (milik pemilik)
-- **FASE P2 — cron:** set `CRON_SECRET` di Vercel (rahasia acak) → `vercel.json` sudah berisi cron `/api/cron/expire-orders` (jam). Uji manual: `GET https://<domain>/api/cron/expire-orders?token=<secret>` → `{ ok:true, expired:N }`.
+- **FASE P2 — cron:** set `CRON_SECRET` di Vercel (rahasia acak) → jadwalkan pemanggilan dari cron eksternal ke `GET https://<domain>/api/cron/expire-orders?token=<secret>` → `{ ok:true, expired:N }`. (Vercel Cron bawaan butuh plan Pro, jadi pakai cron eksternal gratis.)
 - **Produksi Mayar:** daftar `web.mayar.id` → verifikasi bisnis → buat API key produksi → set `MAYAR_MODE=production` + `MAYAR_API_KEY` di Vercel → daftarkan webhook produksi (`.../api/webhooks/mayar?token=<MAYAR_WEBHOOK_TOKEN>`) → redeploy.
 - **Domain sendiri:** belum dibeli (SKIP) → memblokir verifikasi email Resend & domain kustom.
 - **Isi data asli:** portofolio, testimoni, logo klien (SKIP, manual via dashboard).
