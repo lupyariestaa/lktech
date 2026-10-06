@@ -2,17 +2,16 @@
 
 import { Mail, MapPin, MessageCircle } from "lucide-react";
 import { COMPANY, PAGE_NAV_LINKS } from "@/lib/content";
+import { SERVICES } from "@/lib/services";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import { Icon } from "@/components/icon";
 import { Logo } from "@/components/logo";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { useSettings } from "@/components/settings-provider";
-import { useContent } from "@/components/content-provider";
 
 export function Footer() {
   const settings = useSettings();
-  const { services } = useContent();
 
   return (
     <footer className="relative overflow-hidden border-t border-slate-200 bg-surface">
@@ -63,7 +62,7 @@ export function Footer() {
           <div>
             <h2 className="text-sm font-semibold text-secondary">Layanan</h2>
             <ul className="mt-4 flex flex-col gap-2.5">
-              {services.slice(0, 5).map((s) => (
+              {SERVICES.slice(0, 5).map((s) => (
                 <li key={s.slug}>
                   <a
                     href={`/layanan/${s.slug}`}

@@ -9,11 +9,30 @@
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
 > 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
-> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H2, H4–H5 selesai.**
+> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H5 selesai (sisa H6–H8).**
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Beranda FASE H4: Desain & Polesan Visual
+## 🎉 Sesi Terakhir — Upgrade Beranda FASE H3: Sistem Konten (Konsolidasi)
+
+Fase **H3** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
+
+| Perubahan | Detail |
+| --- | --- |
+| **Temuan utama** | Ada **dua** definisi layanan: `src/lib/services.ts` (kaya, hardcoded) + `SERVICES`/`SERVICES_DETAIL` di `content.ts` (duplikat). Beranda menampilkan 3 layanan (data Firestore basi), `/layanan` menampilkan 5. |
+| **Konsolidasi** | `content.ts`: hapus `SERVICES`+`SERVICES_DETAIL`+`getServiceSlugs()` (**−736 baris**); `content-types.ts` menurunkan default dari `@/lib/services`; `services.tsx` & `footer.tsx` membaca `SERVICES` dari `@/lib/services` langsung. |
+| **Efek** | Beranda kini menampilkan **5 layanan** — konsisten dengan `/layanan`. Sumber tunggal: `@/lib/services`. |
+| **Backward-compat** | `SiteContent.services` tetap ada di tipe & normalizer (data lama valid); hanya tak lagi dikonsumsi komponen. |
+| **Bersih-bersih** | Hapus `fadeUp` (dead export) di `motion.tsx`. |
+| **Inventaris** | Tabel sumber konten final didokumentasikan di doc fase (§4 H3). |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (72 halaman; beranda `#layanan` = 5 layanan).
+
+**Lanjut:** FASE **H6** (SEO & performa) → H7 (observability & konversi) → H8 (QA & rilis).
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Beranda FASE H4: Desain & Polesan Visual
 
 Fase **H4** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
 
@@ -418,17 +437,18 @@ Seluruh fase P0–P6 tuntas di sisi kode.
 ### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
 Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
 
-### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H2, H4–H5 selesai)
+### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H5 selesai; sisa H6–H8)
 `docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi).
 - ✅ **H0 Audit & dokumen fase** (baseline + keputusan K1–K8).
 - ✅ **H1 Struktur & alur persuasi (IA)** (urutan AIDA + anchor id konsisten).
 - ✅ **H2 Konten & kejujuran data** (placeholder disembunyikan + bukti sosial nyata).
+- ✅ **H3 Sistem konten (konsolidasi)** (`@/lib/services` sumber tunggal; −736 baris duplikat).
 - ✅ **H4 Desain & polesan visual** (alternasi latar, reduced-motion, kontras AA, tap 44px).
 - ✅ **H5 Seksi produk digital unggulan** (server, `ProductCard`, tersembunyi bila kosong).
-- ⏭️ Lanjut **H3 → H6 → H7 → H8**.
+- ⏭️ Lanjut **H6 → H7 → H8**.
 
 **NEXT TASK = pilihan pemilik:**
-- **Lanjutkan fase beranda** (H3: sistem konten/konsolidasi).
+- **Lanjutkan fase beranda** (H6: SEO & performa).
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).

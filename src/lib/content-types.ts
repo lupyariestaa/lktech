@@ -2,8 +2,6 @@ import {
   FAQS,
   PRICING,
   PROCESS as DEFAULT_PROCESS,
-  SERVICES,
-  SERVICES_DETAIL,
   STATS as DEFAULT_STATS,
   TECH_STACK as DEFAULT_TECH_STACK,
   TESTIMONIALS as DEFAULT_TESTIMONIALS,
@@ -11,6 +9,7 @@ import {
   type Service,
   type ServiceDetail,
 } from "@/lib/content";
+import { SERVICES as HARDCODED_SERVICES } from "@/lib/services";
 
 /** Layanan lengkap (kartu + detail) yang dapat dikelola dari dashboard. */
 export type ManagedService = Service & {
@@ -122,17 +121,31 @@ export type SiteContent = {
 };
 
 /**
- * Menggabungkan `SERVICES` (kartu) dengan `SERVICES_DETAIL` (detail) menjadi
- * satu daftar `ManagedService` sebagai nilai default / fallback.
+ * Membangun daftar `ManagedService` default untuk beranda/footer/navbar.
+ *
+ * SUMBER TUNGGAL (FASE H3): data kartu layanan diturunkan dari modul
+ * **`@/lib/services`** (`SERVICES`) — modul yang sama yang dipakai halaman
+ * `/layanan` & sitemap. Ini menghapus duplikasi lama (`SERVICES` +
+ * `SERVICES_DETAIL` di `content.ts`) sehingga judul/tagline kartu beranda
+ * selalu konsisten dengan halaman layanan.
+ *
+ * `detail` disertakan hanya untuk kompatibilitas tipe `SiteContent` (tidak
+ * dikonsumsi komponen beranda — halaman detail layanan membaca modul
+ * hardcoded secara langsung). Dashboard tetap dapat menimpa `services`
+ * (backward-compatible via `normalizeSiteContent`).
  */
 function buildDefaultServices(): ManagedService[] {
-  return SERVICES.map((service) => {
-    const detail =
-      SERVICES_DETAIL.find((d) => d.slug === service.slug) ??
-      emptyDetail(service.slug);
-    const { slug: _slug, ...rest } = detail;
-    void _slug;
-    return { ...service, detail: rest };
+  return HARDCODED_SERVICES.map((service) => {
+    const { detail: _detail, landingPoints: _lp, image: _img, imageAlt: _alt, ...card } =
+      service;
+    void _detail;
+    void _lp;
+    void _img;
+    void _alt;
+    return {
+      ...card,
+      detail: emptyDetail(service.slug),
+    };
   });
 }
 

@@ -5,10 +5,16 @@ import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "@/components/section-heading";
 import { Reveal } from "@/components/motion";
 import { ServiceCard } from "@/components/service-card";
-import { useContent } from "@/components/content-provider";
+import { SERVICES } from "@/lib/services";
 
+/**
+ * Section layanan beranda.
+ *
+ * SUMBER TUNGGAL (FASE H3): membaca daftar dari modul hardcoded `@/lib/services`
+ * (sama dengan `/layanan`, `/layanan/[slug]`, sitemap, dan admin) — agar kartu
+ * beranda selalu konsisten dengan halaman layanan, tanpa duplikasi data.
+ */
 export function Services() {
-  const { services } = useContent();
   return (
     <section id="layanan" className="relative scroll-mt-24 bg-surface py-24">
       <div className="mx-auto max-w-6xl px-6">
@@ -24,7 +30,7 @@ export function Services() {
         />
 
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service, i) => (
+          {SERVICES.map((service, i) => (
             <Reveal key={service.slug} delay={i * 0.06}>
               <ServiceCard service={service} />
             </Reveal>

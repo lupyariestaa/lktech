@@ -141,13 +141,32 @@ PortfolioTeaser → Testimonials → Pricing → Faq → CtaContact → Footer
 
 > **Catatan teknis:** `page.tsx` diberi `export const revalidate = 300` (5 menit) agar data dinamis (portofolio + bukti sosial) segar; route `/` tetap **Static (`○`)**.
 
-### FASE H3 — Sistem Konten (konsolidasi kelola)
+### ✅ FASE H3 — Sistem Konten (konsolidasi kelola) — **SELESAI**
 **Tujuan:** perjelas mana konten dari dashboard vs hardcoded; minimalkan duplikasi.
-- [ ] Inventaris tabel: **field → sumber** (dashboard | hardcoded | settings) — dokumentasikan di §2.3.
-- [ ] Putuskan: apakah menambah pengelolaan baru (mis. **seksi produk unggulan** di beranda via settings/flag)? Bila ya, skema minimal + backward-compatible.
-- [ ] Pastikan `content-provider` tetap **sumber tunggal** untuk section terkelola; hindari hardcode baru.
-- [ ] Bila menambah field `SiteContent`: update normalizer (`site-content.ts`) + default (`content-types.ts`) + tipe + (bila perlu) `/admin/content`.
-- **DoD:** tabel sumber konten lengkap; tidak ada hardcode baru tanpa alasan.
+- [x] **Tabel sumber konten** disusun (lihat tabel di bawah) — field → sumber.
+- [x] **Menghapus duplikasi layanan (temuan utama).** Sebelumnya ada **DUA** definisi layanan: `src/lib/services.ts` (kaya, hardcoded — dipakai `/layanan`, `/layanan/[slug]`, sitemap, admin) **dan** `SERVICES` + `SERVICES_DETAIL` di `content.ts` (penuh, lama — default `SiteContent.services` untuk beranda & footer). Keduanya berisi 5 layanan sama.
+  - `content.ts`: **hapus** `SERVICES` + `SERVICES_DETAIL` + `getServiceSlugs()` (**−736 baris**). Tipe (`Service`/`ServiceDetail`/`ServiceFaq`/dst.) **dipertahankan**.
+  - `content-types.ts`: `buildDefaultServices()` kini menurunkan default dari **`@/lib/services`** (sumber tunggal).
+  - `services.tsx` (beranda) & `footer.tsx`: membaca **`SERVICES` dari `@/lib/services`** langsung (bukan `useContent`).
+  - **Efek:** beranda kini menampilkan **5 layanan** (sebelumnya 3 dari data Firestore basi) — **konsisten** dengan `/layanan`.
+- [x] **Pemilihan keputusan**: layanan tetap **hardcoded** (K6, sesuai §13 `docs/2026-10-02-upgrade-sistem-layanan.md`); **tidak** menambah field `SiteContent` baru; `content-provider` tetap sumber tunggal untuk section terkelola lain (`whyUs`/`process`/`stats`/`testimonials`/`technologies`/`pricing`/`faqs`/`hero`).
+- [x] **Backward-compat**: `SiteContent.services` tetap ada di tipe & normalizer (data lama tetap valid & tersimpan), hanya tak lagi dikonsumsi komponen.
+- [x] **Pembersihan dead export**: `fadeUp` (tak terpakai) dihapus dari `motion.tsx`.
+- **DoD:** tabel sumber konten lengkap; tidak ada hardcode baru tanpa alasan; duplikasi layanan hilang. ✅
+
+**Tabel sumber konten (inventaris final):**
+
+| Konten | Sumber | Dikelola di |
+| --- | --- | --- |
+| `hero` (showcase carousel) | Dashboard (`content/site`) | `/admin/hero` |
+| `whyUs`, `process`, `stats`, `testimonials`, `technologies` | Dashboard (`content/site`) | `/admin/content` |
+| `pricing` | Dashboard (`content/site`) | `/admin/pricing` |
+| `faqs` | Dashboard (`content/site`) | `/admin/faq` |
+| **`services` (layanan)** | **Hardcoded** `@/lib/services` | *(bukan dashboard — sesuai K6)* |
+| Kontak/WA/email/lokasi/socials | Dashboard (`settings`) | `/admin/settings` |
+| `COMPANY`, `NAV_LINKS`, `PAGE_NAV_LINKS` | Hardcoded `content.ts` | — |
+| `PROJECTS` (default portofolio) | Hardcoded `content.ts` (fallback) | `/admin/projects` (Firestore) |
+| `WA_MESSAGES` | Hardcoded `whatsapp.ts` | — |
 
 ### ✅ FASE H4 — Desain & Polesan Visual — **SELESAI**
 **Tujuan:** hilangkan kesan "datar"; konsisten.
@@ -281,3 +300,4 @@ Plus uji manual (**mobile & desktop**): hero, anchor nav, semua CTA, form newsle
 | 2026-10-06 | **H2** | Kejujuran data: testimoni & stat placeholder disembunyikan (`isDefaultTestimonials`/`isDefaultStats`); bukti sosial nyata (`<SocialProof/>`) masuk hero (ganti chip "100% Kepuasan"); avatar/klien hero hanya dari data nyata; logo klien diverifikasi tidak ada. `revalidate=300` di `/`. | `tsc`/`eslint`/`build` bersih (72 halaman; `/` tetap Static). |
 | 2026-10-06 | **H5** | Seksi baru **Produk Digital unggulan** (`featured-products.tsx`, server, `getProducts()` max 6, `ProductCard`, CTA → `/produk`, tersembunyi bila kosong, `#produk` + `aria-labelledby`) dipasang setelah `Process`. | `tsc`/`eslint`/`build` bersih (72 halaman); HTML prerender memuat `#produk` + kartu produk nyata. |
 | 2026-10-06 | **H4** | Poles visual: alternasi latar section dirapikan (WhyUs/Process/FeaturedProducts), `CtaContact` py-24; `Reveal`+`stats`/`why-us`/`testimonials` hormati `prefers-reduced-motion`; kontras caption stats dinaikkan; tap target navbar `h-11 w-11` (44px). | `tsc`/`eslint`/`build` bersih (72 halaman). |
+| 2026-10-06 | **H3** | Konsolidasi konten: hapus duplikasi layanan (`SERVICES`/`SERVICES_DETAIL` di `content.ts`, −736 baris); `@/lib/services` jadi sumber tunggal (default `SiteContent.services`, beranda `services.tsx`, `footer.tsx`). Beranda kini **5 layanan** (konsisten `/layanan`). Hapus `fadeUp` dead export. | `tsc`/`eslint`/`build` bersih (72 halaman); HTML beranda `#layanan` = 5 layanan. |
