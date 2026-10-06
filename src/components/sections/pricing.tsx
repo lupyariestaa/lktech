@@ -14,7 +14,7 @@ export function Pricing() {
   const settings = useSettings();
   const { pricing } = useContent();
   return (
-    <section id="harga" className="relative bg-surface py-24">
+    <section id="harga" className="relative scroll-mt-24 bg-surface py-24">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           eyebrow="Paket Layanan"

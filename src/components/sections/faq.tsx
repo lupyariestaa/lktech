@@ -8,7 +8,7 @@ import { useContent } from "@/components/content-provider";
 export function Faq() {
   const { faqs } = useContent();
   return (
-    <section id="faq" className="relative bg-white py-24">
+    <section id="faq" className="relative scroll-mt-24 bg-white py-24">
       <div className="mx-auto max-w-3xl px-6">
         <SectionHeading
           eyebrow="FAQ"

@@ -117,18 +117,18 @@ PortfolioTeaser → Testimonials → Pricing → Faq → CtaContact → Footer
 - [x] Catat keputusan urutan section final (lihat H1 di §5).
 - **DoD:** dokumen fase ada; daftar prioritas final disetujui. ✅
 
-### FASE H1 — Struktur & Alur Persuasi (IA)
+### ✅ FASE H1 — Struktur & Alur Persuasi (IA) — **SELESAI**
 **Tujuan:** susun ulang urutan section agar alur persuasi (AIDA) lebih kuat.
-- [ ] Usulan urutan final (evaluasi & putuskan):
+- [x] Urutan final diterapkan di `src/app/page.tsx`:
   ```
-  Hero → Trust strip (logo klien/tech) → Layanan → Bukti sosial nyata →
-  Portofolio → Keunggulan (Why Us) → Alur kerja (Process) → Produk digital (BARU) →
-  Stats → Testimoni → Harga → FAQ → CTA penutup → Footer
+  Hero → Technologies (trust strip) → Services → PortfolioTeaser →
+  WhyUs → Process → Stats → Testimonials → Pricing → Faq → CtaContact
   ```
-- [ ] Pastikan tiap section punya **anchor id** jelas (`#layanan`, `#produk`, `#harga`, `#faq`, `#keunggulan`, `#portofolio`, `#kontak`). → Tambah id pada `process`/`stats`/`testimonials`/`technologies` bila diperlukan.
-- [ ] Perbarui `NAV_LINKS` (`src/lib/content.ts`) agar cocok (mis. tambah "Produk" — sudah ada).
-- [ ] Mobile-first: cek panjang scroll & beban visual.
-- **DoD:** urutan final diterapkan; nav konsisten; tidak ada section menggantung.
+  (Seksi **Bukti sosial nyata** = H2 dan **Produk Digital** = H5 akan disisipkan saat fasenya dikerjakan — slot sudah disiapkan: bukti sosial setelah Services, produk digital setelah Process.)
+- [x] **Anchor id konsisten**: ditambahkan id baru `#teknologi`, `#proses`, `#statistik`, `#testimoni` pada section yang belum punya; seluruh section ber-anchor diberi `scroll-mt-24` agar tidak tertutup navbar fixed.
+- [x] **`NAV_LINKS`** (`src/lib/content.ts`) diverifikasi konsisten: `Beranda (#beranda)` · `Layanan` · `Produk` · `Portofolio` · `Blog` · `Harga` · `Promo` · `FAQ (/#faq)` — "Produk" sudah ada; tautan anchor (`/#beranda`, `/#faq`) valid di beranda. Tidak ada perubahan (menghindari kepadatan menu).
+- [x] **Mobile-first**: tidak ada section menggantung; seluruh section punya `return null` saat data kosong (technologies/whyUs/process/stats/testimonials) — aman saat konten minim.
+- **DoD:** urutan final diterapkan; nav konsisten; tidak ada section menggantung. ✅
 
 ### FASE H2 — Konten & Kejujuran Data (Trust)
 **Tujuan:** ganti placeholder dengan konten nyata/mekanisme jelas.
@@ -269,3 +269,4 @@ Plus uji manual (**mobile & desktop**): hero, anchor nav, semua CTA, form newsle
 | Tanggal | Fase | Hasil | Verifikasi |
 | --- | --- | --- | --- |
 | 2026-10-06 | **H0** | Audit & dokumen fase dibuat; baseline, sumber data, modul siap pakai, dan 8 keputusan awal (K1–K8) ditetapkan. | `tsc`/`eslint`/`build` bersih (tanpa perubahan kode fungsional — hanya dokumen). |
+| 2026-10-06 | **H1** | Urutan section disusun ulang (AIDA) di `page.tsx`; anchor id konsisten (`#teknologi`/`#proses`/`#statistik`/`#testimoni` baru + `scroll-mt-24` di semua section); `NAV_LINKS` diverifikasi. | `tsc`/`eslint`/`build` bersih (72 halaman). |

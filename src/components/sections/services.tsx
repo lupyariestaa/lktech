@@ -10,7 +10,7 @@ import { useContent } from "@/components/content-provider";
 export function Services() {
   const { services } = useContent();
   return (
-    <section id="layanan" className="relative bg-surface py-24">
+    <section id="layanan" className="relative scroll-mt-24 bg-surface py-24">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           eyebrow="Layanan Kami"

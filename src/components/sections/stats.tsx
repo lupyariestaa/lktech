@@ -38,7 +38,7 @@ export function Stats() {
   if (stats.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden bg-secondary py-20">
+    <section id="statistik" className="relative scroll-mt-24 overflow-hidden bg-secondary py-20">
       <div className="grid-lines absolute inset-0 opacity-[0.06]" />
       <div className="pointer-events-none absolute -top-24 left-1/4 h-72 w-72 animate-aurora rounded-full bg-primary/40 blur-[110px]" />
       <div className="pointer-events-none absolute -bottom-24 right-1/4 h-72 w-72 animate-aurora rounded-full bg-primary-light/30 blur-[110px] [animation-delay:-5s]" />

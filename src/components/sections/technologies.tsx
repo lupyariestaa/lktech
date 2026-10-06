@@ -15,7 +15,8 @@ export function Technologies() {
   const items = [...technologies, ...technologies];
   return (
     <section
-      className="relative border-y border-slate-100 bg-white py-12"
+      id="teknologi"
+      className="relative scroll-mt-24 border-y border-slate-100 bg-white py-12"
       aria-label="Teknologi yang kami gunakan"
     >
       <Reveal className="mx-auto max-w-6xl px-6">

@@ -12,7 +12,7 @@ export function WhyUs() {
   if (whyUs.length === 0) return null;
 
   return (
-    <section id="keunggulan" className="relative overflow-hidden bg-white py-24">
+    <section id="keunggulan" className="relative scroll-mt-24 overflow-hidden bg-white py-24">
       <div className="pointer-events-none absolute top-0 right-0 h-80 w-80 rounded-full bg-primary/5 blur-[100px]" />
 
       <div className="relative mx-auto max-w-6xl px-6">

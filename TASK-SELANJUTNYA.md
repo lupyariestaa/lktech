@@ -9,11 +9,28 @@
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
 > 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
-> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres per fase.
+> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H1 selesai.**
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Beranda FASE H0: Audit & Dokumen Fase
+## 🎉 Sesi Terakhir — Upgrade Beranda FASE H1: Struktur & Alur Persuasi (IA)
+
+Fase **H1** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
+
+| Perubahan | Detail |
+| --- | --- |
+| **Urutan section (AIDA)** | `src/app/page.tsx`: `Hero → Technologies → Services → PortfolioTeaser → WhyUs → Process → Stats → Testimonials → Pricing → Faq → CtaContact`. Portofolio (bukti) naik setelah Layanan; Keunggulan/Proses sebelum Stats. Slot Bukti sosial (H2) & Produk Digital (H5) disiapkan. |
+| **Anchor id konsisten** | id baru: `#teknologi` (technologies), `#proses` (process), `#statistik` (stats), `#testimoni` (testimonials). Semua section ber-anchor diberi `scroll-mt-24` agar tidak tertutup navbar fixed. |
+| **`NAV_LINKS`** | Diverifikasi konsisten (`Beranda #beranda` · Layanan · Produk · Portofolio · Blog · Harga · Promo · FAQ `/#faq`); "Produk" sudah ada → tanpa perubahan (hindari kepadatan menu). |
+| **Mobile-first** | Tidak ada section menggantung; tiap section `return null` saat data kosong. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (72 halaman).
+
+**Lanjut:** FASE **H2** (konten & kejujuran data — sembunyikan testimoni/stat placeholder + bukti sosial nyata) → H5 → H4 → H3 → H6 → H7 → H8.
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Beranda FASE H0: Audit & Dokumen Fase
 
 Fase **H0** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai** (audit & keputusan; tanpa perubahan kode fungsional).
 
@@ -344,13 +361,14 @@ Seluruh fase P0–P6 tuntas di sisi kode.
 ### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
 Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
 
-### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0 selesai)
+### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H1 selesai)
 `docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi).
 - ✅ **H0 Audit & dokumen fase** (baseline + keputusan K1–K8).
-- ⏭️ Lanjut **H1 → H2 → H5 → H4 → H3 → H6 → H7 → H8**.
+- ✅ **H1 Struktur & alur persuasi (IA)** (urutan AIDA + anchor id konsisten).
+- ⏭️ Lanjut **H2 → H5 → H4 → H3 → H6 → H7 → H8**.
 
 **NEXT TASK = pilihan pemilik:**
-- **Lanjutkan fase beranda** (H1: struktur & alur persuasi/IA).
+- **Lanjutkan fase beranda** (H2: konten & kejujuran data).
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).

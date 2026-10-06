@@ -14,7 +14,7 @@ export async function PortfolioTeaser() {
   const featured = projects.slice(0, 3);
 
   return (
-    <section id="portofolio" className="relative bg-white py-24">
+    <section id="portofolio" className="relative scroll-mt-24 bg-white py-24">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           eyebrow="Portofolio"

@@ -12,7 +12,7 @@ export function Testimonials() {
   if (testimonials.length === 0) return null;
 
   return (
-    <section className="relative bg-white py-24">
+    <section id="testimoni" className="relative scroll-mt-24 bg-white py-24">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           eyebrow="Testimoni"

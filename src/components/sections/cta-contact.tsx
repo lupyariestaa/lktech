@@ -12,7 +12,7 @@ export function CtaContact() {
   const settings = useSettings();
 
   return (
-    <section id="kontak" className="relative bg-white px-6 py-20">
+    <section id="kontak" className="relative scroll-mt-24 bg-white px-6 py-20">
       <div className="mx-auto max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 40 }}

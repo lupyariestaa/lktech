@@ -11,7 +11,7 @@ export function Process() {
   if (process.length === 0) return null;
 
   return (
-    <section className="relative bg-surface py-24">
+    <section id="proses" className="relative scroll-mt-24 bg-surface py-24">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           eyebrow="Alur Kerja"
