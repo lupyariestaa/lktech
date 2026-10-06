@@ -8,12 +8,27 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
-> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H7 selesai (sisa H8).**
+> 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). ✅ **SELESAI (kode, H0–H8).**
+> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), ringkasan hasil (§11). **H0–H8 SELESAI.**
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Beranda FASE H7: Observability & Konversi
+## 🎉 Sesi Terakhir — Upgrade Beranda FASE H8: QA, Dokumentasi & Rilis (MENUTUP INISIATIF)
+
+Fase **H8** — sekaligus **menutup seluruh rangkaian H0–H8** upgrade beranda.
+
+| Kode | Hasil |
+| --- | --- |
+| **QA gate** | `tsc` bersih ✅ · `eslint` bersih ✅ · `build` sukses ✅ (72 halaman) · **14 suite / 117 test** lolos ✅. |
+| **Audit beranda** | Anchor unik & resolve (AIDA: `#beranda`…`#kontak`); **1 `<h1>`** + 12 `<h2>`; **53/53 gambar ber-`alt`**; 63 `aria-label`; sembunyi-jika-placeholder bekerja. |
+| **Dokumentasi** | `docs/2026-10-06-upgrade-beranda.md` (ringkasan §11 + riwayat H8); task doc → status selESAI; `docs/README.md` diperbarui. |
+| **Rilis** | Commit konvensional + push `main` → Vercel auto-deploy (`https://lktech.vercel.app`). CI (`.github/workflows/ci.yml`) hijau. |
+
+**Status akhir:** ✅ **UPGRADE BERANDA (H0–H8) SELESAI (kode).** Sisa = uji browser manual & Lighthouse (pemilik).
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Beranda FASE H7: Observability & Konversi
 
 Fase **H7** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
 
@@ -476,8 +491,8 @@ Seluruh fase P0–P6 tuntas di sisi kode.
 ### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
 Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
 
-### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H7 selesai; sisa H8)
-`docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi).
+### UPGRADE BERANDA / LANDING PAGE — ✅ SELESAI (kode, H0–H8)
+`docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi + ringkasan §11).
 - ✅ **H0 Audit & dokumen fase** (baseline + keputusan K1–K8).
 - ✅ **H1 Struktur & alur persuasi (IA)** (urutan AIDA + anchor id konsisten).
 - ✅ **H2 Konten & kejujuran data** (placeholder disembunyikan + bukti sosial nyata).
@@ -486,10 +501,14 @@ Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/20
 - ✅ **H5 Seksi produk digital unggulan** (server, `ProductCard`, tersembunyi bila kosong).
 - ✅ **H6 SEO & performa** (metadata beranda, JSON-LD `WebSite`, OG, LCP).
 - ✅ **H7 Observability & konversi** (`cta_click`, `scroll_depth`, `TrackedLink`).
-- ⏭️ Lanjut **H8** (QA, dokumentasi & rilis) — fase terakhir.
+- ✅ **H8 QA, dokumentasi & rilis** (14 suite/117 test, dokumentasi, rilis).
+
+**Sisa manual (pemilik):** uji browser desktop/mobile, Lighthouse (≥90), preview OG, isi konten asli (testimoni/stat) bila ada.
 
 **NEXT TASK = pilihan pemilik:**
-- **Lanjutkan fase beranda** (H8: QA, dokumentasi & rilis — menutup inisiatif upgrade beranda).
+- **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`) — pilih gelombang/inisiatif berikutnya.
+- **Langkah manual tersisa** (daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
+- **Uji sandbox end-to-end** INSTAN & JASA (`docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).

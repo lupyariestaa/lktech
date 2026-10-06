@@ -1,7 +1,7 @@
 # TASK — Upgrade Halaman Beranda / Landing Page (Konten · Desain · Sistem · Tampilan)
 
-> **Status:** 🚧 Sedang dikerjakan — **H0 (Audit & Dokumen Fase) selesai**. Lanjut H1.
-> **Dokumen eksekusi:** [`docs/2026-10-06-upgrade-beranda.md`](2026-10-06-upgrade-beranda.md) (baseline audit, keputusan K1–K8, checklist progres).
+> **Status:** ✅ **SELESAI (kode) — H0–H8 tuntas.** Menutup inisiatif upgrade beranda.
+> **Dokumen eksekusi:** [`docs/2026-10-06-upgrade-beranda.md`](2026-10-06-upgrade-beranda.md) (baseline audit, keputusan K1–K8, ringkasan hasil §11).
 > **Disusun:** sesi pasca-Retensi (Tema 2) & revisi UI login.
 > **Prioritas:** Tinggi (beranda = kesan pertama & gerbang konversi).
 > **Prasyarat baca:** `docs/2026-10-06-roadmap-pengembangan.md`, `docs/2026-10-02-upgrade-sistem-layanan.md`, `docs/2026-10-03-halaman-harga-publik.md`, `docs/identitas-perusahaan.md`, `TASK-SELANJUTNYA.md`.

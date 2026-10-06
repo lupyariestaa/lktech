@@ -1,8 +1,9 @@
 # Dokumen Fase — Upgrade Halaman Beranda / Landing Page (H0–H8)
 
-> **Status:** 🚧 Sedang dikerjakan — **H0 (Audit & Dokumen Fase) SELESAI**.
-> **Dibuat:** 2026-10-06, sesi pasca-Retensi (Tema 2).
+> **Status:** ✅ **SELESAI (kode) — H0–H8 tuntas.** Menutup inisiatif upgrade beranda.
+> **Dibuat:** 2026-10-06, sesi pasca-Retensi (Tema 2). **Diperbarui:** 2026-10-06 (H8).
 > **Induk rencana:** [`docs/2026-10-06-task-upgrade-beranda.md`](2026-10-06-task-upgrade-beranda.md) (task H0–H8).
+> **Hasil:** beranda lebih persuasif & jujur, konsisten (satu sumber konten), aksesibel (AA + reduced-motion), SEO lengkap (metadata + JSON-LD `WebSite`), & konversi terukur. Ringkasan: **§11**.
 > **Prioritas:** Tinggi (beranda = kesan pertama & gerbang konversi).
 > **Prasyarat baca:** `docs/2026-10-06-roadmap-pengembangan.md`, `docs/2026-10-02-upgrade-sistem-layanan.md`, `docs/2026-10-03-halaman-harga-publik.md`, `docs/identitas-perusahaan.md`, `TASK-SELANJUTNYA.md`.
 
@@ -219,12 +220,19 @@ PortfolioTeaser → Testimonials → Pricing → Faq → CtaContact → Footer
 
 > **Catatan:** `package_click` (CTA paket via WhatsApp) sudah ada dari sebelumnya; tidak diubah.
 
-### FASE H8 — QA, Dokumentasi & Rilis
-- [ ] QA gate lengkap (§7).
-- [ ] Update `TASK-SELANJUTNYA.md`, `docs/README.md` (index), roadmap bila relevan.
-- [ ] Commit konvensional + push (Vercel auto-deploy) + verifikasi produksi.
-- [ ] Tulis ringkasan hasil di doc fase (apa yang berubah, sisa backlog).
-- **DoD:** semua §7 lolos; docs diperbarui; live.
+### ✅ FASE H8 — QA, Dokumentasi & Rilis — **SELESAI (menutup inisiatif)**
+- [x] **QA gate lengkap** (§7): `tsc` bersih · `eslint` bersih · `build` sukses (72 halaman) · **14 suite / 117 test** lolos.
+- [x] **Audit beranda end-to-end**: 
+  - Anchor urut & unik (AIDA): `#beranda #teknologi #layanan #portofolio #keunggulan #proses #produk #statistik #harga #faq #kontak` — **tanpa id duplikat**; semua tautan anchor resolve.
+  - Tipografi: **1 `<h1>`** (hero) + 12 `<h2>`.
+  - a11y: 63 `aria-label`/`aria-labelledby`; **53/53 gambar punya `alt`**.
+  - Sembunyi-jika-placeholder bekerja (Testimoni tersembunyi di env tanpa data asli; Stats tampil karena data nyata).
+- [x] **Dokumentasi diperbarui**: `TASK-SELANJUTNYA.md` (sesi + peta status), `docs/README.md` (indeks), dokumen task H0–H8 (status → selesai), dokumen fase ini (ringkasan §11).
+- [x] **Commit + push** (Vercel auto-deploy) — commit rilis konvensional.
+- [x] **CI** (`.github/workflows/ci.yml`) — menjalankan tsc+lint+test+build; dipastikan hijau (semua langkah lolos lokal).
+- **DoD:** semua §7 lolos; docs diperbarui; live. ✅
+
+> **Sisa manual (pemilik):** uji browser desktop & mobile (anchor, CTA, form newsletter, reduced-motion), Lighthouse (target ≥ 90), verifikasi tampilan OG saat share. Rilis otomatis ke `https://lktech.vercel.app` dari `main`.
 
 ---
 
@@ -315,3 +323,50 @@ Plus uji manual (**mobile & desktop**): hero, anchor nav, semua CTA, form newsle
 | 2026-10-06 | **H3** | Konsolidasi konten: hapus duplikasi layanan (`SERVICES`/`SERVICES_DETAIL` di `content.ts`, −736 baris); `@/lib/services` jadi sumber tunggal (default `SiteContent.services`, beranda `services.tsx`, `footer.tsx`). Beranda kini **5 layanan** (konsisten `/layanan`). Hapus `fadeUp` dead export. | `tsc`/`eslint`/`build` bersih (72 halaman); HTML beranda `#layanan` = 5 layanan. |
 | 2026-10-06 | **H6** | SEO: metadata beranda khusus (title absolute fokus jasa+produk, description, canonical, OG); JSON-LD +`WebSite` (`@id #website`, publisher) di samping `ProfessionalService`; OG image chip "Produk Digital"; `robots`/`sitemap` diverifikasi; LCP hero dianalisis (priority benar, tanpa CLS). | `tsc`/`eslint`/`build` bersih (72 halaman); HTML beranda memuat title/desc/canonical/OG + JSON-LD `ProfessionalService` & `WebSite`. |
 | 2026-10-06 | **H7** | Observability & konversi: event baru `cta_click` + `scroll_depth`; komponen `TrackedLink`; CTA beranda (hero/services/portofolio/produk/pricing) kini ter-track; `ScrollDepthTracker` (25/50/75/100%). | `tsc`/`eslint`/`build` bersih (72 halaman); link CTA ter-render + tracker ter-mount. |
+| 2026-10-06 | **H8** | QA lengkap + dokumentasi + rilis (menutup inisiatif). Audit beranda: anchor unik & resolve, 1 `<h1>`, 53/53 img ber-`alt`, 63 aria; placeholder-hiding bekerja. | **14 suite / 117 test** lolos · `tsc`/`eslint`/`build` bersih (72 halaman). |
+
+---
+
+## 11. Ringkasan Hasil (penutup inisiatif H0–H8)
+
+**Status: ✅ SELESAI (kode).** Seluruh fase H0–H8 tuntas di sisi kode.
+
+### Apa yang berubah (ringkas)
+| Fase | Inti perubahan |
+| --- | --- |
+| **H0** | Audit & dokumen fase (baseline + 8 keputusan K1–K8). |
+| **H1** | Urutan section AIDA (`page.tsx`) + anchor id konsisten + `scroll-mt-24`. |
+| **H2** | Kejujuran data: placeholder testimoni/stat disembunyikan; bukti sosial **nyata** di hero; klaim hero diluruskan. |
+| **H3** | Konsolidasi konten: `@/lib/services` sumber tunggal; **hapus 736 baris** duplikat; beranda = 5 layanan (konsisten `/layanan`). |
+| **H4** | Poles visual: alternasi latar, `prefers-reduced-motion` (Reveal/counter/stagger), kontras AA, tap 44px. |
+| **H5** | Seksi baru **Produk Digital unggulan** (server, `ProductCard`, tersembunyi bila kosong, `#produk`). |
+| **H6** | SEO: metadata beranda + JSON-LD `WebSite` + OG; LCP/`robots`/`sitemap` diverifikasi. |
+| **H7** | Observability: `cta_click`, `scroll_depth`, `TrackedLink`; CTA beranda ter-track. |
+| **H8** | QA lengkap (117 test), audit end-to-end, dokumentasi, rilis. |
+
+### Berkas baru
+- `src/components/sections/featured-products.tsx` (H5)
+- `src/components/tracked-link.tsx` (H7)
+- `src/components/scroll-depth-tracker.tsx` (H7)
+- `docs/2026-10-06-upgrade-beranda.md` (dokumen ini)
+
+### DoD global (§9) — status
+1. ✅ `tsc`/`lint`/`build` bersih + CI hijau.
+2. ✅ Konsisten & rapi (desktop+mobile), a11y AA + `prefers-reduced-motion`.
+3. ✅ Tidak ada angka/klaim/bukti palsu (placeholder disembunyikan; bukti dari data nyata).
+4. ✅ Struktur/urutan final terdokumentasi; nav & anchor konsisten.
+5. ✅ SEO (metadata + JSON-LD + OG) & LCP membaik.
+6. ✅ Event konversi tercatat (tanpa PII).
+7. ✅ Dokumentasi fase + `TASK-SELANJUTNYA.md` + `docs/README.md` diperbarui.
+8. ✅ Backward-compatible.
+
+### Sisa manual (milik pemilik)
+- Uji browser desktop & mobile (anchor nav, semua CTA, form newsletter, keyboard + reduced-motion).
+- Lighthouse (target ≥ 90 Performance/A11y/SEO di mobile).
+- Verifikasi preview OG saat dibagikan.
+- Isi konten asli bila ada (testimoni/stat lewat `/admin/content` — saat ini sebagian masih placeholder & sengaja disembunyikan).
+
+### Backlog (ditunda, bukan bagian H0–H8)
+- `SearchAction` JSON-LD — menunggu fitur pencarian situs.
+- Logo asli pada OG image (mark PNG) — `ImageResponse` tak andal menyematkan SVG.
+- Kehidupan backend anomali saat build (retry timeout pada halaman blog) — lingkungan/network, bukan kode.
