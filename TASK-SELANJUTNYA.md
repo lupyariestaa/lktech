@@ -8,11 +8,30 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **NEXT TASK (disiapkan):** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
+> 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
+> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres per fase.
 
 ---
 
-## 🎉 Sesi Terakhir — FASE P2: Alur JASA & Kedaluwarsa
+## 🎉 Sesi Terakhir — Upgrade Beranda FASE H0: Audit & Dokumen Fase
+
+Fase **H0** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai** (audit & keputusan; tanpa perubahan kode fungsional).
+
+| Hasil | Detail |
+| --- | --- |
+| **Dokumen fase** | `docs/2026-10-06-upgrade-beranda.md` dibuat — baseline lengkap (struktur `page.tsx`, 13 section + anchor/sumber data, modul siap pakai, celah) + checklist H0–H8. |
+| **Placeholder teridentifikasi** | `TESTIMONIALS` & `STATS` di `content.ts` (⚠️ CONTOH/angka karangan). Deteksi sudah tersedia: `isDefaultTestimonials()`/`isDefaultStats()` (`content-types.ts`). |
+| **Modul siap pakai** | `getSocialProof()`/`<SocialProof />` (bukti sosial nyata, ambang ≥3), `getProducts()` + `ProductCard` (katalog) — belum dipakai di beranda. |
+| **8 keputusan awal (K1–K8)** | K1 urutan section final · K2 sembunyikan testimoni/stat placeholder · K3 bukti sosial nyata · K4 seksi produk pakai `getProducts`+`ProductCard` · K5 konsolidasi sistem konten · K6 layanan tetap hardcoded · K7 inti transaksi tak diubah · K8 anchor id konsisten. |
+| **Prioritas eksekusi** | H1 → H2 → H5 → H4 → H3 → H6 → H7 → H8. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ (tanpa perubahan kode; hanya dokumen).
+
+**Lanjut:** FASE **H1** (struktur & alur persuasi/IA) → H2 (konten & kejujuran data) → H5 (seksi produk digital) → dst.
+
+---
+
+## 🎉 Sesi Sebelumnya — FASE P2: Alur JASA & Kedaluwarsa
 
 Fase **P2** dari `docs/2026-10-06-fase-konversi-closing.md` **selesai di sisi kode**.
 
@@ -325,7 +344,13 @@ Seluruh fase P0–P6 tuntas di sisi kode.
 ### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
 Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
 
+### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0 selesai)
+`docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi).
+- ✅ **H0 Audit & dokumen fase** (baseline + keputusan K1–K8).
+- ⏭️ Lanjut **H1 → H2 → H5 → H4 → H3 → H6 → H7 → H8**.
+
 **NEXT TASK = pilihan pemilik:**
+- **Lanjutkan fase beranda** (H1: struktur & alur persuasi/IA).
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).
