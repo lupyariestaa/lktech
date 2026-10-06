@@ -149,15 +149,18 @@ PortfolioTeaser → Testimonials → Pricing → Faq → CtaContact → Footer
 - [ ] Bila menambah field `SiteContent`: update normalizer (`site-content.ts`) + default (`content-types.ts`) + tipe + (bila perlu) `/admin/content`.
 - **DoD:** tabel sumber konten lengkap; tidak ada hardcode baru tanpa alasan.
 
-### FASE H4 — Desain & Polesan Visual
+### ✅ FASE H4 — Desain & Polesan Visual — **SELESAI**
 **Tujuan:** hilangkan kesan "datar"; konsisten.
-- [ ] **Konsistensi spacing** antar section (mayoritas `py-24`; `stats`/`technologies`/`cta-contact` menyimpang → samakan sesuai konteks).
-- [ ] **SectionHeading** dipakai seragam (eyebrow + title gradient + description).
-- [ ] **Micro-interaction**: hover/`whileInView` konsisten; hormati `prefers-reduced-motion` (pola `motion.tsx`).
-- [ ] **Hierarki tipografi**: ukuran judul section konsisten; hindari 2 `<h1>`.
-- [ ] **Warna & kontras**: cek WCAG AA (khusus `text-muted` di latar terang).
-- [ ] **Mobile**: cek overflow, padding, ukuran tap ≥ 44px.
-- **DoD:** visual konsisten; a11y AA; mobile rapi.
+- [x] **Konsistensi spacing**: mayoritas section `py-24`; `CtaContact` outer `py-20 → py-24`. `Technologies` (`py-12`, strip tipis) & `Stats` (`py-20`, band gelap) sengaja berbeda sebagai aksen — keduanya dalam rentang konsisten.
+- [x] **Konsistensi latar (alternasi)**: dihilangkan dua section berdekatan sama-latar. Run `Services→FeaturedProducts` kini berselang rapi: `Services (surface) → Portfolio (white) → WhyUs (surface*) → Process (white*) → FeaturedProducts (surface*) → Stats (dark)`. (* = diubah pada fase ini.)
+- [x] **SectionHeading** dipakai seragam (eyebrow + title gradient + description) di semua section berkonten; `Technologies`/`Stats`/`CtaContact` pakai gaya bespoke-nya (dipertahankan, bukan heading konten).
+- [x] **Hierarki tipografi**: hanya **satu `<h1>`** (hero); seluruh judul section `<h2>` (via `SectionHeading` / `cta-contact`).
+- [x] **Micro-interaction & `prefers-reduced-motion`**: `Reveal` (motion.tsx) kini **menonaktifkan animasi masuk** saat reduced-motion; `stats.tsx` (counter angka → tampil penuh instan), `why-us.tsx` & `testimonials.tsx` (stagger → tampil langsung) juga di-gate. (CSS global sudah menangani animasi CSS.)
+- [x] **Kontras WCAG AA**: `text-muted` (#64748b) lolos di white (`~4.76:1`) & surface (`~4.6:1`); caption `stats` dinaikkan `white/40 → white/60` (lolos AA di latar gelap); `text-white/70–85` di gradient biru lolos.
+- [x] **Mobile**: tap target navbar ikon dinaikkan `h-10 w-10 → h-11 w-11` (44px, sesuai WCAG 2.5.5); dekorasi absolut terkurung `overflow-hidden` (aman dari overflow horizontal); grid responsif (`sm`/`lg`).
+- **DoD:** visual konsisten; a11y AA; mobile rapi. ✅
+
+> **Catatan backlog (dicatat, bukan H4):** ekspor `fadeUp` di `motion.tsx` tak terpakai (dead export) — kandidat pembersihan di H3/polesan lanjutan.
 
 ### ✅ FASE H5 — Seksi Baru: Produk Digital (opsional tapi berdampak) — **SELESAI**
 **Tujuan:** ekspos katalog produk (yang punya pembayaran online) di beranda.
@@ -277,3 +280,4 @@ Plus uji manual (**mobile & desktop**): hero, anchor nav, semua CTA, form newsle
 | 2026-10-06 | **H1** | Urutan section disusun ulang (AIDA) di `page.tsx`; anchor id konsisten (`#teknologi`/`#proses`/`#statistik`/`#testimoni` baru + `scroll-mt-24` di semua section); `NAV_LINKS` diverifikasi. | `tsc`/`eslint`/`build` bersih (72 halaman). |
 | 2026-10-06 | **H2** | Kejujuran data: testimoni & stat placeholder disembunyikan (`isDefaultTestimonials`/`isDefaultStats`); bukti sosial nyata (`<SocialProof/>`) masuk hero (ganti chip "100% Kepuasan"); avatar/klien hero hanya dari data nyata; logo klien diverifikasi tidak ada. `revalidate=300` di `/`. | `tsc`/`eslint`/`build` bersih (72 halaman; `/` tetap Static). |
 | 2026-10-06 | **H5** | Seksi baru **Produk Digital unggulan** (`featured-products.tsx`, server, `getProducts()` max 6, `ProductCard`, CTA → `/produk`, tersembunyi bila kosong, `#produk` + `aria-labelledby`) dipasang setelah `Process`. | `tsc`/`eslint`/`build` bersih (72 halaman); HTML prerender memuat `#produk` + kartu produk nyata. |
+| 2026-10-06 | **H4** | Poles visual: alternasi latar section dirapikan (WhyUs/Process/FeaturedProducts), `CtaContact` py-24; `Reveal`+`stats`/`why-us`/`testimonials` hormati `prefers-reduced-motion`; kontras caption stats dinaikkan; tap target navbar `h-11 w-11` (44px). | `tsc`/`eslint`/`build` bersih (72 halaman). |

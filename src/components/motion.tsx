@@ -2,6 +2,7 @@
 
 import { motion, type Variants } from "framer-motion";
 import type { ReactNode } from "react";
+import { useReducedMotionPreference } from "@/lib/intro";
 
 export const fadeUp: Variants = {
   hidden: { opacity: 0, y: 28 },
@@ -23,6 +24,15 @@ export function Reveal({
   className?: string;
   y?: number;
 }) {
+  // A11y (FASE H4): hormati `prefers-reduced-motion` — bila aktif, tampilkan
+  // konten langsung tanpa animasi masuk (framer-motion tidak membaca CSS
+  // transition, jadi gating dilakukan di sini).
+  const reduced = useReducedMotionPreference();
+
+  if (reduced) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <motion.div
       className={className}

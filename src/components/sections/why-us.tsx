@@ -5,14 +5,16 @@ import { Icon } from "@/components/icon";
 import { SectionHeading } from "@/components/section-heading";
 import { staggerContainer, staggerItem } from "@/components/motion";
 import { useContent } from "@/components/content-provider";
+import { useReducedMotionPreference } from "@/lib/intro";
 
 export function WhyUs() {
   const { whyUs } = useContent();
+  const reduced = useReducedMotionPreference();
 
   if (whyUs.length === 0) return null;
 
   return (
-    <section id="keunggulan" className="relative scroll-mt-24 overflow-hidden bg-white py-24">
+    <section id="keunggulan" className="relative scroll-mt-24 overflow-hidden bg-surface py-24">
       <div className="pointer-events-none absolute top-0 right-0 h-80 w-80 rounded-full bg-primary/5 blur-[100px]" />
 
       <div className="relative mx-auto max-w-6xl px-6">
@@ -29,8 +31,8 @@ export function WhyUs() {
 
         <motion.div
           variants={staggerContainer}
-          initial="hidden"
-          whileInView="show"
+          initial={reduced ? false : "hidden"}
+          whileInView={reduced ? undefined : "show"}
           viewport={{ once: true, margin: "-80px" }}
           className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
         >

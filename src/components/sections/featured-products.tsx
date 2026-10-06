@@ -29,7 +29,7 @@ export async function FeaturedProducts({
     <section
       id="produk"
       aria-labelledby="produk-heading"
-      className="relative scroll-mt-24 bg-white py-24"
+      className="relative scroll-mt-24 bg-surface py-24"
     >
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading

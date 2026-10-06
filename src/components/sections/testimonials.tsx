@@ -6,9 +6,11 @@ import { SectionHeading } from "@/components/section-heading";
 import { staggerContainer, staggerItem } from "@/components/motion";
 import { useContent } from "@/components/content-provider";
 import { isDefaultTestimonials } from "@/lib/content-types";
+import { useReducedMotionPreference } from "@/lib/intro";
 
 export function Testimonials() {
   const { testimonials } = useContent();
+  const reduced = useReducedMotionPreference();
 
   // Kejujuran data (FASE H2): jangan tampilkan testimoni CONTOH bawaan.
   // Sembunyikan bila kosong ATAU masih berisi placeholder bawaan — hingga
@@ -32,8 +34,8 @@ export function Testimonials() {
 
         <motion.div
           variants={staggerContainer}
-          initial="hidden"
-          whileInView="show"
+          initial={reduced ? false : "hidden"}
+          whileInView={reduced ? undefined : "show"}
           viewport={{ once: true, margin: "-80px" }}
           className="mt-14 grid gap-6 md:grid-cols-3"
         >

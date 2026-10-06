@@ -4,14 +4,26 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { useContent } from "@/components/content-provider";
 import { isDefaultStats } from "@/lib/content-types";
+import { useReducedMotionPreference } from "@/lib/intro";
 
-function Counter({ value, suffix }: { value: number; suffix: string }) {
+function Counter({
+  value,
+  suffix,
+  instant,
+}: {
+  value: number;
+  suffix: string;
+  instant?: boolean;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
-  const [display, setDisplay] = useState(0);
+  // Bila reduced-motion: nilai awal = nilai penuh (tanpa animasi). Selain itu
+  // mulai dari 0 lalu dihitung saat masuk viewport.
+  const [display, setDisplay] = useState(instant ? value : 0);
 
   useEffect(() => {
-    if (!inView) return;
+    // A11y (FASE H4): tanpa animasi bila `prefers-reduced-motion`.
+    if (instant || !inView) return;
     const duration = 1600;
     const start = performance.now();
     let raf = 0;
@@ -23,7 +35,7 @@ function Counter({ value, suffix }: { value: number; suffix: string }) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [inView, value]);
+  }, [inView, value, instant]);
 
   return (
     <span ref={ref} className="tabular-nums">
@@ -35,6 +47,7 @@ function Counter({ value, suffix }: { value: number; suffix: string }) {
 
 export function Stats() {
   const { stats } = useContent();
+  const reduced = useReducedMotionPreference();
 
   // Kejujuran data (FASE H2): sembunyikan bila kosong ATAU masih berisi
   // angka CONTOH bawaan (mis. "20+ Proyek") — hindari klaim tanpa dasar.
@@ -52,14 +65,14 @@ export function Stats() {
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={reduced ? false : { opacity: 0, y: 24 }}
+              whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.6, delay: i * 0.1 }}
               className="text-center"
             >
               <p className="text-3xl font-bold text-white sm:text-5xl">
-                <Counter value={stat.value} suffix={stat.suffix} />
+                <Counter value={stat.value} suffix={stat.suffix} instant={reduced} />
               </p>
               <p className="mt-2 text-xs font-medium text-white/60 sm:text-sm">
                 {stat.label}
@@ -69,8 +82,9 @@ export function Stats() {
         </div>
 
         {/* Konteks kejujuran (FASE H2): angka bersifat kumulatif, bukan klaim
-            waktu tertentu. Caption halus agar tidak menyesatkan. */}
-        <p className="mt-8 text-center text-xs text-white/40">
+            waktu tertentu. Caption halus agar tidak menyesatkan. Kontras dijaga
+            ≥ AA (white/60 di atas latar gelap). */}
+        <p className="mt-8 text-center text-xs text-white/60">
           Angka kumulatif sejak berdiri, diperbarui berkala.
         </p>
       </div>

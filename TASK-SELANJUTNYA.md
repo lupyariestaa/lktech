@@ -9,11 +9,30 @@
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
 > 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
-> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H2 & H5 selesai.**
+> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H2, H4–H5 selesai.**
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Beranda FASE H5: Seksi Produk Digital Unggulan
+## 🎉 Sesi Terakhir — Upgrade Beranda FASE H4: Desain & Polesan Visual
+
+Fase **H4** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
+
+| Perubahan | Detail |
+| --- | --- |
+| **Alternasi latar** | Menghilangkan section berdekatan sama-latar: `WhyUs → bg-surface`, `Process → bg-white`, `FeaturedProducts → bg-surface` → run `Services→FeaturedProducts` berselang rapi. |
+| **Spacing** | `CtaContact` outer `py-20 → py-24`; mayoritas section `py-24` (Technologies `py-12` & Stats `py-20` = aksen sengaja). |
+| **Reduced-motion (a11y)** | `Reveal` (motion.tsx) + `stats` (counter), `why-us` & `testimonials` (stagger) kini **menonaktifkan animasi** saat `prefers-reduced-motion`. |
+| **Kontras AA** | Caption `stats` `white/40 → white/60`; `text-muted` & teks putih terverifikasi lolos AA. |
+| **Mobile** | Tap target navbar ikon `h-10 → h-11` (44px, WCAG 2.5.5). |
+| **Tipografi** | Diverifikasi: satu `<h1>` (hero), semua judul section `<h2>`. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (72 halaman).
+
+**Lanjut:** FASE **H3** (sistem konten/konsolidasi) → H6 (SEO & performa) → H7 (observability & konversi) → H8 (QA & rilis).
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Beranda FASE H5: Seksi Produk Digital Unggulan
 
 Fase **H5** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
 
@@ -399,16 +418,17 @@ Seluruh fase P0–P6 tuntas di sisi kode.
 ### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
 Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
 
-### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H2, H5 selesai)
+### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H2, H4–H5 selesai)
 `docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi).
 - ✅ **H0 Audit & dokumen fase** (baseline + keputusan K1–K8).
 - ✅ **H1 Struktur & alur persuasi (IA)** (urutan AIDA + anchor id konsisten).
 - ✅ **H2 Konten & kejujuran data** (placeholder disembunyikan + bukti sosial nyata).
+- ✅ **H4 Desain & polesan visual** (alternasi latar, reduced-motion, kontras AA, tap 44px).
 - ✅ **H5 Seksi produk digital unggulan** (server, `ProductCard`, tersembunyi bila kosong).
-- ⏭️ Lanjut **H4 → H3 → H6 → H7 → H8**.
+- ⏭️ Lanjut **H3 → H6 → H7 → H8**.
 
 **NEXT TASK = pilihan pemilik:**
-- **Lanjutkan fase beranda** (H4: desain & polesan visual).
+- **Lanjutkan fase beranda** (H3: sistem konten/konsolidasi).
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).

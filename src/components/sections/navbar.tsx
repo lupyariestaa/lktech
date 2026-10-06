@@ -102,7 +102,7 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <Link
             href="/keranjang"
-            className="relative grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+            className="relative grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary"
             aria-label={`Keranjang belanja${count > 0 ? `, ${count} item` : ""}`}
           >
             <ShoppingCart className="h-5 w-5" aria-hidden="true" />
@@ -116,7 +116,7 @@ export function Navbar() {
           {isAdmin ? (
             <Link
               href="/admin"
-              className="hidden h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:grid"
+              className="hidden h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:grid"
               aria-label="Dashboard admin"
               title="Dashboard admin"
             >
@@ -125,7 +125,7 @@ export function Navbar() {
           ) : (
             <Link
               href={user ? "/akun" : "/masuk"}
-              className="hidden h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:grid"
+              className="hidden h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:grid"
               aria-label={user ? "Akun saya" : "Masuk akun"}
             >
               <UserRound className="h-5 w-5" aria-hidden="true" />
@@ -147,7 +147,7 @@ export function Navbar() {
             aria-label={open ? "Tutup menu navigasi" : "Buka menu navigasi"}
             aria-expanded={open}
             aria-controls="menu-mobile"
-            className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary lg:hidden"
+            className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-secondary transition-colors hover:border-primary/40 hover:text-primary lg:hidden"
           >
             {open ? (
               <X className="h-5 w-5" aria-hidden="true" />
