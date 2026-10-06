@@ -5,11 +5,17 @@ import { Quote, Star } from "lucide-react";
 import { SectionHeading } from "@/components/section-heading";
 import { staggerContainer, staggerItem } from "@/components/motion";
 import { useContent } from "@/components/content-provider";
+import { isDefaultTestimonials } from "@/lib/content-types";
 
 export function Testimonials() {
   const { testimonials } = useContent();
 
-  if (testimonials.length === 0) return null;
+  // Kejujuran data (FASE H2): jangan tampilkan testimoni CONTOH bawaan.
+  // Sembunyikan bila kosong ATAU masih berisi placeholder bawaan — hingga
+  // admin mengisi testimoni asli via /admin/content.
+  if (testimonials.length === 0 || isDefaultTestimonials(testimonials)) {
+    return null;
+  }
 
   return (
     <section id="testimoni" className="relative scroll-mt-24 bg-white py-24">

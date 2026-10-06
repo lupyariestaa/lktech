@@ -9,11 +9,30 @@
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
 > 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
-> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H1 selesai.**
+> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H2 selesai.**
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Beranda FASE H1: Struktur & Alur Persuasi (IA)
+## 🎉 Sesi Terakhir — Upgrade Beranda FASE H2: Konten & Kejujuran Data (Trust)
+
+Fase **H2** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
+
+| Perubahan | Detail |
+| --- | --- |
+| **Testimoni placeholder disembunyikan** | `testimonials.tsx` → `return null` bila kosong **atau** `isDefaultTestimonials()`; tidak menampilkan testimoni karangan. |
+| **Stat placeholder disembunyikan** | `stats.tsx` → `return null` bila kosong **atau** `isDefaultStats()`; bila tampil (nyata) ada caption *"Angka kumulatif sejak berdiri, diperbarui berkala."* |
+| **Bukti sosial NYATA di hero** | `<SocialProof/>` (server, `getSocialProof()` — pesanan nyata 7 hari, ambang ≥3) dikirim ke `Hero` via prop `socialProof` → **menggantikan chip "100% Kepuasan"** yang palsu. Fallback jujur "Garansi · Kualitas" bila data belum cukup. |
+| **Klaim hero diluruskan** | Avatar & "N klien mempercayai kami" hanya tampil bila testimoni/stat **bukan** placeholder. |
+| **Logo klien "Trusted By"** | Diverifikasi: **tidak ada** aset/seksi logo klien di repo → tidak ada yang perlu disembunyikan. |
+| **Freshness** | `page.tsx`: `revalidate = 300` (data dinamis portofolio + bukti sosial); route `/` tetap **Static**. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (72 halaman, `/` Static + 5m).
+
+**Lanjut:** FASE **H5** (seksi produk digital unggulan) → H4 → H3 → H6 → H7 → H8.
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Beranda FASE H1: Struktur & Alur Persuasi (IA)
 
 Fase **H1** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
 
@@ -361,14 +380,15 @@ Seluruh fase P0–P6 tuntas di sisi kode.
 ### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
 Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
 
-### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H1 selesai)
+### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H2 selesai)
 `docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi).
 - ✅ **H0 Audit & dokumen fase** (baseline + keputusan K1–K8).
 - ✅ **H1 Struktur & alur persuasi (IA)** (urutan AIDA + anchor id konsisten).
-- ⏭️ Lanjut **H2 → H5 → H4 → H3 → H6 → H7 → H8**.
+- ✅ **H2 Konten & kejujuran data** (placeholder disembunyikan + bukti sosial nyata).
+- ⏭️ Lanjut **H5 → H4 → H3 → H6 → H7 → H8**.
 
 **NEXT TASK = pilihan pemilik:**
-- **Lanjutkan fase beranda** (H2: konten & kejujuran data).
+- **Lanjutkan fase beranda** (H5: seksi produk digital unggulan).
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowRight, Braces, Code2, MessageCircle, Star } from "lucide-react";
 import { ButtonAnchor } from "@/components/ui/button";
@@ -8,12 +8,19 @@ import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { COMPANY } from "@/lib/content";
 import type { HeroShowcase } from "@/lib/content-types";
+import { isDefaultStats, isDefaultTestimonials } from "@/lib/content-types";
 import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
 import { HeroShowcaseCarousel } from "@/components/hero-showcase-carousel";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 
-function DeviceMockups({ showcase }: { showcase: HeroShowcase }) {
+function DeviceMockups({
+  showcase,
+  socialProof,
+}: {
+  showcase: HeroShowcase;
+  socialProof?: ReactNode;
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
@@ -97,13 +104,17 @@ function DeviceMockups({ showcase }: { showcase: HeroShowcase }) {
           animate={{ y: [0, -10, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
         >
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-100 text-emerald-600">
-            <Star className="h-4 w-4 fill-current" />
-          </span>
-          <div>
-            <p className="text-xs font-bold text-secondary">100%</p>
-            <p className="text-[10px] text-muted">Kepuasan</p>
-          </div>
+          {socialProof ?? (
+            <>
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-100 text-emerald-600">
+                <Star className="h-4 w-4 fill-current" />
+              </span>
+              <div>
+                <p className="text-xs font-bold text-secondary">Garansi</p>
+                <p className="text-[10px] text-muted">Kualitas</p>
+              </div>
+            </>
+          )}
         </motion.div>
 
         <motion.div
@@ -122,16 +133,18 @@ function DeviceMockups({ showcase }: { showcase: HeroShowcase }) {
   );
 }
 
-export function Hero() {
+export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
   const reduced = useReducedMotionPreference();
   const settings = useSettings();
   const { hero, testimonials, stats } = useContent();
   const base = introDelay(reduced);
 
-  // Klaim sosial di bawah CTA diturunkan dari konten terkelola (bukan angka
-  // hardcoded / foto stok). Bila belum ada data, blok tidak ditampilkan.
-  const clientStat = stats.find((s) => /klien/i.test(s.label));
-  const avatars = testimonials.slice(0, 4);
+  // Kejujuran data (FASE H2): klaim sosial di bawah CTA hanya ditampilkan bila
+  // berasal dari data NYATA — bukan testimoni/stat placeholder bawaan.
+  const honestTestimonials = isDefaultTestimonials(testimonials) ? [] : testimonials;
+  const honestStats = isDefaultStats(stats) ? [] : stats;
+  const clientStat = honestStats.find((s) => /klien/i.test(s.label));
+  const avatars = honestTestimonials.slice(0, 4);
 
   return (
     <section
@@ -237,7 +250,7 @@ export function Hero() {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ delay: base + 0.3, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
-          <DeviceMockups showcase={hero} />
+          <DeviceMockups showcase={hero} socialProof={socialProof} />
         </motion.div>
       </div>
     </section>

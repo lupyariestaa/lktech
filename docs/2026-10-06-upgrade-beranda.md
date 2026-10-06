@@ -130,13 +130,16 @@ PortfolioTeaser → Testimonials → Pricing → Faq → CtaContact → Footer
 - [x] **Mobile-first**: tidak ada section menggantung; seluruh section punya `return null` saat data kosong (technologies/whyUs/process/stats/testimonials) — aman saat konten minim.
 - **DoD:** urutan final diterapkan; nav konsisten; tidak ada section menggantung. ✅
 
-### FASE H2 — Konten & Kejujuran Data (Trust)
+### ✅ FASE H2 — Konten & Kejujuran Data (Trust) — **SELESAI**
 **Tujuan:** ganti placeholder dengan konten nyata/mekanisme jelas.
-- [ ] **Testimoni**: sembunyikan section bila masih default (`isDefaultTestimonials`) ATAU isi nyata via `/admin/content` (sudah `return null` saat kosong — perlu tambahan deteksi "masih placeholder"). Jangan tampilkan testimoni karangan.
-- [ ] **Stats**: pakai angka nyata; beri **label/sumber** (mis. "(kumulatif)"); jangan angka palsu (deteksi `isDefaultStats`).
-- [ ] **Bukti sosial nyata** di hero/beranda: pakai `getSocialProof()`/`<SocialProof />` — tampilkan hanya bila ambang terpenuhi (≥3), tanpa angka karangan.
-- [ ] **Logo klien "Trusted By"**: konfirmasi sumber aset (`public/`); jika belum ada asli, sembunyikan (jangan tech stack disamarkan jadi klien).
-- **DoD:** tidak ada klaim/angka tanpa dasar; section kosong/placeholder tersembunyi rapi.
+- [x] **Testimoni**: `testimonials.tsx` kini **sembunyi** bila kosong **atau** masih placeholder (`isDefaultTestimonials(testimonials)` → `return null`). Tidak menampilkan testimoni karangan; konten asli diisi via `/admin/content`.
+- [x] **Stats**: `stats.tsx` **sembunyi** bila kosong **atau** masih placeholder (`isDefaultStats(stats)`). Bila tampil (angka nyata), ditambah caption jujur *"Angka kumulatif sejak berdiri, diperbarui berkala."*.
+- [x] **Bukti sosial nyata di hero**: `<SocialProof />` (server, `getSocialProof()` — pesanan nyata 7 hari, ambang ≥3) dirender di `page.tsx` dan dikirim sebagai prop `socialProof` ke `Hero` → menggantikan chip **"100% Kepuasan"** yang palsu. Fallback jujur bila data belum cukup: chip **"Garansi · Kualitas"** (bukan angka).
+- [x] **Klaim hero (avatars & klien)**: `hero.tsx` kini hanya menampilkan avatar & "N klien mempercayai kami" bila testimoni/stat **bukan** placeholder (`isDefaultTestimonials`/`isDefaultStats`). Tidak ada wajah/angka karangan.
+- [x] **Logo klien "Trusted By"**: diverifikasi — **tidak ada** seksi/aset logo klien di repo (hanya logo tech stack & logo LKTech). Marquee teknologi tetap berlabel jujur *"Teknologi yang kami gunakan"* (bukan disamarkan jadi klien). Tidak ada yang perlu disembunyikan.
+- **DoD:** tidak ada klaim/angka tanpa dasar; section kosong/placeholder tersembunyi rapi. ✅
+
+> **Catatan teknis:** `page.tsx` diberi `export const revalidate = 300` (5 menit) agar data dinamis (portofolio + bukti sosial) segar; route `/` tetap **Static (`○`)**.
 
 ### FASE H3 — Sistem Konten (konsolidasi kelola)
 **Tujuan:** perjelas mana konten dari dashboard vs hardcoded; minimalkan duplikasi.
@@ -270,3 +273,4 @@ Plus uji manual (**mobile & desktop**): hero, anchor nav, semua CTA, form newsle
 | --- | --- | --- | --- |
 | 2026-10-06 | **H0** | Audit & dokumen fase dibuat; baseline, sumber data, modul siap pakai, dan 8 keputusan awal (K1–K8) ditetapkan. | `tsc`/`eslint`/`build` bersih (tanpa perubahan kode fungsional — hanya dokumen). |
 | 2026-10-06 | **H1** | Urutan section disusun ulang (AIDA) di `page.tsx`; anchor id konsisten (`#teknologi`/`#proses`/`#statistik`/`#testimoni` baru + `scroll-mt-24` di semua section); `NAV_LINKS` diverifikasi. | `tsc`/`eslint`/`build` bersih (72 halaman). |
+| 2026-10-06 | **H2** | Kejujuran data: testimoni & stat placeholder disembunyikan (`isDefaultTestimonials`/`isDefaultStats`); bukti sosial nyata (`<SocialProof/>`) masuk hero (ganti chip "100% Kepuasan"); avatar/klien hero hanya dari data nyata; logo klien diverifikasi tidak ada. `revalidate=300` di `/`. | `tsc`/`eslint`/`build` bersih (72 halaman; `/` tetap Static). |

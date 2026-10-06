@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { useContent } from "@/components/content-provider";
+import { isDefaultStats } from "@/lib/content-types";
 
 function Counter({ value, suffix }: { value: number; suffix: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -35,7 +36,10 @@ function Counter({ value, suffix }: { value: number; suffix: string }) {
 export function Stats() {
   const { stats } = useContent();
 
-  if (stats.length === 0) return null;
+  // Kejujuran data (FASE H2): sembunyikan bila kosong ATAU masih berisi
+  // angka CONTOH bawaan (mis. "20+ Proyek") — hindari klaim tanpa dasar.
+  // Admin mengisi angka nyata via /admin/content.
+  if (stats.length === 0 || isDefaultStats(stats)) return null;
 
   return (
     <section id="statistik" className="relative scroll-mt-24 overflow-hidden bg-secondary py-20">
@@ -63,6 +67,12 @@ export function Stats() {
             </motion.div>
           ))}
         </div>
+
+        {/* Konteks kejujuran (FASE H2): angka bersifat kumulatif, bukan klaim
+            waktu tertentu. Caption halus agar tidak menyesatkan. */}
+        <p className="mt-8 text-center text-xs text-white/40">
+          Angka kumulatif sejak berdiri, diperbarui berkala.
+        </p>
       </div>
     </section>
   );
