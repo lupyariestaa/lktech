@@ -80,6 +80,25 @@ export function trackPackageClick(service: string, pkg: string): void {
   trackEvent("package_click", { service, package: pkg });
 }
 
+/**
+ * Klik CTA navigasi bernilai konversi di beranda (FASE H7) — mis. "Lihat semua
+ * produk/layanan/proyek/paket". Tanpa PII: hanya konteks + tujuan.
+ * @param location Konteks tempat CTA (mis. "produk-section", "services", "hero").
+ * @param target   Tujuan tautan (mis. "/produk", "/layanan", "#layanan").
+ */
+export function trackCtaClick(location: string, target: string): void {
+  trackEvent("cta_click", { location, target });
+}
+
+/**
+ * Kedalaman scroll beranda (FASE H7) — dipicu sekali per milestone (25/50/75/100).
+ * Berguna mengukur seberapa jauh pengunjung membaca sebelum berkonversi.
+ * @param percent Milestone kedalaman (25, 50, 75, 100).
+ */
+export function trackScrollDepth(percent: number): void {
+  trackEvent("scroll_depth", { percent });
+}
+
 /** Pembayaran online dimulai (pembeli diarahkan ke halaman bayar — FASE P0/P6). */
 export function trackPaymentInitiated(props: {
   orderId?: string;

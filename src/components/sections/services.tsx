@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "@/components/section-heading";
 import { Reveal } from "@/components/motion";
 import { ServiceCard } from "@/components/service-card";
+import { TrackedLink } from "@/components/tracked-link";
 import { SERVICES } from "@/lib/services";
 
 /**
@@ -38,13 +38,15 @@ export function Services() {
         </div>
 
         <Reveal className="mt-12 flex justify-center">
-          <Link
+          <TrackedLink
             href="/layanan"
+            location="services"
+            target="/layanan"
             className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-6 py-3 text-sm font-semibold text-secondary backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary hover:shadow-lg hover:shadow-primary/10"
           >
             Lihat semua layanan
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
+          </TrackedLink>
         </Reveal>
       </div>
     </section>

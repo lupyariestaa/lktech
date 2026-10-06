@@ -15,6 +15,7 @@ import { Faq } from "@/components/sections/faq";
 import { CtaContact } from "@/components/sections/cta-contact";
 import { Footer } from "@/components/sections/footer";
 import { SocialProof } from "@/components/social-proof";
+import { ScrollDepthTracker } from "@/components/scroll-depth-tracker";
 
 /**
  * Beranda memuat data dinamis (portofolio & bukti sosial nyata) — segarkan
@@ -66,6 +67,8 @@ export default function Home() {
         <CtaContact />
       </main>
       <Footer />
+      {/* Pelacak kedalaman scroll (FASE H7) — tanpa UI, aman tanpa analytics. */}
+      <ScrollDepthTracker />
     </>
   );
 }

@@ -9,11 +9,30 @@
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
 > 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
-> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H6 selesai (sisa H7–H8).**
+> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H7 selesai (sisa H8).**
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Beranda FASE H6: SEO & Performa
+## 🎉 Sesi Terakhir — Upgrade Beranda FASE H7: Observability & Konversi
+
+Fase **H7** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
+
+| Perubahan | Detail |
+| --- | --- |
+| **Event baru (terketik)** | `analytics.ts`: `cta_click` (`trackCtaClick`) + `scroll_depth` (`trackScrollDepth`). |
+| **`TrackedLink`** | Komponen baru (`tracked-link.tsx`) — `next/link` yang mencatat klik, aman dari server component. |
+| **CTA beranda ter-track** | `cta_click`: hero→`#layanan`, services→`/layanan`, portofolio-teaser→`/portofolio`, produk-section→`/produk`, pricing→`/harga`. |
+| **`whatsapp_click`** | Diverifikasi lengkap: hero, pricing, cta-contact, footer, navbar-mobile. |
+| **Scroll depth** | `ScrollDepthTracker` (25/50/75/100%, listener pasif + rAF, di-mount di beranda). |
+| **Aman** | Semua via `trackEvent` (no-op saat SSR/analytics nonaktif); tanpa PII. |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (72 halaman; link CTA ter-render + tracker ter-mount).
+
+**Lanjut:** FASE **H8** (QA, dokumentasi & rilis) — fase terakhir.
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Beranda FASE H6: SEO & Performa
 
 Fase **H6** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
 
@@ -457,7 +476,7 @@ Seluruh fase P0–P6 tuntas di sisi kode.
 ### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
 Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
 
-### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H6 selesai; sisa H7–H8)
+### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H7 selesai; sisa H8)
 `docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi).
 - ✅ **H0 Audit & dokumen fase** (baseline + keputusan K1–K8).
 - ✅ **H1 Struktur & alur persuasi (IA)** (urutan AIDA + anchor id konsisten).
@@ -466,10 +485,11 @@ Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/20
 - ✅ **H4 Desain & polesan visual** (alternasi latar, reduced-motion, kontras AA, tap 44px).
 - ✅ **H5 Seksi produk digital unggulan** (server, `ProductCard`, tersembunyi bila kosong).
 - ✅ **H6 SEO & performa** (metadata beranda, JSON-LD `WebSite`, OG, LCP).
-- ⏭️ Lanjut **H7 → H8**.
+- ✅ **H7 Observability & konversi** (`cta_click`, `scroll_depth`, `TrackedLink`).
+- ⏭️ Lanjut **H8** (QA, dokumentasi & rilis) — fase terakhir.
 
 **NEXT TASK = pilihan pemilik:**
-- **Lanjutkan fase beranda** (H7: observability & konversi).
+- **Lanjutkan fase beranda** (H8: QA, dokumentasi & rilis — menutup inisiatif upgrade beranda).
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).

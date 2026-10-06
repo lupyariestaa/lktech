@@ -203,11 +203,21 @@ PortfolioTeaser → Testimonials → Pricing → Faq → CtaContact → Footer
 
 > **Verifikasi:** HTML beranda ter-prerender memuat judul & deskripsi baru, `canonical https://lktech.id`, `og:title`, dan JSON-LD `ProfessionalService` + `WebSite`.
 
-### FASE H7 — Observability & Konversi
-- [ ] Tambah **event tracking**: klik CTA paket (sudah `pricing`), klik "Lihat Produk" (baru), scroll depth opsional.
-- [ ] Pastikan `whatsapp_click` mencakup semua titik baru (`hero`, `cta-contact`, `pricing`, seksi produk).
-- [ ] (Opsional) A/B ringan: teks hero/judul tanpa menambah dependensi (varian via flag env).
-- **DoD:** event tercatat; tanpa PII; aman saat analytics nonaktif.
+### ✅ FASE H7 — Observability & Konversi — **SELESAI**
+- [x] **Event baru (terketik, tanpa PII)** di `analytics.ts`: `cta_click` (`trackCtaClick(location, target)`) dan `scroll_depth` (`trackScrollDepth(percent)`).
+- [x] **Komponen `TrackedLink`** (`src/components/tracked-link.tsx`) — `next/link` yang mencatat klik; aman dipakai dari server component (props serializable).
+- [x] **CTA navigasi beranda terpasang** `cta_click`:
+  - `hero` → `#layanan` ("Lihat Layanan")
+  - `services` → `/layanan` ("Lihat semua layanan")
+  - `portofolio-teaser` → `/portofolio` ("Lihat semua proyek")
+  - `produk-section` → `/produk` ("Lihat semua produk")
+  - `pricing` → `/harga` ("Lihat semua paket & bandingkan fitur")
+- [x] **`whatsapp_click`** mencakup semua titik: `hero`, `pricing`, `cta-contact`, `footer`, `navbar-mobile` (diverifikasi — sudah ada; tidak ada yang hilang).
+- [x] **Scroll depth** (opsional, diaktifkan): `ScrollDepthTracker` (`scroll-depth-tracker.tsx`) — milestone **25/50/75/100%** sekali tiap milestone; listener pasif + `rAF`; melepas listener setelah semua tercapai. Di-mount di beranda saja.
+- [x] **Aman & tanpa PII**: semua lewat `trackEvent` yang no-op bila SSR/analytics diblokir; properti hanya konteks/tujuan/persen (tanpa nama/email/telepon/isi pesan).
+- **DoD:** event tercatat; tanpa PII; aman saat analytics nonaktif. ✅
+
+> **Catatan:** `package_click` (CTA paket via WhatsApp) sudah ada dari sebelumnya; tidak diubah.
 
 ### FASE H8 — QA, Dokumentasi & Rilis
 - [ ] QA gate lengkap (§7).
@@ -304,3 +314,4 @@ Plus uji manual (**mobile & desktop**): hero, anchor nav, semua CTA, form newsle
 | 2026-10-06 | **H4** | Poles visual: alternasi latar section dirapikan (WhyUs/Process/FeaturedProducts), `CtaContact` py-24; `Reveal`+`stats`/`why-us`/`testimonials` hormati `prefers-reduced-motion`; kontras caption stats dinaikkan; tap target navbar `h-11 w-11` (44px). | `tsc`/`eslint`/`build` bersih (72 halaman). |
 | 2026-10-06 | **H3** | Konsolidasi konten: hapus duplikasi layanan (`SERVICES`/`SERVICES_DETAIL` di `content.ts`, −736 baris); `@/lib/services` jadi sumber tunggal (default `SiteContent.services`, beranda `services.tsx`, `footer.tsx`). Beranda kini **5 layanan** (konsisten `/layanan`). Hapus `fadeUp` dead export. | `tsc`/`eslint`/`build` bersih (72 halaman); HTML beranda `#layanan` = 5 layanan. |
 | 2026-10-06 | **H6** | SEO: metadata beranda khusus (title absolute fokus jasa+produk, description, canonical, OG); JSON-LD +`WebSite` (`@id #website`, publisher) di samping `ProfessionalService`; OG image chip "Produk Digital"; `robots`/`sitemap` diverifikasi; LCP hero dianalisis (priority benar, tanpa CLS). | `tsc`/`eslint`/`build` bersih (72 halaman); HTML beranda memuat title/desc/canonical/OG + JSON-LD `ProfessionalService` & `WebSite`. |
+| 2026-10-06 | **H7** | Observability & konversi: event baru `cta_click` + `scroll_depth`; komponen `TrackedLink`; CTA beranda (hero/services/portofolio/produk/pricing) kini ter-track; `ScrollDepthTracker` (25/50/75/100%). | `tsc`/`eslint`/`build` bersih (72 halaman); link CTA ter-render + tracker ter-mount. |

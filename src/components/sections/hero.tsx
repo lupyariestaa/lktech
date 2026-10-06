@@ -5,6 +5,7 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowRight, Braces, Code2, MessageCircle, Star } from "lucide-react";
 import { ButtonAnchor } from "@/components/ui/button";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
+import { trackCtaClick } from "@/lib/analytics";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { COMPANY } from "@/lib/content";
 import type { HeroShowcase } from "@/lib/content-types";
@@ -209,7 +210,12 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
               Mulai Konsultasi
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </TrackedWaButton>
-            <ButtonAnchor href="#layanan" size="lg" variant="outline">
+            <ButtonAnchor
+              href="#layanan"
+              size="lg"
+              variant="outline"
+              onClick={() => trackCtaClick("hero", "#layanan")}
+            >
               Lihat Layanan
             </ButtonAnchor>
           </motion.div>
