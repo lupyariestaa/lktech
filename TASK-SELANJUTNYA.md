@@ -9,11 +9,31 @@
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
 > 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
-> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H5 selesai (sisa H6–H8).**
+> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H6 selesai (sisa H7–H8).**
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Beranda FASE H3: Sistem Konten (Konsolidasi)
+## 🎉 Sesi Terakhir — Upgrade Beranda FASE H6: SEO & Performa
+
+Fase **H6** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
+
+| Perubahan | Detail |
+| --- | --- |
+| **Metadata beranda** | `page.tsx` kini ekspor `metadata` khusus: `title.absolute` "LKTech — Jasa Pembuatan Website, Aplikasi Mobile & Produk Digital", description fokus layanan + produk, `canonical: "/"`, `openGraph`. |
+| **JSON-LD** | `structured-data.tsx` mengeluarkan **2 node**: `ProfessionalService` (`@id #organization`) + **`WebSite`** (`@id #website`, `publisher`) — brand↔situs tertaut. (Tanpa `SearchAction`: belum ada fitur pencarian.) |
+| **OG image** | Chip diperbarui → `Website · Aplikasi Mobile · Produk Digital`; `alt` disesuaikan. |
+| **LCP** | Hero: carousel browser `priority` ✓, carousel ponsel non-priority ✓, `min-h-screen` (tanpa CLS); showcase kosong → placeholder gradient. |
+| **robots/sitemap** | Diverifikasi benar (larangan `/admin`/`/api`/`/akun`/`/keranjang`/`/masuk`/`/unduhan`; sitemap lengkap). |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (72 halaman; HTML beranda memuat title/desc/canonical/OG + JSON-LD `ProfessionalService` & `WebSite`).
+
+**Sisa manual:** Lighthouse (target ≥ 90) + uji tampilan OG di share preview.
+
+**Lanjut:** FASE **H7** (observability & konversi) → H8 (QA & rilis).
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Beranda FASE H3: Sistem Konten (Konsolidasi)
 
 Fase **H3** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
 
@@ -437,7 +457,7 @@ Seluruh fase P0–P6 tuntas di sisi kode.
 ### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
 Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
 
-### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H5 selesai; sisa H6–H8)
+### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H6 selesai; sisa H7–H8)
 `docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi).
 - ✅ **H0 Audit & dokumen fase** (baseline + keputusan K1–K8).
 - ✅ **H1 Struktur & alur persuasi (IA)** (urutan AIDA + anchor id konsisten).
@@ -445,10 +465,11 @@ Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/20
 - ✅ **H3 Sistem konten (konsolidasi)** (`@/lib/services` sumber tunggal; −736 baris duplikat).
 - ✅ **H4 Desain & polesan visual** (alternasi latar, reduced-motion, kontras AA, tap 44px).
 - ✅ **H5 Seksi produk digital unggulan** (server, `ProductCard`, tersembunyi bila kosong).
-- ⏭️ Lanjut **H6 → H7 → H8**.
+- ✅ **H6 SEO & performa** (metadata beranda, JSON-LD `WebSite`, OG, LCP).
+- ⏭️ Lanjut **H7 → H8**.
 
 **NEXT TASK = pilihan pemilik:**
-- **Lanjutkan fase beranda** (H6: SEO & performa).
+- **Lanjutkan fase beranda** (H7: observability & konversi).
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).

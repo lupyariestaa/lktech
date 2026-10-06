@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "LKTech — Teknologi Modern, Hasil Nyata";
+export const alt =
+  "LKTech — Jasa Website, Aplikasi Mobile & Produk Digital";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -68,7 +69,7 @@ export default function OpengraphImage() {
         </div>
 
         <div style={{ display: "flex", gap: 14 }}>
-          {["Website", "Aplikasi Mobile", "Konsultasi Teknologi"].map((t) => (
+          {["Website", "Aplikasi Mobile", "Produk Digital"].map((t) => (
             <div
               key={t}
               style={{

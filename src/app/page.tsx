@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { IntroLoader } from "@/components/intro-loader";
 import { Navbar } from "@/components/sections/navbar";
 import { Hero } from "@/components/sections/hero";
@@ -20,6 +21,26 @@ import { SocialProof } from "@/components/social-proof";
  * berkala (5 menit) agar tidak basi, sambil tetap ter-prerender statis.
  */
 export const revalidate = 300;
+
+/**
+ * Metadata khusus beranda (FASE H6): judul & deskripsi fokus pada layanan
+ * (website, aplikasi mobile, konsultasi) sekaligus produk digital siap pakai.
+ * `title.absolute` agar tidak digandakan oleh template `%s | LKTech` di layout.
+ */
+export const metadata: Metadata = {
+  title: {
+    absolute: "LKTech — Jasa Pembuatan Website, Aplikasi Mobile & Produk Digital",
+  },
+  description:
+    "LKTech membangun website, aplikasi mobile, dan desain untuk bisnis Anda — plus produk digital siap pakai (template & software) yang bisa dibeli langsung. Harga transparan, hasil berkualitas.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "LKTech — Jasa Pembuatan Website, Aplikasi Mobile & Produk Digital",
+    description:
+      "Jasa pembuatan website, aplikasi mobile, dan konsultasi teknologi — plus produk digital siap pakai. Harga transparan, hasil berkualitas.",
+    url: "/",
+  },
+};
 
 export default function Home() {
   return (

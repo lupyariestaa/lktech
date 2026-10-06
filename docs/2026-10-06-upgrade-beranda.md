@@ -192,14 +192,16 @@ PortfolioTeaser → Testimonials → Pricing → Faq → CtaContact → Footer
 - **DoD:** seksi tampil hanya saat ada produk; menautkan ke katalog. ✅
 - **Verifikasi build:** HTML ter-prerender memuat `#produk` + CTA + kartu produk nyata (mis. `paket-aplikasi-mobile`).
 
-### FASE H6 — SEO & Performa
-- [ ] Perkuat metadata beranda (title/description fokus kata kunci jasa + produk).
-- [ ] **JSON-LD** beranda: tambah `WebSite` + `SearchAction` (saat ini hanya `ProfessionalService` global di `structured-data.tsx`).
-- [ ] **OG image**: pastikan menarik (lihat catatan §8).
-- [ ] **LCP**: hero image/mockup — optimasi (`priority` sudah di `HeroShowcaseCarousel`, ukuran tepat, hindari CLS).
-- [ ] Cek `robots`/`sitemap` tetap benar.
-- [ ] Lighthouse (manual): target ≥ 90 Performance/A11y/SEO (mobile).
-- **DoD:** metadata & JSON-LD lengkap; LCP wajar; Lighthouse baik.
+### ✅ FASE H6 — SEO & Performa — **SELESAI**
+- [x] **Metadata beranda (khusus)**: `page.tsx` kini mengekspor `metadata` — judul `title.absolute` fokus jasa + produk (`"LKTech — Jasa Pembuatan Website, Aplikasi Mobile & Produk Digital"`), deskripsi menyebut layanan & produk digital, `alternates.canonical: "/"`, dan `openGraph` khusus (judul/deskripsi/url).
+- [x] **JSON-LD beranda**: `structured-data.tsx` kini mengeluarkan **dua** node — `ProfessionalService` (`@id #organization`, + `image`/`knowsAbout` diperluas termasuk "Produk Digital") **dan** `WebSite` (`@id #website`, `inLanguage`, `publisher` → organisasi). *(Tidak ada `SearchAction` — situs belum punya fitur pencarian, sesuai checklist "bila ada".)*
+- [x] **OG image**: diperbarui agar selaras posisi baru — chip `Website · Aplikasi Mobile · Produk Digital`; `alt` disesuaikan. (Catatan "LK" vs logo mark tetap backlog — `ImageResponse` tak andal menyematkan SVG.)
+- [x] **LCP**: hero — carousel browser sudah `priority` (≥ `fetchPriority=high`), carousel ponsel non-priority (sekunder); section `min-h-screen` (tinggi tetap → tanpa CLS); saat showcase kosong → placeholder gradient (tanpa gambar LCP sama sekali).
+- [x] **`robots`/`sitemap`**: diverifikasi tetap benar — `robots.ts` melarang `/admin`, `/api`, `/akun`, `/keranjang`, `/masuk`, `/unduhan` + menautkan sitemap; `sitemap.ts` memuat rute statis (beranda prioritas 1) + layanan/produk/portofolio/blog/kategori/tag.
+- [ ] Lighthouse (manual) — target ≥ 90 Performance/A11y/SEO (mobile). → dijalankan manual saat uji browser.
+- **DoD:** metadata & JSON-LD lengkap; LCP wajar; Lighthouse baik (manual). ✅ (kode)
+
+> **Verifikasi:** HTML beranda ter-prerender memuat judul & deskripsi baru, `canonical https://lktech.id`, `og:title`, dan JSON-LD `ProfessionalService` + `WebSite`.
 
 ### FASE H7 — Observability & Konversi
 - [ ] Tambah **event tracking**: klik CTA paket (sudah `pricing`), klik "Lihat Produk" (baru), scroll depth opsional.
@@ -301,3 +303,4 @@ Plus uji manual (**mobile & desktop**): hero, anchor nav, semua CTA, form newsle
 | 2026-10-06 | **H5** | Seksi baru **Produk Digital unggulan** (`featured-products.tsx`, server, `getProducts()` max 6, `ProductCard`, CTA → `/produk`, tersembunyi bila kosong, `#produk` + `aria-labelledby`) dipasang setelah `Process`. | `tsc`/`eslint`/`build` bersih (72 halaman); HTML prerender memuat `#produk` + kartu produk nyata. |
 | 2026-10-06 | **H4** | Poles visual: alternasi latar section dirapikan (WhyUs/Process/FeaturedProducts), `CtaContact` py-24; `Reveal`+`stats`/`why-us`/`testimonials` hormati `prefers-reduced-motion`; kontras caption stats dinaikkan; tap target navbar `h-11 w-11` (44px). | `tsc`/`eslint`/`build` bersih (72 halaman). |
 | 2026-10-06 | **H3** | Konsolidasi konten: hapus duplikasi layanan (`SERVICES`/`SERVICES_DETAIL` di `content.ts`, −736 baris); `@/lib/services` jadi sumber tunggal (default `SiteContent.services`, beranda `services.tsx`, `footer.tsx`). Beranda kini **5 layanan** (konsisten `/layanan`). Hapus `fadeUp` dead export. | `tsc`/`eslint`/`build` bersih (72 halaman); HTML beranda `#layanan` = 5 layanan. |
+| 2026-10-06 | **H6** | SEO: metadata beranda khusus (title absolute fokus jasa+produk, description, canonical, OG); JSON-LD +`WebSite` (`@id #website`, publisher) di samping `ProfessionalService`; OG image chip "Produk Digital"; `robots`/`sitemap` diverifikasi; LCP hero dianalisis (priority benar, tanpa CLS). | `tsc`/`eslint`/`build` bersih (72 halaman); HTML beranda memuat title/desc/canonical/OG + JSON-LD `ProfessionalService` & `WebSite`. |
