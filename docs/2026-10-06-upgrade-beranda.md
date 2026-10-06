@@ -159,14 +159,16 @@ PortfolioTeaser → Testimonials → Pricing → Faq → CtaContact → Footer
 - [ ] **Mobile**: cek overflow, padding, ukuran tap ≥ 44px.
 - **DoD:** visual konsisten; a11y AA; mobile rapi.
 
-### FASE H5 — Seksi Baru: Produk Digital (opsional tapi berdampak)
+### ✅ FASE H5 — Seksi Baru: Produk Digital (opsional tapi berdampak) — **SELESAI**
 **Tujuan:** ekspos katalog produk (yang punya pembayaran online) di beranda.
-- [ ] Section **"Produk digital unggulan"**: 3–6 produk `featured`/terbaru (server component via `getProducts()`).
-- [ ] Kartu pakai `ProductCard` (konsisten + bintang rating bila ada).
-- [ ] CTA "Lihat semua produk" → `/produk`.
-- [ ] Tampilkan **hanya bila ada produk** (tersembunyi bila kosong).
-- [ ] A11y: `<section aria-labelledby>` + anchor `#produk`, heading benar.
-- **DoD:** seksi tampil hanya saat ada produk; menautkan ke katalog.
+- [x] Section baru **`src/components/sections/featured-products.tsx`** (server component) — ambil maksimum 6 produk via `getProducts()` (hanya aktif, urut unggulan → nama).
+- [x] Kartu pakai **`ProductCard`** (konsisten: badge stok nyata, bintang rating, aksi beli/keranjang — sama seperti katalog `/produk`).
+- [x] CTA **"Lihat semua produk"** → `/produk`.
+- [x] **Tersembunyi total** bila tidak ada produk (`return null`) — tidak render seksi kosong.
+- [x] A11y: `<section id="produk" aria-labelledby="produk-heading">` + `<span id="produk-heading">` pada judul; `scroll-mt-24`.
+- [x] Dipasang di `page.tsx` **setelah `Process`** (slot K1); latar `bg-white` agar berselang dengan `Process (bg-surface)` & `Stats (bg-secondary)`.
+- **DoD:** seksi tampil hanya saat ada produk; menautkan ke katalog. ✅
+- **Verifikasi build:** HTML ter-prerender memuat `#produk` + CTA + kartu produk nyata (mis. `paket-aplikasi-mobile`).
 
 ### FASE H6 — SEO & Performa
 - [ ] Perkuat metadata beranda (title/description fokus kata kunci jasa + produk).
@@ -274,3 +276,4 @@ Plus uji manual (**mobile & desktop**): hero, anchor nav, semua CTA, form newsle
 | 2026-10-06 | **H0** | Audit & dokumen fase dibuat; baseline, sumber data, modul siap pakai, dan 8 keputusan awal (K1–K8) ditetapkan. | `tsc`/`eslint`/`build` bersih (tanpa perubahan kode fungsional — hanya dokumen). |
 | 2026-10-06 | **H1** | Urutan section disusun ulang (AIDA) di `page.tsx`; anchor id konsisten (`#teknologi`/`#proses`/`#statistik`/`#testimoni` baru + `scroll-mt-24` di semua section); `NAV_LINKS` diverifikasi. | `tsc`/`eslint`/`build` bersih (72 halaman). |
 | 2026-10-06 | **H2** | Kejujuran data: testimoni & stat placeholder disembunyikan (`isDefaultTestimonials`/`isDefaultStats`); bukti sosial nyata (`<SocialProof/>`) masuk hero (ganti chip "100% Kepuasan"); avatar/klien hero hanya dari data nyata; logo klien diverifikasi tidak ada. `revalidate=300` di `/`. | `tsc`/`eslint`/`build` bersih (72 halaman; `/` tetap Static). |
+| 2026-10-06 | **H5** | Seksi baru **Produk Digital unggulan** (`featured-products.tsx`, server, `getProducts()` max 6, `ProductCard`, CTA → `/produk`, tersembunyi bila kosong, `#produk` + `aria-labelledby`) dipasang setelah `Process`. | `tsc`/`eslint`/`build` bersih (72 halaman); HTML prerender memuat `#produk` + kartu produk nyata. |

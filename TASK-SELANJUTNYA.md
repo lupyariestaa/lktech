@@ -9,11 +9,30 @@
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
 > 🎯 **TASK AKTIF:** **[`docs/2026-10-06-task-upgrade-beranda.md`](docs/2026-10-06-task-upgrade-beranda.md)** — upgrade **Beranda/Landing Page** (konten, desain, sistem, tampilan, SEO). Fase H0–H8 lengkap dengan checklist, QA gate, & DoD.
-> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H2 selesai.**
+> 📄 **Dokumen eksekusi fase:** **[`docs/2026-10-06-upgrade-beranda.md`](docs/2026-10-06-upgrade-beranda.md)** — baseline audit, keputusan awal (K1–K8), & checklist progres. **H0–H2 & H5 selesai.**
 
 ---
 
-## 🎉 Sesi Terakhir — Upgrade Beranda FASE H2: Konten & Kejujuran Data (Trust)
+## 🎉 Sesi Terakhir — Upgrade Beranda FASE H5: Seksi Produk Digital Unggulan
+
+Fase **H5** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
+
+| Perubahan | Detail |
+| --- | --- |
+| **Seksi baru** | `src/components/sections/featured-products.tsx` (server component) — "Produk digital unggulan": ambil maks **6** produk via `getProducts()` (aktif, urut unggulan → nama). |
+| **Kartu** | Memakai `ProductCard` (badge stok nyata, bintang rating, aksi beli) — konsisten dengan `/produk`. |
+| **CTA** | "Lihat semua produk" → `/produk`. |
+| **Etika/Kosong** | `return null` bila tak ada produk → seksi kosong tidak dirender. |
+| **A11y/Anchor** | `<section id="produk" aria-labelledby="produk-heading" className="scroll-mt-24">`; judul ber-`id`. |
+| **Penempatan** | `page.tsx`: setelah `Process` (slot K1); latar `bg-white` berselang dgn `Process` (surface) & `Stats` (secondary). |
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (72 halaman; HTML prerender memuat `#produk` + kartu produk nyata).
+
+**Lanjut:** FASE **H4** (desain & polesan visual — spacing konsisten, SectionHeading, kontras AA) → H3 → H6 → H7 → H8.
+
+---
+
+## 🎉 Sesi Sebelumnya — Upgrade Beranda FASE H2: Konten & Kejujuran Data (Trust)
 
 Fase **H2** dari `docs/2026-10-06-task-upgrade-beranda.md` **selesai**.
 
@@ -380,15 +399,16 @@ Seluruh fase P0–P6 tuntas di sisi kode.
 ### ULASAN & RATING PRODUK — ✅ SELESAI (kode, R0–R6)
 Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/2026-10-05-ulasan-rating-produk.md`).
 
-### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H2 selesai)
+### UPGRADE BERANDA / LANDING PAGE — 🚧 SEDANG DIKERJAKAN (H0–H2, H5 selesai)
 `docs/2026-10-06-task-upgrade-beranda.md` (rencana H0–H8) · `docs/2026-10-06-upgrade-beranda.md` (eksekusi).
 - ✅ **H0 Audit & dokumen fase** (baseline + keputusan K1–K8).
 - ✅ **H1 Struktur & alur persuasi (IA)** (urutan AIDA + anchor id konsisten).
 - ✅ **H2 Konten & kejujuran data** (placeholder disembunyikan + bukti sosial nyata).
-- ⏭️ Lanjut **H5 → H4 → H3 → H6 → H7 → H8**.
+- ✅ **H5 Seksi produk digital unggulan** (server, `ProductCard`, tersembunyi bila kosong).
+- ⏭️ Lanjut **H4 → H3 → H6 → H7 → H8**.
 
 **NEXT TASK = pilihan pemilik:**
-- **Lanjutkan fase beranda** (H5: seksi produk digital unggulan).
+- **Lanjutkan fase beranda** (H4: desain & polesan visual).
 - **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).
