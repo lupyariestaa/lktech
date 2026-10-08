@@ -44,7 +44,9 @@ export const ALLOWED_UPLOAD_FOLDERS: string[] = Object.values(CLOUDINARY_FOLDERS
 export const ALLOWED_UPLOAD_FORMATS = ["jpg", "jpeg", "png", "webp", "avif"] as const;
 
 /** Batas ukuran berkas upload (bytes) — 8 MB. */
-export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
+
+export { MAX_UPLOAD_BYTES };
 
 /**
  * Shared signature untuk signed upload. Param yang ditandatangani HARUS sama

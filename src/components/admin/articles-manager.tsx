@@ -24,7 +24,7 @@ import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import { useUnsavedChanges } from "@/components/admin/use-unsaved-changes";
-import { deleteImage, type CloudinaryAsset } from "@/lib/cloudinary-client";
+import type { CloudinaryAsset } from "@/lib/cloudinary-client";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
@@ -510,18 +510,10 @@ function CoverUploader({
       }
     : null;
 
-  const handleChange = async (next: CloudinaryAsset | null) => {
-    // Saat gambar diganti/dihapus, hapus aset lama dari Cloudinary bila ada.
-    if (value && next?.secureUrl !== value) {
-      const oldId = publicIdFromUrl(value);
-      if (oldId && oldId !== next?.publicId) {
-        try {
-          await deleteImage(oldId);
-        } catch {
-          /* abaikan: aset mungkin sudah tidak ada */
-        }
-      }
-    }
+  // Sampul bisa dipakai artikel lain atau berasal dari media library, jadi
+  // berkas lama TIDAK dihapus dari Cloudinary di sini. Pembersihan aman
+  // dilakukan lewat halaman media (orphans) yang memeriksa pemakaian.
+  const handleChange = (next: CloudinaryAsset | null) => {
     onChange(next?.secureUrl ?? "");
   };
 
@@ -535,11 +527,12 @@ function CoverUploader({
         onChange={handleChange}
         folder="lktech/blog"
         label="Pilih gambar sampul"
+        removeRemote={false}
       />
       {value && !publicIdFromUrl(value) && (
         <span className="text-xs text-amber-600">
-          Sampul memakai URL eksternal — hapus tidak akan menghapus berkas di
-          Cloudinary.
+          Sampul memakai URL eksternal. Berkas di Cloudinary tidak terkelola
+          dari sini.
         </span>
       )}
       {!value && (

@@ -6,12 +6,30 @@ import {
   getStoredArticles,
   saveArticle,
 } from "@/lib/articles";
-import type { Article } from "@/lib/article-types";
+import { taxonomySlug, type Article } from "@/lib/article-types";
 import { articleSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * Revalidate semua halaman yang memuat artikel: list, detail, kategori, tag,
+ * RSS, dan sitemap. Dipanggil dengan versi lama & baru agar perubahan
+ * kategori/tag tidak meninggalkan cache stale.
+ */
+function revalidateBlog(
+  ...articles: Array<Pick<Article, "slug" | "category" | "tags"> | undefined>
+) {
+  const paths = new Set<string>(["/blog", "/blog/rss.xml", "/sitemap.xml"]);
+  for (const a of articles) {
+    if (!a) continue;
+    paths.add(`/blog/${a.slug}`);
+    if (a.category) paths.add(`/blog/kategori/${taxonomySlug(a.category)}`);
+    for (const t of a.tags) paths.add(`/blog/tag/${taxonomySlug(t)}`);
+  }
+  for (const p of paths) revalidatePath(p);
+}
 
 /** GET /api/admin/articles — daftar artikel (termasuk draft). */
 export async function GET(req: Request) {
@@ -69,15 +87,17 @@ export async function POST(req: Request) {
       typeof body.coverImage === "string" && body.coverImage
         ? body.coverImage
         : undefined,
+    coverAlt: body.coverAlt?.trim() || undefined,
     author: (body.author ?? "LKTech").trim(),
     status: body.status === "draft" ? "draft" : "published",
     publishedAt: body.publishedAt || new Date().toISOString(),
   };
 
   try {
+    // Versi sebelumnya (jika ada) ikut di-revalidate: kategori/tag lama bisa berubah.
+    const previous = (await getStoredArticles()).find((a) => a.slug === slug);
     await saveArticle(article, check.email);
-    revalidatePath("/blog");
-    revalidatePath(`/blog/${article.slug}`);
+    revalidateBlog(previous, article);
     return NextResponse.json({ ok: true, article });
   } catch (err) {
     console.error("[api/admin/articles] POST gagal:", err);
@@ -99,8 +119,9 @@ export async function DELETE(req: Request) {
   }
 
   try {
+    const previous = (await getStoredArticles()).find((a) => a.slug === slug);
     await deleteArticleBySlug(slug);
-    revalidatePath("/blog");
+    revalidateBlog(previous ?? { slug, category: "", tags: [] });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/articles] DELETE gagal:", err);

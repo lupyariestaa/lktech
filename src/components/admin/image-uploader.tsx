@@ -9,23 +9,28 @@ import {
   type CloudinaryAsset,
 } from "@/lib/cloudinary-client";
 import { cn } from "@/lib/utils";
-
-const MAX_MB = 5;
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB as MAX_MB } from "@/lib/upload-limits";
 
 /**
  * Komponen upload gambar ke Cloudinary (signed upload).
  * Mendukung klik & drag-drop, preview, progres, dan hapus.
+ *
+ * `removeRemote` (default true): hapus juga berkas di Cloudinary saat klik hapus.
+ * Matikan (false) bila gambar bisa masih dipakai di tempat lain (mis. sampul
+ * artikel), agar berkas tidak hilang; pembersihan dilakukan via halaman orphans.
  */
 export function ImageUploader({
   value,
   onChange,
   folder,
   label = "Unggah gambar",
+  removeRemote = true,
 }: {
   value: CloudinaryAsset | null;
   onChange: (asset: CloudinaryAsset | null) => void;
   folder?: string;
   label?: string;
+  removeRemote?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -40,7 +45,7 @@ export function ImageUploader({
       setError("File harus berupa gambar.");
       return;
     }
-    if (file.size > MAX_MB * 1024 * 1024) {
+    if (file.size > MAX_UPLOAD_BYTES) {
       setError(`Ukuran maksimal ${MAX_MB}MB.`);
       return;
     }
@@ -77,7 +82,7 @@ export function ImageUploader({
     setBusy(true);
     setError(null);
     try {
-      await deleteImage(value.publicId);
+      if (removeRemote) await deleteImage(value.publicId);
       onChange(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menghapus.");

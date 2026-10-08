@@ -50,6 +50,9 @@
     "scripts/lead-scoring.test.ts",
     "scripts/weekly-report.test.ts",
     "scripts/loyalty.test.ts",
-    "scripts/wishlist-alert.test.ts"
+    "scripts/wishlist-alert.test.ts",
+    "scripts/article-schema.test.ts",
+    "scripts/article-taxonomy.test.ts",
+    "scripts/article-related.test.ts"
   ]
 }
