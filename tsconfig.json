@@ -53,6 +53,7 @@
     "scripts/wishlist-alert.test.ts",
     "scripts/article-schema.test.ts",
     "scripts/article-taxonomy.test.ts",
-    "scripts/article-related.test.ts"
+    "scripts/article-related.test.ts",
+    "scripts/markdown.test.ts"
   ]
 }
