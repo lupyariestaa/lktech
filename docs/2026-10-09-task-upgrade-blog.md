@@ -60,7 +60,7 @@ Dikerjakan sebelum B1 karena B1 butuh gambar inline bisa dirender.
 - [x] **B2.3** Blok kode fenced ```` ``` ```` dan inline `` `kode` ``, dengan tombol salin (komponen client kecil).
 - [x] **B2.4** Daftar bernomor `1. item`.
 - [x] **B2.5** Heading `####`. Anchor id otomatis (slug dari teks heading) untuk TOC di B6.
-- [x] **B2.6** Tabel sederhana (pipe table). Opsional, kerjakan bila waktu cukup.
+- [ ] **B2.6** Tabel sederhana (pipe table). Opsional, kerjakan bila waktu cukup.
 - [x] **B2.7** Test parser: `scripts/markdown.test.ts`. Kasus: gambar valid, gambar URL tidak aman ditolak, escape HTML tidak dieksekusi, blockquote, kode, daftar bernomor, heading id.
   - Ekspor fungsi parse murni (tanpa React) agar bisa dites dengan `--experimental-strip-types`. Pisahkan ke `src/lib/markdown-parse.ts`.
   - Tambahkan `scripts/markdown.test.ts` ke `test:blog`.
