@@ -116,6 +116,18 @@ export const articleSchema = z.object({
   author: z.string().trim().max(80).optional(),
   status: z.enum(["draft", "published"]).optional(),
   publishedAt: z.string().trim().max(40).optional(),
+  metaTitle: z.string().trim().max(120).optional(),
+  metaDescription: z.string().trim().max(320).optional(),
+  scheduledAt: z
+    .string()
+    .trim()
+    .max(40)
+    .refine((v) => v === "" || !Number.isNaN(Date.parse(v)), {
+      message: "Jadwal terbit tidak valid.",
+    })
+    .optional(),
+  /** Slug sebelum diubah (untuk riwayat redirect). */
+  renamedFrom: z.string().trim().max(200).optional(),
 });
 
 // ===== Proyek =====

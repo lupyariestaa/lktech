@@ -7,6 +7,7 @@ import {
   saveArticle,
 } from "@/lib/articles";
 import { taxonomySlug, type Article } from "@/lib/article-types";
+import { estimateReadingTime } from "@/lib/article-logic";
 import { articleSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
 
@@ -75,11 +76,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Slug tidak valid." }, { status: 400 });
   }
 
+  const articleBody = body.body ?? "";
+
+  // B5.7: slug berubah → slug lama masuk riwayat (redirect 301 di halaman).
+  const existingList = await getStoredArticles();
+  const previousBySlug = existingList.find((a) => a.slug === slug);
+  const renamedFrom = typeof body.renamedFrom === "string" ? sanitizeSlug(body.renamedFrom) : "";
+  const previousRename = renamedFrom
+    ? existingList.find((a) => a.slug === renamedFrom)
+    : undefined;
+  const history = new Set<string>([
+    ...(previousBySlug?.slugHistory ?? []),
+    ...(previousRename?.slugHistory ?? []),
+  ]);
+  if (previousRename && renamedFrom !== slug) history.add(renamedFrom);
+  history.delete(slug);
+
   const article: Article = {
     slug,
     title,
     excerpt: (body.excerpt ?? "").trim(),
-    body: body.body ?? "",
+    body: articleBody,
+    readingTime: estimateReadingTime(articleBody),
+    metaTitle: body.metaTitle?.trim() || undefined,
+    metaDescription: body.metaDescription?.trim() || undefined,
+    scheduledAt: body.scheduledAt || undefined,
+    slugHistory: Array.from(history),
     category: (body.category ?? "Artikel").trim(),
     tags: Array.isArray(body.tags) ? body.tags.filter(Boolean) : [],
     cover: (body.cover ?? "default").trim(),

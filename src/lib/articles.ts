@@ -1,4 +1,18 @@
 ﻿import type { Article, StoredArticle } from "@/lib/article-types";
+import {
+  findArticleBySlugOrHistory,
+  isPubliclyVisible,
+  type ArticleLike,
+} from "@/lib/article-logic";
+
+export {
+  estimateReadingTime,
+  matchesSearch,
+  paginate,
+  cursorOf,
+  pickRelatedArticles,
+} from "@/lib/article-logic";
+export type { ArticleLike };
 
 export type { Article, StoredArticle };
 
@@ -24,10 +38,21 @@ function normalizeArticle(data: Record<string, unknown>): Article {
     status: data.status === "draft" ? "draft" : "published",
     publishedAt: str(data.publishedAt, new Date().toISOString()),
     updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : undefined,
+    // B5.2: field baru bersifat opsional; artikel lama tetap valid.
+    metaTitle: typeof data.metaTitle === "string" && data.metaTitle ? data.metaTitle : undefined,
+    metaDescription:
+      typeof data.metaDescription === "string" && data.metaDescription
+        ? data.metaDescription
+        : undefined,
+    scheduledAt: typeof data.scheduledAt === "string" && data.scheduledAt ? data.scheduledAt : undefined,
+    slugHistory: Array.isArray(data.slugHistory)
+      ? data.slugHistory.filter((s): s is string => typeof s === "string")
+      : [],
+    readingTime: typeof data.readingTime === "number" ? data.readingTime : undefined,
   };
 }
 
-/** Semua artikel (published saja) dari Firestore. Tanpa DB → kosong. */
+/** Semua artikel yang tayang publik (published & jadwal sudah lewat). Tanpa DB → kosong. */
 export async function getArticles(): Promise<Article[]> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
@@ -35,9 +60,10 @@ export async function getArticles(): Promise<Article[]> {
 
   try {
     const snap = await db.collection(COLLECTION).get();
+    const now = Date.now();
     return snap.docs
       .map((doc) => normalizeArticle(doc.data()))
-      .filter((a) => a.status === "published")
+      .filter((a) => isPubliclyVisible(a, now))
       .sort(
         (a, b) =>
           new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
@@ -66,6 +92,17 @@ export async function getStoredArticles(): Promise<StoredArticle[]> {
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
   const articles = await getArticles();
   return articles.find((a) => a.slug === slug) ?? null;
+}
+
+/**
+ * Cari artikel publik via slug aktif, lalu riwayat slug (B5.7).
+ * `redirectTo` diisi bila pencarian lewat slug lama.
+ */
+export async function resolveArticleSlug(
+  slug: string,
+): Promise<{ article: Article; redirectTo: string | null } | null> {
+  const articles = await getArticles();
+  return findArticleBySlugOrHistory(slug, articles);
 }
 
 export async function getArticleSlugs(): Promise<string[]> {
@@ -114,33 +151,6 @@ export async function getArticlesByTag(tag: string): Promise<Article[]> {
   return articles.filter((a) => a.tags.includes(tag));
 }
 
-/**
- * Artikel terkait: prioritaskan kesamaan kategori, lalu kesamaan tag.
- * Mengembalikan hingga `limit` artikel (tanpa dirinya sendiri).
- */
-export function pickRelatedArticles(
-  current: Article,
-  all: Article[],
-  limit = 3,
-): Article[] {
-  return all
-    .filter((a) => a.slug !== current.slug)
-    .map((a) => {
-      const sameCategory = a.category === current.category ? 2 : 0;
-      const sharedTags = a.tags.filter((t) => current.tags.includes(t)).length;
-      return { article: a, score: sameCategory + sharedTags };
-    })
-    .sort(
-      (x, y) =>
-        y.score - x.score ||
-        new Date(y.article.publishedAt).getTime() -
-          new Date(x.article.publishedAt).getTime(),
-    )
-    .slice(0, limit)
-    .map((x) => x.article);
-}
-
-
 export async function saveArticle(
   article: Article,
   updatedBy: string,
@@ -157,6 +167,11 @@ export async function saveArticle(
     updatedBy,
   };
   payload.coverImage = coverImage ?? null;
+
+  // Firestore menolak `undefined`: ganti dengan null (field opsional kosong).
+  for (const key of Object.keys(payload)) {
+    if (payload[key] === undefined) payload[key] = null;
+  }
 
   await db.collection(COLLECTION).doc(article.slug).set(payload, { merge: true });
 }

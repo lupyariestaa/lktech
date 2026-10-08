@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pickRelatedArticles } from "../src/lib/articles.ts";
+import { pickRelatedArticles } from "../src/lib/article-logic.ts";
 import type { Article } from "../src/lib/article-types.ts";
 
 function art(slug: string, category: string, tags: string[], publishedAt: string): Article {

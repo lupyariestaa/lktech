@@ -92,16 +92,16 @@ Dikerjakan sebelum B1 karena B1 butuh gambar inline bisa dirender.
 
 Dikerjakan sebelum B3 dan B4 karena UI butuh field baru.
 
-- [ ] **B5.1** Field baru di `Article` (`src/lib/article-types.ts:4-21`): `metaTitle?`, `metaDescription?`, `scheduledAt?` (ISO), `slugHistory?: string[]`, `readingTime?` (menit, dihitung di server saat simpan).
-- [ ] **B5.2** Migrasi lunak. `normalizeArticle` (`src/lib/articles.ts:125`) mengisi default untuk field baru. Artikel lama tetap valid tanpa migrasi manual.
-- [ ] **B5.3** Scheduled publishing.
+- [x] **B5.1** Field baru di `Article` (`src/lib/article-types.ts:4-21`): `metaTitle?`, `metaDescription?`, `scheduledAt?` (ISO), `slugHistory?: string[]`, `readingTime?` (menit, dihitung di server saat simpan).
+- [x] **B5.2** Migrasi lunak. `normalizeArticle` (`src/lib/articles.ts:125`) mengisi default untuk field baru. Artikel lama tetap valid tanpa migrasi manual.
+- [x] **B5.3** Scheduled publishing.
   - `getArticles` memfilter `status === "published" && (!scheduledAt || scheduledAt <= now)`. Juga cek `publishedAt <= now`.
   - Cron baru `src/app/api/cron/articles/route.ts` (pola sama dengan cron yang ada, diamankan `CRON_SECRET`) untuk revalidate `/blog` saat jadwal lewat.
   - Verifikasi: test `scripts/article-schedule.test.ts` untuk fungsi filter (ekstrak sebagai fungsi murni).
-- [ ] **B5.4** Pencarian: filter di sisi server dari hasil `getArticles` (cukup untuk volume sekarang). Tidak pakai library pencarian.
-- [ ] **B5.5** Paginasi `/api/articles` dengan `limit` dan `cursor` (cursor = `publishedAt` + slug). Default `limit=12`, maks 50.
-- [ ] **B5.6** Index Firestore `articles`: `status` + `publishedAt`, hanya bila query berubah jadi server-side. Tambah ke `firestore.indexes.json`.
-- [ ] **B5.7** Riwayat slug (keputusan 6): saat slug berubah, slug lama masuk `slugHistory`. Halaman `/blog/[slug]` yang tidak ditemukan mengecek `slugHistory` lalu redirect 301 (`redirect()` dari `next/navigation` dengan `permanent`).
+- [x] **B5.4** Pencarian: filter di sisi server dari hasil `getArticles` (cukup untuk volume sekarang). Tidak pakai library pencarian.
+- [x] **B5.5** Paginasi `/api/articles` dengan `limit` dan `cursor` (cursor = `publishedAt` + slug). Default `limit=12`, maks 50.
+- [x] **B5.6** (SKIP: tetap in-memory, tanpa query Firestore baru, index belum perlu. Ditandai selesai dengan keputusan ini.) Index Firestore `articles`: `status` + `publishedAt`, hanya bila query berubah jadi server-side. Tambah ke `firestore.indexes.json`.
+- [x] **B5.7** Riwayat slug (keputusan 6): saat slug berubah, slug lama masuk `slugHistory`. Halaman `/blog/[slug]` yang tidak ditemukan mengecek `slugHistory` lalu redirect 301 (`redirect()` dari `next/navigation` dengan `permanent`).
   - Verifikasi: test fungsi `findArticleBySlugOrHistory` (murni, dites).
 
 **Verifikasi:** `npm run test:blog` hijau. `npm run build` hijau.

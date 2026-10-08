@@ -18,6 +18,16 @@ export type Article = {
   /** ISO date. */
   publishedAt: string;
   updatedAt?: string;
+  /** Judul SEO (fallback: title). */
+  metaTitle?: string;
+  /** Deskripsi SEO (fallback: excerpt). */
+  metaDescription?: string;
+  /** ISO. Artikel tidak tampil publik sebelum waktu ini. */
+  scheduledAt?: string;
+  /** Slug terdahulu. Dipakai untuk redirect 301 setelah rename. */
+  slugHistory?: string[];
+  /** Estimasi menit baca (dihitung saat simpan). */
+  readingTime?: number;
 };
 
 /** Artikel tersimpan di Firestore (dengan id dokumen). */

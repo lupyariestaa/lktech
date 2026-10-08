@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, ArrowRight, MessageCircle } from "lucide-react";
@@ -9,10 +9,10 @@ import { ArticleCard, ArticleTags } from "@/components/article-card";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { CtaContact } from "@/components/sections/cta-contact";
 import {
-  getArticleBySlug,
   getArticleSlugs,
   getArticles,
   pickRelatedArticles,
+  resolveArticleSlug,
 } from "@/lib/articles";
 import { getSiteSettings } from "@/lib/settings";
 import { SITE } from "@/lib/site";
@@ -35,16 +35,19 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = await getArticleBySlug(slug);
-  if (!article) return { title: "Artikel tidak ditemukan" };
+  const resolved = await resolveArticleSlug(slug);
+  if (!resolved) return { title: "Artikel tidak ditemukan" };
+  const article = resolved.article;
+  const title = article.metaTitle || article.title;
+  const description = article.metaDescription || article.excerpt;
 
   return {
-    title: article.title,
-    description: article.excerpt,
-    alternates: { canonical: `/blog/${slug}` },
+    title,
+    description,
+    alternates: { canonical: `/blog/${article.slug}` },
     openGraph: {
-      title: article.title,
-      description: article.excerpt,
+      title,
+      description,
       type: "article",
       url: `/blog/${slug}`,
       publishedTime: article.publishedAt,
@@ -59,8 +62,11 @@ export default async function ArticleDetailPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const article = await getArticleBySlug(slug);
-  if (!article) notFound();
+  const resolved = await resolveArticleSlug(slug);
+  if (!resolved) notFound();
+  // B5.7: slug lama → redirect permanen ke slug baru.
+  if (resolved.redirectTo) permanentRedirect(`/blog/${resolved.redirectTo}`);
+  const article = resolved.article;
 
   const [all, settings] = await Promise.all([
     getArticles(),
