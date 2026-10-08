@@ -30,6 +30,9 @@ export type Article = {
   readingTime?: number;
 };
 
+/** Payload simpan dari admin: artikel + slug lama bila di-rename (B5.7). */
+export type ArticleSavePayload = Article & { renamedFrom?: string };
+
 /** Artikel tersimpan di Firestore (dengan id dokumen). */
 export type StoredArticle = Article & { id: string };
 

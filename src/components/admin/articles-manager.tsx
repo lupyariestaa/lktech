@@ -1,8 +1,16 @@
-"use client";
+﻿"use client";
 
 import { useRef, useState } from "react";
 import type { MediaItem } from "@/lib/media-types";
-import { buildImageSnippet, insertBlock } from "@/lib/markdown-insert";
+import { buildImageSnippet } from "@/lib/markdown-insert";
+import {
+  draftStorageKey,
+  isoToWibInput,
+  lengthStatus,
+  wibInputToIso,
+} from "@/lib/article-editor";
+import { useEffect } from "react";
+import { MarkdownEditor } from "@/components/admin/markdown-editor";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -60,20 +68,58 @@ export function ArticlesManager() {
   } = useAsyncList<StoredArticle>(fetchArticles, "Gagal memuat artikel.");
   const [editing, setEditing] = useState<Article | null>(null);
   const [isNew, setIsNew] = useState(false);
+  /** Slug asli saat artikel dibuka untuk diedit (deteksi rename, B5.7). */
+  const [originalSlug, setOriginalSlug] = useState("");
+  /** Kunci autosave aktif untuk form yang sedang terbuka (B3.4). */
+  const draftKey = editing ? draftStorageKey(isNew ? "" : originalSlug) : null;
+  /** Draft tersimpan yang belum dipulihkan (ditawarkan di banner). */
+  const [savedDraft, setSavedDraft] = useState<{ article: Article; at: string } | null>(null);
+
+  // Autosave: tulis draft ke localStorage, di-debounce ~800 ms.
+  useEffect(() => {
+    if (!editing || !draftKey) return;
+    const t = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          draftKey,
+          JSON.stringify({ article: editing, at: new Date().toISOString() }),
+        );
+      } catch {
+        /* penyimpanan penuh/diblokir: abaikan */
+      }
+    }, 800);
+    return () => window.clearTimeout(t);
+  }, [editing, draftKey]);
+
+
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<StoredArticle | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Form terbuka → tandai ada perubahan belum disimpan (guard navigasi sidebar).
+  // Form terbuka â†’ tandai ada perubahan belum disimpan (guard navigasi sidebar).
   useRegisterDirty(editing !== null);
 
   const refresh = async () => {
     await load();
   };
 
+  /** Cek draft tersimpan untuk kunci ini (dipanggil saat form dibuka, bukan di efek). */
+  const findDraft = (key: string) => {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { article: Article; at: string };
+      return parsed?.article ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
   const onNew = () => {
     setEditing({ ...emptyArticle });
     setIsNew(true);
+    setOriginalSlug("");
+    setSavedDraft(findDraft(draftStorageKey("")));
   };
 
   const onEdit = (a: StoredArticle) => {
@@ -81,6 +127,8 @@ export function ArticlesManager() {
     void _id;
     setEditing({ ...rest });
     setIsNew(false);
+    setOriginalSlug(a.slug);
+    setSavedDraft(findDraft(draftStorageKey(a.slug)));
   };
 
   const confirmDelete = async () => {
@@ -111,10 +159,20 @@ export function ArticlesManager() {
       toast.error(msg);
       return;
     }
+    if (editing.scheduledAt && Number.isNaN(Date.parse(editing.scheduledAt))) {
+      const msg = "Jadwal terbit tidak valid.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      await saveArticle(editing);
+      // Slug berubah pada artikel yang sudah ada → kirim slug lama untuk riwayat redirect.
+      const renamedFrom =
+        !isNew && originalSlug && originalSlug !== editing.slug ? originalSlug : undefined;
+      await saveArticle(renamedFrom ? { ...editing, renamedFrom } : editing);
+      if (draftKey) window.localStorage.removeItem(draftKey);
       setEditing(null);
       await load({ silent: true });
       toast.success(isNew ? "Artikel dibuat." : "Artikel diperbarui.");
@@ -129,15 +187,46 @@ export function ArticlesManager() {
 
   if (editing) {
     return (
-      <ArticleForm
-        article={editing}
-        isNew={isNew}
-        saving={saving}
-        onChange={setEditing}
-        onSave={onSave}
-        onCancel={() => setEditing(null)}
-        error={error}
-      />
+      <div>
+        {savedDraft && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span>
+              Ada draft belum tersimpan ({new Date(savedDraft.at).toLocaleString("id-ID")}).
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(savedDraft.article);
+                  setSavedDraft(null);
+                }}
+                className="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white"
+              >
+                Pulihkan
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (draftKey) window.localStorage.removeItem(draftKey);
+                  setSavedDraft(null);
+                }}
+                className="rounded-full border border-amber-300 px-3 py-1.5 text-xs font-semibold"
+              >
+                Buang
+              </button>
+            </div>
+          </div>
+        )}
+        <ArticleForm
+          article={editing}
+          isNew={isNew}
+          saving={saving}
+          onChange={setEditing}
+          onSave={onSave}
+          onCancel={() => setEditing(null)}
+          error={error}
+        />
+      </div>
     );
   }
 
@@ -190,7 +279,7 @@ export function ArticlesManager() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <span className="font-semibold text-primary">{a.category}</span>
-                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-300">â€¢</span>
                   <span
                     className={cn(
                       "rounded-full px-2 py-0.5 text-[10px] font-semibold",
@@ -210,11 +299,11 @@ export function ArticlesManager() {
 
               <div className="flex items-center gap-2">
                 <Link
-                  href={`/blog/${a.slug}`}
+                  href={a.status === "published" ? `/blog/${a.slug}` : `/admin/blog/preview/${a.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/30 hover:text-primary"
-                  aria-label="Lihat di website"
+                  aria-label={a.status === "published" ? "Lihat di website" : "Pratinjau draft"}
                 >
                   <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -359,12 +448,11 @@ function ArticleForm({
             <input
               type="date"
               value={article.publishedAt.slice(0, 10)}
-              onChange={(e) =>
-                set(
-                  "publishedAt",
-                  new Date(e.target.value || Date.now()).toISOString(),
-                )
-              }
+              onChange={(e) => {
+                if (!e.target.value) return;
+                // Tanggal dianggap WIB (+07:00), konsisten dengan jadwal.
+                set("publishedAt", new Date(`${e.target.value}T00:00:00+07:00`).toISOString());
+              }}
               className={fieldBase}
             />
           </Field>
@@ -386,7 +474,7 @@ function ArticleForm({
             onChange={(url) => set("coverImage", url)}
             onAlt={(alt) => set("coverAlt", alt)}
           />
-          <Field label="…atau tempel URL gambar (opsional)">
+          <Field label="...atau tempel URL gambar (opsional)">
             <input
               value={article.coverImage ?? ""}
               onChange={(e) => set("coverImage", e.target.value)}
@@ -413,21 +501,47 @@ function ArticleForm({
           onChange={(body) => set("body", body)}
         />
 
-        <Field label="Tags (1 per baris)">
-          <textarea
-            rows={3}
-            value={article.tags.join("\n")}
-            onChange={(e) =>
-              set(
-                "tags",
-                e.target.value
-                  .split("\n")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              )
-            }
-            className={cn(fieldBase, "resize-none")}
+        <Field label="Tags">
+          <TagInput value={article.tags} onChange={(tags) => set("tags", tags)} />
+        </Field>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Field label="Judul SEO (opsional)">
+            <input
+              value={article.metaTitle ?? ""}
+              onChange={(e) => set("metaTitle", e.target.value)}
+              placeholder="Kosong = pakai judul artikel"
+              className={fieldBase}
+            />
+            <CharHint value={article.metaTitle ?? ""} min={30} max={60} />
+          </Field>
+          <Field label="Deskripsi SEO (opsional)">
+            <textarea
+              rows={2}
+              value={article.metaDescription ?? ""}
+              onChange={(e) => set("metaDescription", e.target.value)}
+              placeholder="Kosong = pakai ringkasan"
+              className={cn(fieldBase, "resize-none")}
+            />
+            <CharHint value={article.metaDescription ?? ""} min={70} max={160} />
+          </Field>
+        </div>
+
+        <Field label="Jadwal terbit (WIB, opsional)">
+          <input
+            type="datetime-local"
+            value={isoToWibInput(article.scheduledAt)}
+            onChange={(e) => {
+              const iso = wibInputToIso(e.target.value);
+              if (iso === null) return;
+              set("scheduledAt", iso || undefined);
+            }}
+            className={fieldBase}
           />
+          <span className="text-xs text-muted">
+            Kosongkan untuk langsung tayang. Jadwal di masa depan disembunyikan
+            dari publik sampai waktunya tiba.
+          </span>
         </Field>
       </div>
 
@@ -472,6 +586,79 @@ function Field({
  * Ekstrak `publicId` Cloudinary dari URL secure.
  * Mengembalikan "" bila URL bukan dari Cloudinary (mis. URL eksternal).
  */
+/** Input tag berbentuk chip: Enter/koma untuk menambah, Backspace untuk hapus terakhir (B3.5). */
+function TagInput({ value, onChange }: { value: string[]; onChange: (tags: string[]) => void }) {
+  const [draft, setDraft] = useState("");
+
+  const commit = () => {
+    const parts = draft
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parts.length === 0) return;
+    const merged = Array.from(new Set([...value, ...parts])).slice(0, 30);
+    onChange(merged);
+    setDraft("");
+  };
+
+  return (
+    <div className={cn(fieldBase, "flex flex-wrap items-center gap-2")}>
+      {value.map((t) => (
+        <span
+          key={t}
+          className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary"
+        >
+          {t}
+          <button
+            type="button"
+            onClick={() => onChange(value.filter((x) => x !== t))}
+            aria-label={`Hapus tag ${t}`}
+            className="grid h-4 w-4 place-items-center rounded-full hover:bg-primary/10"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+      <input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            commit();
+          } else if (e.key === "Backspace" && !draft && value.length) {
+            onChange(value.slice(0, -1));
+          }
+        }}
+        onBlur={commit}
+        placeholder={value.length ? "Tambah tag..." : "Ketik tag lalu Enter"}
+        aria-label="Tambah tag"
+        className="min-w-[140px] flex-1 bg-transparent py-0.5 text-sm text-secondary placeholder:text-slate-400 focus:outline-none"
+      />
+    </div>
+  );
+}
+
+/** Penghitung karakter dengan rentang rekomendasi (B3.6). */
+function CharHint({ value, min, max }: { value: string; min: number; max: number }) {
+  const status = lengthStatus(value.length, min, max);
+  const tone =
+    status === "ok" ? "text-emerald-600" : status === "kosong" ? "text-muted" : "text-amber-600";
+  const note =
+    status === "kosong"
+      ? "Opsional"
+      : status === "ok"
+        ? "Panjang ideal"
+        : status === "pendek"
+          ? `Terlalu pendek (ideal ${min}-${max})`
+          : `Terlalu panjang (ideal ${min}-${max})`;
+  return (
+    <span className={cn("text-xs", tone)} aria-live="polite">
+      {value.length} karakter · {note}
+    </span>
+  );
+}
+
 /** Catat unggahan dari form artikel ke library Media (B1.2). */
 async function registerBlogMedia(asset: CloudinaryAsset, title: string) {
   await saveMedia({
@@ -488,8 +675,8 @@ async function registerBlogMedia(asset: CloudinaryAsset, title: string) {
 }
 
 /**
- * Editor isi artikel (Markdown). Gambar disisipkan dari media library di
- * posisi kursor. Alt wajib (B1.4) dan pilihan lebar (B1.5).
+ * Editor isi artikel: toolbar + pratinjau (MarkdownEditor). Sisip gambar dari
+ * media library di posisi kursor, dengan alt wajib (B1.4) dan pilihan lebar (B1.5).
  */
 function BodyEditor({
   value,
@@ -498,17 +685,17 @@ function BodyEditor({
   value: string;
   onChange: (body: string) => void;
 }) {
-  const areaRef = useRef<HTMLTextAreaElement>(null);
-  const cursorRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   const [pickerOpen, setPickerOpen] = useState(false);
   const [alt, setAlt] = useState("");
   const [wide, setWide] = useState(false);
   const [pending, setPending] = useState<MediaItem | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  // Callback sisip dari editor; dipanggil setelah alt & sumber siap.
+  const insertRef = useRef<((snippet: string) => void) | null>(null);
 
-  const rememberCursor = () => {
-    const el = areaRef.current;
-    if (el) cursorRef.current = { start: el.selectionStart, end: el.selectionEnd };
+  const onRequestImage = (insert: (snippet: string) => void) => {
+    insertRef.current = insert;
+    setPickerOpen(true);
   };
 
   const onPicked = (sel: MediaItem[]) => {
@@ -524,66 +711,33 @@ function BodyEditor({
     if (!pending) return;
     const snippet = buildImageSnippet(alt, pending.secureUrl, wide);
     if (!snippet) {
-      setInlineError(
-        "Teks alternatif wajib diisi dan sumber gambar harus dari Cloudinary.",
-      );
+      setInlineError("Teks alternatif wajib diisi dan sumber gambar harus dari Cloudinary.");
       return;
     }
-    const { start, end } = cursorRef.current;
-    const r = insertBlock(value, start, end, snippet);
-    onChange(r.text);
+    insertRef.current?.(snippet);
+    insertRef.current = null;
     setPending(null);
     setAlt("");
     setInlineError(null);
-    // Kembalikan fokus & kursor setelah sisipan.
-    requestAnimationFrame(() => {
-      const el = areaRef.current;
-      if (!el) return;
-      el.focus();
-      el.setSelectionRange(r.cursor, r.cursor);
-      cursorRef.current = { start: r.cursor, end: r.cursor };
-    });
   };
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-medium text-secondary">Isi artikel (Markdown)</span>
-        <button
-          type="button"
-          onClick={() => {
-            rememberCursor();
-            setPickerOpen(true);
-          }}
-          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
-        >
-          Sisipkan gambar
-        </button>
-      </div>
+      <span className="text-sm font-medium text-secondary">Isi artikel</span>
 
-      <textarea
-        ref={areaRef}
-        rows={16}
+      <MarkdownEditor
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onSelect={rememberCursor}
-        onKeyUp={rememberCursor}
-        onClick={rememberCursor}
+        onChange={onChange}
+        onRequestImage={onRequestImage}
         placeholder={"Tulis isi artikel di sini...\n\n## Subjudul\n\n- Poin satu\n- Poin dua\n\n**Tebal** dan *miring*."}
-        className={cn(fieldBase, "resize-y font-mono text-xs leading-relaxed")}
+        fieldClass={fieldBase}
       />
 
       {pending && (
         <div className="flex flex-col gap-2 rounded-2xl border border-primary/20 bg-primary-50/40 p-3">
           <div className="flex items-center gap-3">
             <span className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-surface">
-              <Image
-                src={pending.secureUrl}
-                alt=""
-                fill
-                sizes="80px"
-                className="object-cover"
-              />
+              <Image src={pending.secureUrl} alt="" fill sizes="80px" className="object-cover" />
             </span>
             <div className="min-w-0 flex-1">
               <label className="text-xs font-semibold text-secondary" htmlFor="inline-alt">
@@ -600,11 +754,7 @@ function BodyEditor({
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-xs text-secondary">
-              <input
-                type="checkbox"
-                checked={wide}
-                onChange={(e) => setWide(e.target.checked)}
-              />
+              <input type="checkbox" checked={wide} onChange={(e) => setWide(e.target.checked)} />
               Lebar penuh (wide)
             </label>
             <button
@@ -626,13 +776,6 @@ function BodyEditor({
         </div>
       )}
 
-      <span className="text-xs text-muted">
-        Format: <code>## Judul</code>, <code>- daftar</code>, <code>1. daftar bernomor</code>,{" "}
-        <code>&gt; kutipan</code>, <code>**tebal**</code>, <code>*miring*</code>,{" "}
-        <code>`kode`</code>, <code>[tautan](url)</code>, <code>---</code>,{" "}
-        <code>![alt](url)</code>.
-      </span>
-
       <MediaPickerDialog
         open={pickerOpen}
         onOpenChange={setPickerOpen}
@@ -644,7 +787,6 @@ function BodyEditor({
     </div>
   );
 }
-
 function publicIdFromUrl(url: string): string {
   const marker = "/image/upload/";
   const idx = url.indexOf(marker);
@@ -733,7 +875,7 @@ function CoverUploader({
       )}
       {!value && (
         <span className="text-xs text-muted">
-          Rasio disarankan 16:9 (mis. 1600×900).
+          Rasio disarankan 16:9 (mis. 1600Ã—900).
         </span>
       )}
     </div>

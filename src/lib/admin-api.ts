@@ -579,7 +579,7 @@ export async function fetchArticles(): Promise<StoredArticle[]> {
   return data.articles;
 }
 
-export async function saveArticle(article: Article) {
+export async function saveArticle(article: Article & { renamedFrom?: string }) {
   return adminFetch<{ ok: boolean; article: Article }>("/api/admin/articles", {
     method: "POST",
     body: JSON.stringify(article),

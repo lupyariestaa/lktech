@@ -56,6 +56,7 @@
     "scripts/article-related.test.ts",
     "scripts/markdown.test.ts",
     "scripts/article-media.test.ts",
-    "scripts/article-schedule.test.ts"
+    "scripts/article-schedule.test.ts",
+    "scripts/article-editor.test.ts"
   ]
 }

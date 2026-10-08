@@ -112,15 +112,15 @@ Dikerjakan sebelum B3 dan B4 karena UI butuh field baru.
 
 ## Fase B3 - Editor Admin
 
-- [ ] **B3.1** Toolbar: bold, italic, heading, link, daftar, daftar bernomor, blockquote, kode, gambar (memanggil B1.3).
+- [x] **B3.1** Toolbar: bold, italic, heading, link, daftar, daftar bernomor, blockquote, kode, gambar (memanggil B1.3).
   - Komponen baru `src/components/admin/markdown-editor.tsx`. Operasi teks murni (wrap selection) dipisah ke fungsi dan dites.
-- [ ] **B3.2** Preview berdampingan memakai `Markdown` yang sama dengan publik (B2).
-- [ ] **B3.3** Penghitung kata dan estimasi baca (pakai fungsi B5.1 `readingTime`).
-- [ ] **B3.4** Autosave draft ke `localStorage` per slug/id. Peringatan perubahan belum tersimpan memakai `useUnsavedChanges` yang sudah ada.
-- [ ] **B3.5** Tags sebagai chip (input + Enter), menggantikan textarea per baris.
-- [ ] **B3.6** Field SEO `metaTitle` dan `metaDescription` dengan hitung karakter (rekomendasi 60 dan 160).
-- [ ] **B3.7** Field `scheduledAt` (datetime-local) dengan keterangan zona waktu WIB.
-- [ ] **B3.8** Preview draft **hanya admin** (keputusan 5): tombol "Lihat pratinjau" membuka `/admin/blog/preview/[slug]` yang butuh sesi admin (`requireAdmin`), tanpa mengubah status publik.
+- [x] **B3.2** Preview berdampingan memakai `Markdown` yang sama dengan publik (B2).
+- [x] **B3.3** Penghitung kata dan estimasi baca (pakai fungsi B5.1 `readingTime`).
+- [x] **B3.4** Autosave draft ke `localStorage` per slug/id. Peringatan perubahan belum tersimpan memakai `useUnsavedChanges` yang sudah ada.
+- [x] **B3.5** Tags sebagai chip (input + Enter), menggantikan textarea per baris.
+- [x] **B3.6** Field SEO `metaTitle` dan `metaDescription` dengan hitung karakter (rekomendasi 60 dan 160).
+- [x] **B3.7** Field `scheduledAt` (datetime-local) dengan keterangan zona waktu WIB.
+- [x] **B3.8** Preview draft **hanya admin** (keputusan 5): tombol "Lihat pratinjau" membuka `/admin/blog/preview/[slug]` yang butuh sesi admin (`requireAdmin`), tanpa mengubah status publik.
 
 **Verifikasi:** `npm run test:blog` hijau (termasuk test operasi teks toolbar). Manual: buat artikel dari toolbar, lihat preview, simpan.
 
