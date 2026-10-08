@@ -25,12 +25,15 @@ export function ImageUploader({
   folder,
   label = "Unggah gambar",
   removeRemote = true,
+  registerMedia,
 }: {
   value: CloudinaryAsset | null;
   onChange: (asset: CloudinaryAsset | null) => void;
   folder?: string;
   label?: string;
   removeRemote?: boolean;
+  /** Dipanggil setelah unggah sukses untuk mencatat aset ke library Media. */
+  registerMedia?: (asset: CloudinaryAsset, file: File) => Promise<void>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -54,6 +57,18 @@ export function ImageUploader({
     setProgress(0);
     try {
       const asset = await uploadImage(file, { folder, onProgress: setProgress });
+      if (registerMedia) {
+        // B1.2: catat ke library agar berkas tidak "yatim" di luar Media.
+        try {
+          await registerMedia(asset, file);
+        } catch (err) {
+          setError(
+            `Gambar terunggah, tetapi gagal dicatat ke Media: ${
+              err instanceof Error ? err.message : "error"
+            }`,
+          );
+        }
+      }
       onChange(asset);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload gagal.");

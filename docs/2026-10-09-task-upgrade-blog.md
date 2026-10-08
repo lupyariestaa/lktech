@@ -73,13 +73,13 @@ Dikerjakan sebelum B1 karena B1 butuh gambar inline bisa dirender.
 
 ## Fase B1 - Media Picker dan Gambar Inline
 
-- [ ] **B1.1** Tombol "Pilih dari media" di `CoverUploader` membuka `MediaPickerDialog` (`src/components/admin/media-picker-dialog.tsx:89`). Upload baru tetap bisa.
-- [ ] **B1.2** Upload dari form artikel (cover dan inline) memanggil `saveMedia` agar tercatat di media library.
+- [x] **B1.1** Tombol "Pilih dari media" di `CoverUploader` membuka `MediaPickerDialog` (`src/components/admin/media-picker-dialog.tsx:89`). Upload baru tetap bisa.
+- [x] **B1.2** Upload dari form artikel (cover dan inline) memanggil `saveMedia` agar tercatat di media library.
   - File: `src/components/admin/image-uploader.tsx`, `src/app/api/admin/media/route.ts`. Cek pola yang dipakai `MediaPickerDialog`.
-- [ ] **B1.3** Tombol "Sisipkan gambar" di editor body: buka media picker, lalu sisipkan `![alt](url)` di posisi kursor.
-- [ ] **B1.4** Field alt wajib untuk gambar inline. Simpan tombol sisip tidak aktif sampai alt terisi (validasi di UI dan schema).
-- [ ] **B1.5** Pilihan tampilan gambar: `full` (default) atau `wide`. Sintaks: `![alt](url "wide")`. Renderer di B2 mendukung title sebagai flag ukuran.
-- [ ] **B1.6** `src/lib/media-usage.ts` (`scanArticles`, baris ~136-153) memindai isi `body` juga, bukan hanya `coverImage`. File yang dipakai di body tidak bisa dihapus tanpa peringatan.
+- [x] **B1.3** Tombol "Sisipkan gambar" di editor body: buka media picker, lalu sisipkan `![alt](url)` di posisi kursor.
+- [x] **B1.4** Field alt wajib untuk gambar inline. Simpan tombol sisip tidak aktif sampai alt terisi (validasi di UI dan schema).
+- [x] **B1.5** Pilihan tampilan gambar: `full` (default) atau `wide`. Sintaks: `![alt](url "wide")`. Renderer di B2 mendukung title sebagai flag ukuran.
+- [x] **B1.6** `src/lib/media-usage.ts` (`scanArticles`, baris ~136-153) memindai isi `body` juga, bukan hanya `coverImage`. File yang dipakai di body tidak bisa dihapus tanpa peringatan.
   - Verifikasi: test `scripts/media-usage.test.ts` untuk ekstraksi URL dari body.
 
 **Verifikasi:** `npm run test:blog` hijau. Manual: pilih cover dari media, sisip 2 gambar inline di tengah body, simpan, tampil di publik.

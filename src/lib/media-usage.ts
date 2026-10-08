@@ -2,6 +2,7 @@ import "server-only";
 import type { Firestore } from "firebase-admin/firestore";
 import type { MediaItem, MediaUsage } from "@/lib/media-types";
 import { normalizeMediaItem } from "@/lib/media-normalize";
+import { extractImageUrls } from "@/lib/markdown-insert";
 
 /**
  * Pelacakan penggunaan aset media (FASE M3).
@@ -149,6 +150,16 @@ async function scanArticles(db: Firestore, index: UsageIndex) {
         { type: "article", refId: slug, label, field: "coverImage" },
       );
     }
+
+    // B1.6: gambar inline di body (`![alt](url)`).
+    const body = typeof d.body === "string" ? d.body : "";
+    extractImageUrls(body).forEach((url, i) => {
+      addRef(
+        index,
+        { url },
+        { type: "article", refId: slug, label, field: `body[${i}]` },
+      );
+    });
   }
 }
 

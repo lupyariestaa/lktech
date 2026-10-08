@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { MediaItem } from "@/lib/media-types";
+import { buildImageSnippet, insertBlock } from "@/lib/markdown-insert";
 import Link from "next/link";
+import Image from "next/image";
 import {
   AlertCircle,
   ArrowRight,
@@ -16,9 +19,11 @@ import {
   deleteArticle,
   fetchArticles,
   saveArticle,
+  saveMedia,
 } from "@/lib/admin-api";
 import { ARTICLE_CATEGORIES, type Article, type StoredArticle } from "@/lib/article-types";
 import { ImageUploader } from "@/components/admin/image-uploader";
+import { MediaPickerDialog } from "@/components/admin/media-picker-dialog";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
@@ -379,6 +384,7 @@ function ArticleForm({
           <CoverUploader
             value={article.coverImage ?? ""}
             onChange={(url) => set("coverImage", url)}
+            onAlt={(alt) => set("coverAlt", alt)}
           />
           <Field label="…atau tempel URL gambar (opsional)">
             <input
@@ -402,20 +408,10 @@ function ArticleForm({
           />
         </Field>
 
-        <Field label="Isi artikel (Markdown)">
-          <textarea
-            rows={16}
-            value={article.body}
-            onChange={(e) => set("body", e.target.value)}
-            placeholder={"Tulis isi artikel di sini...\n\n## Subjudul\n\n- Poin satu\n- Poin dua\n\n**Tebal** dan *miring*."}
-            className={cn(fieldBase, "resize-y font-mono text-xs leading-relaxed")}
-          />
-          <span className="text-xs text-muted">
-            Format didukung: <code>## Judul</code>, <code>- daftar</code>,{" "}
-            <code>**tebal**</code>, <code>*miring*</code>,{" "}
-            <code>[tautan](url)</code>, <code>---</code>
-          </span>
-        </Field>
+        <BodyEditor
+          value={article.body}
+          onChange={(body) => set("body", body)}
+        />
 
         <Field label="Tags (1 per baris)">
           <textarea
@@ -476,6 +472,179 @@ function Field({
  * Ekstrak `publicId` Cloudinary dari URL secure.
  * Mengembalikan "" bila URL bukan dari Cloudinary (mis. URL eksternal).
  */
+/** Catat unggahan dari form artikel ke library Media (B1.2). */
+async function registerBlogMedia(asset: CloudinaryAsset, title: string) {
+  await saveMedia({
+    publicId: asset.publicId,
+    secureUrl: asset.secureUrl,
+    width: asset.width,
+    height: asset.height,
+    format: asset.format,
+    bytes: asset.bytes,
+    category: "blog",
+    title,
+    projectSlug: "",
+  });
+}
+
+/**
+ * Editor isi artikel (Markdown). Gambar disisipkan dari media library di
+ * posisi kursor. Alt wajib (B1.4) dan pilihan lebar (B1.5).
+ */
+function BodyEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (body: string) => void;
+}) {
+  const areaRef = useRef<HTMLTextAreaElement>(null);
+  const cursorRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [alt, setAlt] = useState("");
+  const [wide, setWide] = useState(false);
+  const [pending, setPending] = useState<MediaItem | null>(null);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+
+  const rememberCursor = () => {
+    const el = areaRef.current;
+    if (el) cursorRef.current = { start: el.selectionStart, end: el.selectionEnd };
+  };
+
+  const onPicked = (sel: MediaItem[]) => {
+    const it = sel[0];
+    if (!it) return;
+    setPending(it);
+    setAlt(it.alt || it.title || "");
+    setWide(false);
+    setInlineError(null);
+  };
+
+  const insert = () => {
+    if (!pending) return;
+    const snippet = buildImageSnippet(alt, pending.secureUrl, wide);
+    if (!snippet) {
+      setInlineError(
+        "Teks alternatif wajib diisi dan sumber gambar harus dari Cloudinary.",
+      );
+      return;
+    }
+    const { start, end } = cursorRef.current;
+    const r = insertBlock(value, start, end, snippet);
+    onChange(r.text);
+    setPending(null);
+    setAlt("");
+    setInlineError(null);
+    // Kembalikan fokus & kursor setelah sisipan.
+    requestAnimationFrame(() => {
+      const el = areaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(r.cursor, r.cursor);
+      cursorRef.current = { start: r.cursor, end: r.cursor };
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-medium text-secondary">Isi artikel (Markdown)</span>
+        <button
+          type="button"
+          onClick={() => {
+            rememberCursor();
+            setPickerOpen(true);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
+        >
+          Sisipkan gambar
+        </button>
+      </div>
+
+      <textarea
+        ref={areaRef}
+        rows={16}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onSelect={rememberCursor}
+        onKeyUp={rememberCursor}
+        onClick={rememberCursor}
+        placeholder={"Tulis isi artikel di sini...\n\n## Subjudul\n\n- Poin satu\n- Poin dua\n\n**Tebal** dan *miring*."}
+        className={cn(fieldBase, "resize-y font-mono text-xs leading-relaxed")}
+      />
+
+      {pending && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-primary/20 bg-primary-50/40 p-3">
+          <div className="flex items-center gap-3">
+            <span className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-surface">
+              <Image
+                src={pending.secureUrl}
+                alt=""
+                fill
+                sizes="80px"
+                className="object-cover"
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <label className="text-xs font-semibold text-secondary" htmlFor="inline-alt">
+                Teks alternatif (wajib)
+              </label>
+              <input
+                id="inline-alt"
+                value={alt}
+                onChange={(e) => setAlt(e.target.value)}
+                placeholder="Deskripsi gambar"
+                className={fieldBase}
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-secondary">
+              <input
+                type="checkbox"
+                checked={wide}
+                onChange={(e) => setWide(e.target.checked)}
+              />
+              Lebar penuh (wide)
+            </label>
+            <button
+              type="button"
+              onClick={insert}
+              className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-dark"
+            >
+              Sisipkan di kursor
+            </button>
+            <button
+              type="button"
+              onClick={() => setPending(null)}
+              className="text-xs font-semibold text-slate-500 hover:text-secondary"
+            >
+              Batal
+            </button>
+          </div>
+          {inlineError && <span className="text-xs text-rose-500">{inlineError}</span>}
+        </div>
+      )}
+
+      <span className="text-xs text-muted">
+        Format: <code>## Judul</code>, <code>- daftar</code>, <code>1. daftar bernomor</code>,{" "}
+        <code>&gt; kutipan</code>, <code>**tebal**</code>, <code>*miring*</code>,{" "}
+        <code>`kode`</code>, <code>[tautan](url)</code>, <code>---</code>,{" "}
+        <code>![alt](url)</code>.
+      </span>
+
+      <MediaPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        mode="single"
+        title="Sisipkan gambar"
+        folder="lktech/blog"
+        onSelect={onPicked}
+      />
+    </div>
+  );
+}
+
 function publicIdFromUrl(url: string): string {
   const marker = "/image/upload/";
   const idx = url.indexOf(marker);
@@ -494,10 +663,14 @@ function publicIdFromUrl(url: string): string {
 function CoverUploader({
   value,
   onChange,
+  onAlt,
 }: {
   value: string;
   onChange: (url: string) => void;
+  /** Adopsi alt dari media terpilih (B1.1) agar tidak hilang. */
+  onAlt?: (alt: string) => void;
 }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const asset: CloudinaryAsset | null = value
     ? {
         publicId: publicIdFromUrl(value),
@@ -522,12 +695,35 @@ function CoverUploader({
       <span className="text-sm font-medium text-secondary">
         Gambar sampul (unggah)
       </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
+        >
+          Pilih dari media
+        </button>
+      </div>
       <ImageUploader
         value={asset}
         onChange={handleChange}
         folder="lktech/blog"
-        label="Pilih gambar sampul"
+        label="Atau unggah gambar baru"
         removeRemote={false}
+        registerMedia={(asset) => registerBlogMedia(asset, "Sampul artikel")}
+      />
+      <MediaPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        mode="single"
+        title="Pilih sampul artikel"
+        folder="lktech/blog"
+        onSelect={(sel) => {
+          const it = sel[0];
+          if (!it) return;
+          onChange(it.secureUrl);
+          if (onAlt && (it.alt || it.title)) onAlt(it.alt || it.title);
+        }}
       />
       {value && !publicIdFromUrl(value) && (
         <span className="text-xs text-amber-600">
