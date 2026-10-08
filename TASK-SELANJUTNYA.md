@@ -21,7 +21,7 @@ Fase **H8** — sekaligus **menutup seluruh rangkaian H0–H8** upgrade beranda.
 | --- | --- |
 | **QA gate** | `tsc` bersih ✅ · `eslint` bersih ✅ · `build` sukses ✅ (72 halaman) · **14 suite / 117 test** lolos ✅. |
 | **Audit beranda** | Anchor unik & resolve (AIDA: `#beranda`…`#kontak`); **1 `<h1>`** + 12 `<h2>`; **53/53 gambar ber-`alt`**; 63 `aria-label`; sembunyi-jika-placeholder bekerja. |
-| **Dokumentasi** | `docs/2026-10-06-upgrade-beranda.md` (ringkasan §11 + riwayat H8); task doc → status selESAI; `docs/README.md` diperbarui. |
+| **Dokumentasi** | `docs/2026-10-06-upgrade-beranda.md` (ringkasan §11 + riwayat H8); task doc → status SELESAI; `docs/README.md` diperbarui. |
 | **Rilis** | Commit konvensional + push `main` → Vercel auto-deploy (`https://lktech.vercel.app`). CI (`.github/workflows/ci.yml`) hijau. |
 
 **Status akhir:** ✅ **UPGRADE BERANDA (H0–H8) SELESAI (kode).** Sisa = uji browser manual & Lighthouse (pemilik).
@@ -509,8 +509,6 @@ Tema 3 (Kepercayaan) — ulasan verified-purchase + moderasi + JSON-LD (`docs/20
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`) — pilih gelombang/inisiatif berikutnya.
 - **Langkah manual tersisa** (daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
 - **Uji sandbox end-to-end** INSTAN & JASA (`docs/2026-10-06-setup-pembayaran-mayar.md`).
-- **Langkah manual tersisa** (lihat daftar di bawah): aktifkan cron eksternal (`CRON_SECRET`), akun Mayar produksi, domain + verifikasi Resend.
-- **Uji sandbox end-to-end** INSTAN & JASA (panduan `docs/2026-10-06-setup-pembayaran-mayar.md`).
 - **Inisiatif roadmap berikutnya** (`docs/2026-10-06-roadmap-pengembangan.md`): Retensi (loyalitas/email marketing), Kepercayaan (alert wishlist), Operasional (audit log, rate-limit/Upstash, laporan otomatis).
 
 ### DoD Global (§9) — status

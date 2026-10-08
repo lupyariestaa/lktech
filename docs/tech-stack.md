@@ -11,17 +11,23 @@
 | Framework | **Next.js** (App Router) |
 | Bahasa | **TypeScript** |
 | Styling | **Tailwind CSS** |
-| UI Components | **shadcn/ui** + **Radix UI** |
+| UI Components | Komponen custom (`class-variance-authority`, `clsx`, `tailwind-merge`) |
 | Ikon | **lucide-react** |
 | Animasi | **Framer Motion** |
 | Forms & Validasi | **React Hook Form** + **Zod** |
-| Database | **Firebase Firestore** |
-| Autentikasi | **Firebase Authentication** |
+| Database | **Firebase Firestore** + **firebase-admin** (server) |
+| Autentikasi | **Firebase Authentication** + session (`src/lib/session.ts`) |
 | Penyimpanan Gambar | **Cloudinary** |
+| Email | **Resend** |
+| Pembayaran | **Mayar.id** (sandbox) |
+| Monitoring | **Sentry** + **Vercel Analytics** |
+| Rate limit / cache (opsional) | **Upstash Redis** |
 | Integrasi Chat | **WhatsApp (deep link / wa.me)** |
 | Hosting | **Vercel** (frontend) |
-| Package Manager | **pnpm** |
-| Linting & Format | **ESLint** + **Prettier** |
+| Package Manager | **npm** (`package-lock.json`), Node >= 22 |
+| Linting | **ESLint** (`eslint.config.mjs`) |
+| Testing | Unit test `node --test` (`scripts/*.test.ts`, `npm run test:*`) |
+| CI | GitHub Actions (`.github/workflows/ci.yml`): tsc, lint, test, build |
 | Version Control | **Git** + **GitHub** |
 
 ---
@@ -96,8 +102,8 @@
 
 ### 3.7 Hosting & Tooling
 - **Vercel** → deploy Next.js paling mulus, mendukung preview per branch.
-- **pnpm** → install dependency cepat & hemat ruang.
-- **ESLint + Prettier** → kode konsisten.
+- **npm** → package manager (lockfile `package-lock.json`).
+- **ESLint** → kode konsisten.
 - **Git + GitHub** → kontrol versi dan kolaborasi.
 
 ---
@@ -176,16 +182,11 @@ lktech-web/
 │  ├─ components/
 │  │  ├─ ui/                  # komponen shadcn/ui
 │  │  └─ sections/            # section landing page
-│  ├─ lib/
-│  │  ├─ firebase.ts          # init Firebase (client)
-│  │  ├─ cloudinary.ts        # helper Cloudinary
-│  │  └─ whatsapp.ts          # helper deep link wa.me
-│  ├─ hooks/
-│  └─ types/
+│  ├─ lib/                   # service, types (*-types.ts), session, admin-guard, content.ts
+│  └─ components/
+├─ scripts/                   # unit test (*.test.ts)
 ├─ docs/                      # dokumentasi pengembangan
-│  ├─ identitas-perusahaan.md
-│  └─ tech-stack.md
-└─ tailwind.config.ts
+└─ TASK-SELANJUTNYA.md
 ```
 
 ---
@@ -194,13 +195,15 @@ lktech-web/
 
 | Tahap | Fokus | Status |
 | --- | --- | --- |
-| **1** | Landing Page / Home (hero, layanan, keunggulan, CTA, kontak, footer) | 🔜 Berikutnya |
-| 2 | Halaman Layanan / Produk (detail tiap layanan) | ⏳ Rencana |
-| 3 | Halaman Portofolio | ⏳ Rencana |
-| 4 | Halaman Kontak + form ke Firestore + tombol WhatsApp | ⏳ Rencana |
-| 5 | Firebase Auth + Dashboard Admin pengelolaan konten | ⏳ Rencana |
-| 6 | Cloudinary upload gambar (portofolio/banner) | ⏳ Rencana |
-| 7 | Optimasi SEO, performa, dan aksesibilitas | ⏳ Rencana |
+| **1** | Landing Page / Home (hero, layanan, keunggulan, CTA, kontak, footer) | ✅ Selesai |
+| 2 | Halaman Layanan / Produk (detail tiap layanan) | ✅ Selesai |
+| 3 | Halaman Portofolio | ✅ Selesai |
+| 4 | Halaman Kontak + form ke Firestore + tombol WhatsApp | ✅ Selesai |
+| 5 | Firebase Auth + Dashboard Admin pengelolaan konten | ✅ Selesai |
+| 6 | Cloudinary upload gambar (portofolio/banner) | ✅ Selesai |
+| 7 | Optimasi SEO, performa, dan aksesibilitas | ✅ Selesai (kode; Lighthouse manual) |
+
+Detail fase lanjutan: lihat `TASK-SELANJUTNYA.md` dan `docs/2026-10-06-roadmap-pengembangan.md`.
 
 ---
 
