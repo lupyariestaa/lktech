@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Logika murni artikel (tanpa Firestore, tanpa React, tanpa alias "@/").
  * Dipakai oleh `articles.ts`, route API, dan halaman, serta dites langsung.
  */

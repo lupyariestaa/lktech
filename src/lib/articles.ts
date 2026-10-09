@@ -1,4 +1,4 @@
-﻿import type { Article, StoredArticle } from "@/lib/article-types";
+import type { Article, StoredArticle } from "@/lib/article-types";
 import {
   findArticleBySlugOrHistory,
   isPubliclyVisible,
