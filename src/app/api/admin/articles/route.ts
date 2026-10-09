@@ -8,6 +8,7 @@ import {
 } from "@/lib/articles";
 import { taxonomySlug, type Article } from "@/lib/article-types";
 import { estimateReadingTime } from "@/lib/article-logic";
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { articleSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
 
@@ -117,9 +118,32 @@ export async function POST(req: Request) {
 
   try {
     // Versi sebelumnya (jika ada) ikut di-revalidate: kategori/tag lama bisa berubah.
-    const previous = (await getStoredArticles()).find((a) => a.slug === slug);
+    // Saat rename, versi sebelumnya ada di slug lama (previousRename).
+    const previous = previousBySlug ?? previousRename;
     await saveArticle(article, check.email);
     revalidateBlog(previous, article);
+
+    const statusChanged = previous !== undefined && previous.status !== article.status;
+    const duplicatedFrom =
+      typeof body.duplicatedFrom === "string" ? sanitizeSlug(body.duplicatedFrom) : "";
+    const action = duplicatedFrom && !previous
+      ? "article.duplicate"
+      : !statusChanged
+        ? "article.save"
+        : article.status === "published"
+          ? "article.publish"
+          : "article.unpublish";
+    await recordAdminAudit({
+      action,
+      actor: check.email,
+      target: slug,
+      meta: {
+        ...(previous ? { from: previous.status } : { baru: true }),
+        to: article.status,
+        ...(renamedFrom ? { renamedFrom } : {}),
+        ...(duplicatedFrom ? { duplicatedFrom } : {}),
+      },
+    });
     return NextResponse.json({ ok: true, article });
   } catch (err) {
     console.error("[api/admin/articles] POST gagal:", err);
@@ -144,6 +168,7 @@ export async function DELETE(req: Request) {
     const previous = (await getStoredArticles()).find((a) => a.slug === slug);
     await deleteArticleBySlug(slug);
     revalidateBlog(previous ?? { slug, category: "", tags: [] });
+    await recordAdminAudit({ action: "article.delete", actor: check.email, target: slug });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/articles] DELETE gagal:", err);

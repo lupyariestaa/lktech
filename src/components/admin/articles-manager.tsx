@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState } from "react";
 import type { MediaItem } from "@/lib/media-types";
@@ -11,24 +11,23 @@ import {
 } from "@/lib/article-editor";
 import { useEffect } from "react";
 import { MarkdownEditor } from "@/components/admin/markdown-editor";
-import Link from "next/link";
 import Image from "next/image";
 import {
   AlertCircle,
-  ArrowRight,
   Loader2,
-  Pencil,
   Plus,
   RefreshCw,
-  Trash2,
   X,
 } from "lucide-react";
 import {
+  bulkArticles,
   deleteArticle,
   fetchArticles,
   saveArticle,
   saveMedia,
 } from "@/lib/admin-api";
+import { ArticlesList } from "@/components/admin/articles-list";
+import { duplicateSlug, type BulkAction } from "@/lib/article-manage";
 import { ARTICLE_CATEGORIES, type Article, type StoredArticle } from "@/lib/article-types";
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { MediaPickerDialog } from "@/components/admin/media-picker-dialog";
@@ -151,6 +150,45 @@ export function ArticlesManager() {
     }
   };
 
+  /** Duplikat: buat draft baru dengan slug `-salinan` (B4.4). */
+  const onDuplicate = async (a: StoredArticle) => {
+    const { id: _id, ...rest } = a;
+    void _id;
+    const taken = new Set(items.map((i) => i.slug));
+    const copy: Article = {
+      ...rest,
+      slug: duplicateSlug(a.slug, taken),
+      title: `${a.title} (salinan)`,
+      status: "draft",
+      scheduledAt: undefined,
+      publishedAt: new Date().toISOString(),
+      slugHistory: [],
+    };
+    try {
+      await saveArticle({ ...copy, duplicatedFrom: a.slug });
+      await load({ silent: true });
+      toast.success(`Salinan dibuat sebagai draft: ${copy.slug}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Gagal menduplikat.";
+      setError(msg);
+      toast.error(msg);
+    }
+  };
+
+  /** Aksi massal (B4.3). Hasil per item ditampilkan ringkas. */
+  const onBulk = async (action: BulkAction, slugs: string[]) => {
+    try {
+      const res = await bulkArticles(action, slugs);
+      await load({ silent: true });
+      if (res.failed > 0) toast.error(`${res.done} berhasil, ${res.failed} gagal.`);
+      else toast.success(`${res.done} artikel diproses.`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Aksi massal gagal.";
+      setError(msg);
+      toast.error(msg);
+    }
+  };
+
   const onSave = async () => {
     if (!editing) return;
     if (!editing.title.trim()) {
@@ -225,6 +263,7 @@ export function ArticlesManager() {
           onSave={onSave}
           onCancel={() => setEditing(null)}
           error={error}
+          originalSlug={originalSlug}
         />
       </div>
     );
@@ -260,72 +299,15 @@ export function ArticlesManager() {
         </div>
       )}
 
-      {loading ? (
-        <div className="mt-16 flex flex-col items-center gap-3 text-muted">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <span className="text-sm">Memuat artikel...</span>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-white py-16 text-center">
-          <p className="text-sm font-medium text-secondary">Belum ada artikel.</p>
-        </div>
-      ) : (
-        <div className="mt-5 flex flex-col gap-3">
-          {items.map((a) => (
-            <div
-              key={a.slug}
-              className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 text-xs text-muted">
-                  <span className="font-semibold text-primary">{a.category}</span>
-                  <span className="text-slate-300">â€¢</span>
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                      a.status === "published"
-                        ? "bg-emerald-50 text-emerald-600"
-                        : "bg-amber-50 text-amber-600",
-                    )}
-                  >
-                    {a.status === "published" ? "Terbit" : "Draft"}
-                  </span>
-                </div>
-                <h3 className="mt-0.5 truncate text-sm font-bold text-secondary">
-                  {a.title}
-                </h3>
-                <p className="truncate text-xs text-muted">/{a.slug}</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Link
-                  href={a.status === "published" ? `/blog/${a.slug}` : `/admin/blog/preview/${a.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/30 hover:text-primary"
-                  aria-label={a.status === "published" ? "Lihat di website" : "Pratinjau draft"}
-                >
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <button
-                  onClick={() => onEdit(a)}
-                  className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/30 hover:text-primary"
-                  aria-label="Edit"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setToDelete(a)}
-                  className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
-                  aria-label="Hapus"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <ArticlesList
+        items={items}
+        loading={loading}
+        onEdit={onEdit}
+        onDelete={(a) => setToDelete(a)}
+        onDuplicate={onDuplicate}
+        onBulk={onBulk}
+        onRefreshRequest={refresh}
+      />
 
       <ConfirmDialog
         open={toDelete !== null}
@@ -339,7 +321,6 @@ export function ArticlesManager() {
     </div>
   );
 }
-
 function ArticleForm({
   article,
   isNew,
@@ -348,6 +329,7 @@ function ArticleForm({
   onSave,
   onCancel,
   error,
+  originalSlug,
 }: {
   article: Article;
   isNew: boolean;
@@ -356,6 +338,7 @@ function ArticleForm({
   onSave: () => void;
   onCancel: () => void;
   error: string | null;
+  originalSlug: string;
 }) {
   const set = <K extends keyof Article>(key: K, value: Article[K]) =>
     onChange({ ...article, [key]: value });
@@ -396,14 +379,19 @@ function ArticleForm({
         </Field>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Slug (URL)">
-            <input
-              value={article.slug}
-              onChange={(e) => set("slug", e.target.value)}
-              placeholder="otomatis dari judul bila kosong"
-              className={fieldBase}
-            />
-          </Field>
+        <Field label="Slug (URL)">
+          <input
+            value={article.slug}
+            onChange={(e) => set("slug", e.target.value)}
+            placeholder="otomatis dari judul bila kosong"
+            className={fieldBase}
+          />
+          {!isNew && originalSlug && article.slug !== originalSlug && (
+            <span className="text-xs text-amber-600">
+              Slug lama <code>/{originalSlug}</code> akan redirect permanen (301) ke slug baru.
+            </span>
+          )}
+        </Field>
           <Field label="Penulis">
             <input
               value={article.author}

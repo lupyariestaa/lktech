@@ -27,7 +27,7 @@
     "test:report": "node --experimental-strip-types --test scripts/weekly-report.test.ts",
     "test:loyalty": "node --experimental-strip-types --test scripts/loyalty.test.ts",
     "test:wishlist": "node --experimental-strip-types --test scripts/wishlist-alert.test.ts",
-    "test:blog": "node --experimental-strip-types --test scripts/article-schema.test.ts scripts/article-taxonomy.test.ts scripts/article-related.test.ts scripts/markdown.test.ts scripts/article-media.test.ts scripts/article-schedule.test.ts scripts/article-editor.test.ts"
+    "test:blog": "node --experimental-strip-types --test scripts/article-schema.test.ts scripts/article-taxonomy.test.ts scripts/article-related.test.ts scripts/markdown.test.ts scripts/article-media.test.ts scripts/article-schedule.test.ts scripts/article-editor.test.ts scripts/article-manage.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

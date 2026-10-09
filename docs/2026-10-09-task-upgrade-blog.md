@@ -1,4 +1,4 @@
-﻿# Task Implementasi Upgrade Sistem Blog LKTech
+# Task Implementasi Upgrade Sistem Blog LKTech
 
 > Turunan dari `docs/2026-10-09-planning-upgrade-blog.md`.
 > Status: **SIAP DIKERJAKAN**. Urutan fase wajib diikuti. Centang `[x]` setelah selesai dan lolos verifikasi fase.
@@ -130,15 +130,15 @@ Dikerjakan sebelum B3 dan B4 karena UI butuh field baru.
 
 ## Fase B4 - Dashboard Kelola Artikel
 
-- [ ] **B4.1** List dengan pencarian judul, filter status, kategori, dan tag. Filter berupa state URL (`searchParams`) agar bisa dibagikan.
-- [ ] **B4.2** Paginasi dengan tombol "Muat lagi" (cursor dari B5.5).
-- [ ] **B4.3** Aksi massal: publish, unpublish, hapus. Hapus memakai `ConfirmDialog` dan menjelaskan jumlah item.
+- [x] **B4.1** List dengan pencarian judul, filter status, kategori, dan tag. Filter berupa state URL (`searchParams`) agar bisa dibagikan.
+- [x] **B4.2** Paginasi dengan tombol "Muat lagi" (cursor dari B5.5).
+- [x] **B4.3** Aksi massal: publish, unpublish, hapus. Hapus memakai `ConfirmDialog` dan menjelaskan jumlah item.
   - API: `POST /api/admin/articles/bulk` dengan `{ action, slugs[] }`, validasi zod, batas 50 item.
-- [ ] **B4.4** Duplikat artikel (buat draft baru dengan slug `-salinan`).
-- [ ] **B4.5** Indikator status: `draft`, `published`, `terjadwal` (scheduledAt di masa depan), dan tanggal update.
-- [ ] **B4.6** Link "Lihat" ke artikel publik (published) atau pratinjau admin (draft).
-- [ ] **B4.7** Rename slug dengan redirect (B5.7). UI menampilkan peringatan bahwa slug lama akan redirect.
-- [ ] **B4.8** Audit log untuk create, update, publish, unpublish, delete, duplikat.
+- [x] **B4.4** Duplikat artikel (buat draft baru dengan slug `-salinan`).
+- [x] **B4.5** Indikator status: `draft`, `published`, `terjadwal` (scheduledAt di masa depan), dan tanggal update.
+- [x] **B4.6** Link "Lihat" ke artikel publik (published) atau pratinjau admin (draft).
+- [x] **B4.7** Rename slug dengan redirect (B5.7). UI menampilkan peringatan bahwa slug lama akan redirect.
+- [x] **B4.8** Audit log untuk create, update, publish, unpublish, delete, duplikat.
   - Tambah tipe aksi di `src/lib/admin-audit-types.ts` (dengan label, dan lolos test `admin-audit.test.ts` yang sudah ada).
   - Panggil `recordAdminAudit` (`src/lib/admin-audit.ts:30`) di route artikel.
 

@@ -1,5 +1,5 @@
 /**
- * Tipe & konstanta AUDIT LOG — AMAN untuk klien (tanpa `server-only`).
+ * Tipe & konstanta AUDIT LOG â€” AMAN untuk klien (tanpa `server-only`).
  * Data layer (I/O Firestore) ada di `@/lib/admin-audit`.
  */
 
@@ -21,6 +21,12 @@ export const ADMIN_AUDIT_ACTIONS = [
   "review.delete",
   "lead.status",
   "lead.delete",
+  "article.save",
+  "article.delete",
+  "article.publish",
+  "article.unpublish",
+  "article.duplicate",
+  "article.bulk",
 ] as const;
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];
@@ -44,6 +50,12 @@ export const ADMIN_AUDIT_ACTION_LABEL: Record<AdminAuditAction, string> = {
   "review.delete": "Hapus ulasan",
   "lead.status": "Ubah status lead",
   "lead.delete": "Hapus lead",
+  "article.save": "Simpan artikel",
+  "article.delete": "Hapus artikel",
+  "article.publish": "Terbitkan artikel",
+  "article.unpublish": "Tarik artikel ke draft",
+  "article.duplicate": "Duplikat artikel",
+  "article.bulk": "Aksi massal artikel",
 };
 
 /** Entri audit tersimpan. */
@@ -53,7 +65,7 @@ export type AdminAuditEntry = {
   actor: string;
   /** Ringkasan singkat target (mis. kode order, slug produk, email user). */
   target: string;
-  /** Konteks tambahan (mis. status before/after) — non-sensitif. */
+  /** Konteks tambahan (mis. status before/after) â€” non-sensitif. */
   meta?: Record<string, unknown>;
   atISO: string;
 };

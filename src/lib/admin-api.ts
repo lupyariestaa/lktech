@@ -579,10 +579,25 @@ export async function fetchArticles(): Promise<StoredArticle[]> {
   return data.articles;
 }
 
-export async function saveArticle(article: Article & { renamedFrom?: string }) {
+export async function saveArticle(
+  article: Article & { renamedFrom?: string; duplicatedFrom?: string },
+) {
   return adminFetch<{ ok: boolean; article: Article }>("/api/admin/articles", {
     method: "POST",
     body: JSON.stringify(article),
+  });
+}
+
+/** Aksi massal artikel (B4.3). Hasil per item dikembalikan server. */
+export async function bulkArticles(action: "publish" | "unpublish" | "delete", slugs: string[]) {
+  return adminFetch<{
+    ok: boolean;
+    done: number;
+    failed: number;
+    results: Array<{ slug: string; ok: boolean; error?: string }>;
+  }>("/api/admin/articles/bulk", {
+    method: "POST",
+    body: JSON.stringify({ action, slugs }),
   });
 }
 
