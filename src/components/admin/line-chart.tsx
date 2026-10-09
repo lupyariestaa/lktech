@@ -81,6 +81,8 @@ export function LineChart({
     );
   }
 
+  // `relative` pada wrapper: tabel sr-only (absolute) di bawah ikut terikat di sini,
+  // tidak memperluas tinggi dokumen (containing block sebelumnya = dokumen).
   const labelStep = Math.max(1, Math.ceil(points.length / 8));
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -99,7 +101,7 @@ export function LineChart({
   };
 
   return (
-    <div ref={wrapRef} role="group" aria-label={ariaLabel} onKeyDown={onKeyDown}>
+    <div ref={wrapRef} role="group" aria-label={ariaLabel} onKeyDown={onKeyDown} className="relative">
       <div className="relative" style={{ height }}>
         <svg
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
