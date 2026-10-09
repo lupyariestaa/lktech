@@ -326,10 +326,10 @@ type TamanPrivate = {
 - [ ] Audit `taman.*` (tambah ke `admin-audit-types.ts` + label; test audit tetap lolos).
 
 ### T6 — Admin UI
-- [ ] `/admin/taman` (daftar, filter, status, urutan ▲▼, detail panel, pemilih hewan, persetujuan, aksi, bulk, hapus sample).
-- [ ] `/admin/taman/pratinjau` (frame + gacha + label sample).
-- [ ] Tombol "Angkat jadi testimoni" di `/admin/reviews`.
-- [ ] Tambah menu sidebar "Taman Testimoni" (`admin-nav.ts`).
+- [x] `/admin/taman` (daftar, filter, status, urutan ▲▼, detail panel, pemilih hewan, persetujuan, aksi, bulk, hapus sample).
+- [x] `/admin/taman/pratinjau` (pool + gacha + label contoh; frame publik interaktif di T7).
+- [x] Tombol "Angkat jadi testimoni" di `/admin/reviews` (ulasan approved, rating ≥ 4).
+- [x] Tambah menu sidebar "Taman Testimoni" (`admin-nav.ts`).
 
 ### T7 — Frame publik
 - [ ] `taman-frame.tsx`, `taman-animal.tsx`, `taman-card.tsx` (popover/bottom sheet), `taman-section.tsx` (server), `taman-client.tsx` (klien: slot, gacha, fokus).

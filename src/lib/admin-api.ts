@@ -607,3 +607,77 @@ export async function deleteArticle(slug: string) {
     { method: "DELETE" },
   );
 }
+
+/* ---------- Taman Testimoni (T6) ---------- */
+
+export type TamanAdminItem = {
+  id: string;
+  kind: "real" | "sample";
+  status: "pending" | "published" | "hidden" | "rejected";
+  displayName: string;
+  fullName?: string;
+  role: string;
+  quote: string;
+  rating: number;
+  dateISO: string;
+  animal: "kucing" | "kelinci" | "burung" | "rubah" | "beruang" | "kura-kura" | "kupu-kupu" | "ikan";
+  order: number;
+  projectSlug?: string;
+  productSlug?: string;
+  source: "submitted" | "admin" | "review" | "legacy" | "sample";
+  sourceRefId?: string;
+  ownerUid?: string;
+  consent: { given: boolean; givenAtISO?: string };
+  createdAtISO: string;
+  updatedAtISO: string;
+  approvedBy?: string;
+  email: string | null;
+  evidenceNote: string | null;
+  evidenceBy: string | null;
+  consentText: string | null;
+};
+
+export async function fetchTaman(): Promise<TamanAdminItem[]> {
+  const data = await adminFetch<{ items: TamanAdminItem[] }>("/api/admin/taman");
+  return data.items;
+}
+
+export async function patchTaman(id: string, patch: Record<string, unknown>) {
+  return adminFetch<{ ok: boolean }>(`/api/admin/taman/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteTaman(id: string) {
+  return adminFetch<{ ok: boolean }>(`/api/admin/taman/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function bulkTaman(action: "publish" | "hide" | "delete", ids: string[]) {
+  return adminFetch<{
+    ok: boolean;
+    done: number;
+    failed: number;
+    results: Array<{ id: string; ok: boolean; error?: string }>;
+  }>("/api/admin/taman/bulk", {
+    method: "POST",
+    body: JSON.stringify({ action, ids }),
+  });
+}
+
+export async function importTamanFromReview(reviewId: string) {
+  return adminFetch<{ ok: boolean; id: string }>("/api/admin/taman/import-review", {
+    method: "POST",
+    body: JSON.stringify({ reviewId }),
+  });
+}
+
+export async function seedTamanSamples() {
+  return adminFetch<{ ok: boolean; created: number }>("/api/admin/taman/samples", { method: "POST" });
+}
+
+export async function deleteTamanSamples() {
+  return adminFetch<{ ok: boolean; deleted: number }>("/api/admin/taman/samples", { method: "DELETE" });
+}
