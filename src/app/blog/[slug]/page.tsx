@@ -5,17 +5,26 @@ import Image from "next/image";
 import { ArrowLeft, ArrowRight, MessageCircle } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { Markdown } from "@/lib/markdown";
+import { parseMarkdown } from "@/lib/markdown-parse";
+import type { Inline } from "@/lib/markdown-parse";
+import { buildToc } from "@/lib/article-ui";
 import { ArticleCard, ArticleTags } from "@/components/article-card";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { CtaContact } from "@/components/sections/cta-contact";
+import { ArticleToc } from "@/components/blog/article-toc";
+import { ArticleShare } from "@/components/blog/article-share";
+import { ArticleSidebar } from "@/components/blog/article-sidebar";
+import { NewsletterForm } from "@/components/newsletter-form";
 import {
   getArticleSlugs,
   getArticles,
   pickRelatedArticles,
   resolveArticleSlug,
 } from "@/lib/articles";
+import { getProducts } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
 import { SITE } from "@/lib/site";
+import { readingLabel } from "@/lib/article-ui";
 import { taxonomySlug } from "@/lib/article-types";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 
@@ -68,13 +77,21 @@ export default async function ArticleDetailPage({
   if (resolved.redirectTo) permanentRedirect(`/blog/${resolved.redirectTo}`);
   const article = resolved.article;
 
-  const [all, settings] = await Promise.all([
+  const [all, settings, products] = await Promise.all([
     getArticles(),
     getSiteSettings(),
+    getProducts(),
   ]);
 
   const related = pickRelatedArticles(article, all, 3);
-  const url = `${SITE.url}/blog/${slug}`;
+  const url = `${SITE.url}/blog/${article.slug}`;
+  // Produk digital unggulan (maks 2). Tersembunyi bila tidak ada produk aktif.
+  const relatedProducts = products.slice(0, 2);
+  const toc = buildToc(
+    parseMarkdown(article.body).flatMap((b) =>
+      b.t === "h" ? [{ level: b.level, id: b.id, text: plainText(b.inline) }] : [],
+    ),
+  );
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -113,6 +130,11 @@ export default async function ArticleDetailPage({
     }
   })();
 
+  const updated =
+    article.updatedAt && article.updatedAt.slice(0, 10) !== article.publishedAt.slice(0, 10)
+      ? new Date(article.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+      : null;
+
   return (
     <>
       <script
@@ -143,62 +165,97 @@ export default async function ArticleDetailPage({
             {article.category}
           </Link>
           <span>{formatted}</span>
-          <span className="text-slate-300">•</span>
+          <span className="text-slate-300" aria-hidden="true">•</span>
+          <span>{readingLabel(article.readingTime)}</span>
+          {updated && (
+            <>
+              <span className="text-slate-300" aria-hidden="true">•</span>
+              <span>diperbarui {updated}</span>
+            </>
+          )}
+          <span className="text-slate-300" aria-hidden="true">•</span>
           <span>oleh {article.author}</span>
         </div>
       </PageHero>
 
       <article className="relative bg-white pb-16">
-        <div className="mx-auto max-w-3xl px-6">
-          {article.coverImage && (
-            <Image
-              src={article.coverImage}
-              alt={article.coverAlt || article.title}
-              width={1200}
-              height={630}
-              priority
-              className="mb-8 w-full rounded-3xl border border-slate-100 object-cover"
-            />
-          )}
-
-          <Markdown content={article.body} />
-
-          <div className="mt-10 border-t border-slate-100 pt-6">
-            <ArticleTags tags={article.tags} />
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 lg:grid-cols-[200px_minmax(0,1fr)_280px]">
+          {/* Kiri: daftar isi (sticky di desktop, accordion di mobile). */}
+          <div className="lg:pt-10">
+            <ArticleToc headings={toc} />
           </div>
 
-          <div className="mt-10 flex flex-col items-start gap-5 rounded-3xl bg-gradient-to-br from-primary to-primary-dark p-7 text-left sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-white">
-                Butuh bantuan mewujudkannya?
-              </h2>
-              <p className="mt-1 text-sm text-white/85">
-                Konsultasi gratis bersama tim LKTech.
-              </p>
+          {/* Tengah: isi artikel. */}
+          <div className="min-w-0 max-w-3xl">
+            {article.coverImage && (
+              <Image
+                src={article.coverImage}
+                alt={article.coverAlt || article.title}
+                width={1200}
+                height={630}
+                priority
+                className="mb-8 w-full rounded-3xl border border-slate-100 object-cover"
+              />
+            )}
+
+            <Markdown content={article.body} />
+
+            <div className="mt-10 flex flex-col gap-5 border-t border-slate-100 pt-6">
+              <ArticleTags tags={article.tags} />
+              <ArticleShare title={article.title} url={url} />
             </div>
-            <TrackedWaButton
-              location="blog-detail"
-              label={article.title}
-              href={waLink(WA_MESSAGES.general, settings.whatsapp)}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="white"
-              size="lg"
-              className="group shrink-0"
+
+            <div className="mt-10 flex flex-col items-start gap-5 rounded-3xl bg-gradient-to-br from-primary to-primary-dark p-7 text-left sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  Butuh bantuan mewujudkannya?
+                </h2>
+                <p className="mt-1 text-sm text-white/85">
+                  Konsultasi gratis bersama tim LKTech.
+                </p>
+              </div>
+              <TrackedWaButton
+                location="blog-detail"
+                label={article.title}
+                href={waLink(WA_MESSAGES.general, settings.whatsapp)}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="white"
+                size="lg"
+                className="group shrink-0"
+              >
+                <MessageCircle className="h-5 w-5" />
+                Mulai Konsultasi
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </TrackedWaButton>
+            </div>
+
+            <div className="mt-10 rounded-3xl border border-slate-200 bg-surface p-6">
+              <h2 className="text-base font-bold text-secondary">Dapatkan artikel terbaru</h2>
+              <p className="mt-1 text-sm text-muted">Tips digital dikirim langsung ke email Anda.</p>
+              <div className="mt-4">
+                <NewsletterForm source={`blog-${article.slug}`} compact />
+              </div>
+            </div>
+
+            <Link
+              href="/blog"
+              className="group mt-8 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary"
             >
-              <MessageCircle className="h-5 w-5" />
-              Mulai Konsultasi
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </TrackedWaButton>
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              Semua artikel
+            </Link>
           </div>
 
-          <Link
-            href="/blog"
-            className="group mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
-          >
-            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-            Semua artikel
-          </Link>
+          {/* Kanan: sidebar sticky (desktop) / di bawah (mobile). */}
+          <div className="min-w-0 lg:pt-10">
+            <ArticleSidebar
+              article={article}
+              related={related}
+              products={relatedProducts}
+              whatsappNumber={settings.whatsapp}
+            />
+          </div>
         </div>
       </article>
 
@@ -220,4 +277,16 @@ export default async function ArticleDetailPage({
       <CtaContact />
     </>
   );
+}
+
+/** Teks polos dari node inline (untuk label TOC). */
+function plainText(nodes: Inline[]): string {
+  return nodes
+    .map((n) => {
+      if (n.t === "a") return n.text;
+      if (n.t === "img") return "";
+      return n.v;
+    })
+    .join("")
+    .trim();
 }

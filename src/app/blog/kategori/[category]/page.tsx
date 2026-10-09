@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
-import { ArticleGrid } from "@/components/article-grid";
+import { BlogIndex } from "@/components/blog/blog-index";
 import { getArticleCategoryList, getArticlesByCategory } from "@/lib/articles";
+import { parseListQuery } from "@/lib/article-ui";
 import { resolveLabelFromSlug, taxonomySlug } from "@/lib/article-types";
 import { SITE } from "@/lib/site";
 
@@ -43,15 +44,19 @@ export async function generateMetadata({
 
 export default async function BlogCategoryPage({
   params,
+  searchParams,
 }: {
   params: Promise<Params>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { category } = await params;
+  const sp = await searchParams;
   const categories = await getArticleCategoryList();
   const label = resolveLabelFromSlug(category, categories);
   if (!label) notFound();
 
   const articles = await getArticlesByCategory(label);
+  const query = parseListQuery(sp, []);
   const url = `${SITE.url}/blog/kategori/${category}`;
 
   const jsonLd = {
@@ -109,7 +114,14 @@ export default async function BlogCategoryPage({
 
       <section className="relative bg-surface py-16">
         <div className="mx-auto max-w-6xl px-6">
-          <ArticleGrid articles={articles} />
+          <BlogIndex
+            articles={articles}
+            categories={[]}
+            tags={[]}
+            query={{ ...query, category: "" }}
+            basePath={`/blog/kategori/${category}`}
+            lockedBy="category"
+          />
 
           <Link
             href="/blog"

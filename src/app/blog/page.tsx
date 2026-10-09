@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/page-hero";
-import { BlogGrid } from "@/components/blog-grid";
+import { BlogIndex } from "@/components/blog/blog-index";
 import {
-  getArticleCategories,
+  getArticleCategoryList,
   getArticleTags,
   getArticles,
 } from "@/lib/articles";
+import { parseListQuery } from "@/lib/article-ui";
 import { SITE } from "@/lib/site";
 
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-    title: "Blog",
+  title: "Blog",
   description:
     "Artikel & tips seputar website, aplikasi, bisnis digital, dan teknologi untuk membantu bisnis Anda tumbuh.",
   alternates: {
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     types: { "application/rss+xml": `${SITE.url}/blog/rss.xml` },
   },
   openGraph: {
-  title: "Blog",
+    title: "Blog",
     description:
       "Artikel & tips seputar website, aplikasi, bisnis digital, dan teknologi.",
     url: "/blog",
@@ -27,12 +28,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function BlogPage() {
+export default async function BlogPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   const [articles, categories, tags] = await Promise.all([
     getArticles(),
-    getArticleCategories(),
+    getArticleCategoryList(),
     getArticleTags(),
   ]);
+  const query = parseListQuery(sp, categories);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -71,7 +78,12 @@ export default async function BlogPage() {
 
       <section className="relative bg-surface py-16">
         <div className="mx-auto max-w-6xl px-6">
-          <BlogGrid articles={articles} categories={categories} tags={tags} />
+          <BlogIndex
+            articles={articles}
+            categories={categories}
+            tags={tags}
+            query={query}
+          />
         </div>
       </section>
     </>

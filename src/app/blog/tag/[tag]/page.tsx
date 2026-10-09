@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
-import { ArticleGrid } from "@/components/article-grid";
+import { BlogIndex } from "@/components/blog/blog-index";
 import { getArticleTags, getArticlesByTag } from "@/lib/articles";
+import { parseListQuery } from "@/lib/article-ui";
 import { resolveLabelFromSlug, taxonomySlug } from "@/lib/article-types";
 import { SITE } from "@/lib/site";
 
@@ -46,10 +47,13 @@ export async function generateMetadata({
 
 export default async function BlogTagPage({
   params,
+  searchParams,
 }: {
   params: Promise<Params>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { tag } = await params;
+  const sp = await searchParams;
   const tags = await getArticleTags();
   const label = resolveLabelFromSlug(
     tag,
@@ -58,6 +62,7 @@ export default async function BlogTagPage({
   if (!label) notFound();
 
   const articles = await getArticlesByTag(label);
+  const query = parseListQuery(sp, []);
   const url = `${SITE.url}/blog/tag/${tag}`;
 
   const jsonLd = {
@@ -115,7 +120,14 @@ export default async function BlogTagPage({
 
       <section className="relative bg-surface py-16">
         <div className="mx-auto max-w-6xl px-6">
-          <ArticleGrid articles={articles} />
+          <BlogIndex
+            articles={articles}
+            categories={[]}
+            tags={[]}
+            query={{ ...query, tag: "" }}
+            basePath={`/blog/tag/${tag}`}
+            lockedBy="tag"
+          />
 
           <Link
             href="/blog"

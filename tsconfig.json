@@ -58,6 +58,7 @@
     "scripts/article-media.test.ts",
     "scripts/article-schedule.test.ts",
     "scripts/article-editor.test.ts",
-    "scripts/article-manage.test.ts"
+    "scripts/article-manage.test.ts",
+    "scripts/article-ui.test.ts"
   ]
 }

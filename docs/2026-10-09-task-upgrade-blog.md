@@ -150,21 +150,21 @@ Dikerjakan sebelum B3 dan B4 karena UI butuh field baru.
 
 ## Fase B6 - Public UI/UX Blog
 
-- [ ] **B6.1** Layout detail: 3 kolom di desktop (`lg+`): sidebar kiri (TOC), konten tengah (`max-w-3xl`), sidebar kanan (sticky). Di mobile: satu kolom, TOC jadi accordion di atas artikel, sidebar kanan di bawah konten.
+- [x] **B6.1** Layout detail: 3 kolom di desktop (`lg+`): sidebar kiri (TOC), konten tengah (`max-w-3xl`), sidebar kanan (sticky). Di mobile: satu kolom, TOC jadi accordion di atas artikel, sidebar kanan di bawah konten.
   - File: `src/app/blog/layout.tsx` (saat ini satu kolom), `src/app/blog/[slug]/page.tsx`.
-- [ ] **B6.2** Sidebar kanan berisi (urutan):
+- [x] **B6.2** Sidebar kanan berisi (urutan):
   1. Artikel terkait berdasarkan kategori dan tag (ganti logika 3 terbaru).
   2. CTA layanan LKTech yang relevan dengan kategori artikel (kartu layanan dari `src/lib/services`).
   3. Kartu "Konsultasi via WhatsApp" (pakai helper `whatsapp.ts` yang sudah ada).
   4. Produk digital terkait (tersembunyi jika kosong).
   - Tambahan dari AI: kartu newsletter (form ke modul newsletter yang sudah ada). Tampil di bawah artikel, bukan di sidebar.
-- [ ] **B6.3** TOC otomatis dari `##` dan `###` (anchor dari B2.5). Highlight section aktif memakai `IntersectionObserver`. Komponen client kecil.
-- [ ] **B6.4** Tombol share: WhatsApp (`wa.me` dengan teks + URL) dan salin tautan. Tanpa script pihak ketiga.
-- [ ] **B6.5** Header artikel: kategori, tanggal terbit, tanggal update (`updatedAt`), estimasi baca.
-- [ ] **B6.6** `/blog`: search (query `?q=`), filter kategori dan tag, paginasi/load more (B5.5), kartu informatif (waktu baca, excerpt).
+- [x] **B6.3** TOC otomatis dari `##` dan `###` (anchor dari B2.5). Highlight section aktif memakai `IntersectionObserver`. Komponen client kecil.
+- [x] **B6.4** Tombol share: WhatsApp (`wa.me` dengan teks + URL) dan salin tautan. Tanpa script pihak ketiga.
+- [x] **B6.5** Header artikel: kategori, tanggal terbit, tanggal update (`updatedAt`), estimasi baca.
+- [x] **B6.6** `/blog`: search (query `?q=`), filter kategori dan tag, paginasi/load more (B5.5), kartu informatif (waktu baca, excerpt).
   - Ganti filter client-side di `src/components/blog-grid.tsx` dengan state URL.
-- [ ] **B6.7** Halaman `/blog/kategori/[category]` dan `/blog/tag/[tag]` memakai komponen list yang sama dengan `/blog`.
-- [ ] **B6.8** A11y: heading berurutan (satu `h1`), alt wajib, kontras AA, tap target 44px (mengacu H4 beranda). Pakai pola `prefers-reduced-motion` seperti beranda.
+- [x] **B6.7** Halaman `/blog/kategori/[category]` dan `/blog/tag/[tag]` memakai komponen list yang sama dengan `/blog`.
+- [x] **B6.8** A11y: heading berurutan (satu `h1`), alt wajib, kontras AA, tap target 44px (mengacu H4 beranda). Pakai pola `prefers-reduced-motion` seperti beranda.
 - [ ] **B6.9** Print stylesheet sederhana (sembunyikan sidebar dan tombol share saat print). Opsional.
 
 **Verifikasi:** `npm run build` hijau. Manual: cek desktop dan mobile, TOC aktif, sidebar tidak overlap.
