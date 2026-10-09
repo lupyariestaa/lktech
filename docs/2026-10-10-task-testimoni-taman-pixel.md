@@ -349,7 +349,7 @@ type TamanPrivate = {
 
 ### T10 — SEO & analitik
 - [ ] JSON-LD `Review`/`AggregateRating` hanya real+published+consent.
-- [ ] Event `taman_open`, `taman_refresh`, `taman_submit` (tanpa PII).
+- [x] Event `taman_open`, `taman_refresh`, `taman_submit` (tanpa PII; `via` hanya `klik` karena keyboard juga memicu click).
 
 ### T11 — Migrasi
 - [ ] Impor testimoni lama sebagai pending (tombol admin).

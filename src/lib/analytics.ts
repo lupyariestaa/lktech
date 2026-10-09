@@ -155,3 +155,21 @@ export function trackRelatedClick(props: { from: string; to: string; placement: 
 export function trackBlogCta(props: { slug: string; cta: string }): void {
   trackEvent("cta_click", { location: "blog", target: props.cta, slug: props.slug });
 }
+/* -------------------------------------------------------------------------- */
+/* Taman Testimoni (T10). Tanpa PII: hanya hewan, indeks, sumber, dan jumlah.  */
+/* -------------------------------------------------------------------------- */
+
+/** Kartu testimoni dibuka dari hewan tertentu (tanpa isi testimoni). */
+export function trackTamanOpen(props: { animal: string; index: number; via: "klik" | "keyboard" }): void {
+  trackEvent("taman_open", { animal: props.animal, index: props.index, via: props.via });
+}
+
+/** Gacha "Acak lagi": jumlah pilihan yang tersedia dan jumlah slot tampil. */
+export function trackTamanRefresh(props: { pool: number; slots: number }): void {
+  trackEvent("taman_refresh", { pool: props.pool, slots: props.slots });
+}
+
+/** Hasil kirim testimoni (berhasil/gagal). Tanpa isi pesan atau identitas. */
+export function trackTamanSubmit(props: { ok: boolean; reason?: string }): void {
+  trackEvent("taman_submit", { ok: props.ok, reason: props.reason ?? null });
+}

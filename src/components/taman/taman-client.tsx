@@ -7,6 +7,7 @@ import { TAMAN_ANIMALS, type AnimalKey } from "@/lib/taman-types";
 import { cn } from "@/lib/utils";
 import { TamanAnimal } from "@/components/taman/taman-animal";
 import { TamanCard, DESKTOP_MIN_WIDTH } from "@/components/taman/taman-card";
+import { trackTamanOpen, trackTamanRefresh } from "@/lib/analytics";
 
 /** Posisi slot dalam frame (persen). Urutan = urutan fokus keyboard. */
 const SLOT_POSITIONS: Array<{ left: number; top: number }> = [
@@ -89,6 +90,7 @@ export function TamanClient({
     const currentIds = shown.map((s) => s.id);
     const next = pickSlots(items, slots, Array.from(new Set([...recent, ...currentIds])), Math.random);
     writeRecent(currentIds);
+    trackTamanRefresh({ pool: items.length, slots });
     setOpenId(null);
     if (reducedMotion) {
       setShownIds(next.map((n) => n.id));
@@ -177,7 +179,11 @@ export function TamanClient({
               buttonRef={(el) => {
                 btnRefs.current[i] = el;
               }}
-              onActivate={() => setOpenId(openId === t.id ? null : t.id)}
+              onActivate={() => {
+                const opening = openId !== t.id;
+                if (opening) trackTamanOpen({ animal, index: i, via: "klik" });
+                setOpenId(openId === t.id ? null : t.id);
+              }}
             />
           );
         })}

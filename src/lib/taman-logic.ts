@@ -480,3 +480,43 @@ export const PRIVATE_FIELDS = [
   "sourceRefId",
   "approvedBy",
 ] as const;
+/* ---------- T10: JSON-LD (SEO) ---------- */
+
+/** Batas situs (sama dengan konteks SITE) — dikirim sebagai parameter agar murni. */
+export type TamanSchemaContext = { siteUrl: string; siteName: string };
+
+/**
+ * JSON-LD `Review` untuk testimoni taman yang SAH (§10, P4: tanpa angka karangan).
+ * Hanya dari `real` + `published` + persetujuan tercatat, lewat `publicPool`.
+ * Email, uid, nama lengkap, dan catatan tidak pernah ikut. Rating harus valid (1..5).
+ * Mengembalikan `null` bila tidak ada testimoni sah (jangan render schema kosong).
+ */
+export function buildTamanReviewJsonLd(
+  items: TamanPublicView[],
+  ctx: TamanSchemaContext,
+): Record<string, unknown> | null {
+  const reviews = items
+    .filter((i) => sanitizeRating(i.rating) !== null && i.quote.trim().length > 0)
+    .map((i) => ({
+      "@type": "Review",
+      author: { "@type": "Person", name: i.displayName },
+      reviewBody: i.quote,
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: sanitizeRating(i.rating),
+        bestRating: 5,
+        worstRating: 1,
+      },
+      datePublished: i.dateISO,
+    }));
+
+  if (reviews.length === 0) return null;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: ctx.siteName,
+    url: ctx.siteUrl,
+    review: reviews,
+  };
+}

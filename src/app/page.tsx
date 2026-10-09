@@ -11,6 +11,7 @@ import { Stats } from "@/components/sections/stats";
 import { PortfolioTeaser } from "@/components/sections/portfolio-teaser";
 import { Testimonials } from "@/components/sections/testimonials";
 import { TamanSection } from "@/components/taman/taman-section";
+import { TamanSchema } from "@/components/taman/taman-schema";
 import { Pricing } from "@/components/sections/pricing";
 import { Faq } from "@/components/sections/faq";
 import { CtaContact } from "@/components/sections/cta-contact";
@@ -64,6 +65,7 @@ export default function Home() {
         <Stats />
         <Testimonials />
         <TamanSection />
+        <TamanSchema />
         <Pricing />
         <Faq />
         <CtaContact />

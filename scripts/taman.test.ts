@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildTamanReviewJsonLd,
   PRIVATE_FIELDS,
   toMineView,
   validateSubmit,
@@ -388,4 +389,39 @@ test("T9 privasi: PRIVATE_FIELDS mencakup email & uid", () => {
   assert.ok((PRIVATE_FIELDS as readonly string[]).includes("email"));
   assert.ok((PRIVATE_FIELDS as readonly string[]).includes("uid"));
   assert.ok((PRIVATE_FIELDS as readonly string[]).includes("ownerUid"));
+});
+/* ---------- T10: JSON-LD Review ---------- */
+
+const CTX = { siteUrl: "https://lktech.vercel.app", siteName: "LKTech" };
+
+test("T10 JSON-LD: hanya testimoni publik yang sah, tanpa email/uid/nama lengkap", () => {
+  const items = publicPool([t({ id: "ok" } as never)]);
+  const ld = buildTamanReviewJsonLd(items, CTX) as Record<string, unknown>;
+  const text = JSON.stringify(ld);
+  assert.equal(ld["@type"], "Organization");
+  assert.equal(text.includes("ownerUid"), false);
+  assert.equal(text.includes("uid-rahasia"), false);
+  assert.equal(text.includes("Santoso"), false);
+});
+
+test("T10 JSON-LD: sample, pending, dan tanpa persetujuan tidak masuk schema", () => {
+  const items = publicPool([
+    t({ id: "s", kind: "sample" } as never),
+    t({ id: "p", status: "pending" } as never),
+    t({ id: "n", consent: { given: false } } as never),
+  ]);
+  assert.equal(buildTamanReviewJsonLd(items, CTX), null);
+});
+
+test("T10 JSON-LD: rating dibatasi 1..5 dan bentuk Review lengkap", () => {
+  const items = publicPool([t({ id: "a", rating: 4 } as never)]);
+  const ld = buildTamanReviewJsonLd(items, CTX) as { review: Array<Record<string, unknown>> };
+  const r = ld.review[0] as { "@type": string; reviewRating: { ratingValue: number; bestRating: number } };
+  assert.equal(r["@type"], "Review");
+  assert.equal(r.reviewRating.ratingValue, 4);
+  assert.equal(r.reviewRating.bestRating, 5);
+});
+
+test("T10 JSON-LD: tanpa item → null (jangan render schema kosong)", () => {
+  assert.equal(buildTamanReviewJsonLd([], CTX), null);
 });

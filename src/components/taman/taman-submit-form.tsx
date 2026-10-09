@@ -7,6 +7,7 @@ import { CheckCircle2, Loader2, Star } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { getIdToken } from "@/lib/auth";
 import { CONSENT_TEXT } from "@/lib/taman-consent";
+import { trackTamanSubmit } from "@/lib/analytics";
 import { TAMAN_LIMITS } from "@/lib/taman-types";
 import { cn } from "@/lib/utils";
 
@@ -114,11 +115,14 @@ export function TamanSubmitForm() {
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
+        trackTamanSubmit({ ok: false, reason: `http_${res.status}` });
         setError(data.error ?? "Gagal mengirim testimoni.");
         return;
       }
+      trackTamanSubmit({ ok: true });
       setDone(true);
     } catch {
+      trackTamanSubmit({ ok: false, reason: "network" });
       setError("Koneksi bermasalah. Coba lagi.");
     } finally {
       setBusy(false);
