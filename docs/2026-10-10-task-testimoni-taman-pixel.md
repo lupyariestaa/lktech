@@ -305,9 +305,9 @@ type TamanPrivate = {
 - [x] Rules: tetap deny client (tidak ada perubahan ke izin publik).
 
 ### T2 — Logika murni & test
-- [ ] `taman-logic.ts`: `shortName`, `isPubliclyVisible(kind, status)`, `publicView(t)` (whitelist), `pickSlots(pool, n, recent, rng)`, `slotCountFor(width)`, `canPublish(t, private)`, `sanitizeRating`, `validateProjectLink`.
-- [ ] `scripts/taman.test.ts`: shortName (nama tunggal, ganda, nama samaran), whitelist (tidak ada field privat), sample tidak publik di production, pickSlots (tanpa duplikat, bobot recent, deterministik dengan rng), canPublish (tanpa persetujuan → false), slot count.
-- [ ] Tambah `test:taman` ke `package.json`, `.github/workflows/ci.yml`, dan exclude `tsconfig.json`.
+- [x] `taman-logic.ts`: `shortName`, `isPubliclyVisible(kind, status)`, `publicView(t)` (whitelist), `pickSlots(pool, n, recent, rng)`, `slotCountFor(width)`, `canPublish(t, private)`, `sanitizeRating`, `validateProjectLink`.
+- [x] `scripts/taman.test.ts` (30 test): shortName (nama tunggal, ganda, nama samaran), whitelist (tidak ada field privat), sample tidak publik di production, pickSlots (tanpa duplikat, bobot recent, deterministik dengan rng), canPublish (tanpa persetujuan → false), slot count.
+- [x] Tambah `test:taman` ke `package.json`, `.github/workflows/ci.yml`, dan exclude `tsconfig.json`.
 
 ### T3 — Aset SVG
 - [ ] `scripts/gen-taman-sprites.mjs` + grid 8 hewan, latar, pagar, pohon.

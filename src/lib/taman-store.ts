@@ -1,17 +1,7 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
-import {
-  isAnimalKey,
-  TAMAN_KINDS,
-  TAMAN_SOURCES,
-  TAMAN_STATUSES,
-  type AnimalKey,
-  type TamanKind,
-  type TamanPrivate,
-  type TamanSource,
-  type TamanStatus,
-  type TamanTestimonial,
-} from "@/lib/taman-types";
+import type { TamanPrivate, TamanTestimonial } from "@/lib/taman-types";
+import { normalizeTamanTestimonial, str } from "@/lib/taman-logic";
 
 /**
  * Data layer "Taman Pixel" (T1). Hanya Admin SDK (server-only).
@@ -26,45 +16,7 @@ import {
 export const TAMAN_COLLECTION = "taman_testimonials";
 export const TAMAN_PRIVATE_COLLECTION = "taman_private";
 
-function str(v: unknown, fallback = ""): string {
-  return typeof v === "string" ? v : fallback;
-}
-
-function oneOf<T extends string>(v: unknown, allowed: readonly T[], fallback: T): T {
-  return typeof v === "string" && (allowed as readonly string[]).includes(v) ? (v as T) : fallback;
-}
-
-/** Normalisasi dokumen mentah ke bentuk tipe (tolerant terhadap data lama). */
-export function normalizeTamanTestimonial(id: string, d: Record<string, unknown>): TamanTestimonial {
-  const consent = (d.consent && typeof d.consent === "object" ? d.consent : {}) as Record<string, unknown>;
-  const rating = typeof d.rating === "number" && Number.isFinite(d.rating) ? Math.round(d.rating) : 5;
-  return {
-    id,
-    kind: oneOf<TamanKind>(d.kind, TAMAN_KINDS, "real"),
-    status: oneOf<TamanStatus>(d.status, TAMAN_STATUSES, "pending"),
-    displayName: str(d.displayName),
-    fullName: typeof d.fullName === "string" && d.fullName ? d.fullName : undefined,
-    role: str(d.role),
-    quote: str(d.quote),
-    rating: Math.min(5, Math.max(1, rating)),
-    dateISO: str(d.dateISO, str(d.createdAtISO)),
-    animal: isAnimalKey(d.animal) ? (d.animal as AnimalKey) : "kucing",
-    order: typeof d.order === "number" && Number.isFinite(d.order) ? d.order : 0,
-    projectSlug: typeof d.projectSlug === "string" && d.projectSlug ? d.projectSlug : undefined,
-    productSlug: typeof d.productSlug === "string" && d.productSlug ? d.productSlug : undefined,
-    source: oneOf<TamanSource>(d.source, TAMAN_SOURCES, "admin"),
-    sourceRefId: typeof d.sourceRefId === "string" && d.sourceRefId ? d.sourceRefId : undefined,
-    ownerUid: typeof d.ownerUid === "string" && d.ownerUid ? d.ownerUid : undefined,
-    consent: {
-      given: consent.given === true,
-      givenAtISO: typeof consent.givenAtISO === "string" ? consent.givenAtISO : undefined,
-    },
-    createdAtISO: str(d.createdAtISO),
-    updatedAtISO: str(d.updatedAtISO),
-    approvedAtISO: typeof d.approvedAtISO === "string" ? d.approvedAtISO : undefined,
-    approvedBy: typeof d.approvedBy === "string" ? d.approvedBy : undefined,
-  };
-}
+/** Normalisasi dokumen (`normalizeTamanTestimonial`) berada di taman-logic.ts (murni, dites). */
 
 /** Buang nilai `undefined` (Firestore menolaknya). */
 export function stripUndefined<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {

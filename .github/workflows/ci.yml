@@ -51,6 +51,7 @@ jobs:
           npm run test:loyalty
           npm run test:wishlist
           npm run test:blog
+          npm run test:taman
 
       - name: Build
         run: npm run build
