@@ -9,6 +9,7 @@ import {
 import { taxonomySlug, type Article } from "@/lib/article-types";
 import { estimateReadingTime } from "@/lib/article-logic";
 import { buildSlugHistory, decideAuditAction, revalidationPaths } from "@/lib/article-api-logic";
+import { findHistoryConflict } from "@/lib/slug-conflict";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { articleSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
@@ -66,10 +67,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Slug tidak valid." }, { status: 400 });
   }
 
+
   const articleBody = body.body ?? "";
 
   // B5.7: slug berubah → slug lama masuk riwayat (redirect 301 di halaman).
   const existingList = await getStoredArticles();
+
+  // G4: slug yang masih jadi riwayat redirect artikel lain tidak boleh dipakai
+  // (akan menghapus redirect itu diam-diam).
+  const conflict = findHistoryConflict(slug, existingList);
+  if (conflict) {
+    return NextResponse.json(
+      {
+        error: `Slug "${slug}" masih dipakai sebagai redirect oleh artikel "${conflict.slug}". Pilih slug lain.`,
+      },
+      { status: 409 },
+    );
+  }
   const previousBySlug = existingList.find((a) => a.slug === slug);
   const renamedFrom = typeof body.renamedFrom === "string" ? sanitizeSlug(body.renamedFrom) : "";
   const previousRename = renamedFrom

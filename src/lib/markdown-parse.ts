@@ -53,6 +53,37 @@ export function safeImageSrc(url: string): string | null {
 }
 
 /** Slug untuk id anchor heading (aman untuk atribut id & URL fragment). */
+/** Fallback id untuk heading yang tidak punya teks yang bisa dijadikan slug. */
+export const HEADING_FALLBACK = "bagian";
+
+/**
+ * Pembuat id unik per dokumen. Panggil `next(text)` untuk setiap heading berurutan.
+ * - Teks kosong setelah normalisasi → `bagian`, `bagian-2`, ...
+ * - Duplikat → `judul-2`, `judul-3`, ... (tidak pernah sama dengan id sebelumnya).
+ */
+export function createHeadingIdGenerator(
+  slugify: (text: string) => string,
+): (text: string) => string {
+  const used = new Set<string>();
+
+  const unique = (base: string): string => {
+    if (!used.has(base)) {
+      used.add(base);
+      return base;
+    }
+    let n = 2;
+    while (used.has(`${base}-${n}`)) n += 1;
+    const id = `${base}-${n}`;
+    used.add(id);
+    return id;
+  };
+
+  return (text: string) => {
+    const base = slugify(text);
+    return unique(base || HEADING_FALLBACK);
+  };
+}
+
 export function headingId(text: string): string {
   return text
     .toLowerCase()
@@ -131,6 +162,8 @@ export function parseInline(text: string): Inline[] {
 export function parseMarkdown(source: string): Block[] {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const blocks: Block[] = [];
+  // Id heading unik per dokumen (G7): duplikat diberi sufiks, kosong diberi fallback.
+  const nextHeadingId = createHeadingIdGenerator(headingId);
   let i = 0;
 
   while (i < lines.length) {
@@ -171,7 +204,7 @@ export function parseMarkdown(source: string): Block[] {
       const hashes = heading[1].length;
       const level = (hashes <= 2 ? 2 : hashes) as 2 | 3 | 4;
       const text = heading[2];
-      blocks.push({ t: "h", level, id: headingId(text), inline: parseInline(text) });
+      blocks.push({ t: "h", level, id: nextHeadingId(text), inline: parseInline(text) });
       i += 1;
       continue;
     }

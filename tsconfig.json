@@ -62,6 +62,7 @@
     "scripts/article-ui.test.ts",
     "scripts/article-seo.test.ts",
     "scripts/article-meta.test.ts",
-    "scripts/article-api.test.ts"
+    "scripts/article-api.test.ts",
+    "scripts/heading-and-slug.test.ts"
   ]
 }
