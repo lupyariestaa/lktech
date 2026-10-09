@@ -13,7 +13,21 @@
 
 ---
 
-## ✅ Sesi Terakhir - Upgrade Blog B0–B8 (SELESAI, kode)
+## Sesi Terakhir - Taman Testimoni / Taman Pixel (T0-T12, SELESAI kode)
+
+Dokumen hasil: [`docs/2026-10-10-taman-pixel.md`](docs/2026-10-10-taman-pixel.md). Checklist: [`docs/2026-10-10-task-testimoni-taman-pixel.md`](docs/2026-10-10-task-testimoni-taman-pixel.md). Prosedur hapus: [`docs/2026-10-10-prosedur-hapus-testimoni.md`](docs/2026-10-10-prosedur-hapus-testimoni.md).
+
+| Fase | Hasil |
+| --- | --- |
+| **T0-T3** | Konfirmasi D1 & rules, tipe & store (dua koleksi), logika murni, aset SVG 8 hewan (6,5 KB). |
+| **T4-T6** | API publik & kirim (login, email terverifikasi, persetujuan, rate limit), API admin (gate publish, bulk, impor), UI admin (`/admin/taman`, pratinjau, angkat ulasan, menu). |
+| **T7-T8** | Frame publik di beranda (hewan, gacha, kartu popover/bottom sheet, keyboard, reduced motion), form kirim `/taman/kirim`, tab "Testimoni saya". |
+| **T9-T11** | Privasi (whitelist, audit tanpa uid, prosedur hapus), SEO & analitik (JSON-LD Review, event tanpa PII), impor testimoni lama sebagai draft. |
+
+**Verifikasi (T12):** `tsc` ✅ · `eslint` ✅ · 16 suite test ✅ (396 test, termasuk `test:taman` 55) · `build` ✅.
+**Belum diverifikasi manual:** frame & animasi di browser, keyboard & screen reader, reduced motion, alur kirim & admin dengan data nyata, validasi JSON-LD, rate limit di produksi.
+
+---## ✅ Sesi Terakhir - Upgrade Blog B0–B8 (SELESAI, kode)
 
 Dokumen hasil: [`docs/2026-10-09-upgrade-blog.md`](docs/2026-10-09-upgrade-blog.md). Checklist: [`docs/2026-10-09-task-upgrade-blog.md`](docs/2026-10-09-task-upgrade-blog.md).
 

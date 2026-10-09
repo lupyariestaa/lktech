@@ -355,9 +355,9 @@ type TamanPrivate = {
 - [ ] Impor testimoni lama sebagai pending (tombol admin).
 
 ### T12 — QA & rilis
-- [ ] `tsc`, `lint`, `test:taman`, `test:blog`, `test:audit`, `build` hijau.
-- [ ] Uji manual (pemilik): desktop/mobile, keyboard, reduced-motion, kontras.
-- [ ] Dokumen hasil `docs/2026-10-xx-taman-pixel.md` + update `docs/README.md` & `TASK-SELANJUTNYA.md`.
+- [x] `tsc`, `lint`, semua suite test (16 perintah, 396 test), `build` hijau.
+- [ ] Uji manual (pemilik): desktop/mobile, keyboard, reduced-motion, kontras. (BELUM — lihat docs/2026-10-10-taman-pixel.md)
+- [x] Dokumen hasil `docs/2026-10-10-taman-pixel.md` + update `docs/README.md` & `TASK-SELANJUTNYA.md`.
 - [ ] Commit & push **hanya setelah** pemilik minta.
 
 ---
