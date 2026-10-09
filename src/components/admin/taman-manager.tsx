@@ -13,6 +13,7 @@ import {
   fetchTaman,
   patchTaman,
   seedTamanSamples,
+  importLegacyTaman,
   type TamanAdminItem,
 } from "@/lib/admin-api";
 import { cn } from "@/lib/utils";
@@ -111,6 +112,29 @@ export function TamanManager() {
     }
   };
 
+  /** Impor testimoni lama: pratinjau dulu (dry run), lalu konfirmasi. */
+  const importLegacy = async () => {
+    setBusy(true);
+    try {
+      const preview = await importLegacyTaman(true);
+      if ((preview.drafts ?? 0) === 0) {
+        toast.success("Tidak ada testimoni lama yang perlu diimpor.");
+        return;
+      }
+      const ok = window.confirm(
+        `${preview.drafts} testimoni lama akan diimpor sebagai draft (menunggu persetujuan). ${preview.skipped.length} dilewati. Lanjutkan?`,
+      );
+      if (!ok) return;
+      const res = await importLegacyTaman(false);
+      toast.success(`${res.imported ?? 0} testimoni lama diimpor sebagai draft.`);
+      await reload({ silent: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal mengimpor.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const samples = async (action: "seed" | "clear") => {
     setBusy(true);
     try {
@@ -155,6 +179,9 @@ export function TamanManager() {
         <Link href="/admin/taman/pratinjau" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-secondary hover:border-primary/40">
           <Eye className="h-3.5 w-3.5" /> Pratinjau frame
         </Link>
+        <button onClick={importLegacy} disabled={busy} className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 px-4 py-2 text-xs font-semibold text-primary disabled:opacity-60">
+          Impor testimoni lama
+        </button>
         <button onClick={() => reload()} disabled={loading} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-secondary disabled:opacity-60">
           <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} /> Muat ulang
         </button>

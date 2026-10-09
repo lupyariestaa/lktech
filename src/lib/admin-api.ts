@@ -681,3 +681,15 @@ export async function seedTamanSamples() {
 export async function deleteTamanSamples() {
   return adminFetch<{ ok: boolean; deleted: number }>("/api/admin/taman/samples", { method: "DELETE" });
 }
+export async function importLegacyTaman(dryRun: boolean) {
+  return adminFetch<{
+    ok: boolean;
+    dryRun?: boolean;
+    imported?: number;
+    drafts?: number;
+    skipped: Array<{ name: string; reason: string }>;
+  }>("/api/admin/taman/import-legacy", {
+    method: "POST",
+    body: JSON.stringify({ dryRun }),
+  });
+}

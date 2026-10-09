@@ -53,6 +53,7 @@ export function normalizeTamanTestimonial(id: string, d: Record<string, unknown>
     productSlug: typeof d.productSlug === "string" && d.productSlug ? d.productSlug : undefined,
     source: oneOf<TamanSource>(d.source, TAMAN_SOURCE_LIST, "admin"),
     sourceRefId: typeof d.sourceRefId === "string" && d.sourceRefId ? d.sourceRefId : undefined,
+    legacyKey: typeof d.legacyKey === "string" && d.legacyKey ? d.legacyKey : undefined,
     ownerUid: typeof d.ownerUid === "string" && d.ownerUid ? d.ownerUid : undefined,
     consent: {
       given: consent.given === true,
@@ -519,4 +520,79 @@ export function buildTamanReviewJsonLd(
     url: ctx.siteUrl,
     review: reviews,
   };
+}
+/* ---------- T11: migrasi testimoni lama (legacy) ---------- */
+
+/** Bentuk testimoni lama di konten situs (`ManagedTestimonial`). */
+export type LegacyTestimonial = { name: string; role: string; quote: string; rating: number };
+
+/** Kunci identitas untuk deduplikasi (nama + kutipan, tanpa spasi berlebih, huruf kecil). */
+export function legacyKey(t: { name: string; quote: string }): string {
+  return `${t.name.trim().toLowerCase()}|${t.quote.trim().replace(/\s+/g, " ").toLowerCase()}`;
+}
+
+/**
+ * Hasilkan dokumen draft `legacy` dari testimoni lama. Aturan:
+ * - Contoh bawaan (`placeholders`) DILEWATI — tidak pernah jadi testimoni nyata.
+ * - Hanya quote & nama valid yang diimpor (tidak kosong, rating 1..5).
+ * - Duplikat (sama key) dan yang sudah pernah diimpor (`existingKeys`) dilewati.
+ * - Hasil SELALU `pending`, `kind: real`, `consent.given: false`: admin wajib
+ *   mencatat persetujuan dan bukti sebelum menerbitkan (sama seperti ulasan).
+ * - Tidak ada email (tidak tersedia di konten lama) → tidak ada data privat.
+ */
+export function planLegacyImport(input: {
+  legacy: LegacyTestimonial[];
+  placeholders: LegacyTestimonial[];
+  existingKeys: string[];
+  nowISO: string;
+}): {
+  drafts: Array<Record<string, unknown>>;
+  skipped: Array<{ name: string; reason: "placeholder" | "invalid" | "duplicate" | "exists" }>;
+} {
+  const placeholderKeys = new Set(input.placeholders.map(legacyKey));
+  const existing = new Set(input.existingKeys);
+  const seen = new Set<string>();
+  const drafts: Array<Record<string, unknown>> = [];
+  const skipped: Array<{ name: string; reason: "placeholder" | "invalid" | "duplicate" | "exists" }> = [];
+
+  for (const t of input.legacy) {
+    const name = t.name?.trim() ?? "";
+    const quote = t.quote?.trim() ?? "";
+    const rating = sanitizeRating(t.rating);
+    if (!name || quote.length < TAMAN_LIMITS.quoteMin || rating === null) {
+      skipped.push({ name: name || "(tanpa nama)", reason: "invalid" });
+      continue;
+    }
+    const key = legacyKey({ name, quote });
+    if (placeholderKeys.has(key)) {
+      skipped.push({ name, reason: "placeholder" });
+      continue;
+    }
+    if (seen.has(key)) {
+      skipped.push({ name, reason: "duplicate" });
+      continue;
+    }
+    if (existing.has(key)) {
+      skipped.push({ name, reason: "exists" });
+      continue;
+    }
+    seen.add(key);
+    drafts.push({
+      kind: "real",
+      status: "pending",
+      displayName: shortName(name, TAMAN_LIMITS.displayNameMax),
+      role: (t.role ?? "").trim() || "Klien",
+      quote: quote.slice(0, TAMAN_LIMITS.quoteMax),
+      rating,
+      dateISO: input.nowISO.slice(0, 10),
+      animal: "kucing",
+      order: 0,
+      source: "legacy",
+      consent: { given: false },
+      legacyKey: key,
+      createdAtISO: input.nowISO,
+      updatedAtISO: input.nowISO,
+    });
+  }
+  return { drafts, skipped };
 }

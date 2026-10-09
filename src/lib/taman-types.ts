@@ -48,6 +48,8 @@ export type TamanTestimonial = {
   source: TamanSource;
   /** Id ulasan asal (internal). */
   sourceRefId?: string;
+  /** Kunci deduplikasi impor testimoni lama (internal). */
+  legacyKey?: string;
   /** Pemilik akun (internal; hak hapus). */
   ownerUid?: string;
   consent: {

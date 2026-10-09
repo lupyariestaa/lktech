@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  planLegacyImport,
+  legacyKey,
   buildTamanReviewJsonLd,
   PRIVATE_FIELDS,
   toMineView,
@@ -424,4 +426,58 @@ test("T10 JSON-LD: rating dibatasi 1..5 dan bentuk Review lengkap", () => {
 
 test("T10 JSON-LD: tanpa item → null (jangan render schema kosong)", () => {
   assert.equal(buildTamanReviewJsonLd([], CTX), null);
+});
+/* ---------- T11: migrasi testimoni lama ---------- */
+
+const PH = [
+  { name: "Andi Pratama", role: "Owner, Kopi Lokal", quote: "Prosesnya cepat dan komunikatif. Website yang dibuat benar-benar membantu penjualan kami naik.", rating: 5 },
+];
+const NOW_ISO = "2026-10-10T08:00:00.000Z";
+
+test("T11 legacy: contoh bawaan (placeholder) dilewati, tidak pernah jadi testimoni", () => {
+  const r = planLegacyImport({ legacy: PH, placeholders: PH, existingKeys: [], nowISO: NOW_ISO });
+  assert.equal(r.drafts.length, 0);
+  assert.equal(r.skipped[0].reason, "placeholder");
+});
+
+test("T11 legacy: testimoni nyata menjadi draft pending, kind real, tanpa persetujuan", () => {
+  const real = [{ name: "Budi Santoso", role: "Pemilik Warung", quote: "Website saya sekarang jauh lebih rapi dan pelanggan makin banyak.", rating: 5 }];
+  const r = planLegacyImport({ legacy: real, placeholders: PH, existingKeys: [], nowISO: NOW_ISO });
+  assert.equal(r.drafts.length, 1);
+  const d = r.drafts[0] as Record<string, unknown>;
+  assert.equal(d.status, "pending");
+  assert.equal(d.kind, "real");
+  assert.equal(d.source, "legacy");
+  assert.equal((d.consent as { given: boolean }).given, false);
+  assert.equal(d.displayName, "Budi S.");
+});
+
+test("T11 legacy: duplikat di daftar dan yang sudah ada dilewati", () => {
+  const item = { name: "Ani Wijaya", role: "Guru", quote: "Pelayanannya ramah dan hasilnya sesuai dengan yang kami harapkan.", rating: 4 };
+  const key = legacyKey(item);
+  const dup = planLegacyImport({ legacy: [item, { ...item, name: " ani wijaya " }], placeholders: [], existingKeys: [], nowISO: NOW_ISO });
+  assert.equal(dup.drafts.length, 1);
+  assert.equal(dup.skipped[0].reason, "duplicate");
+  const exists = planLegacyImport({ legacy: [item], placeholders: [], existingKeys: [key], nowISO: NOW_ISO });
+  assert.equal(exists.drafts.length, 0);
+  assert.equal(exists.skipped[0].reason, "exists");
+});
+
+test("T11 legacy: data tak valid (nama kosong, quote pendek, rating salah) dilewati", () => {
+  const r = planLegacyImport({
+    legacy: [
+      { name: "", role: "x", quote: "Cukup panjang untuk diterima sebagai pesan.", rating: 5 },
+      { name: "Rudi", role: "x", quote: "pendek", rating: 5 },
+      { name: "Sari", role: "x", quote: "Pesan yang cukup panjang dan jelas.", rating: 9 },
+    ],
+    placeholders: [], existingKeys: [], nowISO: NOW_ISO,
+  });
+  assert.equal(r.drafts.length, 0);
+  assert.deepEqual(r.skipped.map((s) => s.reason), ["invalid", "invalid", "invalid"]);
+});
+
+test("T11 legacy: draft membawa legacyKey untuk deduplikasi berikutnya", () => {
+  const item = { name: "Dewi", role: "x", quote: "Pesan yang cukup panjang untuk diuji impor.", rating: 5 };
+  const r = planLegacyImport({ legacy: [item], placeholders: [], existingKeys: [], nowISO: NOW_ISO });
+  assert.equal((r.drafts[0] as { legacyKey: string }).legacyKey, legacyKey(item));
 });
