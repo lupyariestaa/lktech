@@ -40,7 +40,8 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   await deleteTamanTestimonial(id);
   await recordAdminAudit({
     action: "taman.delete",
-    actor: `owner:${uid}`,
+    // Tanpa uid di audit (privasi): cukup penanda pemilik dan id dokumen.
+    actor: "owner",
     target: id,
     meta: { by: "owner" },
   });

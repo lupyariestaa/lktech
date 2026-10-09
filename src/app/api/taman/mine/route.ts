@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { bearerToken } from "@/lib/admin-guard";
 import { TAMAN_COLLECTION } from "@/lib/taman-store";
-import { normalizeTamanTestimonial } from "@/lib/taman-logic";
+import { normalizeTamanTestimonial, toMineView } from "@/lib/taman-logic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,17 +30,7 @@ export async function GET(req: Request) {
 
   const snap = await db.collection(TAMAN_COLLECTION).where("ownerUid", "==", uid).get();
   const items = snap.docs
-    .map((d) => normalizeTamanTestimonial(d.id, d.data()))
-    .map((t) => ({
-      id: t.id,
-      status: t.status,
-      quote: t.quote,
-      rating: t.rating,
-      displayName: t.displayName,
-      role: t.role,
-      dateISO: t.dateISO,
-      createdAtISO: t.createdAtISO,
-    }))
+    .map((d) => toMineView(normalizeTamanTestimonial(d.id, d.data())))
     .sort((a, b) => b.createdAtISO.localeCompare(a.createdAtISO));
 
   return NextResponse.json({ items }, { headers: { "Cache-Control": "no-store" } });

@@ -438,3 +438,45 @@ export function draftFromReview(
 export function canSeedSamples(env: { NODE_ENV?: string }): boolean {
   return env.NODE_ENV === "development";
 }
+/* ---------- T9: whitelist respons untuk pemilik (privasi) ---------- */
+
+/**
+ * Bentuk respons `GET /api/taman/mine`. WHITELIST: pemilik melihat isi & statusnya sendiri,
+ * tetapi tidak pernah email, uid, nama lengkap, atau catatan bukti admin.
+ */
+export type TamanMineView = {
+  id: string;
+  status: TamanStatus;
+  quote: string;
+  rating: number;
+  displayName: string;
+  role: string;
+  dateISO: string;
+  createdAtISO: string;
+};
+
+export function toMineView(t: TamanTestimonial): TamanMineView {
+  return {
+    id: t.id,
+    status: t.status,
+    quote: t.quote,
+    rating: t.rating,
+    displayName: t.displayName,
+    role: t.role,
+    dateISO: t.dateISO,
+    createdAtISO: t.createdAtISO,
+  };
+}
+
+/** Field yang TIDAK boleh keluar ke klien mana pun (dipakai tes & pemeriksaan). */
+export const PRIVATE_FIELDS = [
+  "email",
+  "uid",
+  "ownerUid",
+  "fullName",
+  "consentText",
+  "evidenceNote",
+  "evidenceBy",
+  "sourceRefId",
+  "approvedBy",
+] as const;

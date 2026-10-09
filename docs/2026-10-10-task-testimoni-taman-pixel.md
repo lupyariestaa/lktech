@@ -343,9 +343,9 @@ type TamanPrivate = {
 - [x] Tab "Testimoni saya" di `/akun` (status, hapus; tab `testimoni`).
 
 ### T9 — Privasi
-- [ ] Hapus oleh pemberi & admin menghapus `taman_private`.
-- [ ] Tes: respons publik & akun tidak mengandung email/ownerUid.
-- [ ] Dokumen prosedur permintaan hapus (operasional).
+- [x] Hapus oleh pemberi & admin menghapus `taman_private` (batch dua dokumen).
+- [x] Tes: respons publik & akun tidak mengandung email/ownerUid (46 test di `test:taman`, termasuk `PRIVATE_FIELDS`).
+- [x] Dokumen prosedur permintaan hapus: `docs/2026-10-10-prosedur-hapus-testimoni.md`.
 
 ### T10 — SEO & analitik
 - [ ] JSON-LD `Review`/`AggregateRating` hanya real+published+consent.

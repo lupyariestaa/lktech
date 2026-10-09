@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  PRIVATE_FIELDS,
+  toMineView,
   validateSubmit,
   SUBMIT_LIMITS,
   hasTooManyPending,
@@ -348,4 +350,42 @@ test("T4 SUBMIT_LIMITS & hasTooManyPending: maks 1 pending aktif", () => {
   assert.equal(SUBMIT_LIMITS.pendingPerUser, 1);
   assert.equal(hasTooManyPending(0), false);
   assert.equal(hasTooManyPending(1), true);
+});
+/* ---------- T9: privasi (tidak ada field privat di respons apa pun) ---------- */
+
+test("T9 privasi: publicPool tidak membawa satu pun PRIVATE_FIELDS", () => {
+  const pool = publicPool([
+    t({ id: "a", fullName: "Budi Santoso", ownerUid: "uid-1", sourceRefId: "rev-1", approvedBy: "admin@x.id" } as never),
+  ]);
+  for (const item of pool) {
+    for (const f of PRIVATE_FIELDS) {
+      assert.equal(f in (item as unknown as Record<string, unknown>), false, `bocor: ${f}`);
+    }
+  }
+});
+
+test("T9 privasi: toMineView hanya memuat field milik pemilik", () => {
+  const v = toMineView(
+    t({ fullName: "Budi Santoso", ownerUid: "uid-1", sourceRefId: "rev-1", approvedBy: "admin@x.id" } as never),
+  ) as unknown as Record<string, unknown>;
+  for (const f of PRIVATE_FIELDS) {
+    assert.equal(f in v, false, `bocor: ${f}`);
+  }
+  assert.deepEqual(Object.keys(v).sort(), ["createdAtISO", "dateISO", "displayName", "id", "quote", "rating", "role", "status"]);
+});
+
+test("T9 privasi: sample tidak pernah masuk publicPool meski status published", () => {
+  const pool = publicPool([t({ id: "s", kind: "sample", status: "published" } as never)]);
+  assert.equal(pool.length, 0);
+});
+
+test("T9 privasi: testimoni tanpa persetujuan tidak pernah publik", () => {
+  const pool = publicPool([t({ id: "n", consent: { given: false } } as never)]);
+  assert.equal(pool.length, 0);
+});
+
+test("T9 privasi: PRIVATE_FIELDS mencakup email & uid", () => {
+  assert.ok((PRIVATE_FIELDS as readonly string[]).includes("email"));
+  assert.ok((PRIVATE_FIELDS as readonly string[]).includes("uid"));
+  assert.ok((PRIVATE_FIELDS as readonly string[]).includes("ownerUid"));
 });
