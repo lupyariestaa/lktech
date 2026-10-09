@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { findHistoryConflict } from "../src/lib/slug-conflict.ts";
+import { revalidationPaths } from "../src/lib/article-api-logic.ts";
 import {
   createHeadingIdGenerator,
   HEADING_FALLBACK,
@@ -69,4 +70,27 @@ test("G4 findHistoryConflict: artikel mengedit slug-nya sendiri tidak dianggap k
 test("G4 findHistoryConflict: slug aktif artikel lain bukan konflik riwayat (ditangani duplikasi)", () => {
   const all = [{ slug: "x", slugHistory: [] }];
   assert.equal(findHistoryConflict("x", all), null);
+});
+
+/* ---------- G6: satu h1 per halaman (h1 datang dari PageHero, bukan body) ---------- */
+
+test("G6 parseMarkdown: '# Judul' tidak menghasilkan h1 (dipetakan ke h2)", () => {
+  const blocks = parseMarkdown("# Judul Besar");
+  assert.equal(blocks[0].t, "h");
+  assert.equal(blocks[0].t === "h" && blocks[0].level, 2);
+});
+
+test("G6 parseMarkdown: tidak ada level 1 sama sekali di output", () => {
+  const blocks = parseMarkdown("# A\n\n## B\n\n### C\n\n#### D");
+  const levels = blocks.flatMap((b) => (b.t === "h" ? [b.level] : []));
+  assert.equal(levels.includes(1 as never), false);
+});
+
+/* ---------- G8: RSS ikut revalidate saat cron ---------- */
+
+test("G8 revalidationPaths: selalu menyertakan /blog/rss.xml (feed ikut segar)", () => {
+  assert.ok(revalidationPaths([], slugify).includes("/blog/rss.xml"));
+  assert.ok(
+    revalidationPaths([{ slug: "a", category: "x", tags: [] }], slugify).includes("/blog/rss.xml"),
+  );
 });

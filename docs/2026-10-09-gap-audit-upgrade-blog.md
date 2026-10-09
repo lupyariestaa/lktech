@@ -126,6 +126,8 @@
 - **G3** — selesai: keputusan route API (riwayat slug, pilihan audit, path revalidate, otorisasi cron) dipindah ke src/lib/article-api-logic.ts dan dites di scripts/article-api.test.ts (19 test).
 - **G4** — selesai: POST artikel menolak (409) slug yang masih jadi riwayat redirect artikel lain (indHistoryConflict, src/lib/slug-conflict.ts).
 - **G7** — selesai: parser memberi id unik per heading (duplikat diberi sufiks -2, -3; heading simbol diberi agian). Generator ada di src/lib/markdown-parse.ts.
+- **G6** — diverifikasi, bukan bug: heading body dipetakan ke h2 (# dan ##), jadi satu h1 per halaman datang dari PageHero. Ditambah test regresi.
+- **G8** — diverifikasi, bukan bug: evalidationPaths sudah menyertakan /blog/rss.xml, dan RSS evalidate = 3600. Ditambah test regresi.
 - **G5** — selesai sebagian, dengan koreksi: globals.css sudah memakai prefers-reduced-motion global (scroll-behavior: auto, durasi transisi nol). Yang ditambahkan: motion-reduce:transition-none pada komponen blog (TOC, tombol share, filter).
 
 ## Ringkasan
