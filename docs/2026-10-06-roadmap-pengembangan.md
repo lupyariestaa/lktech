@@ -57,7 +57,7 @@ Legenda prioritas: **P0** (fondasi/menutup celah) · **P1** (pertumbuhan) · **P
 ```
 TEMA 1 — KONVERSI & CLOSING
   P0  Pembayaran online (Midtrans/Xendit) + status otomatis
-  P1  Bundling & upsell produk ("sering dibeli bersama")
+  P1  Bundling & upsell produk ("sering dibeli bersama") — ✅ P3 + rekomendasi riwayat (docs/2026-10-10-bundling-riwayat-pesanan.md)
   P1  Urgency & trust badges (stok, "X orang lihat hari ini")
   P2  Abandoned checkout recovery (email/WA)
 

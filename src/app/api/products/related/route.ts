@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProductsBySlugs, getRelatedProducts } from "@/lib/products";
+import { getCoPurchaseMap } from "@/lib/co-purchase-server";
+import { rankCoPurchases } from "@/lib/co-purchase";
 import { PRODUCT_CATEGORY_LABEL, type Product } from "@/lib/product-types";
 
 export const runtime = "nodejs";
@@ -39,6 +41,9 @@ export async function GET(req: Request) {
       if (picked.length < 6) picked.push(p);
     };
 
+    // BR-4: ranking riwayat pesanan (sekali per request, best-effort).
+    const coMap = await getCoPurchaseMap();
+
     // Gabungkan saran dari setiap item keranjang (urut sesuai item).
     for (const slug of slugs) {
       const product = cartProducts.get(slug);
@@ -46,6 +51,7 @@ export async function GET(req: Request) {
       const rel = await getRelatedProducts(product, {
         limit: 6,
         exclude: cartSet,
+        coPurchase: rankCoPurchases(product.slug, coMap),
       });
       for (const r of rel) {
         pushUnique(r);

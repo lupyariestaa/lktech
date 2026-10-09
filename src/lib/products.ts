@@ -487,36 +487,13 @@ export async function getProductsBySlugs(
  * Mengembalikan maksimal `limit` produk, tanpa duplikat, tanpa produk yang
  * dikecualikan (mis. produk itu sendiri / yang sudah ada di keranjang).
  */
+import { pickRelatedProducts } from "@/lib/product-related";
+
 export async function getRelatedProducts(
   product: Pick<Product, "slug" | "category" | "relatedSlugs">,
-  opts: { limit?: number; exclude?: Iterable<string> } = {},
+  opts: { limit?: number; exclude?: Iterable<string>; coPurchase?: string[] } = {},
 ): Promise<Product[]> {
-  const limit = Math.max(1, opts.limit ?? 3);
-  const exclude = new Set<string>([product.slug, ...(opts.exclude ?? [])]);
-
   const all = await getProducts(); // hanya aktif, urut unggulan→nama
-  const bySlug = new Map(all.map((p) => [p.slug, p]));
-
-  const picked: Product[] = [];
-  const push = (p: Product | undefined) => {
-    if (!p || exclude.has(p.slug) || picked.some((x) => x.slug === p.slug)) return;
-    if (picked.length < limit) picked.push(p);
-  };
-
-  // 1) Manual (urutan sesuai `relatedSlugs`).
-  for (const slug of product.relatedSlugs ?? []) {
-    push(bySlug.get(slug));
-    if (picked.length >= limit) break;
-  }
-
-  // 2) Fallback: kategori sama.
-  if (picked.length < limit) {
-    for (const p of all) {
-      if (p.category !== product.category) continue;
-      push(p);
-      if (picked.length >= limit) break;
-    }
-  }
-
-  return picked;
+  // Urutan manual → riwayat pesanan → kategori: logika murni di product-related.ts.
+  return pickRelatedProducts(product, all, opts);
 }

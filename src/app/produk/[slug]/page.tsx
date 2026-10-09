@@ -23,6 +23,8 @@ import { ProductPurchasePanel } from "@/components/product-purchase-panel";
 import { ProductPurchaseBar } from "@/components/product-purchase-bar";
 import { FavoriteButton } from "@/components/favorite-button";
 import { Reveal } from "@/components/motion";
+import { getCoPurchaseMap } from "@/lib/co-purchase-server";
+import { rankCoPurchases } from "@/lib/co-purchase";
 import {
   getProductBySlug,
   getProducts,
@@ -84,7 +86,12 @@ export default async function ProdukDetailPage({
 
   const all = await getProducts();
   // "Sering dibeli bersama" (FASE P3): manual (relatedSlugs) + fallback kategori.
-  const related = await getRelatedProducts(product, { limit: 3 });
+  // BR-4: ranking riwayat pesanan (best-effort, cache memori) sebagai sumber kedua.
+  const coMap = await getCoPurchaseMap();
+  const related = await getRelatedProducts(product, {
+    limit: 3,
+    coPurchase: rankCoPurchases(product.slug, coMap),
+  });
   const relatedSlugs = new Set(related.map((p) => p.slug));
   // "Produk lainnya": hindari duplikat dengan bagian "sering dibeli bersama".
   const others = all
