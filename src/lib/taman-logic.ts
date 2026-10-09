@@ -357,3 +357,84 @@ export const SUBMIT_LIMITS = { perDayPerUser: 3, pendingPerUser: 1 } as const;
 export function hasTooManyPending(pendingCount: number): boolean {
   return pendingCount >= SUBMIT_LIMITS.pendingPerUser;
 }
+
+/* ---------- T5: logika admin (murni) ---------- */
+
+/** Aksi bulk admin (maks 50, sama dengan batas artikel). */
+export const TAMAN_BULK_ACTIONS = ["publish", "hide", "delete"] as const;
+export type TamanBulkAction = (typeof TAMAN_BULK_ACTIONS)[number];
+export const TAMAN_BULK_MAX = 50;
+
+/**
+ * Status tujuan untuk aksi publish/hide. Publish real tetap wajib lolos `canPublish`
+ * di pemanggil (gate server). Mengembalikan status baru atau null bila aksi tak valid.
+ */
+export function statusForAction(action: string): "published" | "hidden" | null {
+  if (action === "publish") return "published";
+  if (action === "hide") return "hidden";
+  return null;
+}
+
+/** Hewan default berurutan untuk testimoni tanpa hewan (memastikan variasi di frame). */
+export function nextAnimal(used: string[]): AnimalKey {
+  const counts = new Map<string, number>(TAMAN_ANIMAL_LIST.map((a) => [a, 0]));
+  for (const a of used) if (counts.has(a)) counts.set(a, (counts.get(a) ?? 0) + 1);
+  let best: AnimalKey = TAMAN_ANIMAL_LIST[0];
+  let bestCount = Infinity;
+  for (const a of TAMAN_ANIMAL_LIST) {
+    const c = counts.get(a) ?? 0;
+    if (c < bestCount) {
+      best = a;
+      bestCount = c;
+    }
+  }
+  return best;
+}
+
+/** Validasi urutan (bilangan bulat, 0..9999). */
+export function sanitizeOrder(v: unknown): number | null {
+  if (typeof v !== "number" || !Number.isFinite(v)) return null;
+  const n = Math.round(v);
+  return n >= 0 && n <= 9999 ? n : null;
+}
+
+/**
+ * Susun testimoni dari ulasan produk (T5 import). Nama disingkat dari `buyerName`,
+ * `uid` TIDAK dibawa ke dokumen publik (hanya ke privat). Status tetap `pending`.
+ */
+export function draftFromReview(
+  review: { id: string; uid: string; buyerName: string; rating: number; body?: string; title?: string; productSlug: string; createdAtISO: string },
+  nowISO: string,
+): { publicDoc: Record<string, unknown>; privateDoc: { uid: string; consentText: string; consentAtISO: string } | null } {
+  const quote = (review.body ?? review.title ?? "").trim();
+  return {
+    publicDoc: {
+      kind: "real",
+      status: "pending",
+      displayName: shortName(review.buyerName || "Pelanggan", TAMAN_LIMITS.displayNameMax),
+      role: "Pelanggan produk",
+      quote,
+      rating: Math.min(5, Math.max(1, Math.round(review.rating))),
+      dateISO: review.createdAtISO.slice(0, 10),
+      animal: "kucing",
+      order: 0,
+      productSlug: review.productSlug,
+      source: "review",
+      sourceRefId: review.id,
+      ownerUid: review.uid,
+      consent: { given: false },
+      createdAtISO: nowISO,
+      updatedAtISO: nowISO,
+    },
+    // Persetujuan belum ada: admin wajib mengisi bukti sebelum publish.
+    privateDoc: null,
+  };
+}
+
+/**
+ * Sample (D2) hanya boleh dibuat di lingkungan development. Di produksi TIDAK PERNAH,
+ * dengan atau tanpa env apa pun (keputusan pemilik: sample tidak tampil publik).
+ */
+export function canSeedSamples(env: { NODE_ENV?: string }): boolean {
+  return env.NODE_ENV === "development";
+}
