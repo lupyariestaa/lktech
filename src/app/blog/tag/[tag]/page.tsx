@@ -41,6 +41,7 @@ export async function generateMetadata({
       description: `Artikel blog LKTech dengan tag ${label}.`,
       url: `/blog/tag/${tag}`,
       type: "website",
+      images: ["/opengraph-image"],
     },
   };
 }

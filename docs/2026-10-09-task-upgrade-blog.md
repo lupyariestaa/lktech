@@ -175,12 +175,12 @@ Dikerjakan sebelum B3 dan B4 karena UI butuh field baru.
 
 ## Fase B7 - SEO dan Distribusi
 
-- [ ] **B7.1** `generateMetadata` memakai `metaTitle` dan `metaDescription`, fallback ke judul dan excerpt.
-- [ ] **B7.2** OG image dari `coverImage` artikel (fallback OG default beranda).
-- [ ] **B7.3** RSS: tambah `content:encoded` (HTML dari `Markdown` server-side, gambar absolut). File: `src/app/blog/rss.xml/route.ts`.
-- [ ] **B7.4** Sitemap: `lastModified` dari `updatedAt`. File: `src/app/sitemap.ts`.
-- [ ] **B7.5** JSON-LD BlogPosting: `dateModified`, `image`, `wordCount`.
-- [ ] **B7.6** Test: `scripts/article-seo.test.ts` untuk fungsi pembuat metadata/RSS item (murni).
+- [x] **B7.1** `generateMetadata` memakai `metaTitle` dan `metaDescription`, fallback ke judul dan excerpt.
+- [x] **B7.2** OG image dari `coverImage` artikel (fallback OG default beranda).
+- [x] **B7.3** RSS: tambah `content:encoded` (HTML dari `Markdown` server-side, gambar absolut). File: `src/app/blog/rss.xml/route.ts`.
+- [x] **B7.4** Sitemap: `lastModified` dari `updatedAt`. File: `src/app/sitemap.ts`.
+- [x] **B7.5** JSON-LD BlogPosting: `dateModified`, `image`, `wordCount`.
+- [x] **B7.6** Test: `scripts/article-seo.test.ts` untuk fungsi pembuat metadata/RSS item (murni).
 
 **Verifikasi:** `npm run test:blog` hijau. Cek `/blog/rss.xml` dan sitemap di build lokal.
 

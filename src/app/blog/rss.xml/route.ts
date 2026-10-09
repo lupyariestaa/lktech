@@ -1,5 +1,7 @@
 import { getArticles } from "@/lib/articles";
 import { SITE } from "@/lib/site";
+import { blocksToHtml, cdata } from "@/lib/markdown-html";
+import { parseMarkdown } from "@/lib/markdown-parse";
 
 export const runtime = "nodejs";
 export const revalidate = 3600;
@@ -36,13 +38,14 @@ export async function GET() {
       <guid isPermaLink="true">${link}</guid>
       <pubDate>${pubDate}</pubDate>
       <description>${xmlEscape(a.excerpt)}</description>
+      <content:encoded>${cdata(blocksToHtml(parseMarkdown(a.body), SITE.url))}</content:encoded>
 ${categories}
     </item>`;
     })
     .join("\n");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>${xmlEscape(`${SITE.name} Blog`)}</title>
     <link>${blogUrl}</link>

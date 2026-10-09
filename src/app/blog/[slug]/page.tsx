@@ -25,6 +25,8 @@ import { getProducts } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
 import { SITE } from "@/lib/site";
 import { readingLabel } from "@/lib/article-ui";
+import { seoDescription, seoTitle, ogImageFor } from "@/lib/article-logic";
+import { wordCountFromMarkdown } from "@/lib/markdown-html";
 import { taxonomySlug } from "@/lib/article-types";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 
@@ -47,8 +49,9 @@ export async function generateMetadata({
   const resolved = await resolveArticleSlug(slug);
   if (!resolved) return { title: "Artikel tidak ditemukan" };
   const article = resolved.article;
-  const title = article.metaTitle || article.title;
-  const description = article.metaDescription || article.excerpt;
+  const title = seoTitle(article);
+  const description = seoDescription(article);
+  const image = ogImageFor(article, "/opengraph-image");
 
   return {
     title,
@@ -58,9 +61,10 @@ export async function generateMetadata({
       title,
       description,
       type: "article",
-      url: `/blog/${slug}`,
+      url: `/blog/${article.slug}`,
       publishedTime: article.publishedAt,
-      images: article.coverImage ? [article.coverImage] : undefined,
+      modifiedTime: article.updatedAt ?? article.publishedAt,
+      images: [image],
     },
   };
 }
@@ -103,9 +107,10 @@ export default async function ArticleDetailPage({
     author: { "@type": "Organization", name: article.author },
     publisher: { "@type": "Organization", name: SITE.name },
     mainEntityOfPage: url,
-    image: article.coverImage ? [article.coverImage] : undefined,
+    image: [ogImageFor(article, `${SITE.url}/opengraph-image`)],
     articleSection: article.category,
     keywords: article.tags.join(", "),
+    wordCount: wordCountFromMarkdown(article.body),
   };
 
   const breadcrumbLd = {

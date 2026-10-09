@@ -25,6 +25,7 @@ export const metadata: Metadata = {
       "Artikel & tips seputar website, aplikasi, bisnis digital, dan teknologi.",
     url: "/blog",
     type: "website",
+    images: ["/opengraph-image"],
   },
 };
 

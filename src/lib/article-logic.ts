@@ -140,3 +140,26 @@ export function pickRelatedArticles(
     .slice(0, limit)
     .map((x) => x.article);
 }
+
+/** Judul SEO: `metaTitle` bila ada, fallback ke judul artikel (B7.1). */
+export function seoTitle(a: { title: string; metaTitle?: string }): string {
+  return a.metaTitle?.trim() || a.title;
+}
+
+/** Deskripsi SEO: `metaDescription` bila ada, fallback ke ringkasan (B7.1). */
+export function seoDescription(a: { excerpt: string; metaDescription?: string }): string {
+  return a.metaDescription?.trim() || a.excerpt;
+}
+
+/**
+ * Gambar OG artikel (B7.2): cover artikel bila ada, selain itu `fallback`
+ * (gambar OG default situs). Nilai "default" dianggap tanpa cover.
+ */
+export function ogImageFor(
+  a: { coverImage?: string },
+  fallback: string,
+): string {
+  const img = a.coverImage?.trim();
+  if (!img || img === "default") return fallback;
+  return img;
+}
