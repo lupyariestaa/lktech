@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -109,12 +109,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const closePalette = useCallback(() => setPaletteOpen(false), []);
 
   return (
-    <div className="min-h-screen bg-surface">
-      <div className="flex w-full">
+    <div className="min-h-dvh bg-surface">
+      <div className="flex w-full items-start">
         {/* Sidebar desktop (â‰¥ lg) â€” expanded â†” rail */}
         <aside
           className={cn(
-            "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out lg:flex",
+            "sticky top-0 hidden h-dvh shrink-0 self-start flex-col border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out lg:flex",
             collapsed ? "w-20" : "w-64",
           )}
         >
@@ -142,7 +142,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         {/* Main â€” `inert` saat drawer mobile terbuka agar Tab tidak "lolos"
             ke konten di belakang dialog (mendukung aria-modal secara nyata). */}
         <div
-          className="flex min-h-screen w-full min-w-0 flex-col"
+          className="flex min-h-dvh w-full min-w-0 flex-col"
           inert={open ? true : undefined}
         >
           <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
