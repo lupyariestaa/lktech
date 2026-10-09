@@ -655,7 +655,11 @@ export async function deleteTaman(id: string) {
   });
 }
 
-export async function bulkTaman(action: "publish" | "hide" | "delete", ids: string[]) {
+export async function bulkTaman(
+  action: "publish" | "hide" | "delete" | "consent_publish",
+  ids: string[],
+  evidenceNote?: string,
+) {
   return adminFetch<{
     ok: boolean;
     done: number;
@@ -663,7 +667,7 @@ export async function bulkTaman(action: "publish" | "hide" | "delete", ids: stri
     results: Array<{ id: string; ok: boolean; error?: string }>;
   }>("/api/admin/taman/bulk", {
     method: "POST",
-    body: JSON.stringify({ action, ids }),
+    body: JSON.stringify({ action, ids, ...(evidenceNote ? { evidenceNote } : {}) }),
   });
 }
 

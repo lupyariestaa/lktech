@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  TAMAN_BULK_ACTIONS,
+  statusForAction,
   planLegacyImport,
   legacyKey,
   buildTamanReviewJsonLd,
@@ -480,4 +482,12 @@ test("T11 legacy: draft membawa legacyKey untuk deduplikasi berikutnya", () => {
   const item = { name: "Dewi", role: "x", quote: "Pesan yang cukup panjang untuk diuji impor.", rating: 5 };
   const r = planLegacyImport({ legacy: [item], placeholders: [], existingKeys: [], nowISO: NOW_ISO });
   assert.equal((r.drafts[0] as { legacyKey: string }).legacyKey, legacyKey(item));
+});
+test("T12 TAMAN_BULK_ACTIONS mencakup consent_publish", () => {
+  assert.deepEqual([...TAMAN_BULK_ACTIONS], ["publish", "hide", "delete", "consent_publish"]);
+});
+
+test("T12 statusForAction tidak mengubah consent_publish", () => {
+  assert.equal(statusForAction("consent_publish"), null);
+  assert.equal(statusForAction("publish"), "published");
 });

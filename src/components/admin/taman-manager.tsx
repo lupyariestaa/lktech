@@ -46,7 +46,8 @@ export function TamanManager() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<TamanAdminItem | null>(null);
   const [busy, setBusy] = useState(false);
-  const [confirmBulk, setConfirmBulk] = useState<"publish" | "hide" | "delete" | null>(null);
+  const [confirmBulk, setConfirmBulk] = useState<"publish" | "hide" | "delete" | "consent_publish" | null>(null);
+  const [bulkEvidence, setBulkEvidence] = useState("");
   const [confirmSamples, setConfirmSamples] = useState(false);
 
   const counts = useMemo(() => {
@@ -99,7 +100,7 @@ export function TamanManager() {
     if (!confirmBulk) return;
     setBusy(true);
     try {
-      const res = await bulkTaman(confirmBulk, Array.from(selected));
+      const res = await bulkTaman(confirmBulk, Array.from(selected), bulkEvidence || undefined);
       if (res.failed > 0) toast.error(`${res.done} berhasil, ${res.failed} gagal (lihat alasan di daftar).`);
       else toast.success(`${res.done} testimoni diproses.`);
       setSelected(new Set());
@@ -109,6 +110,7 @@ export function TamanManager() {
     } finally {
       setBusy(false);
       setConfirmBulk(null);
+      setBulkEvidence("");
     }
   };
 
@@ -223,7 +225,8 @@ export function TamanManager() {
       {selected.size > 0 && (
         <div className="sticky top-16 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-primary/30 bg-primary-50 px-4 py-2.5">
           <span className="text-xs font-semibold text-primary">{selected.size} dipilih (maks {BULK_MAX})</span>
-          <button onClick={() => setConfirmBulk("publish")} disabled={busy} className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60">Terbitkan</button>
+          <button onClick={() => setConfirmBulk("consent_publish")} disabled={busy} className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60">Tandai persetujuan &amp; terbitkan</button>
+          <button onClick={() => setConfirmBulk("publish")} disabled={busy} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold disabled:opacity-60">Terbitkan (sudah disetujui)</button>
           <button onClick={() => setConfirmBulk("hide")} disabled={busy} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold disabled:opacity-60">Sembunyikan</button>
           <button onClick={() => setConfirmBulk("delete")} disabled={busy} className="rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 disabled:opacity-60">Hapus</button>
           <button onClick={() => setSelected(new Set())} className="ml-auto text-xs font-semibold text-slate-500">Batal pilih</button>
@@ -273,8 +276,41 @@ export function TamanManager() {
         />
       )}
 
+      {confirmBulk === "consent_publish" && (
+        <div className="fixed inset-0 z-[11950] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Catatan bukti persetujuan">
+          <div className="absolute inset-0 bg-slate-900/50" onClick={() => !busy && setConfirmBulk(null)} />
+          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 className="text-base font-bold text-secondary">Catatan bukti persetujuan</h2>
+            <p className="mt-1 text-sm text-muted">
+              Anda menyatakan persetujuan {selected.size} pemberi sudah diterima. Catat buktinya (mis. tanggal & kanal: email/WhatsApp). Testimoni lalu diterbitkan.
+            </p>
+            <textarea
+              value={bulkEvidence}
+              onChange={(e) => setBulkEvidence(e.target.value)}
+              rows={3}
+              placeholder="Contoh: disetujui via WhatsApp 10 Okt 2026, screenshot tersimpan"
+              className="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/30 focus:outline-none"
+              aria-label="Catatan bukti persetujuan"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setConfirmBulk(null)} disabled={busy} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-secondary">
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={runBulk}
+                disabled={busy || bulkEvidence.trim().length < 3}
+                className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                Tandai &amp; terbitkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmDialog
-        open={confirmBulk !== null}
+        open={confirmBulk !== null && confirmBulk !== "consent_publish"}
         title="Konfirmasi aksi massal"
         description={
           confirmBulk === "delete"

@@ -362,7 +362,7 @@ export function hasTooManyPending(pendingCount: number): boolean {
 /* ---------- T5: logika admin (murni) ---------- */
 
 /** Aksi bulk admin (maks 50, sama dengan batas artikel). */
-export const TAMAN_BULK_ACTIONS = ["publish", "hide", "delete"] as const;
+export const TAMAN_BULK_ACTIONS = ["publish", "hide", "delete", "consent_publish"] as const;
 export type TamanBulkAction = (typeof TAMAN_BULK_ACTIONS)[number];
 export const TAMAN_BULK_MAX = 50;
 
