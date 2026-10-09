@@ -300,9 +300,9 @@ type TamanPrivate = {
 - [x] Status dokumen diperbarui (eksekusi dimulai).
 
 ### T1 — Data & privasi
-- [ ] Tipe `taman-types.ts` (§2.1, §2.2) + konstanta status/kind/source.
-- [ ] Modul data `taman-store.ts` (server-only): CRUD dua koleksi, batch tulis, normalisasi.
-- [ ] Rules: tetap deny client (tidak ada perubahan ke izin publik).
+- [x] Tipe `taman-types.ts` (§2.1, §2.2) + konstanta status/kind/source.
+- [x] Modul data `taman-store.ts` (server-only): CRUD dua koleksi, batch tulis atomik, normalisasi, hapus testimoni + privat.
+- [x] Rules: tetap deny client (tidak ada perubahan ke izin publik).
 
 ### T2 — Logika murni & test
 - [ ] `taman-logic.ts`: `shortName`, `isPubliclyVisible(kind, status)`, `publicView(t)` (whitelist), `pickSlots(pool, n, recent, rng)`, `slotCountFor(width)`, `canPublish(t, private)`, `sanitizeRating`, `validateProjectLink`.
