@@ -6,6 +6,7 @@ import { deleteArticleBySlug, getStoredArticles, saveArticle } from "@/lib/artic
 import { taxonomySlug, type Article } from "@/lib/article-types";
 import { BULK_ACTIONS, normalizeBulkSlugs, type BulkAction } from "@/lib/article-manage";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { revalidationPaths } from "@/lib/article-api-logic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,13 +81,7 @@ export async function POST(req: Request) {
 
   // Revalidate halaman terkait untuk semua item yang berhasil.
   const touched = all.filter((a) => results.some((r) => r.ok && r.slug === a.slug));
-  const paths = new Set<string>(["/blog", "/blog/rss.xml", "/sitemap.xml"]);
-  for (const a of touched) {
-    paths.add(`/blog/${a.slug}`);
-    if (a.category) paths.add(`/blog/kategori/${taxonomySlug(a.category)}`);
-    for (const t of a.tags) paths.add(`/blog/tag/${taxonomySlug(t)}`);
-  }
-  for (const p of paths) revalidatePath(p);
+  for (const p of revalidationPaths(touched, taxonomySlug)) revalidatePath(p);
 
   const okCount = results.filter((r) => r.ok).length;
   return NextResponse.json({ ok: true, action, done: okCount, failed: results.length - okCount, results });

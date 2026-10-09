@@ -8,6 +8,7 @@ import {
 } from "@/lib/articles";
 import { taxonomySlug, type Article } from "@/lib/article-types";
 import { estimateReadingTime } from "@/lib/article-logic";
+import { buildSlugHistory, decideAuditAction, revalidationPaths } from "@/lib/article-api-logic";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { articleSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
@@ -15,24 +16,12 @@ import { sanitizeSlug } from "@/lib/utils";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * Revalidate semua halaman yang memuat artikel: list, detail, kategori, tag,
- * RSS, dan sitemap. Dipanggil dengan versi lama & baru agar perubahan
- * kategori/tag tidak meninggalkan cache stale.
- */
+/** Revalidate halaman blog terkait artikel (sumber path: `revalidationPaths`). */
 function revalidateBlog(
   ...articles: Array<Pick<Article, "slug" | "category" | "tags"> | undefined>
 ) {
-  const paths = new Set<string>(["/blog", "/blog/rss.xml", "/sitemap.xml"]);
-  for (const a of articles) {
-    if (!a) continue;
-    paths.add(`/blog/${a.slug}`);
-    if (a.category) paths.add(`/blog/kategori/${taxonomySlug(a.category)}`);
-    for (const t of a.tags) paths.add(`/blog/tag/${taxonomySlug(t)}`);
-  }
-  for (const p of paths) revalidatePath(p);
+  for (const p of revalidationPaths(articles, taxonomySlug)) revalidatePath(p);
 }
-
 /** GET /api/admin/articles — daftar artikel (termasuk draft). */
 export async function GET(req: Request) {
   const check = await requireAdmin(req);
@@ -86,12 +75,12 @@ export async function POST(req: Request) {
   const previousRename = renamedFrom
     ? existingList.find((a) => a.slug === renamedFrom)
     : undefined;
-  const history = new Set<string>([
-    ...(previousBySlug?.slugHistory ?? []),
-    ...(previousRename?.slugHistory ?? []),
-  ]);
-  if (previousRename && renamedFrom !== slug) history.add(renamedFrom);
-  history.delete(slug);
+  const history = buildSlugHistory({
+    slug,
+    currentHistory: previousBySlug?.slugHistory,
+    renamedFrom: previousRename ? renamedFrom : undefined,
+    renamedFromHistory: previousRename?.slugHistory,
+  });
 
   const article: Article = {
     slug,
@@ -102,7 +91,7 @@ export async function POST(req: Request) {
     metaTitle: body.metaTitle?.trim() || undefined,
     metaDescription: body.metaDescription?.trim() || undefined,
     scheduledAt: body.scheduledAt || undefined,
-    slugHistory: Array.from(history),
+    slugHistory: history,
     category: (body.category ?? "Artikel").trim(),
     tags: Array.isArray(body.tags) ? body.tags.filter(Boolean) : [],
     cover: (body.cover ?? "default").trim(),
@@ -123,16 +112,14 @@ export async function POST(req: Request) {
     await saveArticle(article, check.email);
     revalidateBlog(previous, article);
 
-    const statusChanged = previous !== undefined && previous.status !== article.status;
     const duplicatedFrom =
       typeof body.duplicatedFrom === "string" ? sanitizeSlug(body.duplicatedFrom) : "";
-    const action = duplicatedFrom && !previous
-      ? "article.duplicate"
-      : !statusChanged
-        ? "article.save"
-        : article.status === "published"
-          ? "article.publish"
-          : "article.unpublish";
+    const action = decideAuditAction({
+      hasPrevious: previous !== undefined,
+      previousStatus: previous?.status,
+      nextStatus: article.status,
+      duplicatedFrom: duplicatedFrom || undefined,
+    });
     await recordAdminAudit({
       action,
       actor: check.email,

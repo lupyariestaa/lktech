@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getStoredArticles } from "@/lib/articles";
 import { taxonomySlug } from "@/lib/article-types";
+import { isCronAuthorized, revalidationPaths } from "@/lib/article-api-logic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,15 +27,15 @@ async function run(req: Request) {
     );
   }
 
-  const auth = req.headers.get("authorization") ?? "";
-  const bearer = auth.toLowerCase().startsWith("bearer ")
-    ? auth.slice(7).trim()
-    : "";
-  const queryToken = new URL(req.url).searchParams.get("token") ?? "";
-  if ((bearer || queryToken) !== secret) {
+  if (
+    !isCronAuthorized({
+      secret,
+      authorizationHeader: req.headers.get("authorization"),
+      queryToken: new URL(req.url).searchParams.get("token"),
+    })
+  ) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
-
   try {
     const now = Date.now();
     const articles = await getStoredArticles();
@@ -43,16 +44,11 @@ async function run(req: Request) {
       return a.status === "published" && !Number.isNaN(t) && t <= now && now - t <= DUE_WINDOW_MS;
     });
 
-    const paths = new Set<string>(["/blog", "/blog/rss.xml", "/sitemap.xml"]);
-    for (const a of due) {
-      paths.add(`/blog/${a.slug}`);
-      if (a.category) paths.add(`/blog/kategori/${taxonomySlug(a.category)}`);
-      for (const t of a.tags) paths.add(`/blog/tag/${taxonomySlug(t)}`);
-    }
+    const paths = revalidationPaths(due, taxonomySlug);
     for (const p of paths) revalidatePath(p);
 
     return NextResponse.json(
-      { ok: true, due: due.length, revalidated: paths.size, atISO: new Date(now).toISOString() },
+      { ok: true, due: due.length, revalidated: paths.length, atISO: new Date(now).toISOString() },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (err) {

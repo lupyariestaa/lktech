@@ -123,6 +123,7 @@
 
 - **G1** — selesai: field id dibuang sebelum simpan di aksi massal.
 - **G2** — selesai: editor menampilkan kata dan estimasi baca (countWords, eadingMinutes).
+- **G3** — selesai: keputusan route API (riwayat slug, pilihan audit, path revalidate, otorisasi cron) dipindah ke src/lib/article-api-logic.ts dan dites di scripts/article-api.test.ts (19 test).
 - **G5** — selesai sebagian, dengan koreksi: globals.css sudah memakai prefers-reduced-motion global (scroll-behavior: auto, durasi transisi nol). Yang ditambahkan: motion-reduce:transition-none pada komponen blog (TOC, tombol share, filter).
 
 ## Ringkasan
