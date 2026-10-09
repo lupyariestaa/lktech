@@ -78,3 +78,27 @@ Checklist per fase: [`2026-10-09-task-upgrade-blog.md`](2026-10-09-task-upgrade-
 - Tipe AST di `markdown-html.ts` disalin dari `markdown-parse.ts` (menghindari impor berekstensi `.ts` yang ditolak tsc). Jika AST berubah, sinkronkan keduanya.
 - File dengan BOM UTF-8 dihindari: menulis dengan `Set-Content -Encoding UTF8` di PowerShell 5.1 menambah BOM yang membuat `package.json` tidak bisa di-parse Node.
 - Cache `.next` yang dibuat dari build gagal harus dihapus sebelum build ulang.
+
+## Deviasi dari rencana
+
+Bagian ini mencatat perbedaan antara rencana (`2026-10-09-planning-upgrade-blog.md`) dan implementasi, supaya tidak perlu menelusuri commit.
+
+| # | Rencana | Implementasi | Alasan / status |
+| --- | --- | --- | --- |
+| D1 | B2.6 tabel pipa (opsional) | Belum dikerjakan | Opsional dan belum dibutuhkan |
+| D2 | B6.9 print stylesheet (opsional) | Belum dikerjakan | Opsional |
+| D3 | B5.6 index Firestore `status` + `publishedAt` | Di-skip | Query masih in-memory; index belum perlu |
+| D4 | B4.6 link pratinjau draft via token | Hanya pratinjau admin (sesi login) | Keputusan 5: lebih sedikit permukaan keamanan |
+| D5 | B6.2 newsletter di sidebar | Di bawah artikel | Lebih sesuai alur baca; tercatat di task doc |
+| D6 | B2.3 tombol salin untuk kode | Hanya blok kode fenced (kode inline tanpa tombol) | Kode inline terlalu kecil untuk tombol |
+| D7 | Parser markdown: library (opsional, keputusan 7) | Parser custom, diperluas | Diff lebih kecil, sudah teruji; library tidak diperlukan |
+| D8 | Renderer RSS memakai output publik | Memakai AST yang disalin di `markdown-html.ts` | Menghindari impor berekstensi `.ts` yang ditolak tsc; sinkron manual |
+| D9 | B1.5 opsi lebar gambar | Sintaks title `"wide"` | Sesuai desain sintaks; tanpa kontrol UI terpisah |
+| D10 | G4: cegah slug yang dipakai artikel aktif | Hanya cek riwayat slug (`slugHistory`) | Slug aktif masih ditimpa upsert; perlu keputusan lanjutan |
+| D11 | B3.8 pratinjau draft lewat API admin | Mengambil daftar lalu mencari slug di klien | Sederhana; endpoint detail tunggal belum ada |
+
+### Tindak lanjut yang disarankan
+
+- D10: tentukan apakah simpan artikel baru dengan slug yang sudah dipakai artikel aktif harus ditolak (409) atau menjadi edit eksplisit.
+- D8: bila AST berubah, sinkronkan `markdown-html.ts` dengan `markdown-parse.ts`, atau pindahkan tipe ke satu modul tanpa impor relatif berekstensi.
+- D11: tambahkan `GET /api/admin/articles/[slug]` bila daftar artikel makin besar.
