@@ -10,6 +10,7 @@ import { FeaturedProducts } from "@/components/sections/featured-products";
 import { Stats } from "@/components/sections/stats";
 import { PortfolioTeaser } from "@/components/sections/portfolio-teaser";
 import { Testimonials } from "@/components/sections/testimonials";
+import { TamanSection } from "@/components/taman/taman-section";
 import { Pricing } from "@/components/sections/pricing";
 import { Faq } from "@/components/sections/faq";
 import { CtaContact } from "@/components/sections/cta-contact";
@@ -62,6 +63,7 @@ export default function Home() {
         <FeaturedProducts />
         <Stats />
         <Testimonials />
+        <TamanSection />
         <Pricing />
         <Faq />
         <CtaContact />

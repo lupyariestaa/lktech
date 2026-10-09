@@ -332,11 +332,11 @@ type TamanPrivate = {
 - [x] Tambah menu sidebar "Taman Testimoni" (`admin-nav.ts`).
 
 ### T7 — Frame publik
-- [ ] `taman-frame.tsx`, `taman-animal.tsx`, `taman-card.tsx` (popover/bottom sheet), `taman-section.tsx` (server), `taman-client.tsx` (klien: slot, gacha, fokus).
-- [ ] Gacha dengan `pickSlots`, animasi shuffle, reduced-motion.
-- [ ] Keyboard, Esc, focus return, klik di luar.
-- [ ] Daftar `sr-only` testimoni.
-- [ ] Ganti/tampilkan berdampingan di beranda (Q16: default berdampingan dulu di flag, lalu ganti).
+- [x] `taman-animal.tsx`, `taman-card.tsx` (popover/bottom sheet), `taman-section.tsx`, `taman-client.tsx` (slot, gacha, fokus). Frame digabung di `taman-client.tsx`.
+- [x] Gacha dengan `pickSlots`, animasi shuffle, reduced-motion.
+- [x] Keyboard (roving tabindex, panah), Esc, focus return, klik di luar.
+- [x] Daftar `sr-only` testimoni.
+- [x] Tampil berdampingan di beranda (Q16). Seksi tersembunyi bila testimoni < 3.
 
 ### T8 — Form kirim & akun
 - [ ] `/taman/kirim` (login gate, form, checkbox persetujuan, pesan sukses).
