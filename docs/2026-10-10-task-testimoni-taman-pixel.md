@@ -310,9 +310,9 @@ type TamanPrivate = {
 - [x] Tambah `test:taman` ke `package.json`, `.github/workflows/ci.yml`, dan exclude `tsconfig.json`.
 
 ### T3 — Aset SVG
-- [ ] `scripts/gen-taman-sprites.mjs` + grid 8 hewan, latar, pagar, pohon.
-- [ ] Hasil SVG di `public/taman/`; cetak total ukuran; ≤ 60 KB.
-- [ ] `npm run gen:taman` di `package.json`.
+- [x] `scripts/gen-taman-sprites.mjs` + grid 8 hewan, latar, pagar, pohon.
+- [x] Hasil SVG di `public/taman/`; cetak total ukuran; ≤ 60 KB (6,5 KB).
+- [x] `npm run gen:taman` di `package.json`.
 
 ### T4 — API publik & kirim
 - [ ] `GET /api/taman` (whitelist, `s-maxage=60`, hanya real+published; sample hanya bila lokal dev).
