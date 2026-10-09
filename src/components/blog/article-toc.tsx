@@ -45,7 +45,7 @@ export function ArticleToc({ headings }: { headings: TocHeading[] }) {
             aria-current={activeId === h.id ? "location" : undefined}
             onClick={() => setOpen(false)}
             className={cn(
-              "block rounded-lg px-2 py-1.5 transition-colors",
+              "block rounded-lg px-2 py-1.5 transition-colors motion-reduce:transition-none",
               activeId === h.id
                 ? "bg-primary-50 font-semibold text-primary"
                 : "text-slate-500 hover:text-primary",
@@ -72,7 +72,7 @@ export function ArticleToc({ headings }: { headings: TocHeading[] }) {
             <ListTree className="h-4 w-4 text-primary" aria-hidden="true" />
             Daftar isi
           </span>
-          <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} aria-hidden="true" />
+          <ChevronDown className={cn("h-4 w-4 transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden="true" />
         </button>
         {open && <div className="px-4 pb-4">{list}</div>}
       </nav>

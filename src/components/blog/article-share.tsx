@@ -25,7 +25,7 @@ export function ArticleShare({ slug, title, url }: { slug: string; title: string
   };
 
   const btn =
-    "inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/40 hover:text-primary";
+    "inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors motion-reduce:transition-none hover:border-primary/40 hover:text-primary";
 
   return (
     <div className="flex flex-wrap items-center gap-2" aria-label="Bagikan artikel">

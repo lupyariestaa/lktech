@@ -16,8 +16,10 @@ import {
 } from "lucide-react";
 import { Markdown } from "@/lib/markdown";
 import {
+  countWords,
   insertAt,
   prefixLines,
+  readingMinutes,
   wrapSelection,
   type Edit,
 } from "@/lib/article-editor";
@@ -149,7 +151,9 @@ export function MarkdownEditor({
     }
   };
 
-  const words = value.trim() ? value.trim().split(/\s+/).length : 0;
+  // Hitungan memakai fungsi murni yang sama dengan estimasi di server (B5.1).
+  const words = countWords(value);
+  const minutes = readingMinutes(value);
 
   return (
     <div className="flex flex-col gap-2">
@@ -170,7 +174,9 @@ export function MarkdownEditor({
           ))}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted">
-          <span>{words} kata</span>
+          <span>
+            {words} kata · ~{minutes} menit baca
+          </span>
           <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5" role="group" aria-label="Mode tampilan">
             <button
               type="button"

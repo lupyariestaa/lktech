@@ -56,8 +56,11 @@ export async function POST(req: Request) {
       if (action === "delete") {
         await deleteArticleBySlug(slug);
       } else {
+        // `id` (doc id) bukan bagian dari artikel; jangan ikut tersimpan.
+        const { id: _docId, ...rest } = current;
+        void _docId;
         const next: Article = {
-          ...current,
+          ...rest,
           status: action === "publish" ? "published" : "draft",
         };
         await saveArticle(next, check.email);

@@ -75,7 +75,7 @@ export function BlogIndex({
               href={linkFor({ category: c.value, tag: "" })}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium transition-all",
+                "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium transition-all motion-reduce:transition-none",
                 active
                   ? "bg-primary text-white shadow-lg shadow-primary/25"
                   : "border border-slate-200 bg-white/70 text-slate-600 hover:border-primary/40 hover:text-primary",
@@ -99,7 +99,7 @@ export function BlogIndex({
                 href={linkFor({ tag: active ? "" : tag, category: "" })}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex min-h-9 items-center rounded-full px-3 text-xs font-medium transition-colors",
+                  "inline-flex min-h-9 items-center rounded-full px-3 text-xs font-medium transition-colors motion-reduce:transition-none",
                   active ? "bg-secondary text-white" : "bg-surface text-slate-500 hover:bg-primary-50 hover:text-primary",
                 )}
               >
