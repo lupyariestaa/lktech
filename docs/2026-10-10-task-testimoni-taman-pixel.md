@@ -339,8 +339,8 @@ type TamanPrivate = {
 - [x] Tampil berdampingan di beranda (Q16). Seksi tersembunyi bila testimoni < 3.
 
 ### T8 — Form kirim & akun
-- [ ] `/taman/kirim` (login gate, form, checkbox persetujuan, pesan sukses).
-- [ ] Tab "Testimoni saya" di `/akun` (status, hapus).
+- [x] `/taman/kirim` (login gate ke `/masuk?next=`, form, checkbox persetujuan, pesan sukses).
+- [x] Tab "Testimoni saya" di `/akun` (status, hapus; tab `testimoni`).
 
 ### T9 — Privasi
 - [ ] Hapus oleh pemberi & admin menghapus `taman_private`.
