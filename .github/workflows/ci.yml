@@ -50,6 +50,7 @@ jobs:
           npm run test:report
           npm run test:loyalty
           npm run test:wishlist
+          npm run test:blog
 
       - name: Build
         run: npm run build

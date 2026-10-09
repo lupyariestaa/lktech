@@ -127,3 +127,31 @@ export function trackAbandonedRecovered(props: {
     source: props.source ?? "email_reminder",
   });
 }
+
+/* -------------------------------------------------------------------------- */
+/* Blog (B8.1). Tanpa PII: hanya slug, kategori, dan konteks tampilan.         */
+/* -------------------------------------------------------------------------- */
+
+/** Artikel dibuka (dicatat sekali per tampilan halaman detail). */
+export function trackArticleView(props: { slug: string; category: string; readingTime?: number }): void {
+  trackEvent("article_view", {
+    slug: props.slug,
+    category: props.category,
+    reading_time: props.readingTime ?? null,
+  });
+}
+
+/** Artikel dibagikan (WhatsApp atau salin tautan). */
+export function trackArticleShare(props: { slug: string; method: "whatsapp" | "copy" }): void {
+  trackEvent("article_share", { slug: props.slug, method: props.method });
+}
+
+/** Klik artikel terkait / sidebar blog. */
+export function trackRelatedClick(props: { from: string; to: string; placement: string }): void {
+  trackEvent("related_click", { from: props.from, to: props.to, placement: props.placement });
+}
+
+/** Klik CTA di halaman blog (WhatsApp, layanan, newsletter). */
+export function trackBlogCta(props: { slug: string; cta: string }): void {
+  trackEvent("cta_click", { location: "blog", target: props.cta, slug: props.slug });
+}

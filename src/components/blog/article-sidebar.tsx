@@ -7,6 +7,8 @@ import { getService } from "@/lib/services";
 import { serviceSlugForCategory } from "@/lib/article-ui";
 import { formatPrice } from "@/lib/product-format";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
+import { TrackedRelatedLink } from "@/components/blog/tracked-related-link";
+import { TrackedBlogCta } from "@/components/blog/tracked-blog-cta";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 
 /**
@@ -37,12 +39,12 @@ export function ArticleSidebar({
           <ul className="mt-3 flex flex-col gap-3">
             {related.map((a) => (
               <li key={a.slug}>
-                <Link href={`/blog/${a.slug}`} className="group block">
+                <TrackedRelatedLink from={article.slug} to={a.slug} placement="sidebar" href={`/blog/${a.slug}`} className="group block">
                   <span className="text-sm font-semibold text-secondary transition-colors group-hover:text-primary">
                     {a.title}
                   </span>
                   <span className="mt-0.5 block text-xs text-muted">{a.category}</span>
-                </Link>
+                </TrackedRelatedLink>
               </li>
             ))}
           </ul>
@@ -54,13 +56,15 @@ export function ArticleSidebar({
           <p className="text-xs font-semibold text-primary">Layanan kami</p>
           <h2 className="mt-1 text-sm font-bold text-secondary">{service.title}</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted">{service.tagline}</p>
-          <Link
+          <TrackedBlogCta
+            slug={article.slug}
+            cta={`layanan:${service.slug}`}
             href={`/layanan/${service.slug}`}
             className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
           >
             Lihat layanan
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          </TrackedBlogCta>
         </section>
       )}
 

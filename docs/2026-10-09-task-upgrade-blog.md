@@ -1,7 +1,7 @@
 # Task Implementasi Upgrade Sistem Blog LKTech
 
 > Turunan dari `docs/2026-10-09-planning-upgrade-blog.md`.
-> Status: **SIAP DIKERJAKAN**. Urutan fase wajib diikuti. Centang `[x]` setelah selesai dan lolos verifikasi fase.
+> Status: **SELESAI (kode)**. Verifikasi manual tersisa (lihat docs/2026-10-09-upgrade-blog.md). Urutan fase wajib diikuti. Centang `[x]` setelah selesai dan lolos verifikasi fase.
 > Aturan per fase: satu commit konvensional, lalu `npx tsc --noEmit`, `npm run lint`, `npm run test:blog` (dibuat di B0), dan `npm run build` harus hijau sebelum lanjut.
 
 ---
@@ -190,11 +190,11 @@ Dikerjakan sebelum B3 dan B4 karena UI butuh field baru.
 
 ## Fase B8 - Observability, Test, Dokumentasi
 
-- [ ] **B8.1** Event analytics memakai pola `TrackedLink` (H7): `article_view`, `article_share`, `related_click`, `cta_click` di blog. Tanpa tracking pihak ketiga.
-- [ ] **B8.2** Lengkapi test: tambahkan suite yang belum ada dari fase sebelumnya. Target: semua fungsi murni blog punya test.
-- [ ] **B8.3** `package.json`: script `test:blog` sudah ada. Pastikan `.github/workflows/ci.yml` menjalankan `test:blog`.
-- [ ] **B8.4** Dokumentasi: `docs/2026-10-xx-upgrade-blog.md` (ringkasan hasil per fase, keputusan) dan update `docs/README.md`.
-- [ ] **B8.5** Update `TASK-SELANJUTNYA.md` dengan status upgrade blog.
+- [x] **B8.1** Event analytics memakai pola `TrackedLink` (H7): `article_view`, `article_share`, `related_click`, `cta_click` di blog. Tanpa tracking pihak ketiga.
+- [x] **B8.2** Lengkapi test: tambahkan suite yang belum ada dari fase sebelumnya. Target: semua fungsi murni blog punya test.
+- [x] **B8.3** `package.json`: script `test:blog` sudah ada. Pastikan `.github/workflows/ci.yml` menjalankan `test:blog`.
+- [x] **B8.4** Dokumentasi: `docs/2026-10-xx-upgrade-blog.md` (ringkasan hasil per fase, keputusan) dan update `docs/README.md`.
+- [x] **B8.5** Update `TASK-SELANJUTNYA.md` dengan status upgrade blog.
 
 **Verifikasi:** `tsc`, `lint`, semua `test:*`, `build` hijau.
 

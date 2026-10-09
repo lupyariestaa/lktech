@@ -13,6 +13,26 @@
 
 ---
 
+## ✅ Sesi Terakhir - Upgrade Blog B0–B8 (SELESAI, kode)
+
+Dokumen hasil: [`docs/2026-10-09-upgrade-blog.md`](docs/2026-10-09-upgrade-blog.md). Checklist: [`docs/2026-10-09-task-upgrade-blog.md`](docs/2026-10-09-task-upgrade-blog.md).
+
+| Fase | Hasil |
+| --- | --- |
+| **B0** | Bug: `coverAlt` tersimpan, revalidate lengkap, demo fallback dihapus, batas upload satu sumber. |
+| **B2** | Markdown: gambar (host aman), kutipan, kode + salin, daftar bernomor, heading id. |
+| **B1** | Media: pilih cover & sisip gambar dari media library, alt wajib, pelacakan body. |
+| **B5** | Backend: SEO meta, jadwal tayang, riwayat slug + 301, paginasi & cari API, cron revalidate. |
+| **B3** | Editor: toolbar, pratinjau, autosave, tag chip, SEO, jadwal WIB, pratinjau draft admin. |
+| **B4** | Dashboard: filter URL, bulk (maks 50), duplikat, peringatan rename, audit artikel. |
+| **B6** | Publik: layout 3 kolom, TOC, sidebar CTA & produk, share, pencarian & paginasi via URL. |
+| **B7** | SEO: RSS `content:encoded`, OG fallback, JSON-LD `wordCount`. |
+| **B8** | Analitik blog (tanpa PII), coverage test, `test:blog` masuk CI. |
+
+**Verifikasi:** `tsc` ✅ · `lint` ✅ · `test:blog` 120 ✅ · `build` ✅.
+**Belum diverifikasi manual:** alur editor & bulk di browser, tampilan 3 kolom, redirect 301 & cron di server, feed RSS & preview OG, event analitik di dashboard Vercel.
+
+---
 ## 🎉 Sesi Terakhir — Upgrade Beranda FASE H8: QA, Dokumentasi & Rilis (MENUTUP INISIATIF)
 
 Fase **H8** — sekaligus **menutup seluruh rangkaian H0–H8** upgrade beranda.
@@ -483,6 +503,7 @@ Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
   ✅ P4  Urgency & trust (badge stok nyata, bukti sosial 7 hari, trust badges)
   ✅ P5  Abandoned checkout (draft server, email pengingat H+1, opt-out, tracking recovery)
   ✅ P6  QA/observability + docs (event tracking, konversi pembayaran di analitik, test transisi status)
+  ✅ Upgrade Blog B0–B8 (docs/2026-10-09-upgrade-blog.md) — kode selesai, verifikasi manual tersisa
 ```
 
 ### FASE KONVERSI & CLOSING — ✅ SELESAI (kode, P0–P6)

@@ -13,6 +13,7 @@ import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { CtaContact } from "@/components/sections/cta-contact";
 import { ArticleToc } from "@/components/blog/article-toc";
 import { ArticleShare } from "@/components/blog/article-share";
+import { ArticleViewTracker } from "@/components/blog/article-view-tracker";
 import { ArticleSidebar } from "@/components/blog/article-sidebar";
 import { NewsletterForm } from "@/components/newsletter-form";
 import {
@@ -183,6 +184,8 @@ export default async function ArticleDetailPage({
         </div>
       </PageHero>
 
+      <ArticleViewTracker slug={article.slug} category={article.category} readingTime={article.readingTime} />
+
       <article className="relative bg-white pb-16">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 lg:grid-cols-[200px_minmax(0,1fr)_280px]">
           {/* Kiri: daftar isi (sticky di desktop, accordion di mobile). */}
@@ -207,7 +210,7 @@ export default async function ArticleDetailPage({
 
             <div className="mt-10 flex flex-col gap-5 border-t border-slate-100 pt-6">
               <ArticleTags tags={article.tags} />
-              <ArticleShare title={article.title} url={url} />
+              <ArticleShare slug={article.slug} title={article.title} url={url} />
             </div>
 
             <div className="mt-10 flex flex-col items-start gap-5 rounded-3xl bg-gradient-to-br from-primary to-primary-dark p-7 text-left sm:flex-row sm:items-center sm:justify-between">

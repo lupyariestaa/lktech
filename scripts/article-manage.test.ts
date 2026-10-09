@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  BULK_ACTIONS,
   BULK_MAX,
+  MANAGE_STATUS_LABEL,
   bulkConfirmText,
   duplicateSlug,
   manageStatus,
@@ -110,4 +112,12 @@ test("B4.3 bulkConfirmText: pesan sesuai aksi", () => {
   assert.match(bulkConfirmText("delete", 2), /dihapus permanen/);
   assert.match(bulkConfirmText("publish", 2), /diterbitkan/);
   assert.match(bulkConfirmText("unpublish", 2), /draft/);
+});
+
+test("B8.2 MANAGE_STATUS_LABEL: label lengkap untuk setiap status", () => {
+  assert.deepEqual(Object.keys(MANAGE_STATUS_LABEL).sort(), ["draft", "published", "terjadwal"]);
+});
+
+test("B8.2 BULK_ACTIONS: hanya publish, unpublish, delete", () => {
+  assert.deepEqual([...BULK_ACTIONS].sort(), ["delete", "publish", "unpublish"]);
 });

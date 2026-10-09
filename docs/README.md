@@ -56,6 +56,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-05 | [Retensi & Engagement (Tema 2: loyalitas/poin, newsletter, alert wishlist, WA)](2026-10-05-retensi-tema2.md) | ✅ Selesai (R1–R5) |
 | 2026-10-06 | [Task — Upgrade Halaman Beranda / Landing Page (H0–H8)](2026-10-06-task-upgrade-beranda.md) | ✅ Selesai (kode) |
 | 2026-10-06 | [Upgrade Halaman Beranda — Dokumen Fase & Eksekusi (H0–H8)](2026-10-06-upgrade-beranda.md) | ✅ Selesai (kode) |
+| 2026-10-09 | [Upgrade Sistem Blog (B0–B8: editor, media, dashboard, UI publik, SEO)](2026-10-09-upgrade-blog.md) | Selesai (kode) |
 
 ### Dokumen pendukung (referensi & setup)
 

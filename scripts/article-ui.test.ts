@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildToc,
+  CATEGORY_SERVICE,
+  LIST_PAGE_SIZE,
   listHref,
   pageSlice,
   parseListQuery,
@@ -86,4 +88,12 @@ test("B6.6 listHref: mempertahankan filter, halaman 1 tidak ditulis", () => {
   );
   assert.equal(listHref("/blog", { page: 3 }), "/blog?halaman=3");
   assert.equal(listHref("/blog", {}), "/blog");
+});
+
+test("B8.2 CATEGORY_SERVICE: setiap kategori artikel punya layanan tujuan", () => {
+  assert.deepEqual(Object.keys(CATEGORY_SERVICE).sort(), ["Bisnis Digital", "Panduan", "Teknologi", "Tips & Trik"]);
+});
+
+test("B8.2 LIST_PAGE_SIZE: ukuran halaman wajar", () => {
+  assert.ok(LIST_PAGE_SIZE >= 3 && LIST_PAGE_SIZE <= 24);
 });

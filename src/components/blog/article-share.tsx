@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { Check, Link2, Share2 } from "lucide-react";
 import { whatsappShareUrl } from "@/lib/article-ui";
+import { trackArticleShare } from "@/lib/analytics";
+
 
 /**
  * Tombol bagikan (B6.4): WhatsApp (tautan wa.me) dan salin tautan.
  * Tanpa skrip pihak ketiga.
  */
-export function ArticleShare({ title, url }: { title: string; url: string }) {
+export function ArticleShare({ slug, title, url }: { slug: string; title: string; url: string }) {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
+    trackArticleShare({ slug, method: "copy" });
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -34,6 +37,7 @@ export function ArticleShare({ title, url }: { title: string; url: string }) {
         href={whatsappShareUrl(title, url)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackArticleShare({ slug, method: "whatsapp" })}
         className={btn}
       >
         WhatsApp
