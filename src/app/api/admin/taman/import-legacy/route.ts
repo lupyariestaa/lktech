@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getSiteContent } from "@/lib/site-content";
 import { defaultSiteContent, isDefaultTestimonials } from "@/lib/content-types";
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
     ids.push(id);
   }
 
+  revalidatePath("/admin/taman");
   await recordAdminAudit({
     action: "taman.import_review",
     actor: check.email,

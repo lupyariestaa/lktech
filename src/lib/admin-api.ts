@@ -697,3 +697,8 @@ export async function importLegacyTaman(dryRun: boolean) {
     body: JSON.stringify({ dryRun }),
   });
 }
+export async function rapikanTaman() {
+  return adminFetch<{ ok: boolean; published: number; changed: number }>("/api/admin/taman/rapikan", {
+    method: "POST",
+  });
+}

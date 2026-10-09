@@ -14,6 +14,7 @@ import {
   patchTaman,
   seedTamanSamples,
   importLegacyTaman,
+  rapikanTaman,
   type TamanAdminItem,
 } from "@/lib/admin-api";
 import { cn } from "@/lib/utils";
@@ -137,6 +138,20 @@ export function TamanManager() {
     }
   };
 
+  /** Bagi hewan merata & rapikan urutan untuk testimoni yang sudah terbit. */
+  const rapikan = async () => {
+    setBusy(true);
+    try {
+      const r = await rapikanTaman();
+      toast.success(`${r.changed} dari ${r.published} testimoni dirapikan.`);
+      await reload({ silent: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal merapikan.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const samples = async (action: "seed" | "clear") => {
     setBusy(true);
     try {
@@ -181,6 +196,9 @@ export function TamanManager() {
         <Link href="/admin/taman/pratinjau" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-secondary hover:border-primary/40">
           <Eye className="h-3.5 w-3.5" /> Pratinjau frame
         </Link>
+        <button onClick={rapikan} disabled={busy} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-secondary disabled:opacity-60">
+          Rapikan hewan &amp; urutan
+        </button>
         <button onClick={importLegacy} disabled={busy} className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 px-4 py-2 text-xs font-semibold text-primary disabled:opacity-60">
           Impor testimoni lama
         </button>

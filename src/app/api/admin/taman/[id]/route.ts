@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin-guard";
 import {
@@ -136,6 +137,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   patch.updatedAtISO = new Date().toISOString();
 
   await updateTamanTestimonial(id, patch as Parameters<typeof updateTamanTestimonial>[1]);
+  // Beranda menampilkan kanvas + JSON-LD: segarkan agar perubahan langsung terlihat.
+  revalidatePath("/");
   await recordAdminAudit({
     action,
     actor: check.email,
@@ -155,6 +158,7 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   if (!current) return NextResponse.json({ error: "Testimoni tidak ditemukan." }, { status: 404 });
 
   await deleteTamanTestimonial(id);
+  revalidatePath("/");
   await recordAdminAudit({
     action: "taman.delete",
     actor: check.email,

@@ -19,7 +19,10 @@ export function TamanSection() {
     let active = true;
     (async () => {
       try {
-        const res = await fetch("/api/taman", { cache: "force-cache" });
+        // `no-store`: jangan simpan di cache browser. Sebelumnya `force-cache` menahan
+        // respons kosong dari kunjungan pertama sehingga testimoni baru tidak pernah tampil.
+        // Cache publik tetap ditangani header CDN di route `/api/taman` (s-maxage=60).
+        const res = await fetch("/api/taman", { cache: "no-store" });
         if (!res.ok) throw new Error("gagal");
         const data = (await res.json()) as { items: TamanPublicView[] };
         if (active) setItems(data.items);

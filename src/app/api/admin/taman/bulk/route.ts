@@ -5,12 +5,14 @@ import { requireAdmin } from "@/lib/admin-guard";
 import {
   getTamanTestimonial,
   getTamanPrivate,
+  listTamanTestimonials,
   deleteTamanTestimonial,
   updateTamanTestimonial,
   updateTamanEvidence,
 } from "@/lib/taman-store";
 import {
   canPublish,
+  nextAnimal,
   statusForAction,
   TAMAN_BULK_ACTIONS,
   TAMAN_BULK_MAX,
@@ -57,6 +59,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Catatan bukti persetujuan wajib diisi." }, { status: 400 });
   }
 
+  // Daftar hewan yang sudah dipakai (testimoni terbit) untuk membagi hewan secara merata.
+  const usedAnimals = (await listTamanTestimonials())
+    .filter((t) => t.status === "published")
+    .map((t) => t.animal);
+
   const results: Array<{ id: string; ok: boolean; error?: string }> = [];
   for (const id of unique) {
     try {
@@ -68,7 +75,8 @@ export async function POST(req: Request) {
       if (action === "delete") {
         await deleteTamanTestimonial(id);
       } else if (action === "consent_publish") {
-        // Tandai persetujuan + catat bukti, lalu terbitkan (gate tetap dievaluasi).
+        // Tandai persetujuan + catat bukti, lalu terbitkan (gate dievaluasi dengan nilai tersimpan).
+        // Admin menyatakan persetujuan sudah diterima; setelah baris berikut, nilainya true.
         if (!item.consent.given) {
           await updateTamanTestimonial(id, { consent: { given: true, givenAtISO: new Date().toISOString() } });
         }
@@ -78,8 +86,12 @@ export async function POST(req: Request) {
           results.push({ id, ok: false, error: gate.reason });
           continue;
         }
+        // Hewan beragam: pakai hewan yang paling sedikit dipakai, lalu catat sebagai terpakai.
+        const animal = nextAnimal(usedAnimals);
+        usedAnimals.push(animal);
         await updateTamanTestimonial(id, {
           status: "published",
+          animal,
           approvedAtISO: new Date().toISOString(),
           approvedBy: check.email,
         });
