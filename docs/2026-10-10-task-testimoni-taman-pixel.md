@@ -315,10 +315,10 @@ type TamanPrivate = {
 - [x] `npm run gen:taman` di `package.json`.
 
 ### T4 — API publik & kirim
-- [ ] `GET /api/taman` (whitelist, `s-maxage=60`, hanya real+published; sample hanya bila lokal dev).
-- [ ] `POST /api/taman/submit` (requireUser, email_verified, zod, consent, rate limit, batch tulis).
-- [ ] `GET /api/taman/mine`, `DELETE /api/taman/mine/[id]`.
-- [ ] Test validasi input (fungsi murni dipisah dari route).
+- [x] `GET /api/taman` (whitelist, `s-maxage=60`, hanya real+published; sample hanya bila lokal dev).
+- [x] `POST /api/taman/submit` (token diverifikasi, email_verified, email_verified, zod, consent, rate limit, batch tulis).
+- [x] `GET /api/taman/mine`, `DELETE /api/taman/mine/[id]` (pemilik dicek dari token).
+- [x] Test validasi input (`validateSubmit` di `taman-logic.ts`, 11 test baru).
 
 ### T5 — API admin & audit
 - [ ] `GET/PATCH/DELETE /api/admin/taman/*`, `POST /bulk`, `POST /import-review`, `POST /seed-samples`, `DELETE /samples`.

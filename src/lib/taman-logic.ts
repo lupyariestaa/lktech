@@ -255,3 +255,105 @@ export function isValidPastDate(iso: string, nowMs: number): boolean {
   const t = Date.parse(iso);
   return !Number.isNaN(t) && t <= nowMs;
 }
+
+/* ---------- Validasi input kirim testimoni (T4) ---------- */
+
+export const TAMAN_LIMITS = {
+  displayNameMax: 40,
+  roleMax: 120,
+  quoteMin: 20,
+  quoteMax: 400,
+  ratingMin: 1,
+  ratingMax: 5,
+} as const;
+export type SubmitInput = {
+  displayName?: unknown;
+  role?: unknown;
+  quote?: unknown;
+  rating?: unknown;
+  dateISO?: unknown;
+  projectSlug?: unknown;
+  productSlug?: unknown;
+  consent?: unknown;
+};
+
+export type SubmitClean = {
+  displayName: string;
+  role: string;
+  quote: string;
+  rating: number;
+  dateISO: string;
+  projectSlug?: string;
+  productSlug?: string;
+};
+
+export type SubmitResult =
+  | { ok: true; value: SubmitClean }
+  | { ok: false; error: string };
+
+const SLUG = /^[a-z0-9][a-z0-9-]{0,199}$/;
+
+/**
+ * Validasi & normalisasi. `nowMs` diinjeksi agar tanggal bisa dites deterministik.
+ * `fallbackName` (nama dari akun Google) dipakai bila nama tampil kosong.
+ */
+export function validateSubmit(input: SubmitInput, nowMs: number, fallbackName: string): SubmitResult {
+  if (input.consent !== true) {
+    return { ok: false, error: "Anda perlu menyetujui penampilan testimoni sebelum mengirim." };
+  }
+
+  const rawName = typeof input.displayName === "string" && input.displayName.trim()
+    ? input.displayName
+    : fallbackName;
+  const displayName = shortName(rawName, TAMAN_LIMITS.displayNameMax);
+  if (!displayName) return { ok: false, error: "Nama tampil wajib diisi." };
+
+  const role = typeof input.role === "string" ? input.role.trim() : "";
+  if (!role) return { ok: false, error: "Peran atau nama usaha wajib diisi." };
+  if (role.length > TAMAN_LIMITS.roleMax) {
+    return { ok: false, error: `Peran maksimal ${TAMAN_LIMITS.roleMax} karakter.` };
+  }
+
+  const quoteRes = validateQuote(
+    typeof input.quote === "string" ? input.quote : "",
+    TAMAN_LIMITS.quoteMin,
+    TAMAN_LIMITS.quoteMax,
+  );
+  if (!quoteRes.ok) return { ok: false, error: quoteRes.reason };
+
+  const rating = sanitizeRating(input.rating);
+  if (rating === null) return { ok: false, error: "Rating harus 1 sampai 5." };
+
+  const dateISO = typeof input.dateISO === "string" && input.dateISO
+    ? input.dateISO
+    : new Date(nowMs).toISOString().slice(0, 10);
+  if (!isValidPastDate(dateISO, nowMs)) {
+    return { ok: false, error: "Tanggal tidak valid atau di masa depan." };
+  }
+
+  const projectSlug = typeof input.projectSlug === "string" && input.projectSlug ? input.projectSlug : undefined;
+  const productSlug = typeof input.productSlug === "string" && input.productSlug ? input.productSlug : undefined;
+  if (projectSlug && !SLUG.test(projectSlug)) return { ok: false, error: "Tautan proyek tidak valid." };
+  if (productSlug && !SLUG.test(productSlug)) return { ok: false, error: "Tautan produk tidak valid." };
+
+  return {
+    ok: true,
+    value: {
+      displayName,
+      role,
+      quote: quoteRes.value,
+      rating,
+      dateISO,
+      ...(projectSlug ? { projectSlug } : {}),
+      ...(productSlug ? { productSlug } : {}),
+    },
+  };
+}
+
+/** Batas pengiriman per pengguna: maks 1 pending aktif dan 3 pengiriman per 24 jam. */
+export const SUBMIT_LIMITS = { perDayPerUser: 3, pendingPerUser: 1 } as const;
+
+/** Apakah pengguna sudah punya testimoni pending (dibatasi 1). */
+export function hasTooManyPending(pendingCount: number): boolean {
+  return pendingCount >= SUBMIT_LIMITS.pendingPerUser;
+}

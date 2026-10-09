@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  validateSubmit,
+  SUBMIT_LIMITS,
+  hasTooManyPending,
   normalizeTamanTestimonial,
   canPublish,
   isPubliclyVisible,
@@ -272,4 +275,77 @@ test("T2 normalizeTamanTestimonial: hewan & status tak dikenal → default", () 
   assert.equal(n.animal, "kucing");
   assert.equal(n.status, "pending");
   assert.equal(n.kind, "real");
+});
+
+/* ---------- T4: validasi kirim testimoni ---------- */
+
+const NOW = Date.parse("2026-10-10T00:00:00Z");
+const GOOD = {
+  displayName: "Budi Santoso",
+  role: "Pemilik Toko Kopi",
+  quote: "Website saya sekarang rapi dan pelanggan makin banyak datang.",
+  rating: 5,
+  dateISO: "2026-09-15",
+  consent: true,
+};
+
+test("T4 validateSubmit: input benar → nama disingkat & nilai dinormalisasi", () => {
+  const r = validateSubmit(GOOD, NOW, "Fallback");
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.value.displayName, "Budi S.");
+    assert.equal(r.value.rating, 5);
+    assert.equal(r.value.dateISO, "2026-09-15");
+  }
+});
+
+test("T4 validateSubmit: tanpa persetujuan → ditolak (Q19)", () => {
+  assert.equal(validateSubmit({ ...GOOD, consent: false }, NOW, "x").ok, false);
+  assert.equal(validateSubmit({ ...GOOD, consent: undefined }, NOW, "x").ok, false);
+});
+
+test("T4 validateSubmit: nama kosong memakai nama akun Google", () => {
+  const r = validateSubmit({ ...GOOD, displayName: "  " }, NOW, "Ani Wijaya");
+  assert.equal(r.ok && r.value.displayName, "Ani W.");
+});
+
+test("T4 validateSubmit: peran wajib dan dibatasi", () => {
+  assert.equal(validateSubmit({ ...GOOD, role: "" }, NOW, "x").ok, false);
+  assert.equal(validateSubmit({ ...GOOD, role: "x".repeat(121) }, NOW, "x").ok, false);
+});
+
+test("T4 validateSubmit: quote di luar batas ditolak", () => {
+  assert.equal(validateSubmit({ ...GOOD, quote: "pendek" }, NOW, "x").ok, false);
+  assert.equal(validateSubmit({ ...GOOD, quote: "x".repeat(401) }, NOW, "x").ok, false);
+});
+
+test("T4 validateSubmit: rating di luar 1..5 ditolak", () => {
+  assert.equal(validateSubmit({ ...GOOD, rating: 0 }, NOW, "x").ok, false);
+  assert.equal(validateSubmit({ ...GOOD, rating: 6 }, NOW, "x").ok, false);
+});
+
+test("T4 validateSubmit: tanggal masa depan ditolak", () => {
+  assert.equal(validateSubmit({ ...GOOD, dateISO: "2027-01-01" }, NOW, "x").ok, false);
+});
+
+test("T4 validateSubmit: tanggal kosong → hari ini (ISO tanggal)", () => {
+  const r = validateSubmit({ ...GOOD, dateISO: undefined }, NOW, "x");
+  assert.equal(r.ok && r.value.dateISO, "2026-10-10");
+});
+
+test("T4 validateSubmit: tautan proyek/produk harus slug valid", () => {
+  assert.equal(validateSubmit({ ...GOOD, projectSlug: "proyek-ok" }, NOW, "x").ok, true);
+  assert.equal(validateSubmit({ ...GOOD, projectSlug: "../etc" }, NOW, "x").ok, false);
+  assert.equal(validateSubmit({ ...GOOD, productSlug: "Bad Slug" }, NOW, "x").ok, false);
+});
+
+test("T4 validateSubmit: tautan opsional tidak wajib", () => {
+  const r = validateSubmit(GOOD, NOW, "x");
+  assert.equal(r.ok && "projectSlug" in r.value, false);
+});
+
+test("T4 SUBMIT_LIMITS & hasTooManyPending: maks 1 pending aktif", () => {
+  assert.equal(SUBMIT_LIMITS.pendingPerUser, 1);
+  assert.equal(hasTooManyPending(0), false);
+  assert.equal(hasTooManyPending(1), true);
 });
