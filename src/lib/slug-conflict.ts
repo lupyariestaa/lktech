@@ -6,7 +6,7 @@
  * akan menampilkan artikel baru dan redirect lama hilang diam-diam.
  */
 
-export type SlugOwner = { slug: string; slugHistory?: string[] };
+export type SlugOwner = { slug: string; title?: string; slugHistory?: string[] };
 
 /**
  * Mengembalikan artikel lain yang masih menyimpan `slug` di riwayatnya
@@ -20,4 +20,19 @@ export function findHistoryConflict(
     all.find((a) => a.slug !== slug && (a.slugHistory ?? []).includes(slug)) ??
     null
   );
+}
+
+/**
+ * Konflik timpa (D10): slug target sudah dipakai artikel LAIN yang aktif.
+ * - `originalSlug` = slug artikel yang sedang diedit (kosong untuk artikel baru).
+ * - Artikel dengan slug `originalSlug` dianggap dirinya sendiri (tidak konflik).
+ * Mengembalikan artikel yang menabrak, atau null bila aman.
+ */
+export function findOverwriteConflict(
+  slug: string,
+  originalSlug: string,
+  all: SlugOwner[],
+): SlugOwner | null {
+  if (slug === originalSlug) return null;
+  return all.find((a) => a.slug === slug) ?? null;
 }

@@ -209,7 +209,13 @@ export function ArticlesManager() {
       // Slug berubah pada artikel yang sudah ada → kirim slug lama untuk riwayat redirect.
       const renamedFrom =
         !isNew && originalSlug && originalSlug !== editing.slug ? originalSlug : undefined;
-      await saveArticle(renamedFrom ? { ...editing, renamedFrom } : editing);
+      // D10: kirim slug asal (kosong untuk artikel baru) agar server bisa cek timpa.
+      const payload = {
+        ...editing,
+        ...(renamedFrom ? { renamedFrom } : {}),
+        originalSlug: isNew ? undefined : originalSlug || undefined,
+      };
+      await saveArticle(payload);
       if (draftKey) window.localStorage.removeItem(draftKey);
       setEditing(null);
       await load({ silent: true });

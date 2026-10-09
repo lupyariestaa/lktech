@@ -128,6 +128,8 @@ export const articleSchema = z.object({
     .optional(),
   /** Slug sebelum diubah (untuk riwayat redirect). */
   renamedFrom: z.string().trim().max(200).optional(),
+  /** Slug artikel yang sedang diedit (kosong = artikel baru). Dipakai cek timpa (D10). */
+  originalSlug: z.string().trim().max(200).optional(),
   /** Slug sumber bila artikel ini hasil duplikat (audit). */
   duplicatedFrom: z.string().trim().max(200).optional(),
 });

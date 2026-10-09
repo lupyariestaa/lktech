@@ -99,6 +99,5 @@ Bagian ini mencatat perbedaan antara rencana (`2026-10-09-planning-upgrade-blog.
 
 ### Tindak lanjut yang disarankan
 
-- D10: tentukan apakah simpan artikel baru dengan slug yang sudah dipakai artikel aktif harus ditolak (409) atau menjadi edit eksplisit.
 - D8: bila AST berubah, sinkronkan `markdown-html.ts` dengan `markdown-parse.ts`, atau pindahkan tipe ke satu modul tanpa impor relatif berekstensi.
 - D11: tambahkan `GET /api/admin/articles/[slug]` bila daftar artikel makin besar.

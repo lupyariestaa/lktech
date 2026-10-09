@@ -123,6 +123,7 @@
 
 - **G1** — selesai: field id dibuang sebelum simpan di aksi massal.
 - **G2** — selesai: editor menampilkan kata dan estimasi baca (countWords, eadingMinutes).
+- **D10** (lanjutan G4) — selesai: artikel baru/rename dengan slug yang dipakai artikel lain ditolak 409 (indOverwriteConflict, originalSlug dari klien). Edit artikel sendiri tetap boleh.
 - **G10** — selesai: deviasi dari rencana didokumentasikan di docs/2026-10-09-upgrade-blog.md (bagian Deviasi, D1–D11).
 - **G3** — selesai: keputusan route API (riwayat slug, pilihan audit, path revalidate, otorisasi cron) dipindah ke src/lib/article-api-logic.ts dan dites di scripts/article-api.test.ts (19 test).
 - **G4** — selesai: POST artikel menolak (409) slug yang masih jadi riwayat redirect artikel lain (indHistoryConflict, src/lib/slug-conflict.ts).

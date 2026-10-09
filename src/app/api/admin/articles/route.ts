@@ -9,7 +9,7 @@ import {
 import { taxonomySlug, type Article } from "@/lib/article-types";
 import { estimateReadingTime } from "@/lib/article-logic";
 import { buildSlugHistory, decideAuditAction, revalidationPaths } from "@/lib/article-api-logic";
-import { findHistoryConflict } from "@/lib/slug-conflict";
+import { findHistoryConflict, findOverwriteConflict } from "@/lib/slug-conflict";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { articleSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
@@ -80,6 +80,17 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error: `Slug "${slug}" masih dipakai sebagai redirect oleh artikel "${conflict.slug}". Pilih slug lain.`,
+      },
+      { status: 409 },
+    );
+  }
+  // D10: slug yang sudah dipakai artikel aktif lain tidak boleh ditimpa diam-diam.
+  const originalSlug = typeof body.originalSlug === "string" ? sanitizeSlug(body.originalSlug) : "";
+  const overwrite = findOverwriteConflict(slug, originalSlug, existingList);
+  if (overwrite) {
+    return NextResponse.json(
+      {
+        error: `Slug "${slug}" sudah dipakai artikel "${overwrite.title ?? overwrite.slug}". Pilih slug lain.`,
       },
       { status: 409 },
     );

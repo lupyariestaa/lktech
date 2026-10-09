@@ -580,7 +580,7 @@ export async function fetchArticles(): Promise<StoredArticle[]> {
 }
 
 export async function saveArticle(
-  article: Article & { renamedFrom?: string; duplicatedFrom?: string },
+  article: Article & { renamedFrom?: string; duplicatedFrom?: string; originalSlug?: string },
 ) {
   return adminFetch<{ ok: boolean; article: Article }>("/api/admin/articles", {
     method: "POST",

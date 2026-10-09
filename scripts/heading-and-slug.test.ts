@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findHistoryConflict } from "../src/lib/slug-conflict.ts";
+import { findHistoryConflict, findOverwriteConflict } from "../src/lib/slug-conflict.ts";
 import { revalidationPaths } from "../src/lib/article-api-logic.ts";
 import {
   createHeadingIdGenerator,
@@ -93,4 +93,27 @@ test("G8 revalidationPaths: selalu menyertakan /blog/rss.xml (feed ikut segar)",
   assert.ok(
     revalidationPaths([{ slug: "a", category: "x", tags: [] }], slugify).includes("/blog/rss.xml"),
   );
+});
+/* ---------- D10: slug aktif artikel lain tidak boleh ditimpa ---------- */
+
+test("D10 findOverwriteConflict: artikel baru dengan slug yang sudah dipakai → konflik", () => {
+  const all = [{ slug: "ada" }];
+  assert.equal(findOverwriteConflict("ada", "", all)?.slug, "ada");
+});
+
+test("D10 findOverwriteConflict: artikel baru dengan slug bebas → aman", () => {
+  assert.equal(findOverwriteConflict("baru", "", [{ slug: "ada" }]), null);
+});
+
+test("D10 findOverwriteConflict: edit tanpa rename (slug sama dengan asal) → aman", () => {
+  assert.equal(findOverwriteConflict("a", "a", [{ slug: "a" }]), null);
+});
+
+test("D10 findOverwriteConflict: rename ke slug artikel lain → konflik", () => {
+  const all = [{ slug: "a" }, { slug: "b" }];
+  assert.equal(findOverwriteConflict("b", "a", all)?.slug, "b");
+});
+
+test("D10 findOverwriteConflict: rename ke slug bebas → aman", () => {
+  assert.equal(findOverwriteConflict("c", "a", [{ slug: "a" }, { slug: "b" }]), null);
 });
