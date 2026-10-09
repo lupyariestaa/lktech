@@ -64,9 +64,9 @@
 - [ ] `taman-logic.ts`: normalisasi `variant` (data lama → `"normal"`), validasi pasangan hewan+warna, helper `variantTint`.
 - [ ] `submit/route.ts`: terima `animal` + `variant` dari user (validasi ketat), ganti aturan "admin menetapkan hewan".
 - [ ] `api-schemas.ts`: tambah field ke schema validasi submit.
-- [ ] Panel admin: izinkan mengubah hewan + warna (lihat V2-8 untuk UI lengkap; di sini cukup API).
-- [ ] Aksi **Rapikan**: tetapkan hewan **dan varian** merata untuk testimoni terbit.
-- [ ] Test: normalisasi variasi, validasi pasangan, tint, rapikan menetapkan varian berbeda.
+- [x] Panel admin: izinkan mengubah hewan + warna (lihat V2-8 untuk UI lengkap; di sini cukup API).
+- [x] Aksi **Rapikan**: tetapkan hewan **dan varian** merata untuk testimoni terbit.
+- [x] Test: normalisasi variasi, validasi pasangan, tint, rapikan menetapkan varian berbeda.
 
 **Verifikasi:** `test:taman` hijau (termasuk test baru), `build` hijau.
 

@@ -83,7 +83,8 @@ export async function POST(req: Request) {
       quote: checked.value.quote,
       rating: checked.value.rating,
       dateISO: checked.value.dateISO,
-      animal: "kucing", // ditetapkan admin saat menerbitkan (T5)
+      animal: checked.value.animal,
+      variant: checked.value.variant,
       order: 0,
       projectSlug: checked.value.projectSlug,
       productSlug: checked.value.productSlug,

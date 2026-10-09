@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
-import { canSeedSamples, nextAnimal } from "@/lib/taman-logic";
+import { canSeedSamples, nextAnimal, variantsForAnimal } from "@/lib/taman-logic";
 import {
   listTamanTestimonials,
   writeTamanTestimonial,
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
         rating: s.rating,
         dateISO: nowISO.slice(0, 10),
         animal,
+        variant: variantsForAnimal(animal)[0],
         order: existing.length + i,
         source: "sample",
         consent: { given: false },

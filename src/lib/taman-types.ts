@@ -18,6 +18,58 @@ export const TAMAN_ANIMALS = [
 ] as const;
 export type AnimalKey = (typeof TAMAN_ANIMALS)[number];
 
+/* ---------- Varian warna hewan (V2-1) ---------- */
+
+export const TAMAN_VARIANTS = [
+  "normal",
+  "putih",
+  "hitam",
+  "coklat",
+  "emas",
+  "biru",
+  "abu",
+  "merah",
+] as const;
+export type AnimalVariant = (typeof TAMAN_VARIANTS)[number];
+
+/**
+ * Varian yang tersedia per hewan. Tidak semua warna cocok untuk semua hewan
+ * (mis. "emas" khas ikan, "merah" khas rubah). Urutan = urutan tampil di form.
+ */
+export const ANIMAL_VARIANTS: Record<AnimalKey, readonly AnimalVariant[]> = {
+  kucing: ["normal", "putih", "hitam", "coklat", "abu", "emas"],
+  kelinci: ["normal", "putih", "hitam", "coklat", "abu"],
+  burung: ["normal", "biru", "putih", "hitam", "emas", "merah"],
+  rubah: ["normal", "emas", "merah", "putih", "hitam"],
+  beruang: ["normal", "coklat", "hitam", "putih", "abu"],
+  "kura-kura": ["normal", "coklat", "putih", "hitam", "biru"],
+  "kupu-kupu": ["normal", "biru", "emas", "merah", "putih", "hitam"],
+  ikan: ["normal", "emas", "biru", "merah", "putih", "hitam"],
+};
+
+/**
+ * Nilai tint (hex) untuk Phaser. `null` = tanpa tint (sprite asli). Sprite dasar
+ * hewan dibuat monokrom terang, sehingga tint menghasilkan varian warna.
+ */
+export const VARIANT_TINT: Record<AnimalVariant, number | null> = {
+  normal: null,
+  putih: 0xf5f5f5,
+  hitam: 0x3a3a44,
+  coklat: 0xa9743f,
+  emas: 0xffc93c,
+  biru: 0x5aa9ff,
+  abu: 0x9aa4b2,
+  merah: 0xff6b5a,
+};
+
+/** Varian sah untuk pasangan hewan+varian tertentu. */
+export function isValidAnimalVariant(animal: AnimalKey, variant: string): variant is AnimalVariant {
+  return (ANIMAL_VARIANTS[animal] as readonly string[]).includes(variant);
+}
+
+/** Varian default bila tidak diisi (kompatibel dengan data lama). */
+export const DEFAULT_VARIANT: AnimalVariant = "normal";
+
 export const TAMAN_STATUSES = ["pending", "published", "hidden", "rejected"] as const;
 export type TamanStatus = (typeof TAMAN_STATUSES)[number];
 
@@ -42,6 +94,8 @@ export type TamanTestimonial = {
   rating: number;
   dateISO: string;
   animal: AnimalKey;
+  /** Varian warna hewan (V2-1). Data lama tanpa ini → "normal". */
+  variant: AnimalVariant;
   order: number;
   projectSlug?: string;
   productSlug?: string;

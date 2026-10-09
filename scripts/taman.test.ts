@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  normalizeVariant,
+  variantsForAnimal,
   TAMAN_BULK_ACTIONS,
   statusForAction,
   planLegacyImport,
@@ -25,6 +27,12 @@ import {
   slotCountFor,
   validateQuote,
 } from "../src/lib/taman-logic.ts";
+import {
+  isValidAnimalVariant,
+  TAMAN_ANIMALS,
+  TAMAN_VARIANTS,
+  VARIANT_TINT,
+} from "../src/lib/taman-types.ts";
 
 
 type T = {
@@ -294,6 +302,9 @@ const GOOD = {
   rating: 5,
   dateISO: "2026-09-15",
   consent: true,
+  // V2-1: hewan kini wajib diisi oleh pengirim.
+  animal: "kucing",
+  variant: "normal",
 };
 
 test("T4 validateSubmit: input benar → nama disingkat & nilai dinormalisasi", () => {
@@ -490,4 +501,74 @@ test("T12 TAMAN_BULK_ACTIONS mencakup consent_publish", () => {
 test("T12 statusForAction tidak mengubah consent_publish", () => {
   assert.equal(statusForAction("consent_publish"), null);
   assert.equal(statusForAction("publish"), "published");
+});
+
+/* ---------- V2-1: varian warna hewan ---------- */
+
+test("V2-1 normalizeVariant: data lama/tak dikenal → normal", () => {
+  assert.equal(normalizeVariant("kucing", undefined), "normal");
+  assert.equal(normalizeVariant("ikan", "entah"), "normal");
+});
+
+test("V2-1 normalizeVariant: warna tidak cocok untuk hewan → normal, yang cocok dipertahankan", () => {
+  assert.equal(normalizeVariant("kelinci", "emas"), "normal");
+  assert.equal(normalizeVariant("kucing", "hitam"), "hitam");
+});
+
+test("V2-1 variantsForAnimal: setiap hewan punya minimal normal", () => {
+  for (const a of TAMAN_ANIMALS) {
+    assert.ok(variantsForAnimal(a).includes("normal"), `hewan ${a} tanpa varian normal`);
+  }
+});
+
+test("V2-1 normalizeTamanTestimonial: dokumen lama dapat variant normal", () => {
+  const n = normalizeTamanTestimonial("x", { displayName: "A", quote: "q", animal: "ikan" });
+  assert.equal(n.variant, "normal");
+});
+
+test("V2-1 validateSubmit: hewan wajib diisi", () => {
+  const r = validateSubmit(
+    { role: "Pemilik", quote: "Pesan yang cukup panjang untuk validasi ini.", rating: 5, dateISO: "2026-09-01", consent: true },
+    NOW, "Ani",
+  );
+  assert.equal(r.ok, false);
+});
+
+test("V2-1 validateSubmit: hewan & varian sah tersimpan", () => {
+  const r = validateSubmit(
+    { role: "Pemilik", quote: "Pesan yang cukup panjang untuk validasi ini.", rating: 5, dateISO: "2026-09-01", consent: true, animal: "ikan", variant: "emas" },
+    NOW, "Ani",
+  );
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.value.animal, "ikan");
+    assert.equal(r.value.variant, "emas");
+  }
+});
+
+test("V2-1 validateSubmit: warna tidak sah untuk hewan ditolak", () => {
+  const r = validateSubmit(
+    { role: "x", quote: "Pesan yang cukup panjang untuk validasi ini.", rating: 5, dateISO: "2026-09-01", consent: true, animal: "kelinci", variant: "emas" },
+    NOW, "Ani",
+  );
+  assert.equal(r.ok, false);
+});
+
+test("V2-1 validateSubmit: hewan tanpa varian → normal", () => {
+  const r = validateSubmit(
+    { role: "x", quote: "Pesan yang cukup panjang untuk validasi ini.", rating: 5, dateISO: "2026-09-01", consent: true, animal: "kucing" },
+    NOW, "Ani",
+  );
+  assert.equal(r.ok && r.value.variant, "normal");
+});
+
+test("V2-1 VARIANT_TINT: setiap varian punya entri", () => {
+  assert.equal(VARIANT_TINT.normal, null);
+  for (const v of TAMAN_VARIANTS) assert.ok(v in VARIANT_TINT, `varian ${v} tanpa tint`);
+});
+
+test("V2-1 isValidAnimalVariant: pasangan sah & tidak sah", () => {
+  assert.equal(isValidAnimalVariant("ikan", "emas"), true);
+  assert.equal(isValidAnimalVariant("kelinci", "emas"), false);
+  assert.equal(isValidAnimalVariant("kucing", "normal"), true);
 });

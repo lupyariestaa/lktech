@@ -7,13 +7,62 @@
  *   tidak pernah ikut keluar ke klien.
  * - `sample` tidak pernah lolos filter publik di lingkungan produksi (D2).
  */
-import type { AnimalKey, TamanKind, TamanSource, TamanStatus, TamanTestimonial } from "./taman-types.ts";
+import type { AnimalKey, AnimalVariant, TamanKind, TamanSource, TamanStatus, TamanTestimonial } from "./taman-types.ts";
 
 /* ---------- Normalisasi dokumen mentah (tolerant terhadap data lama) ---------- */
 
 const TAMAN_KIND_LIST = ["real", "sample"] as const;
 const TAMAN_STATUS_LIST = ["pending", "published", "hidden", "rejected"] as const;
 const TAMAN_SOURCE_LIST = ["submitted", "admin", "review", "legacy", "sample"] as const;
+const TAMAN_VARIANT_LIST = [
+  "normal",
+  "putih",
+  "hitam",
+  "coklat",
+  "emas",
+  "biru",
+  "abu",
+  "merah",
+] as const;
+
+/** Varian yang tersedia per hewan (cerminan ANIMAL_VARIANTS, tanpa alias). */
+const ANIMAL_VARIANTS_LOCAL: Record<AnimalKey, readonly AnimalVariant[]> = {
+  kucing: ["normal", "putih", "hitam", "coklat", "abu", "emas"],
+  kelinci: ["normal", "putih", "hitam", "coklat", "abu"],
+  burung: ["normal", "biru", "putih", "hitam", "emas", "merah"],
+  rubah: ["normal", "emas", "merah", "putih", "hitam"],
+  beruang: ["normal", "coklat", "hitam", "putih", "abu"],
+  "kura-kura": ["normal", "coklat", "putih", "hitam", "biru"],
+  "kupu-kupu": ["normal", "biru", "emas", "merah", "putih", "hitam"],
+  ikan: ["normal", "emas", "biru", "merah", "putih", "hitam"],
+};
+
+/**
+ * Normalisasi varian: nilai tak dikenal atau tidak cocok untuk hewan itu
+ * dikembalikan ke "normal" (kompatibel dengan data lama).
+ */
+export function normalizeVariant(animal: AnimalKey, v: unknown): AnimalVariant {
+  const variant = oneOf<AnimalVariant>(v, TAMAN_VARIANT_LIST, "normal");
+  return (ANIMAL_VARIANTS_LOCAL[animal] ?? []).includes(variant) ? variant : "normal";
+}
+
+/** Daftar varian yang sah untuk hewan (untuk UI form). */
+export function variantsForAnimal(animal: AnimalKey): readonly AnimalVariant[] {
+  return ANIMAL_VARIANTS_LOCAL[animal] ?? ["normal"];
+}
+
+/** Tint warna untuk rendisi (klien & canvas). */
+export const V2_VARIANT_TINT: Record<AnimalVariant, string | null> = {
+  normal: null,
+  putih: "#f5f5f5",
+  hitam: "#3a3a44",
+  coklat: "#a9743f",
+  emas: "#ffc93c",
+  biru: "#5aa9ff",
+  abu: "#9aa4b2",
+  merah: "#ff6b5a",
+};
+
 const TAMAN_ANIMAL_LIST = [
   "kucing",
   "kelinci",
@@ -48,6 +97,7 @@ export function normalizeTamanTestimonial(id: string, d: Record<string, unknown>
     rating: Math.min(5, Math.max(1, rating)),
     dateISO: str(d.dateISO, str(d.createdAtISO)),
     animal: oneOf<AnimalKey>(d.animal, TAMAN_ANIMAL_LIST, "kucing"),
+    variant: normalizeVariant(oneOf<AnimalKey>(d.animal, TAMAN_ANIMAL_LIST, "kucing"), d.variant),
     order: typeof d.order === "number" && Number.isFinite(d.order) ? d.order : 0,
     projectSlug: typeof d.projectSlug === "string" && d.projectSlug ? d.projectSlug : undefined,
     productSlug: typeof d.productSlug === "string" && d.productSlug ? d.productSlug : undefined,
@@ -276,6 +326,9 @@ export type SubmitInput = {
   projectSlug?: unknown;
   productSlug?: unknown;
   consent?: unknown;
+  /** V2-1: pilihan hewan & varian dari user (wajib). */
+  animal?: unknown;
+  variant?: unknown;
 };
 
 export type SubmitClean = {
@@ -286,6 +339,8 @@ export type SubmitClean = {
   dateISO: string;
   projectSlug?: string;
   productSlug?: string;
+  animal: AnimalKey;
+  variant: AnimalVariant;
 };
 
 export type SubmitResult =
@@ -337,6 +392,17 @@ export function validateSubmit(input: SubmitInput, nowMs: number, fallbackName: 
   if (projectSlug && !SLUG.test(projectSlug)) return { ok: false, error: "Tautan proyek tidak valid." };
   if (productSlug && !SLUG.test(productSlug)) return { ok: false, error: "Tautan produk tidak valid." };
 
+  // V2-1: hewan & varian wajib dan harus pasangannya sah.
+  if (typeof input.animal !== "string" || !TAMAN_ANIMAL_LIST.includes(input.animal as AnimalKey)) {
+    return { ok: false, error: "Pilih hewan untuk testimoni Anda." };
+  }
+  const animal = input.animal as AnimalKey;
+  const rawVariant = typeof input.variant === "string" ? input.variant.trim() : "";
+  if (rawVariant && !variantsForAnimal(animal).includes(rawVariant as AnimalVariant)) {
+    return { ok: false, error: "Warna tidak tersedia untuk hewan itu." };
+  }
+  const variant = (rawVariant || "normal") as AnimalVariant;
+
   return {
     ok: true,
     value: {
@@ -347,6 +413,8 @@ export function validateSubmit(input: SubmitInput, nowMs: number, fallbackName: 
       dateISO,
       ...(projectSlug ? { projectSlug } : {}),
       ...(productSlug ? { productSlug } : {}),
+      animal,
+      variant,
     },
   };
 }

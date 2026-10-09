@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { listTamanTestimonials, updateTamanTestimonial } from "@/lib/taman-store";
-import { nextAnimal } from "@/lib/taman-logic";
+import { nextAnimal, variantsForAnimal } from "@/lib/taman-logic";
 import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/admin/taman/rapikan — bagi hewan secara merata dan atur urutan
- * untuk testimoni yang sudah TERBIT. Dipakai sekali untuk merapikan data yang
+ * dan varian warna untuk testimoni yang sudah TERBIT. Dipakai sekali untuk merapikan data yang
  * sudah ada (mis. semua masih "kucing" dan order 0 karena terbit lewat bulk awal).
  * Testimoni `pending`/`hidden` tidak diubah. Hanya admin.
  */
@@ -28,9 +28,12 @@ export async function POST(req: Request) {
   for (const [i, t] of published.entries()) {
     const animal = nextAnimal(used);
     used.push(animal);
+    // Varian merata: pakai varian sesuai posisi agar tidak semua "normal".
+    const options = variantsForAnimal(animal);
+    const variant = options[i % options.length];
     // Hanya tulis bila benar-benar berubah (hindari tulisan tak perlu).
-    if (t.animal !== animal || t.order !== i) {
-      await updateTamanTestimonial(t.id, { animal, order: i });
+    if (t.animal !== animal || t.variant !== variant || t.order !== i) {
+      await updateTamanTestimonial(t.id, { animal, variant, order: i });
       changed += 1;
     }
   }
