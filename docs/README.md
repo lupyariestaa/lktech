@@ -57,6 +57,9 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-06 | [Task — Upgrade Halaman Beranda / Landing Page (H0–H8)](2026-10-06-task-upgrade-beranda.md) | ✅ Selesai (kode) |
 | 2026-10-06 | [Upgrade Halaman Beranda — Dokumen Fase & Eksekusi (H0–H8)](2026-10-06-upgrade-beranda.md) | ✅ Selesai (kode) |
 | 2026-10-09 | [Upgrade Sistem Blog (B0–B8: editor, media, dashboard, UI publik, SEO)](2026-10-09-upgrade-blog.md) | Selesai (kode) |
+| 2026-10-10 | [Taman Testimoni / Taman Pixel v1 (T0–T12)](2026-10-10-taman-pixel.md) | Selesai (kode) |
+| 2026-10-10 | [Planning Taman Testimoni v2 (Phaser, varian warna, full-bleed)](2026-10-10-planning-taman-v2.md) | Rencana |
+| 2026-10-10 | [Task Implementasi Taman v2 (V2-0–V2-8)](2026-10-10-task-taman-v2.md) | ✅ Selesai (kode) |
 
 ### Dokumen pendukung (referensi & setup)
 

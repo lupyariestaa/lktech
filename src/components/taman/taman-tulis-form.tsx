@@ -8,18 +8,19 @@ import { useAuth } from "@/components/auth-provider";
 import { getIdToken } from "@/lib/auth";
 import { CONSENT_TEXT } from "@/lib/taman-consent";
 import { trackTamanSubmit } from "@/lib/analytics";
-import { TAMAN_LIMITS } from "@/lib/taman-types";
+import { TAMAN_LIMITS, ANIMAL_LABEL, VARIANT_LABEL, type AnimalKey, type AnimalVariant } from "@/lib/taman-types";
 import { cn } from "@/lib/utils";
+import { AnimalPicker, AnimalSprite } from "@/components/taman/taman-animal-picker";
 
 const field =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
 
 /**
- * Form kirim testimoni (T8). Wajib login Google (pakai sistem login yang sudah ada).
- * Klien hanya memberi umpan balik; aturan final (validasi, consent, email terverifikasi,
- * rate limit) dijaga server di `/api/taman/submit`.
+ * Form kirim testimoni v2 (V2-3). Wajib login Google. User memilih **hewan** dan
+ * **warna** (pratinjau tint langsung). Aturan final (validasi, consent, email
+ * terverifikasi, rate limit) tetap dijaga server di `/api/taman/submit`.
  */
-export function TamanSubmitForm() {
+export function TamanTulisForm() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
@@ -27,6 +28,8 @@ export function TamanSubmitForm() {
   const [quote, setQuote] = useState("");
   const [rating, setRating] = useState(5);
   const [dateISO, setDateISO] = useState(() => new Date().toISOString().slice(0, 10));
+  const [animal, setAnimal] = useState<AnimalKey>("kucing");
+  const [variant, setVariant] = useState<AnimalVariant>("normal");
   const [projectSlug, setProjectSlug] = useState("");
   const [productSlug, setProductSlug] = useState("");
   const [consent, setConsent] = useState(false);
@@ -43,14 +46,13 @@ export function TamanSubmitForm() {
   }
 
   if (!user) {
-    // Belum login: arahkan ke halaman masuk yang sudah ada, lalu kembali ke sini.
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-6 text-center">
         <p className="text-sm text-secondary">Masuk dulu untuk menulis testimoni.</p>
         <p className="mt-1 text-xs text-muted">Testimoni dikaitkan dengan akun agar bisa dikelola kembali.</p>
         <button
           type="button"
-          onClick={() => router.push("/masuk?next=/taman/kirim")}
+          onClick={() => router.push("/masuk?next=/taman/tulis")}
           className="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-white hover:bg-primary-dark"
         >
           Masuk dengan Google
@@ -72,7 +74,9 @@ export function TamanSubmitForm() {
       <div className="flex flex-col items-center gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-8 text-center">
         <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden="true" />
         <p className="text-base font-semibold text-secondary">Terima kasih.</p>
-        <p className="text-sm text-muted">Testimoni akan ditampilkan setelah kami tinjau. Anda bisa melihat statusnya di akun Anda.</p>
+        <p className="text-sm text-muted">
+          Testimoni akan ditampilkan setelah kami tinjau. Anda bisa melihat statusnya di akun Anda.
+        </p>
         <Link href="/akun?tab=testimoni" className="mt-2 text-sm font-semibold text-primary underline underline-offset-2">
           Lihat testimoni saya
         </Link>
@@ -108,6 +112,8 @@ export function TamanSubmitForm() {
           quote,
           rating,
           dateISO,
+          animal,
+          variant,
           projectSlug: projectSlug || undefined,
           productSlug: productSlug || undefined,
           consent: true,
@@ -133,18 +139,39 @@ export function TamanSubmitForm() {
     <form onSubmit={submit} className="flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8" noValidate>
       <label className="flex flex-col gap-1.5 text-sm font-semibold text-secondary">
         Nama yang tampil
-        <input className={field} value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={TAMAN_LIMITS.displayNameMax} placeholder={user.displayName ?? "Nama Anda"} />
-        <span className="text-xs font-normal text-muted">Ditampilkan singkat, mis. &ldquo;Budi S.&rdquo;. Kosong = nama akun Google.</span>
+        <input
+          className={field}
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          maxLength={TAMAN_LIMITS.displayNameMax}
+          placeholder={user.displayName ?? "Nama Anda"}
+        />
+        <span className="text-xs font-normal text-muted">
+          Ditampilkan singkat, mis. &ldquo;Budi S.&rdquo;. Kosong = nama akun Google.
+        </span>
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm font-semibold text-secondary">
         Peran atau nama usaha
-        <input className={field} value={role} onChange={(e) => setRole(e.target.value)} maxLength={TAMAN_LIMITS.roleMax} placeholder="Pemilik Toko Kopi, Tasikmalaya" required />
+        <input
+          className={field}
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          maxLength={TAMAN_LIMITS.roleMax}
+          placeholder="Pemilik Toko Kopi, Tasikmalaya"
+          required
+        />
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm font-semibold text-secondary">
         Pesan Anda
-        <textarea className={cn(field, "min-h-[120px]")} value={quote} onChange={(e) => setQuote(e.target.value)} maxLength={TAMAN_LIMITS.quoteMax} required />
+        <textarea
+          className={cn(field, "min-h-[120px]")}
+          value={quote}
+          onChange={(e) => setQuote(e.target.value)}
+          maxLength={TAMAN_LIMITS.quoteMax}
+          required
+        />
         <span className={cn("text-xs font-normal", quoteLen < TAMAN_LIMITS.quoteMin ? "text-muted" : "text-emerald-700")}>
           {quoteLen}/{TAMAN_LIMITS.quoteMax} karakter (minimal {TAMAN_LIMITS.quoteMin})
         </span>
@@ -169,20 +196,57 @@ export function TamanSubmitForm() {
         </div>
       </fieldset>
 
+      <div className="rounded-3xl border border-slate-200 bg-surface p-4">
+        <AnimalPicker
+          animal={animal}
+          variant={variant}
+          onAnimal={(a) => {
+            setAnimal(a);
+            setVariant("normal");
+          }}
+          onVariant={setVariant}
+        />
+        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
+          <AnimalSprite animal={animal} variant={variant} size={56} />
+          <div className="text-xs text-muted">
+            <p className="font-semibold text-secondary">
+              {ANIMAL_LABEL[animal]} · {VARIANT_LABEL[variant]}
+            </p>
+            <p className="mt-0.5">Begini kira-kira hewan Anda tampil di taman.</p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-sm font-semibold text-secondary">
           Tanggal
-          <input type="date" className={field} value={dateISO} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDateISO(e.target.value)} />
+          <input
+            type="date"
+            className={field}
+            value={dateISO}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setDateISO(e.target.value)}
+          />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-semibold text-secondary">
           Slug proyek (opsional)
-          <input className={field} value={projectSlug} onChange={(e) => setProjectSlug(e.target.value.trim().toLowerCase())} placeholder="contoh: website-toko-kopi" />
+          <input
+            className={field}
+            value={projectSlug}
+            onChange={(e) => setProjectSlug(e.target.value.trim().toLowerCase())}
+            placeholder="contoh: website-toko-kopi"
+          />
         </label>
       </div>
 
       <label className="flex flex-col gap-1.5 text-sm font-semibold text-secondary">
         Slug produk (opsional)
-        <input className={field} value={productSlug} onChange={(e) => setProductSlug(e.target.value.trim().toLowerCase())} placeholder="contoh: paket-landing-page" />
+        <input
+          className={field}
+          value={productSlug}
+          onChange={(e) => setProductSlug(e.target.value.trim().toLowerCase())}
+          placeholder="contoh: paket-landing-page"
+        />
       </label>
 
       <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-surface p-4 text-xs leading-relaxed text-slate-700">

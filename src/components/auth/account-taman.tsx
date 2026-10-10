@@ -100,7 +100,7 @@ export function AccountTaman() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">Testimoni yang pernah Anda kirim dan statusnya.</p>
-        <Link href="/taman/kirim" className="inline-flex min-h-10 items-center rounded-full bg-primary px-4 text-xs font-semibold text-white hover:bg-primary-dark">
+        <Link href="/taman/tulis" className="inline-flex min-h-10 items-center rounded-full bg-primary px-4 text-xs font-semibold text-white hover:bg-primary-dark">
           Tulis testimoni
         </Link>
       </div>

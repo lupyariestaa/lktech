@@ -621,6 +621,7 @@ export type TamanAdminItem = {
   rating: number;
   dateISO: string;
   animal: "kucing" | "kelinci" | "burung" | "rubah" | "beruang" | "kura-kura" | "kupu-kupu" | "ikan";
+  variant: "normal" | "putih" | "hitam" | "coklat" | "emas" | "biru" | "abu" | "merah";
   order: number;
   projectSlug?: string;
   productSlug?: string;

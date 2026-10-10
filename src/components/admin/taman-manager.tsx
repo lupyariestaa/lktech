@@ -7,6 +7,7 @@ import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { TamanDetailPanel } from "@/components/admin/taman-detail-panel";
+import { AnimalSprite } from "@/components/taman/taman-animal-picker";
 import {
   bulkTaman,
   deleteTamanSamples,
@@ -17,6 +18,7 @@ import {
   rapikanTaman,
   type TamanAdminItem,
 } from "@/lib/admin-api";
+import { TAMAN_ANIMALS, ANIMAL_LABEL, VARIANT_LABEL } from "@/lib/taman-types";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<TamanAdminItem["status"], string> = {
@@ -59,6 +61,16 @@ export function TamanManager() {
       hidden: real.filter((i) => i.status === "hidden").length,
       samples: items.filter((i) => i.kind === "sample").length,
     };
+  }, [items]);
+
+  /**. Statistik per hewan: jumlah testimoni TERBIT per hewan (bantu variasi). */
+  const perAnimal = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const a of TAMAN_ANIMALS) map.set(a, 0);
+    for (const t of items) {
+      if (t.kind === "real" && t.status === "published") map.set(t.animal, (map.get(t.animal) ?? 0) + 1);
+    }
+    return map;
   }, [items]);
 
   const visible = useMemo(() => {
@@ -191,6 +203,24 @@ export function TamanManager() {
         ))}
       </div>
 
+      {/* Statistik per hewan (bantu variasi; V2-7) */}
+      <details className="rounded-2xl border border-slate-200 bg-white p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-secondary">
+          Statistik hewan terbit (bantu variasi)
+        </summary>
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {TAMAN_ANIMALS.map((a) => (
+            <li key={a} className="flex items-center gap-2 rounded-full border border-slate-200 px-2.5 py-1">
+              <AnimalSprite animal={a} variant="normal" size={28} />
+              <span className="text-xs text-secondary">{ANIMAL_LABEL[a]}</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-slate-600">
+                {perAnimal.get(a) ?? 0}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </details>
+
       {/* Aksi utama */}
       <div className="flex flex-wrap items-center gap-2">
         <Link href="/admin/taman/pratinjau" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-secondary hover:border-primary/40">
@@ -261,13 +291,15 @@ export function TamanManager() {
           {visible.map((t, i) => (
             <li key={t.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5">
               <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggle(t.id)} aria-label={`Pilih ${t.displayName}`} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/taman/animals/${t.animal}.svg`} alt="" width={36} height={36} className="h-9 w-9" />
+              <AnimalSprite animal={t.animal} variant={t.variant} size={36} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-bold text-secondary">{t.displayName}</span>
                   <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", STATUS_TONE[t.status])}>{STATUS_LABEL[t.status]}</span>
                   {t.kind === "sample" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">CONTOH</span>}
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                    {ANIMAL_LABEL[t.animal]} · {VARIANT_LABEL[t.variant]}
+                  </span>
                   <span className="text-[11px] text-muted">{"★".repeat(t.rating)}</span>
                 </div>
                 <p className="truncate text-xs text-muted">{t.quote}</p>

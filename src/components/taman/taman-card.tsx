@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Star, X } from "lucide-react";
 import type { TamanPublicView } from "@/lib/taman-logic";
+import { ANIMAL_LABEL, VARIANT_LABEL } from "@/lib/taman-types";
 import { cn } from "@/lib/utils";
+import { AnimalSprite } from "@/components/taman/taman-animal-picker";
 
 /** Batas lebar: di bawahnya kartu menjadi bottom sheet (Q8). */
 export const DESKTOP_MIN_WIDTH = 768;
@@ -90,6 +92,15 @@ export function TamanCard({
       </div>
 
       <blockquote className="mt-3 text-sm leading-relaxed text-slate-700">&ldquo;{item.quote}&rdquo;</blockquote>
+
+      {/* Pratinjau hewan + warnanya (keputusan #5): tampil seperti di kanvas. */}
+      <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-surface p-3">
+        <AnimalSprite animal={item.animal} variant={item.variant} size={48} />
+        <div className="text-xs text-muted">
+          <p className="font-semibold text-secondary">{ANIMAL_LABEL[item.animal]}</p>
+          <p className="mt-0.5">Warna {VARIANT_LABEL[item.variant]} — hewan ini di Taman.</p>
+        </div>
+      </div>
 
       {(item.projectSlug || item.productSlug) && (
         <a

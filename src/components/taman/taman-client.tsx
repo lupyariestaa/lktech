@@ -1,25 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Pencil, RefreshCw } from "lucide-react";
 import { pickSlots, slotCountFor, type TamanPublicView } from "@/lib/taman-logic";
-import { TAMAN_ANIMALS, type AnimalKey } from "@/lib/taman-types";
 import { cn } from "@/lib/utils";
-import { TamanAnimal } from "@/components/taman/taman-animal";
 import { TamanCard, DESKTOP_MIN_WIDTH } from "@/components/taman/taman-card";
+import { TamanPhaser } from "@/components/taman/taman-phaser";
 import { trackTamanOpen, trackTamanRefresh } from "@/lib/analytics";
-
-/** Posisi slot dalam frame (persen). Urutan = urutan fokus keyboard. */
-const SLOT_POSITIONS: Array<{ left: number; top: number }> = [
-  { left: 14, top: 62 },
-  { left: 36, top: 70 },
-  { left: 60, top: 64 },
-  { left: 84, top: 72 },
-  { left: 24, top: 36 },
-  { left: 50, top: 42 },
-  { left: 74, top: 36 },
-  { left: 50, top: 80 },
-];
 
 /** Riwayat sesi: testimoni yang baru tampil (bobot kecil saat gacha, §3.3). */
 const SESSION_KEY = "taman:recent";
@@ -42,18 +30,26 @@ function writeRecent(ids: string[]) {
 }
 
 /**
- * Frame taman interaktif (T7). Klien: jumlah slot per device, gacha "Acak lagi",
- * kartu popover (desktop) atau bottom sheet (mobile), dan keyboard.
- * Data (`items`) sudah whitelist dari server; komponen ini tidak menerima field privat.
+ * Frame taman interaktif (V2-4/V2-5). Visual peta & hewan digambar oleh kanvas
+ * Phaser (`TamanPhaser`, dynamic import). Judul, tombol, dan kartu testimoni tetap
+ * DOM di atas kanvas. Navigasi keyboard & screen reader memakai tombol `sr-only`
+ * (jalur penuh), karena isi kanvas tidak terbaca pembaca layar.
  */
 export function TamanClient({
   items,
   reducedMotion,
+  pixelClassName,
+  title,
+  description,
+  writeHref,
 }: {
   items: TamanPublicView[];
   reducedMotion: boolean;
+  pixelClassName?: string;
+  title: string;
+  description: string;
+  writeHref: string;
 }) {
-  // Jumlah slot diatur setelah mount agar server & klien awal sama (tanpa hydration mismatch).
   const [slots, setSlots] = useState(8);
   const [width, setWidth] = useState(DESKTOP_MIN_WIDTH);
   useEffect(() => {
@@ -72,8 +68,21 @@ export function TamanClient({
   const [focusIndex, setFocusIndex] = useState(0);
   const frameRef = useRef<HTMLDivElement>(null);
   const btnRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  // Posisi hewan di kanvas (px, relatif kanvas) → untuk anchor popover kartu.
+  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
+  // Ukuran kanvas (untuk konversi px → persen frame) — disimpan sebagai state.
+  const [frameSize, setFrameSize] = useState({ w: 0, h: 0 });
 
-  // Pool: seluruh testimoni publik. Sebelum acak, tampilkan urutan `order` (sudah dari server).
+  useEffect(() => {
+    const host = frameRef.current;
+    if (!host) return;
+    const measure = () => setFrameSize({ w: host.clientWidth, h: host.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(host);
+    return () => ro.disconnect();
+  }, []);
+
   const shown: TamanPublicView[] = useMemo(() => {
     const byId = new Map(items.map((i) => [i.id, i]));
     if (shownIds) {
@@ -96,7 +105,6 @@ export function TamanClient({
       setShownIds(next.map((n) => n.id));
       return;
     }
-    // Animasi acak: kedip singkat, lalu set baru muncul (§3.3).
     setShuffling(true);
     window.setTimeout(() => {
       setShownIds(next.map((n) => n.id));
@@ -114,7 +122,7 @@ export function TamanClient({
     setOpenId(shown[n].id);
   };
 
-  // Roving tabindex: satu hewan dapat Tab; panah berpindah antar hewan.
+  // Roving tabindex untuk jalur keyboard (tombol sr-only).
   const onFrameKey = (e: React.KeyboardEvent) => {
     if (openId) return;
     if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
@@ -127,18 +135,84 @@ export function TamanClient({
 
   const label = (t: TamanPublicView) => `Testimoni dari ${t.displayName}, ${t.role}, ${t.rating} bintang`;
 
+  /** Anchor popover (persen frame) dari posisi hewan di kanvas. */
+  const anchorOf = (id: string): { left: number; top: number } | undefined => {
+    const p = positions[id];
+    if (!p || frameSize.w === 0 || frameSize.h === 0) return undefined;
+    return { left: (p.x / frameSize.w) * 100, top: (p.y / frameSize.h) * 100 };
+  };
+
   if (shown.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted">Klik hewan untuk membaca testimoninya.</p>
+    <div
+      ref={frameRef}
+      role="group"
+      aria-label="Taman testimoni"
+      onKeyDown={onFrameKey}
+      className="relative h-full w-full overflow-hidden border-y-4 border-secondary bg-gradient-to-b from-sky-300 via-sky-100 to-emerald-200"
+      style={{ imageRendering: "pixelated" }}
+    >
+      {/* Kanvas Phaser (visual peta & hewan). */}
+      <TamanPhaser
+        animals={shown.map((t) => ({ id: t.id, animal: t.animal, variant: t.variant }))}
+        reducedMotion={reducedMotion}
+        onPick={(id) => {
+          const t = shown.find((s) => s.id === id);
+          if (t) {
+            if (openId !== id) trackTamanOpen({ animal: t.animal, index: shown.indexOf(t), via: "klik" });
+            setOpenId(openId === id ? null : id);
+          }
+        }}
+        onFrame={(pos) => {
+          const next: Record<string, { x: number; y: number }> = {};
+          for (const p of pos) next[p.id] = { x: p.x, y: p.y };
+          setPositions(next);
+        }}
+      />
+
+      {/* Judul & kontrol di DALAM frame (tengah atas). */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col items-center gap-2 px-4 pt-6 text-center">
+        <span
+          className={cn(
+            "pointer-events-auto rounded-full border-2 border-secondary bg-white/90 px-3 py-1 text-[10px] font-bold tracking-wider text-secondary uppercase shadow-[2px_2px_0_0_rgba(10,15,30,0.9)]",
+            pixelClassName,
+          )}
+        >
+          Testimoni
+        </span>
+        <h3
+          className={cn(
+            "pointer-events-auto text-lg leading-tight text-secondary drop-shadow-[2px_2px_0_rgba(255,255,255,0.9)] sm:text-2xl",
+            pixelClassName,
+          )}
+        >
+          {title}
+        </h3>
+        <p className="pointer-events-auto max-w-md text-xs text-secondary/80 sm:text-sm">{description}</p>
+      </div>
+
+      {/* Kontrol bawah di DALAM frame: tulis testimoni + acak lagi. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-wrap items-center justify-center gap-2 p-4">
+        <Link
+          href={writeHref}
+          className={cn(
+            "pointer-events-auto inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-secondary bg-primary px-4 text-[11px] font-bold text-white shadow-[3px_3px_0_0_rgba(10,15,30,0.9)] hover:bg-primary-dark",
+            pixelClassName,
+          )}
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+          Tulis testimoni
+        </Link>
         {canReroll && (
           <button
             type="button"
             onClick={reroll}
             disabled={shuffling}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-primary/30 bg-white px-4 text-xs font-semibold text-primary hover:bg-primary-50 disabled:opacity-60"
+            className={cn(
+              "pointer-events-auto inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-secondary bg-white px-4 text-[11px] font-bold text-secondary shadow-[3px_3px_0_0_rgba(10,15,30,0.9)] hover:bg-slate-50 disabled:opacity-60",
+              pixelClassName,
+            )}
           >
             <RefreshCw className={cn("h-3.5 w-3.5", shuffling && "motion-safe:animate-spin")} aria-hidden="true" />
             Acak lagi
@@ -146,68 +220,49 @@ export function TamanClient({
         )}
       </div>
 
-      <div
-        ref={frameRef}
-        role="group"
-        aria-label="Taman testimoni"
-        onKeyDown={onFrameKey}
-        className={cn(
-          "relative w-full overflow-visible rounded-3xl border-4 border-secondary bg-gradient-to-b from-sky-200 via-sky-100 to-emerald-200",
-          "aspect-[4/5] sm:aspect-[16/9]",
-          "shadow-[6px_6px_0_0_rgba(10,15,30,0.85)]",
-        )}
-        style={{ imageRendering: "pixelated" }}
-      >
-        {/* Latar dekoratif (pixel): tanah & pagar. Tidak dibacakan (alt=""). */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[22%] bg-[url('/taman/bg-tanah.svg')] bg-[length:auto_100%] bg-repeat-x [image-rendering:pixelated]" />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-[20%] h-[12%] bg-[url('/taman/pagar.svg')] bg-[length:auto_100%] bg-repeat-x opacity-90 [image-rendering:pixelated]" />
-
-        {shown.map((t, i) => {
-          const pos = SLOT_POSITIONS[i] ?? SLOT_POSITIONS[0];
-          const animal: AnimalKey = TAMAN_ANIMALS.includes(t.animal) ? t.animal : "kucing";
-          return (
-            <TamanAnimal
-              key={t.id}
-              animal={animal}
-              label={label(t)}
-              left={pos.left}
-              top={pos.top}
-              active={openId === t.id}
-              shuffling={shuffling}
-              tabIndex={i === focusIndex ? 0 : -1}
-              onFocusSlot={() => setFocusIndex(i)}
-              buttonRef={(el) => {
-                btnRefs.current[i] = el;
-              }}
-              onActivate={() => {
-                const opening = openId !== t.id;
-                if (opening) trackTamanOpen({ animal, index: i, via: "klik" });
-                setOpenId(openId === t.id ? null : t.id);
-              }}
-            />
-          );
-        })}
-
-        {open && (
-          <TamanCard
-            item={open}
-            index={openIndex}
-            total={shown.length}
-            mode={isSheet ? "sheet" : "popover"}
-            anchor={isSheet ? undefined : SLOT_POSITIONS[openIndex] ?? SLOT_POSITIONS[0]}
-            onClose={() => {
-              const id = open.id;
-              setOpenId(null);
-              requestAnimationFrame(() => {
-                const idx = shown.findIndex((s) => s.id === id);
-                btnRefs.current[idx]?.focus();
-              });
+      {/* Jalur keyboard & screen reader: tombol tak terlihat untuk tiap hewan. */}
+      <div className="sr-only">
+        Klik hewan untuk membaca testimoni. Gunakan tombol berikut.
+        {shown.map((t, i) => (
+          <button
+            key={t.id}
+            ref={(el) => {
+              btnRefs.current[i] = el;
             }}
-            onPrev={() => go(-1)}
-            onNext={() => go(1)}
-          />
-        )}
+            type="button"
+            tabIndex={i === focusIndex ? 0 : -1}
+            aria-label={label(t)}
+            aria-pressed={openId === t.id}
+            onFocus={() => setFocusIndex(i)}
+            onClick={() => {
+              if (openId !== t.id) trackTamanOpen({ animal: t.animal, index: i, via: "keyboard" });
+              setOpenId(openId === t.id ? null : t.id);
+            }}
+          >
+            {t.displayName} — {t.role} — {t.rating} bintang
+          </button>
+        ))}
       </div>
+
+      {open && (
+        <TamanCard
+          item={open}
+          index={openIndex}
+          total={shown.length}
+          mode={isSheet ? "sheet" : "popover"}
+          anchor={isSheet ? undefined : anchorOf(open.id)}
+          onClose={() => {
+            const id = open.id;
+            setOpenId(null);
+            requestAnimationFrame(() => {
+              const idx = shown.findIndex((s) => s.id === id);
+              btnRefs.current[idx]?.focus();
+            });
+          }}
+          onPrev={() => go(-1)}
+          onNext={() => go(1)}
+        />
+      )}
 
       {/* Teks lengkap untuk pembaca layar dan crawler (tidak terlihat). */}
       <ul className="sr-only">

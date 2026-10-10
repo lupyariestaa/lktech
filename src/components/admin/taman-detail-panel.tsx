@@ -5,40 +5,12 @@ import { Loader2, X } from "lucide-react";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { patchTaman, deleteTaman, type TamanAdminItem } from "@/lib/admin-api";
-import { TAMAN_ANIMALS, type AnimalKey } from "@/lib/taman-types";
+import type { AnimalKey, AnimalVariant } from "@/lib/taman-types";
 import { canPublish } from "@/lib/taman-logic";
-import { cn } from "@/lib/utils";
+import { AnimalPicker } from "@/components/taman/taman-animal-picker";
 
 const field =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
-
-/** Pemilih hewan: grid ikon. Pratinjau sprite dimuat dari public/taman. */
-function AnimalPicker({ value, onChange }: { value: AnimalKey; onChange: (a: AnimalKey) => void }) {
-  return (
-    <div role="radiogroup" aria-label="Pilih hewan" className="grid grid-cols-4 gap-2 sm:grid-cols-8">
-      {TAMAN_ANIMALS.map((a) => {
-        const active = a === value;
-        return (
-          <button
-            key={a}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(a)}
-            className={cn(
-              "flex flex-col items-center gap-1 rounded-xl border p-2 text-[10px] font-semibold transition-colors",
-              active ? "border-primary bg-primary-50 text-primary" : "border-slate-200 text-slate-500 hover:border-primary/40",
-            )}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/taman/animals/${a}.svg`} alt="" width={40} height={40} className="h-10 w-10" />
-            {a}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 /**
  * Panel detail testimoni taman (T6): isi, hewan, urutan, persetujuan & bukti,
@@ -62,6 +34,7 @@ export function TamanDetailPanel({
     rating: item.rating,
     dateISO: item.dateISO.slice(0, 10),
     animal: item.animal,
+    variant: item.variant,
     order: item.order,
     projectSlug: item.projectSlug ?? "",
     productSlug: item.productSlug ?? "",
@@ -101,6 +74,7 @@ export function TamanDetailPanel({
           rating: draft.rating,
           dateISO: draft.dateISO,
           animal: draft.animal,
+          variant: draft.variant,
           order: draft.order,
           projectSlug: draft.projectSlug,
           productSlug: draft.productSlug,
@@ -208,10 +182,14 @@ export function TamanDetailPanel({
             </label>
           </section>
 
-          {/* Hewan */}
-          <section className="flex flex-col gap-2">
-            <h3 className="text-sm font-bold text-secondary">Hewan di taman</h3>
-            <AnimalPicker value={draft.animal} onChange={(a) => setDraft({ ...draft, animal: a })} />
+          {/* Hewan & warna */}
+          <section className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-surface p-4">
+            <AnimalPicker
+              animal={draft.animal as AnimalKey}
+              variant={draft.variant as AnimalVariant}
+              onAnimal={(a) => setDraft((d) => ({ ...d, animal: a, variant: "normal" }))}
+              onVariant={(v) => setDraft((d) => ({ ...d, variant: v }))}
+            />
           </section>
 
           {/* Tautan opsional */}

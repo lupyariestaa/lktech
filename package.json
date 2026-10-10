@@ -28,6 +28,8 @@
     "test:loyalty": "node --experimental-strip-types --test scripts/loyalty.test.ts",
     "test:wishlist": "node --experimental-strip-types --test scripts/wishlist-alert.test.ts",
     "gen:taman": "node scripts/gen-taman-sprites.mjs",
+    "gen:taman-v2": "node scripts/gen-taman-v2.mjs",
+    "gen:taman-animals": "node scripts/gen-taman-animals.mjs",
     "test:taman": "node --experimental-strip-types --test scripts/taman.test.ts",
     "test:blog": "node --experimental-strip-types --test scripts/article-schema.test.ts scripts/article-taxonomy.test.ts scripts/article-related.test.ts scripts/markdown.test.ts scripts/article-media.test.ts scripts/article-schedule.test.ts scripts/article-editor.test.ts scripts/article-manage.test.ts scripts/article-ui.test.ts scripts/article-seo.test.ts scripts/article-meta.test.ts scripts/article-api.test.ts scripts/heading-and-slug.test.ts scripts/co-purchase.test.ts scripts/product-related.test.ts scripts/taman.test.ts"
   },
@@ -43,6 +45,7 @@
     "framer-motion": "^13.4.4",
     "lucide-react": "^1.48.0",
     "next": "^16.3.6",
+    "phaser": "^3.90.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.89.0",
@@ -60,6 +63,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.6",
     "postcss": "^8.5.28",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3"
   }

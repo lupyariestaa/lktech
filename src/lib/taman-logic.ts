@@ -51,6 +51,31 @@ export function variantsForAnimal(animal: AnimalKey): readonly AnimalVariant[] {
   return ANIMAL_VARIANTS_LOCAL[animal] ?? ["normal"];
 }
 
+/**
+ * Resolusi perubahan hewan/varian admin (V2-7). Menjaga pasangan selalu sah:
+ * - `variant` diminta tapi tidak cocok untuk hewan → ditolak.
+ * - `animal` diganti tanpa `variant` → varian lama dipertahankan bila masih sah,
+ *   jika tidak jatuh ke "normal".
+ * Mengembalikan `{ ok }` atau error.
+ */
+export function resolveAnimalVariant(
+  current: { animal: AnimalKey; variant: AnimalVariant },
+  next: { animal?: string; variant?: string },
+): { ok: true; animal: AnimalKey; variant: AnimalVariant } | { ok: false; error: string } {
+  const animal: AnimalKey =
+    typeof next.animal === "string" && (TAMAN_ANIMAL_LIST as readonly string[]).includes(next.animal)
+      ? (next.animal as AnimalKey)
+      : current.animal;
+  const allowed = variantsForAnimal(animal) as readonly string[];
+  if (next.variant !== undefined) {
+    if (!allowed.includes(next.variant)) return { ok: false, error: "Warna tidak tersedia untuk hewan itu." };
+    return { ok: true, animal, variant: next.variant as AnimalVariant };
+  }
+  // Hanya ganti hewan: pertahankan varian lama bila masih sah, jika tidak "normal".
+  const variant = allowed.includes(current.variant) ? current.variant : "normal";
+  return { ok: true, animal, variant };
+}
+
 /** Tint warna untuk rendisi (klien & canvas). */
 export const V2_VARIANT_TINT: Record<AnimalVariant, string | null> = {
   normal: null,
@@ -158,6 +183,8 @@ export type TamanPublicView = {
   rating: number;
   dateISO: string;
   animal: AnimalKey;
+  /** Varian warna hewan (V2-1/V2-5) — untuk tint di kanvas & pratinjau kartu. */
+  variant: AnimalVariant;
   order: number;
   projectSlug?: string;
   productSlug?: string;
@@ -173,6 +200,7 @@ export function publicView(t: TamanTestimonial): TamanPublicView {
     rating: t.rating,
     dateISO: t.dateISO,
     animal: t.animal,
+    variant: t.variant,
     order: t.order,
     ...(t.projectSlug ? { projectSlug: t.projectSlug } : {}),
     ...(t.productSlug ? { productSlug: t.productSlug } : {}),

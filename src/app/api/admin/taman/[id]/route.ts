@@ -17,6 +17,7 @@ import {
   shortName,
   validateQuote,
   isValidPastDate,
+  resolveAnimalVariant,
   TAMAN_LIMITS,
 } from "@/lib/taman-logic";
 import { recordAdminAudit } from "@/lib/admin-audit";
@@ -32,6 +33,7 @@ const patchSchema = z.object({
   rating: z.number().optional(),
   dateISO: z.string().trim().max(40).optional(),
   animal: z.string().optional(),
+  variant: z.string().optional(),
   order: z.number().optional(),
   projectSlug: z.string().trim().max(200).optional(),
   productSlug: z.string().trim().max(200).optional(),
@@ -91,9 +93,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
     patch.dateISO = body.dateISO;
   }
-  if (body.animal !== undefined) {
-    if (!isAnimalKey(body.animal)) return NextResponse.json({ error: "Hewan tidak dikenal." }, { status: 400 });
-    patch.animal = body.animal;
+  // Hewan & varian harus pasangannya sah (validasi gabungan; V2-7).
+  if (body.animal !== undefined && !isAnimalKey(body.animal)) {
+    return NextResponse.json({ error: "Hewan tidak dikenal." }, { status: 400 });
+  }
+  if (body.animal !== undefined || body.variant !== undefined) {
+    const res = resolveAnimalVariant(
+      { animal: current.animal, variant: current.variant },
+      { animal: body.animal, variant: body.variant },
+    );
+    if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
+    patch.animal = res.animal;
+    patch.variant = res.variant;
   }
   if (body.order !== undefined) {
     const o = sanitizeOrder(body.order);

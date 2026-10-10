@@ -1,5 +1,11 @@
 # Taman Testimoni (Taman Pixel) — Dokumen Hasil (T0–T12)
 
+> **Catatan v2:** tampilan Taman di beranda sudah digantikan versi 2 (kanvas Phaser
+> full-bleed, varian warna hewan, form `/taman/tulis`, dashboard lengkap). Lihat
+> [`2026-10-10-task-taman-v2.md`](2026-10-10-task-taman-v2.md) (V2-0…V2-8) dan
+> [`2026-10-10-planning-taman-v2.md`](2026-10-10-planning-taman-v2.md). Dokumen ini
+> tetap berlaku untuk model data, API, privasi, dan alur moderasi yang diwarisi v2.
+
 ## Ringkasan
 
 Testimoni klien ditampilkan sebagai frame pixel art berisi hewan. Setiap hewan mewakili satu testimoni. Klik hewan untuk membaca testimoninya. Pengunjung bisa mengirim testimoni sendiri setelah login Google, dan testimoni tampil publik hanya setelah disetujui admin dan persetujuan pemberi tercatat.

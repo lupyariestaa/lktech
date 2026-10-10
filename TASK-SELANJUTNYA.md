@@ -27,6 +27,36 @@ Dokumen hasil: [`docs/2026-10-10-taman-pixel.md`](docs/2026-10-10-taman-pixel.md
 **Verifikasi (T12):** `tsc` ✅ · `eslint` ✅ · 16 suite test ✅ (396 test, termasuk `test:taman` 55) · `build` ✅.
 **Belum diverifikasi manual:** frame & animasi di browser, keyboard & screen reader, reduced motion, alur kirim & admin dengan data nyata, validasi JSON-LD, rate limit di produksi.
 
+---
+
+## 🔄 Sesi Terakhir — Taman Testimoni **v2** (V2-1 ✅, V2-2 selesai: 8 hewan)
+
+Dokumen: [`docs/2026-10-10-task-taman-v2.md`](docs/2026-10-10-task-taman-v2.md) (checklist) · [`docs/2026-10-10-planning-taman-v2.md`](docs/2026-10-10-planning-taman-v2.md).
+
+| Fase | Hasil |
+| --- | --- |
+| **V2-0** | Audit & keputusan teknis (PNG, tile 16 px, dunia 40×24, sprite 24×24/6 pose, 8 varian via tint, zona spawn). ✅ |
+| **V2-1** | Data varian warna: `AnimalVariant`/`ANIMAL_VARIANTS`/`VARIANT_TINT`, `TamanTestimonial.variant`, normalisasi & validasi pasangan, submit terima hewan+warna, **Rapikan** tetapkan varian. ✅ (commit `42140c3`) |
+| **V2-2** | Aset: tile 16×16 (11), objek (wortel), **8 hewan sprite 24×24 × 6 pose** = **2.690 B total**. Generator `gen-taman-animals` + `gen-taman-v2`; halaman pratinjau **`/taman/aset`**. 🔶 **kode selesai, belum di-commit** |
+| **V2-3** | Halaman form **`/taman/tulis`**: pemilih 8 hewan + warna (pratinjau tint via `AnimalPicker`/`AnimalSprite`), submit `animal`+`variant`. `/taman/kirim` → redirect 301 ke `/taman/tulis`. 🔶 **kode selesai, belum di-commit** |
+| **V2-4** | Beranda: seksi Taman **full-bleed** (`100dvh`), judul/badge/deskripsi di dalam frame pakai font pixel (`Press Start 2P`, `preload:false`); tombol **Tulis testimoni** & **Acak lagi** di dalam frame; heading asli `<h2>` tetap `sr-only` untuk SEO. 🔶 **kode selesai, belum di-commit** |
+| **V2-5** | **Kanvas Phaser 3.90**: `taman-scene.ts` (peta tile 40×24, spawn hewan + tint varian, AI per gaya, klik→React), `taman-world.ts` (data murni), `taman-phaser.tsx` (dynamic import, klien saja). Kanvas di belakang judul; jalur keyboard/screen reader via tombol `sr-only`. Phaser ±1.164 KB **tidak** di-preload di beranda. 🔶 **kode selesai, belum di-commit** |
+| **V2-6** | Kartu testimoni: **pratinjau hewan + warna** (`AnimalSprite`) di popup; label Indonesia terpusat (`ANIMAL_LABEL`/`VARIANT_LABEL`); a11y (jalur `sr-only`, Esc, fokus kembali); reduced-motion (scene diam) + throttle `onFrame` ~10 fps; JSON-LD tetap. 🔶 **kode selesai, belum di-commit** |
+| **V2-7** | Dashboard lengkap: daftar + chip hewan·warna (`AnimalSprite`), panel detail pemilih hewan+warna (tint), **Pratinjau Kanvas nyata** (Phaser + Acak pool), statistik hewan terbit, API PATCH terima `variant` (helper `resolveAnimalVariant`), Rapikan tetapkan varian. 🔶 **kode selesai, belum di-commit** |
+| **V2-8** | QA/perf/docs: chunk Phaser **±1.164 KB tidak di-preload** di halaman lain (dynamic import terbukti); batas sprite (4/6/8 < 15 slot); regresi lolos; gate penuh hijau (**16 suite / 467 test**, `test:taman` 78). ✅ |
+
+**STATUS:** ✅ **Taman Testimoni v2 (V2-0…V2-8) SELESAI (kode).** Sisa = uji browser manual (kanvas, FPS mobile, keyboard/SR, reduced-motion) & commit/push oleh pemilik.
+
+**Status V2-2:** kucing pass (pemilik) → 7 hewan lain (kelinci, burung, rubah, beruang, kura-kura, kupu-kupu, ikan) selesai. Gate fase hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` 67 ✅ · `build` ✅.
+**Status V2-3:** komponen picker reusable (`taman-animal-picker.tsx`) + form (`taman-tulis-form.tsx`) + halaman `/taman/tulis`; form lama & folder `/taman/kirim` dihapus (diganti redirect). Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` 67 ✅ · `build` ✅.
+**Status V2-4:** font pixel `taman-font.ts`; `taman-section.tsx` full-bleed + heading `sr-only`; `taman-client.tsx` judul & tombol di dalam frame. Beranda tetap Static. Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` 67 ✅ · `build` ✅.
+**Status V2-5:** Phaser 3.90 terpasang; `taman-world.ts` + `taman-scene.ts` + `taman-phaser.tsx`; `TamanPublicView` + `variant`; `taman-animal.tsx` v1 dihapus. Chunk Phaser tidak di-preload beranda. Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` **72** ✅ · `build` ✅.
+**Status V2-6:** pratinjau hewan+warna di kartu; label terpusat; a11y & reduced-motion dirapikan; perf `onFrame` di-throttle. Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` **74** ✅ · `build` ✅.
+**Status V2-7:** dashboard lengkap (daftar, panel detail hewan+warna, pratinjau kanvas nyata, statistik per hewan, API `variant`, `resolveAnimalVariant`). Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` **78** ✅ · `build` ✅.
+**Status V2-8:** QA/perf/docs selesai; gate penuh hijau (semua `test:*`). ✅
+
+**Lanjut:** commit V2-2…V2-8 (bila diminta) → uji browser manual (kanvas di desktop & mobile, FPS, keyboard/SR, reduced-motion) → rilis.
+
 ---## ✅ Sesi Terakhir - Upgrade Blog B0–B8 (SELESAI, kode)
 
 Dokumen hasil: [`docs/2026-10-09-upgrade-blog.md`](docs/2026-10-09-upgrade-blog.md). Checklist: [`docs/2026-10-09-task-upgrade-blog.md`](docs/2026-10-09-task-upgrade-blog.md).

@@ -67,6 +67,30 @@ export function isValidAnimalVariant(animal: AnimalKey, variant: string): varian
   return (ANIMAL_VARIANTS[animal] as readonly string[]).includes(variant);
 }
 
+/** Label Indonesia untuk hewan (tampilan). */
+export const ANIMAL_LABEL: Record<AnimalKey, string> = {
+  kucing: "Kucing",
+  kelinci: "Kelinci",
+  burung: "Burung",
+  rubah: "Rubah",
+  beruang: "Beruang",
+  "kura-kura": "Kura-kura",
+  "kupu-kupu": "Kupu-kupu",
+  ikan: "Ikan",
+};
+
+/** Label Indonesia untuk varian warna (tampilan). */
+export const VARIANT_LABEL: Record<AnimalVariant, string> = {
+  normal: "Normal",
+  putih: "Putih",
+  hitam: "Hitam",
+  coklat: "Coklat",
+  emas: "Emas",
+  biru: "Biru",
+  abu: "Abu-abu",
+  merah: "Merah",
+};
+
 /** Varian default bila tidak diisi (kompatibel dengan data lama). */
 export const DEFAULT_VARIANT: AnimalVariant = "normal";
 

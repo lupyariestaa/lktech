@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   normalizeVariant,
   variantsForAnimal,
+  resolveAnimalVariant,
   TAMAN_BULK_ACTIONS,
   statusForAction,
   planLegacyImport,
@@ -29,10 +30,27 @@ import {
 } from "../src/lib/taman-logic.ts";
 import {
   isValidAnimalVariant,
+  ANIMAL_LABEL,
+  VARIANT_LABEL,
   TAMAN_ANIMALS,
   TAMAN_VARIANTS,
   VARIANT_TINT,
 } from "../src/lib/taman-types.ts";
+import {
+  WORLD_MAP,
+  WORLD_COLS,
+  WORLD_ROWS,
+  WORLD_WIDTH,
+  WORLD_HEIGHT,
+  TILE_NAMES,
+  ZONES,
+  ANIMAL_ZONE,
+  ANIMAL_STYLE,
+  STYLE_SPEED,
+  parseWorld,
+  mulberry32,
+  randomInZone,
+} from "../src/lib/taman-world.ts";
 
 
 type T = {
@@ -46,6 +64,7 @@ type T = {
   rating: number;
   dateISO: string;
   animal: "kucing" | "kelinci" | "burung" | "rubah" | "beruang" | "kura-kura" | "kupu-kupu" | "ikan";
+  variant: "normal" | "putih" | "hitam" | "coklat" | "emas" | "biru" | "abu" | "merah";
   order: number;
   projectSlug?: string;
   productSlug?: string;
@@ -69,6 +88,7 @@ function t(over: Partial<T> = {}): T {
     rating: 5,
     dateISO: "2026-09-01",
     animal: "kucing",
+    variant: "normal",
     order: 0,
     source: "submitted",
     ownerUid: "uid-rahasia",
@@ -119,9 +139,10 @@ test("T2 publicView: tidak mengandung field privat", () => {
 });
 
 test("T2 publicView: menyertakan field publik yang diperlukan", () => {
-  const v = publicView(t({ projectSlug: "proyek-a" }) as never);
+  const v = publicView(t({ projectSlug: "proyek-a", variant: "biru" }) as never);
   assert.equal(v.displayName, "Budi S.");
   assert.equal(v.animal, "kucing");
+  assert.equal(v.variant, "biru");
   assert.equal(v.projectSlug, "proyek-a");
   assert.equal("productSlug" in v, false);
 });
@@ -571,4 +592,102 @@ test("V2-1 isValidAnimalVariant: pasangan sah & tidak sah", () => {
   assert.equal(isValidAnimalVariant("ikan", "emas"), true);
   assert.equal(isValidAnimalVariant("kelinci", "emas"), false);
   assert.equal(isValidAnimalVariant("kucing", "normal"), true);
+});
+
+/* ---------- V2-5: dunia (peta & zona) ---------- */
+
+test("V2-5 world: peta 24 baris × 40 kolom, semua karakter dikenal", () => {
+  assert.equal(WORLD_MAP.length, WORLD_ROWS);
+  const known = new Set(["k", "i", "A", "W", "t", "w", "f", "T", "b", ",", "."]);
+  WORLD_MAP.forEach((row, y) => {
+    assert.equal(row.length, WORLD_COLS, `baris ${y} lebar ${row.length}`);
+    for (const ch of row) assert.ok(known.has(ch), `karakter tak dikenal '${ch}' di baris ${y}`);
+  });
+});
+
+test("V2-5 world: parseWorld menghasilkan matriks nama tile yang sah", () => {
+  const m = parseWorld();
+  assert.equal(m.length, WORLD_ROWS);
+  const allowed = new Set(TILE_NAMES);
+  for (const row of m) {
+    assert.equal(row.length, WORLD_COLS);
+    for (const t of row) assert.ok(allowed.has(t), `tile '${t}' di luar daftar`);
+  }
+  // Tanpa karakter '.', semuanya rumput (dasar peta).
+  assert.equal(m[0][0], "rumput");
+  assert.equal(m[0][0], "rumput");
+  // Ada air (kolam) di peta → tempat ikan.
+  assert.ok(m.some((r) => r.includes("air")), "peta harus punya kolam");
+});
+
+test("V2-5 world: zona tiap hewan ada & berada di dalam batas dunia", () => {
+  for (const a of TAMAN_ANIMALS) {
+    const zoneKey = ANIMAL_ZONE[a];
+    assert.ok(zoneKey in ZONES, `hewan ${a} tanpa zona`);
+    const z = ZONES[zoneKey];
+    assert.ok(z.x >= 0 && z.y >= 0, `zona ${zoneKey} mulai di luar dunia`);
+    assert.ok(z.x + z.w <= WORLD_WIDTH, `zona ${zoneKey} keluar kanan`);
+    assert.ok(z.y + z.h <= WORLD_HEIGHT, `zona ${zoneKey} keluar bawah`);
+  }
+});
+
+test("V2-5 world: setiap hewan punya gaya gerak & kecepatan", () => {
+  for (const a of TAMAN_ANIMALS) {
+    const style = ANIMAL_STYLE[a];
+    assert.ok(style, `hewan ${a} tanpa gaya gerak`);
+    assert.ok(ANIMAL_STYLE[a] in STYLE_SPEED, `gaya ${style} tanpa kecepatan`);
+  }
+});
+
+test("V2-5 world: randomInZone menghasilkan titik di dalam zona", () => {
+  const rnd = mulberry32(42);
+  const z = ZONES.darat;
+  for (let i = 0; i < 50; i++) {
+    const p = randomInZone("darat", rnd);
+    assert.ok(p.x >= z.x && p.x <= z.x + z.w, `x ${p.x} di luar zona`);
+    assert.ok(p.y >= z.y && p.y <= z.y + z.h, `y ${p.y} di luar zona`);
+  }
+});
+
+/* ---------- V2-6: label & kontrak kartu ---------- */
+
+test("V2-6 label: setiap hewan & varian punya label Indonesia", () => {
+  for (const a of TAMAN_ANIMALS) assert.ok(ANIMAL_LABEL[a], `hewan ${a} tanpa label`);
+  for (const v of TAMAN_VARIANTS) assert.ok(VARIANT_LABEL[v], `varian ${v} tanpa label`);
+});
+
+test("V2-6 publicView: selalu membawa variant yang sah (untuk kartu & kanvas)", () => {
+  const v = publicView(t({ animal: "ikan", variant: "emas" }) as never);
+  assert.equal(v.animal, "ikan");
+  assert.equal(v.variant, "emas");
+  assert.ok(VARIANT_TINT[v.variant] !== undefined);
+});
+
+/* ---------- V2-7: resolusi hewan+varian admin ---------- */
+
+test("V2-7 resolveAnimalVariant: varian tidak sah untuk hewan ditolak", () => {
+  const r = resolveAnimalVariant({ animal: "kelinci", variant: "normal" }, { animal: "kelinci", variant: "emas" });
+  assert.equal(r.ok, false);
+});
+
+test("V2-7 resolveAnimalVariant: ganti hewan tanpa varian → varian lama bila masih sah", () => {
+  // kucing+putih → burung (putih tersedia di burung).
+  const r = resolveAnimalVariant({ animal: "kucing", variant: "putih" }, { animal: "burung" });
+  assert.equal(r.ok, true);
+  assert.equal((r as { animal: string }).animal, "burung");
+  assert.equal((r as { variant: string }).variant, "putih");
+});
+
+test("V2-7 resolveAnimalVariant: varian lama tak sah untuk hewan baru → normal", () => {
+  // kucing+abu → kelinci (abu tersedia) → cek kasus tak sah: kucing+emas → kelinci (emas tak ada).
+  const r = resolveAnimalVariant({ animal: "kucing", variant: "emas" }, { animal: "kelinci" });
+  assert.equal(r.ok, true);
+  assert.equal((r as { variant: string }).variant, "normal");
+});
+
+test("V2-7 resolveAnimalVariant: varian eksplisit sah diterapkan", () => {
+  const r = resolveAnimalVariant({ animal: "kucing", variant: "normal" }, { animal: "ikan", variant: "emas" });
+  assert.equal(r.ok, true);
+  assert.equal((r as { animal: string }).animal, "ikan");
+  assert.equal((r as { variant: string }).variant, "emas");
 });
