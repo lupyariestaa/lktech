@@ -20,8 +20,8 @@ const STEPS = [
   },
   {
     icon: Sparkles,
-    title: "Poin & kupon",
-    desc: "Kumpulkan poin tiap pembelian, tukar jadi kupon.",
+    title: "Kupon & promo",
+    desc: "Dapatkan kupon diskon untuk hemat tiap checkout.",
   },
 ];
 

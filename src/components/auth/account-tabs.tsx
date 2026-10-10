@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 export const ACCOUNT_TABS = [
   "ringkasan",
   "pesanan",
-  "poin",
   "favorit",
   "alamat",
   "profil",
@@ -16,7 +15,6 @@ export type AccountTab = (typeof ACCOUNT_TABS)[number];
 export const ACCOUNT_TAB_LABEL: Record<AccountTab, string> = {
   ringkasan: "Ringkasan",
   pesanan: "Pesanan",
-  poin: "Poin",
   favorit: "Favorit",
   alamat: "Alamat",
   profil: "Profil",

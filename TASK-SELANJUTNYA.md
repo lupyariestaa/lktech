@@ -13,7 +13,23 @@
 
 ---
 
-## Sesi Terakhir — ❌ HAPUS TOTAL SISTEM TESTIMONI (dari Taman v2)
+## Sesi Terakhir — ❌ HAPUS TOTAL SISTEM POIN / LOYALITAS (cukup kupon/voucher)
+
+**Keputusan pemilik (2026-10-11):** LKTech **tidak memakai sistem poin/loyalitas** — cukup **sistem kupon/voucher** yang sudah mandiri. Seluruh sistem poin (ledger `users/{uid}/points`, saldo/lifetime, tier Bronze/Silver/Gold, perolehan poin dari order & ulasan, tukar poin → kupon, tab "Poin" di `/akun`) **dihapus**.
+
+Analisis dampak + alur: [`docs/2026-10-11-task-hapus-sistem-poin.md`](docs/2026-10-11-task-hapus-sistem-poin.md).
+
+Yang dihapus/diubah:
+- **Dihapus (file):** `src/lib/loyalty-pure.ts`, `src/lib/loyalty.ts`, `src/lib/loyalty-api.ts`, `src/components/auth/account-points.tsx`, `src/app/api/user/points/route.ts`, `scripts/loyalty.test.ts`.
+- **Diubah (file bersama, hanya bagian poin):** `src/app/api/webhooks/mayar/route.ts` (lepas `awardOrderPoints`), `src/app/api/admin/reviews/route.ts` (lepas `awardReviewPoints`), `src/components/auth/user-account.tsx` (lepas panel Poin), `src/components/auth/account-tabs.tsx` (lepas tab "poin"), `src/components/auth/login-steps-carousel.tsx` (step "Poin & kupon" → "Kupon & promo"), `src/lib/user-types.ts` + `src/lib/user-profile.ts` (lepas field `points`/`pointsLifetime`), `package.json` (lepas `test:loyalty`), `firestore.rules` (komentar).
+
+**Dampak disadari:** portal `/akun` tanpa tab "Poin"; perolehan poin otomatis (order & ulasan) berhenti; tukar poin → kupon hilang. **Kupon, checkout, order, pembayaran, unduhan, ulasan produk, analitik TETAP UTUH** (tidak bergantung pada poin).
+
+**Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · semua `test:*` ✅ · `npm run build` ✅.
+
+**Lanjut (pemilik, opsional):** bersihkan data Firestore subkoleksi `users/{uid}/points/*` & field `points`/`pointsLifetime` (tidak wajib untuk kode).
+
+---## ✅ Sesi Terakhir — Hapus Total Sistem Testimoni (Taman v1/v2 + Testimoni Lama)
 
 **Keputusan pemilik (2026-10-10):** setelah meninjau Taman v2, pemilik **tidak menyukai** hasilnya dan memutuskan **menghapus total sistem testimoni** dari LKTech — **(A) Taman Testimoni** (pixel/Phaser v1 & v2), **(B) Testimoni lama** (avatar Hero + tab admin konten), dan **(C) `ProjectTestimonial`** (kutipan di halaman proyek portofolio). **LKTech kini tidak punya testimoni apa pun.**
 
@@ -398,7 +414,7 @@ Inisiatif Retensi. Dokumen: `docs/2026-10-05-retensi-tema2.md`.
 
 | Fase | Hasil |
 | --- | --- |
-| **R1 Loyalitas/Poin** | Poin dari pembelian & ulasan, tier (Bronze/Silver/Gold), tukar poin → kupon, tab **Poin** di `/akun`. Ledger `users/{uid}/points`; poin otomatis saat order lunas & ulasan disetujui. |
+| **R1 Loyalitas/Poin** | ❌ **DIHAPUS** (2026-10-11) — poin dari pembelian & ulasan, tier, tukar poin → kupon, tab **Poin** di `/akun`. Cukup kupon/voucher. |
 | **R2 Email Marketing** | Newsletter opt-in (footer), **broadcast admin** per segmen (semua/pernah beli/belum), unsubscribe bertoken HMAC, `/admin/broadcast`. |
 | **R3 Alert Wishlist** | Cron `/api/cron/wishlist-alerts` — email "harga turun"/"kembali tersedia" (cooldown 72 jam). |
 | **R4 Notifikasi WA** | `whatsapp-notify.ts` opsional & **fail-safe** (aktif bila env diisi). Web Push ditunda. |
@@ -406,7 +422,7 @@ Inisiatif Retensi. Dokumen: `docs/2026-10-05-retensi-tema2.md`.
 
 **Verifikasi:** `tsc`/`eslint`/`build` bersih ✅ (72 halaman) · **14 suite / 117 test** lolos ✅.
 
-**Langkah manual:** set `NEWSLETTER_UNSUB_SECRET`; (opsional) `WHATSAPP_ACCESS_TOKEN`+`WHATSAPP_PHONE_NUMBER_ID`; jadwalkan cron eksternal `GET /api/cron/wishlist-alerts?token=<CRON_SECRET>`; publish ulang Firestore Rules (koleksi `subscribers`, subkoleksi `users/{uid}/points`).
+**Langkah manual:** set `NEWSLETTER_UNSUB_SECRET`; (opsional) `WHATSAPP_ACCESS_TOKEN`+`WHATSAPP_PHONE_NUMBER_ID`; jadwalkan cron eksternal `GET /api/cron/wishlist-alerts?token=<CRON_SECRET>`; publish ulang Firestore Rules (koleksi `subscribers`).
 
 ---
 

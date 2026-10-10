@@ -410,7 +410,7 @@ Aturan:
 - **Kupon per-produk/kategori** (v1 hanya ke subtotal) — kandidat lanjutan.
 - **Penggabungan beberapa kupon** (v1 satu kupon/order).
 - **Voucher publik otomatis** (hanya input kode).
-- **Program loyalitas/poin** (sesi terpisah).
+- **Program loyalitas/poin** — ❌ **dibatalkan/dihapus** (keputusan pemilik 2026-10-11; LKTech cukup kupon/voucher). Lihat `docs/2026-10-11-task-hapus-sistem-poin.md`.
 - **Auto-apply kode terbaik**.
 - **Pengembalian kuota otomatis** saat order dibatalkan (opsional lanjut).
 - **Kupon khusus user tertentu** (v1 global + batas per-user).

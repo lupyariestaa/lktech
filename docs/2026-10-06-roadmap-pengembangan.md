@@ -62,7 +62,7 @@ TEMA 1 — KONVERSI & CLOSING
   P2  Abandoned checkout recovery (email/WA)
 
 TEMA 2 — RETENSI & ENGAGEMENT
-  P1  Program loyalitas / poin / tier pelanggan
+  P1  Program loyalitas / poin / tier pelanggan — ❌ DIHAPUS (keputusan pemilik 2026-10-11; cukup kupon/voucher)
   P1  Email marketing ringan (newsletter + broadcast promo)
   P2  Notifikasi kanal sekunder (WhatsApp/Web Push)
   P2  Wishlist → harga turun / back-in-stock alert
@@ -128,14 +128,14 @@ Memperpendek jalan dari minat → pembayaran, dan memungkinkan penjualan tanpa k
 ### 🎯 Tujuan
 Mengubah pembeli sekali menjadi pelanggan berulang, dan pengunjung menjadi audiens.
 
-### 2.1 [P1] Program Loyalitas / Poin — ✅ SELESAI
-**Rancangan:**
-- Poin dari pembelian (rasio Rp tertentu) & aksi (ulasan, referral).
-- **Tier** (Bronze/Silver/Gold) dengan benefit (diskon, akses promo awal).
-- Tukar poin → kupon otomatis (integrasi erat dengan modul kupon).
-- Tampil di `/akun` (tab "Poin") + ringkasan di admin.
+### 2.1 [P1] Program Loyalitas / Poin — ❌ DIHAPUS
 
-> **✅ Selesai (R1):** `docs/2026-10-05-retensi-tema2.md` — poin dari pembelian & ulasan, tier, tukar poin→kupon, tab Poin.
+> **❌ Dihapus (keputusan pemilik, 2026-10-11).** Sistem poin/loyalitas **tidak
+> digunakan** di LKTech — cukup **sistem kupon/voucher**. Penghapusan didokumentasikan
+> di `docs/2026-10-11-task-hapus-sistem-poin.md`.
+>
+> Sisa pemikiran (untuk arsip): poin dari pembelian & aksi, tier (Bronze/Silver/Gold),
+> tukar poin → kupon, tab "Poin" di `/akun`. Semua ini sudah dilepas dari kode.
 
 ### 2.2 [P1] Email Marketing Ringan — ✅ SELESAI
 **Rancangan:**
@@ -241,7 +241,7 @@ Gelombang dibuat agar tiap rilis **mandiri & bernilai**, dengan ketergantungan d
 3. **[P1] Bundling & cross-sell** produk.
 
 ### 🌊 Gelombang 2 — "Retensi"
-4. **[P1] Program loyalitas / poin**.
+4. ~~**[P1] Program loyalitas / poin**~~ — ❌ dihapus (cukup kupon/voucher).
 5. **[P1] Email marketing ringan** (newsletter + broadcast).
 6. **[P1] Alert wishlist**.
 

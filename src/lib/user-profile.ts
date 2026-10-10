@@ -63,11 +63,6 @@ function normalizeProfile(
     addresses: normalizeAddresses(data.addresses),
     whatsapp: str(data.whatsapp),
     blocked: data.blocked === true,
-    points: typeof data.points === "number" && Number.isFinite(data.points) ? Math.max(0, Math.floor(data.points)) : 0,
-    pointsLifetime:
-      typeof data.pointsLifetime === "number" && Number.isFinite(data.pointsLifetime)
-        ? Math.max(0, Math.floor(data.pointsLifetime))
-        : 0,
   };
 }
 
@@ -158,8 +153,6 @@ export async function upsertUserProfile(profile: {
     addresses: prev.addresses,
     whatsapp: prev.whatsapp,
     blocked: prev.blocked,
-    points: prev.points ?? 0,
-    pointsLifetime: prev.pointsLifetime ?? 0,
   };
 }
 

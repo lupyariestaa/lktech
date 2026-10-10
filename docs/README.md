@@ -58,6 +58,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-06 | [Upgrade Halaman Beranda — Dokumen Fase & Eksekusi (H0–H8)](2026-10-06-upgrade-beranda.md) | ✅ Selesai (kode) |
 | 2026-10-09 | [Upgrade Sistem Blog (B0–B8: editor, media, dashboard, UI publik, SEO)](2026-10-09-upgrade-blog.md) | Selesai (kode) |
 | 2026-10-10 | [Hapus Total Sistem Testimoni (analisis dampak + task)](2026-10-10-task-hapus-sistem-testimoni.md) | ✅ Selesai (kode) |
+| 2026-10-11 | [Hapus Total Sistem Poin / Loyalitas (analisis dampak + task)](2026-10-11-task-hapus-sistem-poin.md) | ✅ Selesai (kode) |
 
 ### Dokumen pendukung (referensi & setup)
 

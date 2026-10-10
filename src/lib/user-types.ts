@@ -38,11 +38,6 @@ export type UserProfile = {
   whatsapp: string;
   /** User diblokir (mis. spam) — penanda admin. */
   blocked: boolean;
-  /* ===== Program loyalitas/poin (Tema 2.1) — opsional (backward-compat) ===== */
-  /** Saldo poin saat ini. */
-  points?: number;
-  /** Total poin sepanjang waktu (untuk tier). */
-  pointsLifetime?: number;
 };
 
 /** Batas maksimum entri yang boleh disimpan user (anti-abuse). */

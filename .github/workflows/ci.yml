@@ -48,10 +48,8 @@ jobs:
           npm run test:audit
           npm run test:leads
           npm run test:report
-          npm run test:loyalty
           npm run test:wishlist
           npm run test:blog
-          npm run test:taman
 
       - name: Build
         run: npm run build

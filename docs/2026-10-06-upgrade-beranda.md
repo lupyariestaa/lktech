@@ -281,7 +281,7 @@ npm run test:metrics && npm run test:fulfillment && npm run test:downloads `
  && npm run test:expiry && npm run test:bundle && npm run test:stock `
  && npm run test:cart && npm run test:status && npm run test:reviews `
  && npm run test:audit && npm run test:leads && npm run test:report `
- && npm run test:loyalty && npm run test:wishlist
+ && npm run test:wishlist
 ```
 Plus uji manual (**mobile & desktop**): hero, anchor nav, semua CTA, form newsletter, a11y (keyboard + `prefers-reduced-motion`), cepat (LCP wajar).
 
