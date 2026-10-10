@@ -101,14 +101,21 @@ export async function POST(
     if (!product || !product.active) {
       return NextResponse.json({ error: "Produk tidak ditemukan." }, { status: 404 });
     }
+    // Ulasan dimatikan untuk produk ini (gate juga dijaga di server, bukan hanya UI).
+    if (product.reviewsEnabled === false) {
+      return NextResponse.json(
+        { error: "Ulasan untuk produk ini sedang dinonaktifkan." },
+        { status: 403 },
+      );
+    }
 
-    // Verifikasi pembelian (order `selesai` milik user memuat produk ini).
+    // Verifikasi pembelian (order milik user memuat produk ini & sudah dibayar).
     const order = await findCompletedOrderForProduct(check.uid, slug);
     if (!order) {
       return NextResponse.json(
         {
           error:
-            "Ulasan hanya untuk pembeli. Selesaikan pesanan produk ini terlebih dahulu.",
+            "Ulasan hanya untuk pembeli. Pastikan pesanan produk ini sudah dibayar terlebih dahulu.",
           code: "not_verified_buyer",
         },
         { status: 403 },

@@ -328,9 +328,22 @@ export async function getOrderById(id: string): Promise<Order | null> {
 }
 
 /**
- * Cari order MILIK `uid` berstatus `selesai` yang memuat produk `slug`
- * (FASE R — verifikasi pembelian untuk ulasan). Mengembalikan order pertama
- * yang cocok, atau null. Menyaring di memori (jumlah order per user kecil).
+ * Status order yang dianggap "sudah dibayar / layak diulas" (FASE R).
+ * Pelanggan boleh mengulas bila pembayaran sudah diterima dan order belum
+ * dibatalkan/kedaluwarsa. `menunggu_bayar` & `menunggu_konfirmasi` (JASA belum
+ * dikonfirmasi) TIDAK termasuk.
+ */
+export const REVIEW_ELIGIBLE_STATUSES: readonly OrderStatus[] = [
+  "dibayar",
+  "diproses",
+  "selesai",
+];
+
+/**
+ * Cari order MILIK `uid` yang memuat produk `slug` dan sudah dibayar/layak diulas
+ * (status ∈ REVIEW_ELIGIBLE_STATUSES). Mengembalikan order pertama yang cocok,
+ * atau null. Menyaring di memori (jumlah order per user kecil) agar tidak
+ * bergantung index komposit `uid`+status+items.
  */
 export async function findCompletedOrderForProduct(
   uid: string,
@@ -338,15 +351,13 @@ export async function findCompletedOrderForProduct(
 ): Promise<Order | null> {
   const db = getAdminDb();
   if (!db) return null;
-  const snap = await db
-    .collection(COLLECTION)
-    .where("uid", "==", uid)
-    .where("status", "==", "selesai")
-    .get();
+  // Ambil semua order user, saring status & produk di memori.
+  const snap = await db.collection(COLLECTION).where("uid", "==", uid).get();
   const orders = snap.docs
     .map((doc) =>
       normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
     )
+    .filter((o) => (REVIEW_ELIGIBLE_STATUSES as readonly string[]).includes(o.status))
     .filter((o) => o.items.some((it) => it.slug === productSlug))
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   return orders[0] ?? null;

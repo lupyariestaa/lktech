@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildModerationPatch,
   computeRatingSummary,
+  MODERATION_DELETE,
   normalizeRatingSummary,
   isValidRating,
   ratingPercent,
@@ -73,4 +75,31 @@ test("ratingPercent: hitung persen & jaga dari pembagi 0", () => {
   assert.equal(ratingPercent(1, 4), 25);
   assert.equal(ratingPercent(3, 3), 100);
   assert.equal(ratingPercent(0, 0), 0);
+});
+
+/* ---------- buildModerationPatch (anti-undefined; bug moderasi) ---------- */
+
+test("buildModerationPatch: approve tidak memuat nilai undefined", () => {
+  const p = buildModerationPatch("approved", "admin@x.com", "2026-10-10T00:00:00Z");
+  assert.equal(p.status, "approved");
+  assert.equal(p.moderatedBy, "admin@x.com");
+  // Approve → tandai hapus alasan penolakan lama (bukan undefined).
+  assert.equal(p.rejectionReason, MODERATION_DELETE);
+  for (const [k, v] of Object.entries(p)) {
+    assert.notEqual(v, undefined, `field ${k} bernilai undefined`);
+  }
+});
+
+test("buildModerationPatch: reject dengan alasan menyimpan alasan", () => {
+  const p = buildModerationPatch("rejected", "admin@x.com", "2026-10-10T00:00:00Z", "  spam  ");
+  assert.equal(p.status, "rejected");
+  assert.equal(p.rejectionReason, "spam");
+});
+
+test("buildModerationPatch: reject tanpa alasan tidak set rejectionReason (tanpa undefined)", () => {
+  const p = buildModerationPatch("rejected", "admin@x.com", "2026-10-10T00:00:00Z");
+  assert.equal("rejectionReason" in p, false);
+  for (const [k, v] of Object.entries(p)) {
+    assert.notEqual(v, undefined, `field ${k} bernilai undefined`);
+  }
 });

@@ -116,3 +116,36 @@ export function ratingPercent(count: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((count / total) * 100);
 }
+
+/**
+ * Bangun patch moderasi ulasan (murni, teruji). PENTING: tidak pernah memuat
+ * nilai `undefined` (Firestore Admin SDK menolak `undefined`). Untuk approve,
+ * `rejectionReason` ditandai `${DELETE}` agar pemanggil menghapus field-nya.
+ *
+ * `DELETE` = sentinel string; `reviews.ts` menerjemahkannya menjadi
+ * `FieldValue.delete()`.
+ */
+export const MODERATION_DELETE = "__delete__";
+
+export function buildModerationPatch(
+  status: ReviewStatus,
+  moderatedBy: string,
+  nowISO: string,
+  rejectionReason?: string,
+): Record<string, string> {
+  const patch: Record<string, string> = {
+    status,
+    moderatedBy,
+    moderatedAtISO: nowISO,
+    updatedAtISO: nowISO,
+  };
+  const reason = (rejectionReason ?? "").trim();
+  if (status === "rejected") {
+    // Hanya set bila ada alasan; kalau kosong, biarkan (tanpa undefined).
+    if (reason) patch.rejectionReason = reason;
+  } else {
+    // Approve: tandai agar alasan penolakan lama dihapus dari dokumen.
+    patch.rejectionReason = MODERATION_DELETE;
+  }
+  return patch;
+}

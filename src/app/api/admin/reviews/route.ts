@@ -89,7 +89,8 @@ export async function PATCH(req: Request) {
       meta: { status: parsed.data.status },
     });
     // Poin bonus saat ulasan DISETUJUI (Tema 2.1) — idempoten per review.
-    if (parsed.data.status === "approved") {
+    // Dilewati bila `uid` kosong (data legacy/seed) agar tidak menulis ke dokumen user kosong.
+    if (parsed.data.status === "approved" && review.uid) {
       try {
         const { awardReviewPoints } = await import("@/lib/loyalty");
         await awardReviewPoints(review.uid, review.id);
@@ -115,11 +116,12 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    const ok = await deleteReview(id);
-    if (!ok) {
+    const productSlug = await deleteReview(id);
+    if (!productSlug) {
       return NextResponse.json({ error: "Ulasan tidak ditemukan." }, { status: 404 });
     }
     revalidatePath("/produk");
+    revalidatePath(`/produk/${productSlug}`);
     await recordAdminAudit({
       action: "review.delete",
       actor: check.email,

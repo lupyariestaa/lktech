@@ -1,8 +1,11 @@
 import "server-only";
+import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import {
+  buildModerationPatch,
   computeRatingSummary,
   isValidRating,
+  MODERATION_DELETE,
   normalizeRatingSummary,
   REVIEW_BODY_MAX,
   REVIEW_TITLE_MAX,
@@ -71,8 +74,9 @@ export type CreateReviewResult =
   | { ok: false; reason: "invalid_rating" | "duplicate" | "unavailable" };
 
 /**
- * Buat ulasan baru. Idempoten per (orderId, productSlug): bila sudah ada,
- * kembalikan `duplicate`. Selalu berstatus `pending` (moderasi wajib).
+ * Buat ulasan baru. Idempoten per (orderId, productSlug): id dokumen
+ * deterministik `{orderId}_{productSlug}` + `.create()` (gagal bila sudah ada),
+ * sehingga dua klik cepat tidak bisa membuat ulasan ganda. Selalu `pending`.
  */
 export async function createReview(
   input: CreateReviewInput,
@@ -80,15 +84,6 @@ export async function createReview(
   const db = getAdminDb();
   if (!db) return { ok: false, reason: "unavailable" };
   if (!isValidRating(input.rating)) return { ok: false, reason: "invalid_rating" };
-
-  // Idempotensi: cek apakah (orderId, productSlug) sudah pernah diulas.
-  const existing = await db
-    .collection(COLLECTION)
-    .where("orderId", "==", input.orderId)
-    .where("productSlug", "==", input.productSlug)
-    .limit(1)
-    .get();
-  if (!existing.empty) return { ok: false, reason: "duplicate" };
 
   const nowISO = new Date().toISOString();
   const payload = {
@@ -103,8 +98,26 @@ export async function createReview(
     orderId: input.orderId,
     createdAtISO: nowISO,
   };
-  const ref = await db.collection(COLLECTION).add(payload);
-  return { ok: true, review: normalizeReview(ref.id, payload) };
+  // Buang field `undefined` sebelum menulis (Admin SDK menolak undefined).
+  const clean: Record<string, unknown> = { ...payload };
+  for (const k of ["title", "body"]) {
+    if (clean[k] === undefined) delete clean[k];
+  }
+
+  // ID deterministik: satu ulasan per (order, produk). `_` pemisah aman untuk doc id.
+  const docId = `${input.orderId}_${input.productSlug}`.replace(/\//g, "_");
+  const ref = db.collection(COLLECTION).doc(docId);
+  try {
+    await ref.create(clean);
+  } catch (err) {
+    // `.create()` gagal bila dokumen sudah ada (ALREADY_EXISTS) → duplikat.
+    // Kegagalan lain (mis. jaringan) dibedakan agar tidak salah lapor duplikat.
+    const exists = await ref.get();
+    if (exists.exists) return { ok: false, reason: "duplicate" };
+    console.error("[reviews] gagal membuat ulasan:", err);
+    return { ok: false, reason: "unavailable" };
+  }
+  return { ok: true, review: normalizeReview(docId, clean) };
 }
 
 /** Daftar ulasan DISETUJUI sebuah produk (terbaru dulu). */
@@ -190,16 +203,15 @@ export async function moderateReview(
   const doc = await ref.get();
   if (!doc.exists) return null;
 
-  await ref.set(
-    {
-      status,
-      moderatedBy,
-      moderatedAtISO: new Date().toISOString(),
-      updatedAtISO: new Date().toISOString(),
-      rejectionReason: status === "rejected" ? (rejectionReason ?? "") || undefined : undefined,
-    },
-    { merge: true },
-  );
+  const nowISO = new Date().toISOString();
+  // PENTING: Firestore Admin SDK MENOLAK nilai `undefined` (akan throw).
+  // Helper murni membangun patch tanpa undefined (lihat buildModerationPatch).
+  const built = buildModerationPatch(status, moderatedBy, nowISO, rejectionReason);
+  const patch: Record<string, unknown> = { ...built };
+  if (patch.rejectionReason === MODERATION_DELETE) {
+    patch.rejectionReason = FieldValue.delete();
+  }
+  await ref.set(patch, { merge: true });
 
   const updated = normalizeReview(id, (await ref.get()).data() ?? {});
   await recomputeProductRating(updated.productSlug);
@@ -207,16 +219,18 @@ export async function moderateReview(
 }
 
 /** Hapus ulasan (permanen) + recompute agregat produk. */
-export async function deleteReview(id: string): Promise<boolean> {
+/** Hapus ulasan (permanen) + recompute agregat produk.
+ *  Mengembalikan slug produk yang terdampak (untuk revalidate), atau null bila tak ada. */
+export async function deleteReview(id: string): Promise<string | null> {
   const db = getAdminDb();
-  if (!db) return false;
+  if (!db) return null;
   const ref = db.collection(COLLECTION).doc(id);
   const doc = await ref.get();
-  if (!doc.exists) return false;
+  if (!doc.exists) return null;
   const review = normalizeReview(id, doc.data() ?? {});
   await ref.delete();
   await recomputeProductRating(review.productSlug);
-  return true;
+  return review.productSlug;
 }
 
 /**
