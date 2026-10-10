@@ -466,6 +466,7 @@ export async function redeemCoupon(
         { merge: true },
       );
     });
+    invalidateCouponStatsCache();
     return { ok: true };
   } catch (err) {
     const reason = err instanceof Error ? err.message : "redeem_failed";
@@ -477,14 +478,18 @@ export async function redeemCoupon(
  * Kembalikan kuota kupon (`KP-C2`) — dipanggil saat order dibatalkan/dihapus.
  * Idempoten bila pemanggil hanya memanggil pada transisi status yang tepat
  * (lihat pemanggilan di API admin). Dekremen `usageCount` (tidak negatif) +
- * `redemptions/{uid}` (jika ada). Tidak melempar.
+ * `redemptions/{uid}` (jika ada).
+ *
+ * Mengembalikan `true` bila berhasil (atau tidak ada yang perlu dikembalikan),
+ * `false` bila terjadi kegagalan — agar pemanggil yang butuh (mis. hard-delete
+ * order, OR-A5) bisa membatalkan operasi & tidak membuat kuota bocor.
  */
 export async function restoreCouponUsage(
   id: string,
   uid: string,
-): Promise<void> {
+): Promise<boolean> {
   const db = getAdminDb();
-  if (!db) return;
+  if (!db) return false;
 
   const ref = db.collection(COLLECTION).doc(id);
   const redemptionRef = ref.collection(REDEMPTIONS).doc(uid);
@@ -513,8 +518,10 @@ export async function restoreCouponUsage(
         );
       }
     });
+    return true;
   } catch (err) {
     console.error("[coupons] gagal mengembalikan kuota kupon:", err);
+    return false;
   }
 }
 
@@ -570,8 +577,25 @@ export type CouponStat = {
  * Dipakai kartu kupon admin (`KP-M2`) + ekspor CSV. Menyaring order yang
  * memiliki snapshot `coupon`. Best-effort — mengembalikan map kosong bila
  * Admin SDK tak tersedia.
+ *
+ * OR-C3: hasil di-CACHE singkat (in-memory + TTL) karena memuat seluruh koleksi
+ * `orders`; dipanggil berulang oleh halaman kupon.
  */
-export async function getCouponStats(): Promise<Record<string, CouponStat>> {
+const COUPON_STATS_TTL_MS = 60_000;
+let couponStatsCache: { at: number; value: Record<string, CouponStat> } | null = null;
+
+export function invalidateCouponStatsCache(): void {
+  couponStatsCache = null;
+}
+
+export async function getCouponStats(
+  opts: { bypassCache?: boolean } = {},
+): Promise<Record<string, CouponStat>> {
+  const now = Date.now();
+  if (!opts.bypassCache && couponStatsCache && now - couponStatsCache.at < COUPON_STATS_TTL_MS) {
+    return couponStatsCache.value;
+  }
+
   const db = getAdminDb();
   if (!db) return {};
   try {
@@ -604,6 +628,7 @@ export async function getCouponStats(): Promise<Record<string, CouponStat>> {
       }
       stats[couponId] = entry;
     });
+    couponStatsCache = { at: Date.now(), value: stats };
     return stats;
   } catch (err) {
     console.error("[coupons] gagal menghitung statistik kupon:", err);

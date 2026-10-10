@@ -3,6 +3,12 @@ import type { Order, OrderStatus } from "@/lib/order-types";
 import { ORDER_STATUS_LABEL } from "@/lib/order-types";
 import { formatRupiah, shortOrderCode } from "@/lib/format";
 import { SITE } from "@/lib/site";
+import {
+  RESEND_ENDPOINT,
+  getResendApiKey,
+  getFromEmail,
+  getReplyTo,
+} from "@/lib/email-config";
 
 /**
  * Email TRANSAKSIONAL ke PEMBELI (berbeda dari notifikasi admin di `email.ts`).
@@ -19,12 +25,10 @@ import { SITE } from "@/lib/site";
  * - Semua teks dinamis di-escape untuk HTML (anti-XSS).
  */
 
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
-
-const apiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.EMAIL_FROM ?? "LKTech <onboarding@resend.dev>";
+const apiKey = getResendApiKey();
+const fromEmail = getFromEmail();
 /** Alamat balasan (agar jawaban pembeli masuk ke admin, bukan ke diri sendiri). */
-const replyTo = process.env.ORDER_REPLY_TO || process.env.SMTP_REPLY_TO || undefined;
+const replyTo = getReplyTo();
 
 export type EmailResult = {
   ok: boolean;

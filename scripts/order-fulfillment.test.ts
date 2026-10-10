@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   fulfillmentTypeForCategory,
   fulfillmentTypeForCategories,
+  effectiveFulfillment,
 } from "../src/lib/order-fulfillment.ts";
 
 /**
@@ -35,4 +36,18 @@ test("keranjang semua digital → INSTAN", () => {
     fulfillmentTypeForCategories(["template", "software", "ebook"]),
     "instan",
   );
+});
+
+/* ---- OR-B7: effectiveFulfillment (order lama tanpa field) ---- */
+
+test("effectiveFulfillment: 'jasa' tetap jasa", () => {
+  assert.equal(effectiveFulfillment("jasa"), "jasa");
+});
+
+test("effectiveFulfillment: 'instan' tetap instan", () => {
+  assert.equal(effectiveFulfillment("instan"), "instan");
+});
+
+test("effectiveFulfillment: undefined (order lama) → instan", () => {
+  assert.equal(effectiveFulfillment(undefined), "instan");
 });

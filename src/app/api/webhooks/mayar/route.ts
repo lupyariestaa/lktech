@@ -12,20 +12,23 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/webhooks/mayar — menerima notifikasi `payment.received` dari Mayar.
  *
- * Keamanan & keandalan (lihat `docs/2026-10-06-fase-konversi-closing.md` §3.4):
- * 1. **Verifikasi lunak** via shared-secret: bila `MAYAR_WEBHOOK_TOKEN` diisi,
- *    token dicocokkan (query `?token=` ATAU header `x-webhook-token`, toleran
- *    terhadap URL-encoding). Bila TIDAK cocok, cukup dicatat sebagai peringatan
- *    (TIDAK memblok 401) — keamanan tetap terjaga oleh korelasi order,
- *    idempotensi, dan pencocokan nominal. (Pemblokiran keras menyulitkan saat
- *    gateway mengubah/memotong query string.)
+ * Keamanan & keandalan:
+ * 1. **Verifikasi shared-secret (KUAT, OR-A4)**: bila `MAYAR_WEBHOOK_TOKEN`
+ *    diisi, token WAJIB cocok (query `?token=` ATAU header `x-webhook-token`,
+ *    toleran URL-encoding) — bila TIDAK cocok → **401, tidak diproses**. Bila env
+ *    KOSONG, verifikasi dinonaktifkan tapi dicatat peringatan (keamanan fallback:
+ *    korelasi order + nominal). Disarankan mengisi token di produksi.
+ *    (Event uji "Test URL" Mayar dikecualikan — lihat `isTestingEvent`.)
  * 2. **Korelasi order**: dari `data.extraData.orderId` (di-echo Mayar). Bila
  *    tidak ada, coba `data.productId` sebagai fallback (order id kita).
- * 3. **Idempoten**: `markOrderPaid` tidak menerapkan perubahan bila order sudah
- *    `dibayar`; webhook ganda aman.
+ * 3. **Idempoten & atomik**: `markOrderPaid` transaksional — tidak menerapkan
+ *    perubahan bila order sudah lunas; webhook ganda aman.
  * 4. **Cocokkan nominal**: bila `amount` yang diterima KURANG dari `order.total`,
  *    JANGAN tandai lunas — catat mismatch & beri 200 agar Mayar tak retry.
- * 5. Selalu balas **200 cepat** (jangan memblok Mayar); fulfillment best-effort.
+ * 5. **Guard status terminal (OR-A2)**: pembayaran untuk order `dibatalkan`/
+ *    `kedaluwarsa`/`selesai` TIDAK menimpa status — dicatat sebagai `payment_late`.
+ * 6. Selalu balas **200 cepat** (kecuali 401 token salah / 503 DB); fulfillment
+ *    best-effort.
  */
 export async function POST(req: Request) {
   const rl = rateLimit("webhook:mayar", 60, 60_000);
@@ -41,10 +44,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false }, { status: 503 });
   }
 
-  // ===== 1. Verifikasi shared-secret (LUNAK — tidak memblok) =====
-  verifyTokenSoft(req);
-
-  // ===== Parse payload =====
+  // ===== Parse payload (butuh body untuk mendeteksi event "testing") =====
   let body: unknown;
   try {
     body = await req.json();
@@ -55,9 +55,16 @@ export async function POST(req: Request) {
   // ===== Event "testing": tombol "Test URL" di dashboard Mayar =====
   // Mayar menganggap test BERHASIL bila endpoint membalas 200 dengan format
   // respons standar mereka (`{statusCode, messages}`). Kita balas persis itu
-  // agar tombol Test URL hijau — TANPA memproses pembayaran apa pun.
+  // agar tombol Test URL hijau — TANPA memproses pembayaran apa pun. Event uji
+  // dikecualikan dari verifikasi token (Mayar tak menjamin token pada test).
   if (isTestingEvent(body)) {
     return NextResponse.json({ statusCode: 200, messages: "success", ok: true });
+  }
+
+  // ===== 1. Verifikasi shared-secret (KUAT — blok bila token diisi & salah) =====
+  if (!verifyToken(req)) {
+    console.warn("[webhook/mayar] token webhook tidak cocok — request ditolak.");
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
   const payload = extractPaymentEvent(body);
@@ -81,6 +88,8 @@ export async function POST(req: Request) {
         `[webhook/mayar] payment_mismatch order=${orderId} received=${amount} expected=${order.total}`,
       );
       obs.paymentMismatch({ orderId, received: amount, expected: order.total });
+      // OR-A6: ini KURANG BAYAR (bukan "gagal") — status order dibiarkan
+      // `menunggu_bayar` agar pembeli bisa melunasi; cacat nominal dicatat.
       await db
         .collection("orders")
         .doc(orderId)
@@ -91,23 +100,36 @@ export async function POST(req: Request) {
               expected: order.total,
               atISO: new Date().toISOString(),
             },
-            payment: { ...(order.payment ?? { provider: "mayar", status: "belum_bayar" }), status: "gagal" },
           },
           { merge: true },
         );
       return NextResponse.json({ ok: true, mismatch: true });
     }
 
-    // ===== 3. Tandai lunas (idempoten) → status `dibayar` =====
+    // ===== 3. Tandai lunas (idempoten, ATOMIK) → status `dibayar` =====
     const targetStatus: OrderStatus = "dibayar";
-    const { applied } = await markOrderPaid(
+    const { applied, reason } = await markOrderPaid(
       orderId,
       { amount: typeof amount === "number" ? amount : order.total, method, transactionId },
       targetStatus,
     );
 
     if (!applied) {
-      // Sudah dibayar sebelumnya — idempoten, tak ada aksi.
+      if (reason === "not_payable") {
+        // OR-A2: pembayaran datang untuk order yang sudah terminal
+        // (dibatalkan/kedaluwarsa/selesai). JANGAN timpa status/kuota — catat
+        // sebagai anomali agar admin bisa menindak (mis. refund manual).
+        console.error(
+          `[webhook/mayar] late_payment order=${orderId} status=${order.status} received=${amount ?? "?"}`,
+        );
+        obs.paymentLate({
+          orderId,
+          amount: typeof amount === "number" ? amount : order.total,
+          orderStatus: order.status,
+        });
+        return NextResponse.json({ ok: true, not_payable: true });
+      }
+      // Sudah dibayar sebelumnya (atau tidak ditemukan) — idempoten, tak ada aksi.
       return NextResponse.json({ ok: true, already_paid: true });
     }
 
@@ -139,18 +161,23 @@ function isTestingEvent(body: unknown): boolean {
 }
 
 /**
- * Verifikasi token webhook secara LUNAK.
- * - Bila `MAYAR_WEBHOOK_TOKEN` kosong → verifikasi dinonaktifkan (diam).
- * - Bila token cocok (toleran URL-encoding) → dianggap valid (diam).
- * - Bila tidak cocok / tidak ada → CATAT peringatan saja (TIDAK memblok).
+ * Verifikasi token webhook (KUAT, OR-A4).
+ * - Bila `MAYAR_WEBHOOK_TOKEN` KOSONG → verifikasi dinonaktifkan tetapi dicatat
+ *   peringatan (mode fallback; disarankan mengisi token di produksi). → `true`.
+ * - Bila token DIISI → WAJIB cocok (toleran URL-encoding, dari query `?token=`
+ *   ATAU header `x-webhook-token`). Tidak cocok → `false` (pemanggil balas 401).
  *
- * Keamanan sesungguhnya tetap terjaga: order dicocokkan via `extraData.orderId`
- * (hanya dibuat server saat checkout), perubahan status idempoten, dan nominal
- * diverifikasi ulang. Webhook "asing" tanpa orderId valid takkan berefek.
+ * Keamanan berlapis tetap ada (korelasi order + nominal + guard status), tetapi
+ * token kini benar-benar mengikat saat dikonfigurasi.
  */
-function verifyTokenSoft(req: Request): void {
+function verifyToken(req: Request): boolean {
   const secret = process.env.MAYAR_WEBHOOK_TOKEN?.trim();
-  if (!secret) return;
+  if (!secret) {
+    console.warn(
+      "[webhook/mayar] MAYAR_WEBHOOK_TOKEN kosong — verifikasi token dinonaktifkan (disarankan diisi di produksi).",
+    );
+    return true;
+  }
 
   const url = new URL(req.url);
   const candidates = [
@@ -167,13 +194,7 @@ function verifyTokenSoft(req: Request): void {
     }
   };
   const expected = normalize(secret);
-  const ok = candidates.some((c) => normalize(c) === expected);
-  if (!ok) {
-    console.warn(
-      "[webhook/mayar] token webhook tidak cocok (dilanjutkan; dicek lewat orderId).",
-      candidates.length ? "" : "(token tidak dikirim)",
-    );
-  }
+  return candidates.some((c) => normalize(c) === expected);
 }
 
 /** Hasil ekstraksi event pembayaran dari payload Mentah. */

@@ -4,12 +4,15 @@ import {
   type OrderPayment,
   type PaymentStatus,
 } from "@/lib/payment-types";
+import { coerceISODate } from "@/lib/order-time-pure";
+import { ORDER_STATUS_LIST } from "@/lib/order-status-pure";
 
 // Re-export agar konsumen order cukup impor dari satu tempat.
 export type { FulfillmentType, OrderPayment };
 
 /**
- * Status pesanan.
+ * STATUS pesanan (OR-E3): diturunkan dari daftar kanonik di `order-status-pure`
+ * agar tidak ada duplikasi definisi yang bisa drift.
  *
  * - **JASA**: `baru` → `menunggu_konfirmasi` → `diproses` → `selesai`.
  * - **INSTAN**: `baru` → `menunggu_bayar` → `dibayar` → (`diproses`/`selesai`).
@@ -18,16 +21,7 @@ export type { FulfillmentType, OrderPayment };
  * Status lama (`baru|diproses|selesai|dibatalkan`) tetap valid untuk order
  * yang dibuat sebelum fitur pembayaran online (backward-compatible).
  */
-export const ORDER_STATUSES = [
-  "baru",
-  "menunggu_bayar",
-  "dibayar",
-  "menunggu_konfirmasi",
-  "diproses",
-  "selesai",
-  "dibatalkan",
-  "kedaluwarsa",
-] as const;
+export const ORDER_STATUSES = ORDER_STATUS_LIST;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 /** Label tampilan status pesanan. */
@@ -187,7 +181,12 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
     : "baru";
 
   const total = num(data.total);
-  const subtotal = num(data.subtotal) || total;
+  // OR-B6: pakai nilai `subtotal` bila memang ada (number valid), else fallback
+  // ke `total` (order lama). Menghindari `||` yang menutupi subtotal 0 valid.
+  const subtotal =
+    typeof data.subtotal === "number" && Number.isFinite(data.subtotal)
+      ? data.subtotal
+      : total;
 
   const payment = normalizeOrderPayment(data.payment);
   const fulfillment =
@@ -224,7 +223,8 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
     downloadTokenId: str(data.downloadTokenId) || undefined,
     whatsapp: str(data.whatsapp),
     message: str(data.message),
-    createdAt: str(data.createdAtISO) || str(data.createdAt),
+    createdAt:
+      coerceISODate(data.createdAtISO) || coerceISODate(data.createdAt),
     confirmationEmailAt: str(data.confirmationEmailAt) || undefined,
     confirmationEmailStatus: str(data.confirmationEmailStatus) || undefined,
     lastStatusEmailAt: str(data.lastStatusEmailAt) || undefined,
@@ -240,4 +240,16 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
 // Logika kedaluwarsa dipindah ke modul murni (bebas impor runtime) agar dapat
 // diuji Node tanpa resolver alias — lihat `@/lib/order-expiry-pure`.
 export { isOrderExpired, DEFAULT_EXPIRY_TTL_MS } from "@/lib/order-expiry-pure";
+
+// Predikat status (murni) juga di-reekspor agar konsumen order cukup impor dari
+// satu tempat. Lihat `@/lib/order-status-pure`.
+export {
+  isPaidStatus,
+  isTerminalStatus,
+  isPayableStatus,
+  isAwaitingPayment,
+  isTransitionAllowed,
+  shouldRestoreCoupon,
+  shouldSendStatusEmail,
+} from "@/lib/order-status-pure";
 

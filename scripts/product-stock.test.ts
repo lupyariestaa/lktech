@@ -5,6 +5,7 @@ import {
   productTotalStock,
   isStockOut,
   effectiveStock,
+  evaluatePurchase,
   LOW_STOCK_THRESHOLD,
 } from "../src/lib/product-format.ts";
 
@@ -85,4 +86,92 @@ test("productTotalStock: multi-varian tanpa stok → null", () => {
     productTotalStock({ variants: [{}, {}] as never }),
     null,
   );
+});
+
+/* -------------------------------------------------------------------------- */
+/* OR-B4/B5: evaluatePurchase (aturan kelayakan beli terpusat)                 */
+/* -------------------------------------------------------------------------- */
+
+const single = {
+  slug: "p1",
+  name: "Produk",
+  price: 50000,
+  soldOut: false,
+  active: true,
+  variants: [],
+};
+
+test("evaluatePurchase: produk tunggal valid → ok + harga", () => {
+  const r = evaluatePurchase(single, { qty: 2 });
+  assert.equal(r.ok, true);
+  if (r.ok) assert.equal(r.price, 50000);
+});
+
+test("evaluatePurchase: produk nonaktif → code product_inactive", () => {
+  const r = evaluatePurchase({ ...single, active: false }, { qty: 1 });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.code, "product_inactive");
+});
+
+test("evaluatePurchase: produk tunggal stok habis → out_of_stock", () => {
+  const r = evaluatePurchase({ ...single, stock: 0 }, { qty: 1 });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.code, "out_of_stock");
+});
+
+test("evaluatePurchase: qty melebihi stok → insufficient_stock", () => {
+  const r = evaluatePurchase({ ...single, stock: 3 }, { qty: 4 });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.code, "insufficient_stock");
+});
+
+test("evaluatePurchase: harga 0 → no_price", () => {
+  const r = evaluatePurchase({ ...single, price: 0 }, { qty: 1 });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.code, "no_price");
+});
+
+const multi = {
+  slug: "p2",
+  name: "Paket",
+  price: 0,
+  soldOut: false,
+  active: true,
+  variants: [
+    { slug: "basic", name: "Basic", price: 100000, soldOut: false, stock: 5 },
+    { slug: "pro", name: "Pro", price: 200000, soldOut: true, stock: 5 },
+  ],
+};
+
+test("evaluatePurchase: multi-varian tanpa pilih varian → variant_required", () => {
+  const r = evaluatePurchase(multi, { qty: 1 });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.code, "variant_required");
+});
+
+test("evaluatePurchase: varian tak ada → variant_not_found", () => {
+  const r = evaluatePurchase(multi, { variantSlug: "xxx", qty: 1 });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.code, "variant_not_found");
+});
+
+test("evaluatePurchase: varian valid → ok + harga varian", () => {
+  const r = evaluatePurchase(multi, { variantSlug: "basic", qty: 2 });
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.price, 100000);
+    assert.equal(r.variantSlug, "basic");
+  }
+});
+
+test("evaluatePurchase: varian soldOut → soldout", () => {
+  const r = evaluatePurchase(multi, { variantSlug: "pro", qty: 1 });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.code, "soldout");
+});
+
+test("evaluatePurchase: varian qty > stok → insufficient_stock", () => {
+  const r = evaluatePurchase(multi, { variantSlug: "basic", qty: 6 });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.equal(r.code, "insufficient_stock");
 });

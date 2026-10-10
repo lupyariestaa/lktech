@@ -1,8 +1,10 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
-import type { Query } from "firebase-admin/firestore";
+import { AggregateField, type Query } from "firebase-admin/firestore";
 import {
   isOrderExpired,
+  isPaidStatus,
+  isPayableStatus,
   normalizeOrder,
   ORDER_STATUSES,
   type Order,
@@ -45,7 +47,26 @@ export async function createOrder(
   if (data.fulfillment) payload.fulfillment = data.fulfillment;
 
   const ref = await db.collection(COLLECTION).add(payload);
+  invalidateOrdersSummaryCache();
   return normalizeOrder({ ...payload, id: ref.id, createdAtISO: nowISO });
+}
+
+/**
+ * Apakah error Firestore menandakan composite index belum dibuat
+ * (`FAILED_PRECONDITION` / "requires an index"). Dipakai untuk fallback aman.
+ */
+function isMissingIndexError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    /requires an index/i.test(msg) ||
+    /FAILED_PRECONDITION/i.test(msg) ||
+    /failed-precondition/i.test(msg)
+  );
+}
+
+/** Urutkan order terbaru lebih dulu (pakai `createdAt` yang sudah dinormalisasi). */
+function sortByCreatedAtDesc(orders: Order[]): Order[] {
+  return [...orders].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 /** Mengambil pesanan milik satu user (terbaru lebih dulu). */
@@ -53,17 +74,30 @@ export async function getOrdersByUser(uid: string): Promise<Order[]> {
   const db = getAdminDb();
   if (!db) return [];
 
-  // CATATAN: sengaja TANPA `orderBy` di query. Kombinasi `where(uid)` +
-  // `orderBy(createdAtISO)` menuntut composite index Firestore; bila index
-  // belum ada, query gagal dan riwayat pembeli tampak kosong. Karena jumlah
-  // order per user kecil, urutkan di memori — hasil sama, tanpa index.
-  const snap = await db.collection(COLLECTION).where("uid", "==", uid).get();
-
-  return snap.docs
-    .map((doc) =>
+  // Jalur utama: query NATIVE dengan orderBy (index `uid`+`createdAtISO` sudah
+  // dideklarasikan di `firestore.indexes.json`). Fallback ke memori bila index
+  // belum dipublikasikan (deploy lama) agar riwayat pembeli tidak tampak kosong.
+  try {
+    const snap = await db
+      .collection(COLLECTION)
+      .where("uid", "==", uid)
+      .orderBy("createdAtISO", "desc")
+      .get();
+    return snap.docs.map((doc) =>
       normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
-    )
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    );
+  } catch (err) {
+    if (!isMissingIndexError(err)) throw err;
+    console.warn(
+      "[orders] index uid+createdAtISO belum tersedia — fallback urut di memori.",
+    );
+    const snap = await db.collection(COLLECTION).where("uid", "==", uid).get();
+    return sortByCreatedAtDesc(
+      snap.docs.map((doc) =>
+        normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
+      ),
+    );
+  }
 }
 
 // ===== Admin: daftar, ringkasan, ubah status =====
@@ -89,11 +123,24 @@ export type OrdersSummary = {
 
 /**
  * Ringkasan pesanan untuk badge sidebar & metrik dashboard.
- * Memakai count() aggregation (tanpa mengunduh dokumen). Omzet dihitung
- * dari jumlah `total` pesanan berstatus "selesai" (query terbatas, hanya
- * field yang dibutuhkan).
+ * - Count per status via count() aggregation (tanpa unduh dokumen).
+ * - Omzet pesanan "selesai": utamakan SUM aggregation (server-side); fallback ke
+ *   proyeksi `select("total")` bila versi SDK/emulator tak mendukung.
+ * - OR-C2: hasil di-CACHE singkat (in-memory + TTL) & di-dedupe antar-panggilan
+ *   bersamaan, karena ringkasan dipanggil sering (sidebar polling + tiap ubah
+ *   status). TTL kecil menjaga data tetap segar.
  */
-export async function getOrdersSummary(): Promise<OrdersSummary> {
+const SUMMARY_TTL_MS = 60_000;
+let summaryCache: { at: number; value: OrdersSummary } | null = null;
+let summaryInflight: Promise<OrdersSummary> | null = null;
+
+export function invalidateOrdersSummaryCache(): void {
+  summaryCache = null;
+}
+
+export async function getOrdersSummary(
+  opts: { bypassCache?: boolean } = {},
+): Promise<OrdersSummary> {
   const empty: OrdersSummary = {
     total: 0,
     baru: 0,
@@ -109,43 +156,75 @@ export async function getOrdersSummary(): Promise<OrdersSummary> {
   const db = getAdminDb();
   if (!db) return empty;
 
-  const col = db.collection(COLLECTION);
-  const [total, ...byStatus] = await Promise.all([
-    col.count().get(),
-    ...ORDER_STATUSES.map((status) =>
-      col.where("status", "==", status).count().get(),
-    ),
-  ]);
-
-  const counts = { total: total.data().count } as Record<string, number>;
-  ORDER_STATUSES.forEach((status, i) => {
-    counts[status] = byStatus[i].data().count;
-  });
-
-  // Omzet: jumlahkan `total` pesanan "selesai" (proyeksi field `total` saja).
-  let omzet = 0;
-  try {
-    const snap = await col.where("status", "==", "selesai").select("total").get();
-    snap.forEach((doc) => {
-      const t = doc.get("total");
-      if (typeof t === "number" && Number.isFinite(t)) omzet += t;
-    });
-  } catch (err) {
-    console.error("[orders] gagal menghitung omzet:", err);
+  const now = Date.now();
+  if (!opts.bypassCache) {
+    if (summaryCache && now - summaryCache.at < SUMMARY_TTL_MS) {
+      return summaryCache.value;
+    }
+    if (summaryInflight) return summaryInflight;
   }
 
-  return {
-    total: counts.total ?? 0,
-    baru: counts.baru ?? 0,
-    menunggu_bayar: counts.menunggu_bayar ?? 0,
-    dibayar: counts.dibayar ?? 0,
-    menunggu_konfirmasi: counts.menunggu_konfirmasi ?? 0,
-    diproses: counts.diproses ?? 0,
-    selesai: counts.selesai ?? 0,
-    dibatalkan: counts.dibatalkan ?? 0,
-    kedaluwarsa: counts.kedaluwarsa ?? 0,
-    omzet,
+  const compute = async (): Promise<OrdersSummary> => {
+    const col = db.collection(COLLECTION);
+    const [total, ...byStatus] = await Promise.all([
+      col.count().get(),
+      ...ORDER_STATUSES.map((status) =>
+        col.where("status", "==", status).count().get(),
+      ),
+    ]);
+
+    const counts = { total: total.data().count } as Record<string, number>;
+    ORDER_STATUSES.forEach((status, i) => {
+      counts[status] = byStatus[i].data().count;
+    });
+
+    // Omzet: SUM aggregation server-side untuk pesanan "selesai".
+    let omzet = 0;
+    try {
+      const agg = await col
+        .where("status", "==", "selesai")
+        .aggregate({ total: AggregateField.sum("total") })
+        .get();
+      const sum = (agg.data() as { total?: number }).total;
+      if (typeof sum === "number" && Number.isFinite(sum)) omzet = sum;
+      else throw new Error("sum_unavailable");
+    } catch {
+      // Fallback: proyeksi field `total` lalu jumlahkan (kompatibel luas).
+      try {
+        const snap = await col.where("status", "==", "selesai").select("total").get();
+        snap.forEach((doc) => {
+          const t = doc.get("total");
+          if (typeof t === "number" && Number.isFinite(t)) omzet += t;
+        });
+      } catch (err) {
+        console.error("[orders] gagal menghitung omzet:", err);
+      }
+    }
+
+    return {
+      total: counts.total ?? 0,
+      baru: counts.baru ?? 0,
+      menunggu_bayar: counts.menunggu_bayar ?? 0,
+      dibayar: counts.dibayar ?? 0,
+      menunggu_konfirmasi: counts.menunggu_konfirmasi ?? 0,
+      diproses: counts.diproses ?? 0,
+      selesai: counts.selesai ?? 0,
+      dibatalkan: counts.dibatalkan ?? 0,
+      kedaluwarsa: counts.kedaluwarsa ?? 0,
+      omzet,
+    };
   };
+
+  const p = compute()
+    .then((value) => {
+      summaryCache = { at: Date.now(), value };
+      return value;
+    })
+    .finally(() => {
+      summaryInflight = null;
+    });
+  summaryInflight = p;
+  return p;
 }
 
 /** Opsi paginasi/filter daftar pesanan admin. */
@@ -156,14 +235,13 @@ export type OrdersPageQuery = {
 };
 
 /**
- * Daftar seluruh pesanan (admin), terbaru lebih dulu, dengan cursor
- * pagination. `nextCursor` = `createdAtISO` item terakhir bila masih ada lagi.
+ * Daftar seluruh pesanan (admin), terbaru lebih dulu, dengan cursor pagination.
+ * `nextCursor` = `createdAtISO` item terakhir bila masih ada lagi.
  *
- * CATATAN (penting): filter status diterapkan di MEMORI, bukan `where()` di
- * query. Kombinasi `where(status)` + `orderBy(createdAtISO)` menuntut composite
- * index Firestore — bila index belum dibuat, query GAGAL dan daftar tampak
- * kosong. Dengan menyaring di memori, hasil benar tanpa bergantung index
- * (jumlah order awal masih kecil; lihat `firestore.indexes.json` untuk skala).
+ * Jalur utama memakai query NATIVE (`where(status)` + `orderBy(createdAtISO)`)
+ * yang dilayani composite index (`firestore.indexes.json`). Bila index belum
+ * dipublikasikan (deploy lama) → fallback ke penyaringan di memori agar daftar
+ * TIDAK tampak kosong (perilaku lama).
  */
 export async function getOrdersPage(
   query: OrdersPageQuery = {},
@@ -172,69 +250,112 @@ export async function getOrdersPage(
   if (!db) return { orders: [], nextCursor: null };
 
   const limit = Math.min(Math.max(query.limit ?? ORDERS_PAGE_SIZE, 1), 100);
-  const filtering = query.status && query.status !== "semua";
+  const status = query.status && query.status !== "semua" ? query.status : null;
 
-  // Saat memfilter status, ambil halaman lebih besar lalu saring di memori
-  // (jumlah order yang perlu disaring masih wajar di tahap ini).
-  const fetchLimit = filtering ? Math.min(limit * 4, 200) : limit;
+  // ===== Jalur utama: query native (butuh composite index status+createdAtISO) =====
+  try {
+    let ref: Query = db.collection(COLLECTION);
+    if (status) ref = ref.where("status", "==", status);
+    ref = ref.orderBy("createdAtISO", "desc");
+    if (query.cursor) ref = ref.startAfter(query.cursor);
 
-  let ref: Query = db.collection(COLLECTION).orderBy("createdAtISO", "desc");
-  if (query.cursor) {
-    ref = ref.startAfter(query.cursor);
+    const snap = await ref.limit(limit + 1).get();
+    const docs = snap.docs;
+    const hasMore = docs.length > limit;
+    const pageDocs = hasMore ? docs.slice(0, limit) : docs;
+
+    const orders = pageDocs.map((doc) =>
+      normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
+    );
+    const nextCursor =
+      hasMore && pageDocs.length > 0
+        ? (pageDocs[pageDocs.length - 1].get("createdAtISO") as string)
+        : null;
+
+    return { orders, nextCursor };
+  } catch (err) {
+    if (!isMissingIndexError(err)) throw err;
+    console.warn(
+      "[orders] index status+createdAtISO belum tersedia — fallback saring di memori.",
+    );
   }
+
+  // ===== Fallback: saring status di memori (ambil window lebih besar) =====
+  const fetchLimit = status ? Math.min(limit * 4, 200) : limit;
+  let ref: Query = db.collection(COLLECTION).orderBy("createdAtISO", "desc");
+  if (query.cursor) ref = ref.startAfter(query.cursor);
   const snap = await ref.limit(fetchLimit + 1).get();
 
   let docs = snap.docs;
   const hasMoreServer = docs.length > fetchLimit;
   if (hasMoreServer) docs = docs.slice(0, fetchLimit);
 
-  const all = docs.map((doc) => ({
-    order: normalizeOrder({
-      id: doc.id,
-      ...(doc.data() as Record<string, unknown>),
-    }),
-    raw: doc.get("createdAtISO") as string,
-  }));
+  const all = docs.map((doc) =>
+    normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
+  );
 
-  const filtered = filtering
-    ? all.filter((x) => x.order.status === query.status)
-    : all;
-
+  const filtered = status ? all.filter((o) => o.status === status) : all;
   const page = filtered.slice(0, limit);
-  const orders = page.map((x) => x.order);
-  // Halaman berikutnya ada bila sisa item (atau masih ada di server).
   const moreInPage = filtered.length > limit;
   const nextCursor =
     (moreInPage || hasMoreServer) && docs.length > 0
       ? (docs[docs.length - 1].get("createdAtISO") as string)
       : null;
 
-  return { orders, nextCursor };
+  return { orders: page, nextCursor };
 }
 
 /**
- * Mengubah status sebuah pesanan + mencatat updater.
- * Mengembalikan status SEBELUMNYA (untuk idempotensi email `EM-C3` &
- * pengembalian kuota kupon saat transisi ke dibatalkan `KP-C2`).
+ * Mengubah status sebuah pesanan + mencatat updater. **ATOMIK** (OR-A3):
+ * dijalankan dalam transaksi dengan RE-CHECK status di dalam transaksi, sehingga
+ * perubahan bersamaan tidak saling menimpa.
+ *
+ * Mengembalikan `{ previousStatus, changed, notFound? }`:
+ * - `previousStatus` — status SEBELUM perubahan (untuk idempotensi email `EM-C3`
+ *   & pengembalian kuota kupon `KP-C2`).
+ * - `changed` — `false` bila status sudah sama (no-op) atau order tak ada.
+ * - `notFound` — `true` bila order tidak ditemukan.
+ *
+ * Catatan: validasi **transisi yang diizinkan** dilakukan di pemanggil (API admin)
+ * memakai `isTransitionAllowed` dari `@/lib/order-status-pure`, agar pesan error
+ * bisa jelas. Fungsi ini hanya menjaga atomisitas baca-tulis.
  */
 export async function updateOrderStatus(
   id: string,
   status: OrderStatus,
   updatedBy: string,
-): Promise<{ previousStatus: OrderStatus | null }> {
+): Promise<{
+  previousStatus: OrderStatus | null;
+  changed: boolean;
+  notFound?: boolean;
+}> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
   const ref = db.collection(COLLECTION).doc(id);
-  const doc = await ref.get();
-  const previousStatus = doc.exists
-    ? normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }).status
-    : null;
-  await ref.update({
-    status,
-    updatedAtISO: new Date().toISOString(),
-    updatedBy,
+
+  const result = await db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (!doc.exists) {
+      return { previousStatus: null, changed: false, notFound: true };
+    }
+    const previousStatus = normalizeOrder({
+      id: doc.id,
+      ...(doc.data() as Record<string, unknown>),
+    }).status;
+
+    if (previousStatus === status) {
+      return { previousStatus, changed: false };
+    }
+
+    tx.update(ref, {
+      status,
+      updatedAtISO: new Date().toISOString(),
+      updatedBy,
+    });
+    return { previousStatus, changed: true };
   });
-  return { previousStatus };
+  if (result.changed) invalidateOrdersSummaryCache();
+  return result;
 }
 
 /**
@@ -269,53 +390,95 @@ export async function setOrderDownloadToken(
 }
 
 /**
- * Menandai order sebagai DIBAYAR secara **idempoten** (aman dipanggil ulang,
- * mis. dari webhook yang terkirim ganda). Bila order sudah `dibayar`, tidak ada
- * perubahan (mengembalikan `applied: false`).
+ * Menandai order sebagai DIBAYAR secara **idempoten & ATOMIK**.
  *
- * - Mengisi `payment.status = "dibayar"`, `paidAt`, `amount` (bila diberikan),
- *   serta `status` order (default `"dibayar"`).
- * - `extraPayment` dipakai untuk menyimpan method/transactionId dari webhook.
+ * ATOMIK (OR-A1): dijalankan dalam **transaksi Firestore** dengan RE-CHECK status
+ * DI DALAM transaksi. Ini mencegah balapan dengan cron kedaluwarsa / perubahan
+ * status bersamaan: bila order sudah berpindah dari status yang boleh dibayar
+ * (mis. sudah `kedaluwarsa`/`dibatalkan`), transaksi dibatalkan & status terminal
+ * TIDAK ditimpa (uang/kuota kupon tetap konsisten).
+ *
+ * Guard status (OR-A2): hanya status ∈ `PAYABLE_STATUSES` (`baru`, `menunggu_bayar`,
+ * `menunggu_konfirmasi`) yang boleh ditandai lunas. Order yang sudah `dibayar`
+ * (idempoten) atau terminal ditolak dengan `applied: false` + `reason`.
+ *
+ * Mengembalikan `{ applied, order, reason? }`:
+ * - `applied: true` — status berhasil diubah menjadi `dibayar`.
+ * - `applied: false` + `reason: "already_paid"` — order sudah lunas (idempoten).
+ * - `applied: false` + `reason: "not_payable"` — status tidak boleh dibayar
+ *   (terminal: `dibatalkan`/`kedaluwarsa`/`selesai`, atau `diproses`).
+ * - `applied: false` + `reason: "not_found"` — order tidak ada.
  */
 export async function markOrderPaid(
   id: string,
   info: { amount?: number; method?: string; transactionId?: string; at?: string },
   orderStatus: OrderStatus = "dibayar",
-): Promise<{ applied: boolean; order: Order | null }> {
+): Promise<{
+  applied: boolean;
+  order: Order | null;
+  reason?: "already_paid" | "not_payable" | "not_found";
+}> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
   const ref = db.collection(COLLECTION).doc(id);
-  const doc = await ref.get();
-  if (!doc.exists) return { applied: false, order: null };
-
-  const current = normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) });
-  if (current.payment?.status === "dibayar") {
-    return { applied: false, order: current };
-  }
-
   const at = info.at ?? new Date().toISOString();
-  const payment = {
-    provider: current.payment?.provider ?? "mayar",
-    status: "dibayar" as const,
-    invoiceId: current.payment?.invoiceId,
-    payUrl: current.payment?.payUrl,
-    expiresAt: current.payment?.expiresAt,
-    transactionId: info.transactionId ?? current.payment?.transactionId,
-    method: info.method ?? current.payment?.method,
-    amount: typeof info.amount === "number" ? info.amount : current.payment?.amount,
-    paidAt: at,
-    ...(current.payment?.manual ? { manual: true } : {}),
-  };
 
-  await ref.update({
-    status: orderStatus,
-    payment,
-    updatedAtISO: at,
-    updatedBy: "system:markOrderPaid",
-  });
+  try {
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(ref);
+      if (!doc.exists) {
+        return { applied: false, order: null, reason: "not_found" as const };
+      }
 
-  const order = normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>), status: orderStatus, payment });
-  return { applied: true, order };
+      const current = normalizeOrder({
+        id: doc.id,
+        ...(doc.data() as Record<string, unknown>),
+      });
+
+      // Idempoten: sudah dibayar → tidak ada aksi.
+      if (current.payment?.status === "dibayar" || isPaidStatus(current.status)) {
+        return { applied: false, order: current, reason: "already_paid" as const };
+      }
+
+      // Guard status (OR-A2): status terminal / tak boleh dibayar → tolak.
+      if (!isPayableStatus(current.status)) {
+        return { applied: false, order: current, reason: "not_payable" as const };
+      }
+
+      const payment = {
+        provider: current.payment?.provider ?? "mayar",
+        status: "dibayar" as const,
+        invoiceId: current.payment?.invoiceId,
+        payUrl: current.payment?.payUrl,
+        expiresAt: current.payment?.expiresAt,
+        transactionId: info.transactionId ?? current.payment?.transactionId,
+        method: info.method ?? current.payment?.method,
+        amount: typeof info.amount === "number" ? info.amount : current.payment?.amount,
+        paidAt: at,
+        ...(current.payment?.manual ? { manual: true } : {}),
+      };
+
+      tx.update(ref, {
+        status: orderStatus,
+        payment,
+        updatedAtISO: at,
+        updatedBy: "system:markOrderPaid",
+      });
+
+      const order = normalizeOrder({
+        id: doc.id,
+        ...(doc.data() as Record<string, unknown>),
+        status: orderStatus,
+        payment,
+      });
+      return { applied: true, order };
+    });
+    if (result.applied) invalidateOrdersSummaryCache();
+    return result;
+  } catch (err) {
+    console.error("[orders] markOrderPaid gagal:", id, err);
+    throw err;
+  }
 }
 
 /** Mengambil satu pesanan berdasarkan id (null bila tidak ada). */
@@ -405,6 +568,7 @@ export async function deleteOrder(id: string): Promise<void> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
   await db.collection(COLLECTION).doc(id).delete();
+  invalidateOrdersSummaryCache();
 }
 
 // ===== Kedaluwarsa otomatis (FASE P2) =====
@@ -456,7 +620,7 @@ export async function markOrderExpired(
   const ref = db.collection(COLLECTION).doc(id);
 
   try {
-    return await db.runTransaction(async (tx) => {
+    const result = await db.runTransaction(async (tx) => {
       const doc = await tx.get(ref);
       if (!doc.exists) return { applied: false, order: null };
 
@@ -491,6 +655,8 @@ export async function markOrderExpired(
         }),
       };
     });
+    if (result.applied) invalidateOrdersSummaryCache();
+    return result;
   } catch (err) {
     console.error("[orders] markOrderExpired gagal:", id, err);
     throw err;

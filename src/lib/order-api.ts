@@ -80,3 +80,39 @@ export async function fetchMyOrders(): Promise<MyOrder[]> {
   if (!res.ok) throw new Error(data?.error ?? "Gagal memuat pesanan.");
   return (data?.orders ?? []) as MyOrder[];
 }
+
+/** Harga/kelayakan terkini sebuah item (OR-B3). */
+export type CurrentProduct = {
+  slug: string;
+  exists: boolean;
+  active?: boolean;
+  soldOut?: boolean;
+  name?: string;
+  price: number;
+  variant?: { slug: string; name: string; price: number; soldOut: boolean; stock: number | null } | null;
+};
+
+/**
+ * Ambil harga & kelayakan TERKINI untuk item (dipakai "Pesan lagi" agar keranjang
+ * menampilkan harga aktual, bukan harga lama di order).
+ */
+export async function fetchCurrentProducts(
+  items: { slug: string; variantSlug?: string }[],
+): Promise<Map<string, CurrentProduct>> {
+  const slugs = Array.from(new Set(items.map((it) => it.slug)));
+  if (slugs.length === 0) return new Map();
+  const variants = items
+    .filter((it) => it.variantSlug)
+    .map((it) => `${it.slug}:${it.variantSlug}`)
+    .join(",");
+  const params = new URLSearchParams({ slugs: slugs.join(",") });
+  if (variants) params.set("variants", variants);
+
+  const res = await fetch(`/api/products/current?${params.toString()}`, {
+    cache: "no-store",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error ?? "Gagal memuat harga produk.");
+  const list = (data?.products ?? []) as CurrentProduct[];
+  return new Map(list.map((p) => [p.slug, p]));
+}

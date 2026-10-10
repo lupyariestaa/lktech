@@ -5,36 +5,13 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, Clock, Download, RefreshCw, ShoppingBag } from "lucide-react";
 import {
   ORDER_STATUS_LABEL,
-  type Order,
+  ORDER_STATUS_STYLE,
+  isAwaitingPayment,
 } from "@/lib/order-types";
 import type { MyOrder } from "@/lib/order-api";
 import { formatPrice } from "@/lib/product-format";
+import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const ORDER_STATUS_CLASS: Record<Order["status"], string> = {
-  baru: "bg-blue-50 text-blue-600",
-  menunggu_bayar: "bg-amber-50 text-amber-600",
-  dibayar: "bg-emerald-50 text-emerald-600",
-  menunggu_konfirmasi: "bg-purple-50 text-purple-600",
-  diproses: "bg-amber-50 text-amber-600",
-  selesai: "bg-emerald-50 text-emerald-600",
-  dibatalkan: "bg-rose-50 text-rose-600",
-  kedaluwarsa: "bg-slate-100 text-slate-500",
-};
-
-function formatDateTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}
 
 /** Tab "Pesanan": daftar pesanan + detail + pesan lagi. */
 export function AccountOrders({
@@ -79,12 +56,7 @@ export function AccountOrders({
       {orders.map((order) => {
         const open = openId === order.id;
         const itemCount = order.items.reduce((n, it) => n + it.qty, 0);
-        const pendingPayment =
-          Boolean(order.payment?.payUrl) &&
-          order.payment?.status !== "dibayar" &&
-          order.status !== "dibatalkan" &&
-          order.status !== "kedaluwarsa" &&
-          order.status !== "selesai";
+        const pendingPayment = isAwaitingPayment(order);
         return (
           <li
             key={order.id}
@@ -105,7 +77,7 @@ export function AccountOrders({
               <span
                 className={cn(
                   "rounded-full px-3 py-1 text-xs font-semibold",
-                  ORDER_STATUS_CLASS[order.status],
+                  ORDER_STATUS_STYLE[order.status],
                 )}
               >
                 {ORDER_STATUS_LABEL[order.status]}

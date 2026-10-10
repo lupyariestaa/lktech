@@ -99,7 +99,7 @@ export default async function UnduhanPage({
             <>
               <span aria-hidden="true">·</span>
               <span>
-                Dipakai {grant.hits}/{grant.maxHits} unduhan
+                Dipakai {grant.hits}/{grant.maxHits} unduhan (total semua berkas)
               </span>
             </>
           )}

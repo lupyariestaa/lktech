@@ -20,7 +20,7 @@ import {
   listOrderEmails,
 } from "@/lib/email-status";
 import { restoreCouponUsage } from "@/lib/coupons";
-import { shouldRestoreCoupon } from "@/lib/order-status-pure";
+import { shouldRestoreCoupon, isTransitionAllowed } from "@/lib/order-status-pure";
 import { getSiteSettings } from "@/lib/settings";
 import { releaseOrderDownload, createManualOrderInvoice } from "@/lib/order-payment";
 import { recordAdminAudit } from "@/lib/admin-audit";
@@ -157,14 +157,31 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    const { previousStatus } = await updateOrderStatus(
+    // OR-A3: validasi transisi terhadap matriks status (server-authoritative).
+    const before = await getOrderById(id);
+    if (!before) {
+      return NextResponse.json({ error: "Pesanan tidak ditemukan." }, { status: 404 });
+    }
+    if (!isTransitionAllowed(before.status, status)) {
+      return NextResponse.json(
+        {
+          error: `Perubahan status dari "${ORDER_STATUS_LABEL[before.status]}" ke "${ORDER_STATUS_LABEL[status as OrderStatus]}" tidak diizinkan.`,
+          code: "invalid_transition",
+          from: before.status,
+          to: status,
+        },
+        { status: 409 },
+      );
+    }
+
+    const { previousStatus, changed } = await updateOrderStatus(
       id,
       status as OrderStatus,
       check.email,
     );
 
     // `EM-C3`: idempotensi — bila status tidak berubah, jangan kirim email lagi.
-    if (previousStatus === status) {
+    if (!changed || previousStatus === status) {
       return NextResponse.json({ ok: true, unchanged: true });
     }
 
@@ -452,12 +469,25 @@ export async function DELETE(req: Request) {
       );
     }
 
-    await deleteOrder(id);
-
-    // Kembalikan kuota kupon (bila ada) agar tidak bocor (`KP-C2`).
+    // OR-A5: kembalikan kuota kupon SEBELUM menghapus order. Bila restore gagal,
+    // order belum terhapus sehingga masih bisa dicoba ulang (cegah kebocoran kuota
+    // permanen). `restoreCouponUsage` sendiri tidak melempar (best-effort), jadi
+    // kita periksa hasilnya secara eksplisit.
     if (order.coupon?.couponId) {
-      await restoreCouponUsage(order.coupon.couponId, order.uid);
+      const restored = await restoreCouponUsage(order.coupon.couponId, order.uid);
+      if (!restored) {
+        return NextResponse.json(
+          {
+            error:
+              "Gagal mengembalikan kuota kupon. Pesanan belum dihapus — coba lagi.",
+            code: "coupon_restore_failed",
+          },
+          { status: 502 },
+        );
+      }
     }
+
+    await deleteOrder(id);
 
     await recordAdminAudit({
       action: "order.delete",

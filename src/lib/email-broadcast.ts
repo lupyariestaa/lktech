@@ -1,5 +1,11 @@
 import "server-only";
 import { SITE } from "@/lib/site";
+import {
+  RESEND_ENDPOINT,
+  getResendApiKey,
+  getFromEmail,
+  getReplyTo,
+} from "@/lib/email-config";
 
 /**
  * BROADCAST EMAIL (Tema 2.2, FASE R2) — kirim email promo/konten ke daftar
@@ -10,11 +16,9 @@ import { SITE } from "@/lib/site";
  * kecil, dan otomatis berfungsi penuh setelah domain diverifikasi.
  */
 
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
-
-const apiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.EMAIL_FROM ?? "LKTech <onboarding@resend.dev>";
-const replyTo = process.env.ORDER_REPLY_TO || process.env.SMTP_REPLY_TO || undefined;
+const apiKey = getResendApiKey();
+const fromEmail = getFromEmail();
+const replyTo = getReplyTo();
 
 export type BroadcastResult = {
   ok: boolean;

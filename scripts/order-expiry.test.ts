@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { isOrderExpired } from "../src/lib/order-expiry-pure.ts";
+import { coerceISODate } from "../src/lib/order-time-pure.ts";
 
 /**
  * Uji logika KEDALUWARSA order (FASE P2).
@@ -61,4 +62,50 @@ test("status non-menunggu_bayar TIDAK pernah kedaluwarsa", () => {
     });
     assert.equal(isOrderExpired(o, now, TTL), false, `status ${status}`);
   }
+});
+
+/* ---- OR-B1: coerceISODate (normalisasi waktu lama) ---- */
+
+test("coerceISODate: ISO string → ISO ternormalisasi", () => {
+  assert.equal(coerceISODate("2026-06-01T12:00:00.000Z"), "2026-06-01T12:00:00.000Z");
+});
+
+test("coerceISODate: string tanggal tanpa zona → ISO", () => {
+  assert.match(coerceISODate("2026-06-01T12:00:00"), /^2026-06-01T/);
+});
+
+test("coerceISODate: Date → ISO", () => {
+  assert.equal(
+    coerceISODate(new Date("2026-06-01T12:00:00.000Z")),
+    "2026-06-01T12:00:00.000Z",
+  );
+});
+
+test("coerceISODate: epoch millis → ISO", () => {
+  assert.equal(
+    coerceISODate(Date.parse("2026-06-01T12:00:00.000Z")),
+    "2026-06-01T12:00:00.000Z",
+  );
+});
+
+test("coerceISODate: Firestore Timestamp-like (seconds) → ISO", () => {
+  const seconds = Date.parse("2026-06-01T12:00:00.000Z") / 1000;
+  assert.equal(coerceISODate({ seconds }), "2026-06-01T12:00:00.000Z");
+  assert.equal(coerceISODate({ _seconds: seconds }), "2026-06-01T12:00:00.000Z");
+});
+
+test("coerceISODate: objek toDate() → ISO", () => {
+  assert.equal(
+    coerceISODate({ toDate: () => new Date("2026-06-01T12:00:00.000Z") }),
+    "2026-06-01T12:00:00.000Z",
+  );
+});
+
+test("coerceISODate: nilai kosong/invalid → \"\"", () => {
+  assert.equal(coerceISODate(undefined), "");
+  assert.equal(coerceISODate(null), "");
+  assert.equal(coerceISODate(""), "");
+  assert.equal(coerceISODate({}), "");
+  assert.equal(coerceISODate([]), "");
+  assert.equal(coerceISODate(true), "");
 });

@@ -11,7 +11,7 @@ export const revalidate = 120;
 export const metadata: Metadata = {
   title: "Produk",
   description:
-    "Produk digital LKTech: template, software, aplikasi, dan e-book siap pakai dengan harga transparan. Beli langsung dan checkout via WhatsApp.",
+    "Produk digital LKTech: template, software, aplikasi, dan e-book siap pakai dengan harga transparan. Beli langsung — bayar online & unduh otomatis.",
   alternates: { canonical: "/produk" },
   openGraph: {
     title: "Produk",

@@ -2,15 +2,19 @@ import "server-only";
 import { formatRupiah } from "@/lib/format";
 import { SITE } from "@/lib/site";
 import type { WishlistAlert } from "@/lib/wishlist-alert-pure";
+import {
+  RESEND_ENDPOINT,
+  getResendApiKey,
+  getFromEmail,
+} from "@/lib/email-config";
 
 /**
  * Email ALERT WISHLIST (Tema 2.4, FASE R3) — "harga turun" / "kembali tersedia".
  * Best-effort: tidak melempar.
  */
 
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const apiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.EMAIL_FROM ?? "LKTech <onboarding@resend.dev>";
+const apiKey = getResendApiKey();
+const fromEmail = getFromEmail();
 
 export type WishlistEmailResult = { ok: boolean; skipped?: boolean; error?: string };
 

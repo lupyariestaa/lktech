@@ -97,6 +97,104 @@ export function productIsPurchasable(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Evaluasi kelayakan beli TERPUSAT (OR-B4/B5)                                 */
+/* -------------------------------------------------------------------------- */
+
+/** Kode alasan item tidak bisa dibeli (dipakai server untuk respons jelas). */
+export type PurchaseIssueCode =
+  | "product_inactive"
+  | "variant_required"
+  | "variant_not_found"
+  | "soldout"
+  | "out_of_stock"
+  | "insufficient_stock"
+  | "no_price";
+
+/** Hasil evaluasi kelayakan beli satu item. */
+export type PurchaseEvaluation =
+  | { ok: true; price: number; variantSlug?: string; variantName?: string }
+  | { ok: false; code: PurchaseIssueCode; message: string };
+
+type EvaluatableVariant = Pick<
+  ProductVariant,
+  "slug" | "name" | "price" | "soldOut" | "stock"
+>;
+
+type EvaluatableProduct = Pick<
+  Product,
+  "slug" | "name" | "price" | "soldOut" | "stock" | "active"
+> & {
+  variants: EvaluatableVariant[];
+};
+
+/**
+ * Evaluasi kelayakan satu item keranjang (produk + varian opsional + qty).
+ * Satu sumber kebenaran untuk aturan "boleh dibeli" — dipakai server checkout
+ * agar aturan tidak tersebar & konsisten. Mengembalikan harga final (terverifikasi
+ * dari produk/varian, bukan klien) atau kode alasan yang spesifik.
+ *
+ * Aturan (seragam produk tunggal & multi-varian):
+ * - Produk nonaktif → `product_inactive`.
+ * - Produk multi-varian: wajib pilih varian; varian harus ada.
+ * - `soldOut` (produk ATAU varian) → `soldout`.
+ * - `stock` diisi & ≤ 0 → `out_of_stock`.
+ * - qty melebihi stok (bila stok diisi) → `insufficient_stock`.
+ * - harga ≤ 0 → `no_price`.
+ */
+export function evaluatePurchase(
+  product: EvaluatableProduct,
+  opts: { variantSlug?: string | null; qty: number },
+): PurchaseEvaluation {
+  if (!product.active) {
+    return { ok: false, code: "product_inactive", message: `Produk "${product.name}" sudah tidak dijual.` };
+  }
+
+  const qty = Math.max(1, Math.floor(opts.qty));
+
+  // ===== Multi-varian =====
+  if (product.variants.length > 0) {
+    const variantSlug = opts.variantSlug?.trim();
+    if (!variantSlug) {
+      return { ok: false, code: "variant_required", message: `Pilih paket untuk "${product.name}" sebelum checkout.` };
+    }
+    const variant = product.variants.find((v) => v.slug === variantSlug);
+    if (!variant) {
+      return { ok: false, code: "variant_not_found", message: "Paket yang dipilih tidak ditemukan. Muat ulang halaman." };
+    }
+    if (variant.soldOut || product.soldOut) {
+      return { ok: false, code: "soldout", message: `Paket "${variant.name}" sedang tidak tersedia.` };
+    }
+    if (isStockOut(variant) || isStockOut(product)) {
+      return { ok: false, code: "out_of_stock", message: `Paket "${variant.name}" sedang stok habis.` };
+    }
+    const left = effectiveStock(variant);
+    if (left !== null && qty > left) {
+      return { ok: false, code: "insufficient_stock", message: `Stok paket "${variant.name}" tersisa ${left}. Silakan kurangi jumlah.` };
+    }
+    if (variant.price <= 0) {
+      return { ok: false, code: "no_price", message: `Paket "${variant.name}" belum bisa dipesan online.` };
+    }
+    return { ok: true, price: variant.price, variantSlug: variant.slug, variantName: variant.name };
+  }
+
+  // ===== Produk tunggal =====
+  if (product.soldOut) {
+    return { ok: false, code: "soldout", message: `Produk "${product.name}" sedang stok habis.` };
+  }
+  if (isStockOut(product)) {
+    return { ok: false, code: "out_of_stock", message: `Produk "${product.name}" sedang stok habis.` };
+  }
+  const left = effectiveStock(product);
+  if (left !== null && qty > left) {
+    return { ok: false, code: "insufficient_stock", message: `Stok "${product.name}" tersisa ${left}. Silakan kurangi jumlah.` };
+  }
+  if (product.price <= 0) {
+    return { ok: false, code: "no_price", message: `Produk "${product.name}" belum bisa dipesan online (harga belum tersedia).` };
+  }
+  return { ok: true, price: product.price };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Stok nyata (FASE P4)                                                        */
 /* -------------------------------------------------------------------------- */
 

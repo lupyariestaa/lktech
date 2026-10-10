@@ -50,6 +50,28 @@ export const obs = {
       received: props.received,
       expected: props.expected,
     }),
+  paymentLate: (props: {
+    orderId: string;
+    amount: number;
+    orderStatus: string;
+  }) =>
+    logEvent("payment_late", {
+      order: props.orderId,
+      amount: props.amount,
+      orderStatus: props.orderStatus,
+    }),
+  checkoutCompleted: (props: {
+    orderId: string;
+    total: number;
+    fulfillment: string;
+    items: number;
+  }) =>
+    logEvent("checkout_completed", {
+      order: props.orderId,
+      total: props.total,
+      fulfillment: props.fulfillment,
+      items: props.items,
+    }),
   orderExpired: (props: { count: number; couponsRestored: number }) =>
     logEvent("orders_expired", {
       count: props.count,

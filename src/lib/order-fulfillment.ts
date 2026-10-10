@@ -28,6 +28,19 @@ export function fulfillmentTypeForCategories(
   return categories.some((c) => c === "jasa") ? "jasa" : "instan";
 }
 
+/**
+ * Fulfillment EFEKTIF sebuah order untuk tampilan/aksi (OR-B7).
+ * Order lama (dibuat sebelum fitur fulfillment) dapat `undefined` — padahal
+ * produknya digital. Default-kan ke `instan` agar aksi unduhan tetap tersedia;
+ * server tetap memvalidasi (`releaseOrderDownload` mencari berkas & menolak bila
+ * tak ada). Field yang benar-benar `jasa` tetap dihormati.
+ */
+export function effectiveFulfillment(
+  fulfillment: FulfillmentType | undefined,
+): FulfillmentType {
+  return fulfillment === "jasa" ? "jasa" : "instan";
+}
+
 export const FULFILLMENT_LABEL: Record<FulfillmentType, string> = {
   instan: "Produk instan (unduh)",
   jasa: "Jasa (konsultasi/konfirmasi)",

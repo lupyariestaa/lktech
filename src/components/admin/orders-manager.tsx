@@ -37,6 +37,8 @@ import {
   type Order,
   type OrderStatus,
 } from "@/lib/order-types";
+import { isTransitionAllowed } from "@/lib/order-status-pure";
+import { effectiveFulfillment } from "@/lib/order-fulfillment";
 import {
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUS_STYLE,
@@ -50,13 +52,17 @@ import { cn } from "@/lib/utils";
 
 const PAGE_LIMIT = 25;
 
-/** Pesanan + status ringkas untuk kartu metrik. */
+/** Pesanan + status ringkas untuk kartu metrik (OR-D3: lengkap semua status). */
 const SUMMARY_CARDS: Array<{ key: keyof OrdersSummary; label: string; accent: string }> = [
   { key: "total", label: "Total Pesanan", accent: "bg-primary-50 text-primary" },
   { key: "baru", label: "Baru", accent: "bg-blue-50 text-blue-600" },
   { key: "menunggu_bayar", label: "Menunggu Bayar", accent: "bg-amber-50 text-amber-600" },
   { key: "menunggu_konfirmasi", label: "Perlu Konfirmasi", accent: "bg-purple-50 text-purple-600" },
+  { key: "dibayar", label: "Dibayar", accent: "bg-emerald-50 text-emerald-600" },
   { key: "diproses", label: "Diproses", accent: "bg-amber-50 text-amber-600" },
+  { key: "selesai", label: "Selesai", accent: "bg-emerald-50 text-emerald-600" },
+  { key: "dibatalkan", label: "Dibatalkan", accent: "bg-slate-100 text-slate-500" },
+  { key: "kedaluwarsa", label: "Kedaluwarsa", accent: "bg-slate-100 text-slate-500" },
   { key: "omzet", label: "Omzet (selesai, sepanjang waktu)", accent: "bg-emerald-50 text-emerald-600" },
 ];
 
@@ -295,8 +301,14 @@ export function OrdersManager() {
       </div>
 
       <p className="mt-3 text-xs text-muted">
-        Menampilkan {filtered.length} pesanan
+        Menampilkan {filtered.length} dari {orders.length} pesanan termuat
         {nextCursor ? " (masih ada lagi)" : ""}.
+        {query.trim() && (
+          <span className="ml-1 text-amber-600">
+            Pencarian hanya menyaring pesanan yang sudah dimuat — klik “Muat lagi”
+            atau persempit filter status untuk menjangkau lebih banyak.
+          </span>
+        )}
       </p>
 
       {error && (
@@ -392,6 +404,10 @@ function OrderCard({
   onDelete: () => void;
 }) {
   const itemCount = order.items.reduce((sum, it) => sum + it.qty, 0);
+  // OR-A3: hanya tawarkan transisi status yang diizinkan (server juga menegakkan).
+  const selectableStatuses = ORDER_STATUSES.filter((s) =>
+    isTransitionAllowed(order.status, s),
+  );
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-lg hover:shadow-slate-900/5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -449,7 +465,7 @@ function OrderCard({
           aria-label={`Status pesanan ${shortOrderCode(order.id)}`}
           className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none disabled:opacity-60"
         >
-          {ORDER_STATUSES.map((s) => (
+          {selectableStatuses.map((s) => (
             <option key={s} value={s}>
               {ORDER_STATUS_LABEL[s]}
             </option>
@@ -511,8 +527,9 @@ function OrderDetailDialog({
 
   // Apakah tombol "Buat/Kirim ulang unduhan" relevan:
   // order produk digital (INSTAN) yang sudah dibayar/diproses/selesai.
+  // OR-B7: order lama tanpa `fulfillment` diperlakukan sebagai INSTAN (efektif).
   const canReleaseDownload =
-    order.fulfillment === "instan" &&
+    effectiveFulfillment(order.fulfillment) === "instan" &&
     (order.status === "dibayar" ||
       order.status === "diproses" ||
       order.status === "selesai");

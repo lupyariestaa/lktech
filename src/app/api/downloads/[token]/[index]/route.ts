@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGrantByToken, recordDownloadHit } from "@/lib/downloads";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,13 +9,28 @@ export const dynamic = "force-dynamic";
  * GET /api/downloads/[token]/[index] — menyajikan berkas unduhan.
  *
  * - Validasi token (HMAC) & grant (kedaluwarsa/batas unduhan) via `downloads.ts`.
+ * - OR-A7: rate-limit ringan per-IP untuk mencegah refresh berulang yang
+ *   menghabiskan kuota unduhan sendiri / membebani Firestore.
  * - Catat 1 hit (best-effort) lalu **redirect** ke URL berkas (Cloudinary/CDN).
  * - Tidak menyajikan berkas langsung, sehingga tidak memproses byte di server.
  */
+function clientIp(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for") ?? "";
+  return fwd.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+}
+
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ token: string; index: string }> },
 ) {
+  const rl = rateLimit(`download:${clientIp(req)}`, 60, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Terlalu banyak permintaan unduhan. Coba lagi nanti." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   const { token, index } = await params;
   const idx = Number(index);
   if (!Number.isInteger(idx) || idx < 0) {

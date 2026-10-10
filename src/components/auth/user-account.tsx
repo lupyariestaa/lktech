@@ -6,7 +6,7 @@ import { Check, Loader2, LogOut, ShieldAlert, X } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
 import { getIdToken, signOutUser } from "@/lib/auth";
-import { fetchMyOrders, type MyOrder } from "@/lib/order-api";
+import { fetchMyOrders, fetchCurrentProducts, type MyOrder } from "@/lib/order-api";
 import {
   createAddress,
   deleteAddress,
@@ -139,29 +139,59 @@ export function UserAccount() {
   // "Pesan lagi": masukkan item pesanan ke keranjang. Harga/validasi final tetap
   // diverifikasi server saat checkout, jadi aman memakai data item pesanan.
   const onReorder = useCallback(
-    (order: MyOrder) => {
+    async (order: MyOrder) => {
       if (blocked) {
         pushToast("Akun Anda sedang diblokir.", "error");
         return;
       }
       setReordering(order.id);
-      for (const it of order.items) {
-        add({
-          slug: it.slug,
-          name: it.name,
-          price: it.price,
-          cover: "default",
-          qty: it.qty,
-          variantSlug: it.variantSlug,
-          variantName: it.variantName,
-        });
+      try {
+        // OR-B3: hidrasi harga & kelayakan TERKINI dari server (bukan harga lama
+        // di order). Checkout tetap memverifikasi ulang (safety net).
+        let fresh: Awaited<ReturnType<typeof fetchCurrentProducts>> | null = null;
+        try {
+          fresh = await fetchCurrentProducts(
+            order.items.map((it) => ({ slug: it.slug, variantSlug: it.variantSlug })),
+          );
+        } catch {
+          fresh = null;
+        }
+
+        let added = 0;
+        let skipped = 0;
+        for (const it of order.items) {
+          const now = fresh?.get(it.slug);
+          if (now && (!now.exists || now.active === false || now.soldOut)) {
+            skipped += 1;
+            continue;
+          }
+          const freshPrice = now?.variant?.price ?? now?.price ?? it.price;
+          add({
+            slug: it.slug,
+            name: it.name,
+            price: freshPrice,
+            cover: "default",
+            qty: it.qty,
+            variantSlug: it.variantSlug,
+            variantName: it.variantName,
+          });
+          added += 1;
+        }
+
+        if (added === 0) {
+          pushToast("Produk pada pesanan ini sudah tidak tersedia.", "error");
+          return;
+        }
+        pushToast(
+          skipped > 0
+            ? `${added} item ditambahkan (${skipped} tak tersedia dilewati).`
+            : `${added} item ditambahkan ke keranjang.`,
+          skipped > 0 ? "error" : "success",
+        );
+        router.push("/keranjang");
+      } finally {
+        setReordering(null);
       }
-      setReordering(null);
-      pushToast(
-        `${order.items.length} item ditambahkan ke keranjang.`,
-        "success",
-      );
-      router.push("/keranjang");
     },
     [add, router, pushToast, blocked],
   );

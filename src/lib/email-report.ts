@@ -2,16 +2,19 @@ import "server-only";
 import { formatRupiah } from "@/lib/format";
 import { SITE } from "@/lib/site";
 import type { WeeklyReport } from "@/lib/weekly-report";
+import {
+  RESEND_ENDPOINT,
+  getResendApiKey,
+  getFromEmail,
+} from "@/lib/email-config";
 
 /**
  * Email LAPORAN MINGGUAN (Tema 3.3, FASE L4) — dikirim ke ADMIN
  * (`LEAD_NOTIFY_EMAILS`) via Resend. Best-effort: tidak melempar.
  */
 
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
-
-const apiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.EMAIL_FROM ?? "LKTech <onboarding@resend.dev>";
+const apiKey = getResendApiKey();
+const fromEmail = getFromEmail();
 
 export type ReportEmailResult = { ok: boolean; skipped?: boolean; error?: string };
 

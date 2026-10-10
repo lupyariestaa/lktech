@@ -2,11 +2,14 @@ import "server-only";
 import type { LeadInput } from "@/lib/lead-schema";
 import type { Order } from "@/lib/order-types";
 import { formatRupiah, shortOrderCode } from "@/lib/format";
+import {
+  RESEND_ENDPOINT,
+  getResendApiKey,
+  getFromEmail,
+} from "@/lib/email-config";
 
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
-
-const apiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.EMAIL_FROM ?? "LKTech <onboarding@resend.dev>";
+const apiKey = getResendApiKey();
+const fromEmail = getFromEmail();
 
 /**
  * Apakah notifikasi email dikonfigurasi (Resend API key tersedia).

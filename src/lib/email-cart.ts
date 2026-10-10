@@ -2,6 +2,12 @@ import "server-only";
 import { formatRupiah } from "@/lib/format";
 import { SITE } from "@/lib/site";
 import type { CartDraft } from "@/lib/cart-draft-pure";
+import {
+  RESEND_ENDPOINT,
+  getResendApiKey,
+  getFromEmail,
+  getReplyTo,
+} from "@/lib/email-config";
 
 /**
  * Email PENGINGAT KERANJANG (FASE P5) — transaksional, ke pembeli yang
@@ -11,11 +17,9 @@ import type { CartDraft } from "@/lib/cart-draft-pure";
  * + cara berhenti diingatkan (opt-out, dihormati).
  */
 
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
-
-const apiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.EMAIL_FROM ?? "LKTech <onboarding@resend.dev>";
-const replyTo = process.env.ORDER_REPLY_TO || process.env.SMTP_REPLY_TO || undefined;
+const apiKey = getResendApiKey();
+const fromEmail = getFromEmail();
+const replyTo = getReplyTo();
 
 export type CartEmailResult = {
   ok: boolean;

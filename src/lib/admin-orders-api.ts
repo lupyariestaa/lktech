@@ -4,7 +4,7 @@ import {
   type Order,
   type OrderStatus,
 } from "@/lib/order-types";
-import { formatRupiah, shortOrderCode } from "@/lib/format";
+import { shortOrderCode } from "@/lib/format";
 import type { OrdersSummary } from "@/lib/orders";
 
 /** Opsi query daftar pesanan admin. */
@@ -179,9 +179,4 @@ export function exportOrdersToCsv(orders: Order[], filename?: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-/** Label total untuk ringkasan cepat (dipakai kartu metrik). */
-export function formatTotal(total: number): string {
-  return formatRupiah(total);
 }
