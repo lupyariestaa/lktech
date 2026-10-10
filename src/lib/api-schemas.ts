@@ -159,13 +159,6 @@ export const projectSchema = z.object({
     .max(20)
     .optional(),
   techStack: z.array(z.string().trim().max(60)).max(50).optional(),
-  testimonial: z
-    .object({
-      quote: z.string().trim().max(1000),
-      author: z.string().trim().max(120),
-      role: z.string().trim().max(120),
-    })
-    .optional(),
 });
 
 // ===== Produk =====

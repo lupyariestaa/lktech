@@ -119,12 +119,6 @@ const project = {
     "jsPDF",
     "Nodemailer",
   ],
-  testimonial: {
-    quote:
-      "Sejak ada website member, pelanggan marketplace kami jadi punya alasan untuk balik lagi ke toko sendiri — bukan cuma lewat WhatsApp.",
-    author: "Pengelola Y&H Yudha Grafika",
-    role: "Tim Operasional Y&H Yudha Grafika",
-  },
   featured: true,
   order: 0,
 };

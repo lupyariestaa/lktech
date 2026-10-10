@@ -27,14 +27,6 @@ export const ADMIN_AUDIT_ACTIONS = [
   "article.unpublish",
   "article.duplicate",
   "article.bulk",
-  "taman.save",
-  "taman.publish",
-  "taman.hide",
-  "taman.reject",
-  "taman.delete",
-  "taman.reorder",
-  "taman.import_review",
-  "taman.bulk",
 ] as const;
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];
@@ -64,14 +56,6 @@ export const ADMIN_AUDIT_ACTION_LABEL: Record<AdminAuditAction, string> = {
   "article.unpublish": "Tarik artikel ke draft",
   "article.duplicate": "Duplikat artikel",
   "article.bulk": "Aksi massal artikel",
-  "taman.save": "Simpan testimoni taman",
-  "taman.publish": "Terbitkan testimoni taman",
-  "taman.hide": "Sembunyikan testimoni taman",
-  "taman.reject": "Tolak testimoni taman",
-  "taman.delete": "Hapus testimoni taman",
-  "taman.reorder": "Ubah urutan testimoni taman",
-  "taman.import_review": "Angkat ulasan jadi testimoni",
-  "taman.bulk": "Aksi massal testimoni taman",
 };
 
 /** Entri audit tersimpan. */

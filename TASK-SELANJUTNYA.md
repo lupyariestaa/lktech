@@ -13,49 +13,22 @@
 
 ---
 
-## Sesi Terakhir - Taman Testimoni / Taman Pixel (T0-T12, SELESAI kode)
+## Sesi Terakhir — ❌ HAPUS TOTAL SISTEM TESTIMONI (dari Taman v2)
 
-Dokumen hasil: [`docs/2026-10-10-taman-pixel.md`](docs/2026-10-10-taman-pixel.md). Checklist: [`docs/2026-10-10-task-testimoni-taman-pixel.md`](docs/2026-10-10-task-testimoni-taman-pixel.md). Prosedur hapus: [`docs/2026-10-10-prosedur-hapus-testimoni.md`](docs/2026-10-10-prosedur-hapus-testimoni.md).
+**Keputusan pemilik (2026-10-10):** setelah meninjau Taman v2, pemilik **tidak menyukai** hasilnya dan memutuskan **menghapus total sistem testimoni** dari LKTech — **(A) Taman Testimoni** (pixel/Phaser v1 & v2), **(B) Testimoni lama** (avatar Hero + tab admin konten), dan **(C) `ProjectTestimonial`** (kutipan di halaman proyek portofolio). **LKTech kini tidak punya testimoni apa pun.**
 
-| Fase | Hasil |
-| --- | --- |
-| **T0-T3** | Konfirmasi D1 & rules, tipe & store (dua koleksi), logika murni, aset SVG 8 hewan (6,5 KB). |
-| **T4-T6** | API publik & kirim (login, email terverifikasi, persetujuan, rate limit), API admin (gate publish, bulk, impor), UI admin (`/admin/taman`, pratinjau, angkat ulasan, menu). |
-| **T7-T8** | Frame publik di beranda (hewan, gacha, kartu popover/bottom sheet, keyboard, reduced motion), form kirim `/taman/kirim`, tab "Testimoni saya". |
-| **T9-T11** | Privasi (whitelist, audit tanpa uid, prosedur hapus), SEO & analitik (JSON-LD Review, event tanpa PII), impor testimoni lama sebagai draft. |
+Analisis dampak + alur: [`docs/2026-10-10-task-hapus-sistem-testimoni.md`](docs/2026-10-10-task-hapus-sistem-testimoni.md).
 
-**Verifikasi (T12):** `tsc` ✅ · `eslint` ✅ · 16 suite test ✅ (396 test, termasuk `test:taman` 55) · `build` ✅.
-**Belum diverifikasi manual:** frame & animasi di browser, keyboard & screen reader, reduced motion, alur kirim & admin dengan data nyata, validasi JSON-LD, rate limit di produksi.
+Yang dihapus/diubah:
+- **Dihapus:** seluruh route `/taman/*`, `/api/taman/*`, `/api/admin/taman/*`, `/admin/(dashboard)/taman/*`; komponen `src/components/taman/*`, `admin/taman-*`, `auth/account-taman`; lib `taman-types/logic/store/world/consent`; aset `public/taman/*`; script `gen-taman-*` + `taman*.mjs` + `taman.test.ts`; dokumen Taman; dependensi **Phaser**.
+- **Diubah (file bersama, hanya bagian testimoni):** `src/app/page.tsx` (lepas TamanSection/TamanSchema), `user-account.tsx` + `account-tabs.tsx` (lepas tab "Testimoni saya"), `reviews-manager.tsx` (lepas tombol "Angkat jadi testimoni"), `admin-nav.ts` (lepas menu), `hero.tsx` (lepas avatar testimoni), `content-extra-manager.tsx` (lepas tab Testimoni), `content-types.ts`/`content.ts`/`site-content.ts` (lepas `ManagedTestimonial`/`TESTIMONIALS`/normalizer), `admin-api.ts`, `analytics.ts`, `admin-audit-types.ts`, `next.config.ts` (redirect), `tsconfig.json`, `package.json`, `globals.css` (keyframes `taman-*`).
+- **Fase D7 — `ProjectTestimonial` dihapus:** `project-types.ts`, `projects.ts`, `api-schemas.ts`, `api/admin/projects/route.ts`, `admin/projects-manager.tsx`, `app/portofolio/[slug]/page.tsx` (render + JSON-LD Review proyek), `content.ts` (3 entri `PROJECTS`), 4 `scripts/seed-project-*.mjs`.
 
----
+**Dampak disadari:** beranda tidak lagi menampilkan bukti sosial testimoni; portal akun tanpa tab testimoni; halaman proyek tanpa kutipan klien; audit lama beraksi `taman.*` tetap tampil sebagai string mentah (aman). **Ulasan produk & rating TETAP ADA** (hanya tombol angkat-testimoni yang hilang).
 
-## 🔄 Sesi Terakhir — Taman Testimoni **v2** (V2-1 ✅, V2-2 selesai: 8 hewan)
+**Verifikasi:** `tsc` ✅ · `eslint` ✅ · 15 suite test (291 test) ✅ · `build` ✅.
 
-Dokumen: [`docs/2026-10-10-task-taman-v2.md`](docs/2026-10-10-task-taman-v2.md) (checklist) · [`docs/2026-10-10-planning-taman-v2.md`](docs/2026-10-10-planning-taman-v2.md).
-
-| Fase | Hasil |
-| --- | --- |
-| **V2-0** | Audit & keputusan teknis (PNG, tile 16 px, dunia 40×24, sprite 24×24/6 pose, 8 varian via tint, zona spawn). ✅ |
-| **V2-1** | Data varian warna: `AnimalVariant`/`ANIMAL_VARIANTS`/`VARIANT_TINT`, `TamanTestimonial.variant`, normalisasi & validasi pasangan, submit terima hewan+warna, **Rapikan** tetapkan varian. ✅ (commit `42140c3`) |
-| **V2-2** | Aset: tile 16×16 (11), objek (wortel), **8 hewan sprite 24×24 × 6 pose** = **2.690 B total**. Generator `gen-taman-animals` + `gen-taman-v2`; halaman pratinjau **`/taman/aset`**. 🔶 **kode selesai, belum di-commit** |
-| **V2-3** | Halaman form **`/taman/tulis`**: pemilih 8 hewan + warna (pratinjau tint via `AnimalPicker`/`AnimalSprite`), submit `animal`+`variant`. `/taman/kirim` → redirect 301 ke `/taman/tulis`. 🔶 **kode selesai, belum di-commit** |
-| **V2-4** | Beranda: seksi Taman **full-bleed** (`100dvh`), judul/badge/deskripsi di dalam frame pakai font pixel (`Press Start 2P`, `preload:false`); tombol **Tulis testimoni** & **Acak lagi** di dalam frame; heading asli `<h2>` tetap `sr-only` untuk SEO. 🔶 **kode selesai, belum di-commit** |
-| **V2-5** | **Kanvas Phaser 3.90**: `taman-scene.ts` (peta tile 40×24, spawn hewan + tint varian, AI per gaya, klik→React), `taman-world.ts` (data murni), `taman-phaser.tsx` (dynamic import, klien saja). Kanvas di belakang judul; jalur keyboard/screen reader via tombol `sr-only`. Phaser ±1.164 KB **tidak** di-preload di beranda. 🔶 **kode selesai, belum di-commit** |
-| **V2-6** | Kartu testimoni: **pratinjau hewan + warna** (`AnimalSprite`) di popup; label Indonesia terpusat (`ANIMAL_LABEL`/`VARIANT_LABEL`); a11y (jalur `sr-only`, Esc, fokus kembali); reduced-motion (scene diam) + throttle `onFrame` ~10 fps; JSON-LD tetap. 🔶 **kode selesai, belum di-commit** |
-| **V2-7** | Dashboard lengkap: daftar + chip hewan·warna (`AnimalSprite`), panel detail pemilih hewan+warna (tint), **Pratinjau Kanvas nyata** (Phaser + Acak pool), statistik hewan terbit, API PATCH terima `variant` (helper `resolveAnimalVariant`), Rapikan tetapkan varian. 🔶 **kode selesai, belum di-commit** |
-| **V2-8** | QA/perf/docs: chunk Phaser **±1.164 KB tidak di-preload** di halaman lain (dynamic import terbukti); batas sprite (4/6/8 < 15 slot); regresi lolos; gate penuh hijau (**16 suite / 467 test**, `test:taman` 78). ✅ |
-
-**STATUS:** ✅ **Taman Testimoni v2 (V2-0…V2-8) SELESAI (kode).** Sisa = uji browser manual (kanvas, FPS mobile, keyboard/SR, reduced-motion) & commit/push oleh pemilik.
-
-**Status V2-2:** kucing pass (pemilik) → 7 hewan lain (kelinci, burung, rubah, beruang, kura-kura, kupu-kupu, ikan) selesai. Gate fase hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` 67 ✅ · `build` ✅.
-**Status V2-3:** komponen picker reusable (`taman-animal-picker.tsx`) + form (`taman-tulis-form.tsx`) + halaman `/taman/tulis`; form lama & folder `/taman/kirim` dihapus (diganti redirect). Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` 67 ✅ · `build` ✅.
-**Status V2-4:** font pixel `taman-font.ts`; `taman-section.tsx` full-bleed + heading `sr-only`; `taman-client.tsx` judul & tombol di dalam frame. Beranda tetap Static. Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` 67 ✅ · `build` ✅.
-**Status V2-5:** Phaser 3.90 terpasang; `taman-world.ts` + `taman-scene.ts` + `taman-phaser.tsx`; `TamanPublicView` + `variant`; `taman-animal.tsx` v1 dihapus. Chunk Phaser tidak di-preload beranda. Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` **72** ✅ · `build` ✅.
-**Status V2-6:** pratinjau hewan+warna di kartu; label terpusat; a11y & reduced-motion dirapikan; perf `onFrame` di-throttle. Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` **74** ✅ · `build` ✅.
-**Status V2-7:** dashboard lengkap (daftar, panel detail hewan+warna, pratinjau kanvas nyata, statistik per hewan, API `variant`, `resolveAnimalVariant`). Gate hijau: `tsc` ✅ · `eslint` ✅ · `test:taman` **78** ✅ · `build` ✅.
-**Status V2-8:** QA/perf/docs selesai; gate penuh hijau (semua `test:*`). ✅
-
-**Lanjut:** commit V2-2…V2-8 (bila diminta) → uji browser manual (kanvas di desktop & mobile, FPS, keyboard/SR, reduced-motion) → rilis.
+**Lanjut (pemilik, opsional):** (1) siapkan pengganti bukti sosial beranda (mis. `SocialProof` dari pesanan nyata yang sudah ada); (2) bersihkan data Firestore `taman_testimonials`/`taman_private`, field `testimonials` di `content/*`, dan field `testimonial` di dokumen `projects/*` (tidak wajib untuk kode).
 
 ---## ✅ Sesi Terakhir - Upgrade Blog B0–B8 (SELESAI, kode)
 

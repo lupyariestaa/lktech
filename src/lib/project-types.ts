@@ -3,12 +3,6 @@ export type ProjectMetric = {
   value: string;
 };
 
-export type ProjectTestimonial = {
-  quote: string;
-  author: string;
-  role: string;
-};
-
 export type Project = {
   slug: string;
   title: string;
@@ -27,7 +21,6 @@ export type Project = {
   results: string[];
   metrics: ProjectMetric[];
   techStack: string[];
-  testimonial?: ProjectTestimonial;
   /** Tampilkan sebagai proyek unggulan (mis. di beranda). */
   featured?: boolean;
   /** Urutan tampil manual (kecil = lebih dulu). Bila kosong → pakai tahun. */

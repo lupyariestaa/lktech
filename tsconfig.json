@@ -65,7 +65,6 @@
     "scripts/article-api.test.ts",
     "scripts/heading-and-slug.test.ts",
     "scripts/co-purchase.test.ts",
-    "scripts/product-related.test.ts",
-    "scripts/taman.test.ts"
+    "scripts/product-related.test.ts"
   ]
 }

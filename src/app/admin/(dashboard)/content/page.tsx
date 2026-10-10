@@ -13,7 +13,7 @@ export default function AdminContentPage() {
       <div className="mb-6">
         <h1 className="text-xl font-bold text-secondary">Konten Beranda</h1>
         <p className="mt-1 text-sm text-muted">
-          Kelola keunggulan, alur kerja, statistik, dan testimoni yang tampil di
+          Kelola keunggulan, alur kerja, statistik, dan teknologi yang tampil di
           beranda serta halaman layanan.
         </p>
       </div>

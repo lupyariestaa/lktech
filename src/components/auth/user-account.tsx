@@ -28,7 +28,6 @@ import { AccountPoints } from "@/components/auth/account-points";
 import { AccountWishlist } from "@/components/auth/account-wishlist";
 import { AccountAddresses } from "@/components/auth/account-addresses";
 import { AccountProfile } from "@/components/auth/account-profile";
-import { AccountTaman } from "@/components/auth/account-taman";
 import { cn } from "@/lib/utils";
 
 /** Toast ringan (pesan aksi cepat). */
@@ -40,7 +39,6 @@ const VALID_TABS: AccountTab[] = [
   "favorit",
   "alamat",
   "profil",
-  "testimoni",
 ];
 
 /** Baca tab awal dari query string (?tab=) — dipakai sebagai state awal. */
@@ -377,12 +375,6 @@ export function UserAccount() {
               initialDisplayName={displayName}
               initialWhatsapp={profile?.whatsapp ?? ""}
             />
-          </div>
-        )}
-
-        {tab === "testimoni" && (
-          <div role="tabpanel" id="panel-testimoni" aria-labelledby="tab-testimoni">
-            <AccountTaman />
           </div>
         )}
       </div>

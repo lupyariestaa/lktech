@@ -9,7 +9,6 @@ import {
   Target,
   Lightbulb,
   TrendingUp,
-  Quote,
 } from "lucide-react";
 import { ProjectCover } from "@/components/project-cover";
 import { ProjectCard } from "@/components/project-card";
@@ -127,18 +126,6 @@ export default async function ProjectDetailPage({
               keywords: [...project.tags, ...project.techStack].join(", "),
               image: galleryImages.length ? galleryImages.map((g) => g.url) : undefined,
               creator: { "@type": "Organization", name: "LKTech" },
-              ...(project.testimonial
-                ? {
-                    review: {
-                      "@type": "Review",
-                      reviewBody: project.testimonial.quote,
-                      author: {
-                        "@type": "Person",
-                        name: project.testimonial.author,
-                      },
-                    },
-                  }
-                : {}),
             },
             {
               "@context": "https://schema.org",
@@ -384,33 +371,6 @@ export default async function ProjectDetailPage({
                 ))}
               </div>
             )}
-          </div>
-        </section>
-      )}
-
-      {/* Testimoni (jika ada) */}
-      {project.testimonial && (
-        <section className="relative bg-white py-16">
-          <div className="mx-auto max-w-3xl px-6">
-            <figure className="relative rounded-3xl border border-slate-100 bg-surface p-8 text-center">
-              <Quote className="mx-auto h-9 w-9 text-primary/20" />
-              <blockquote className="mt-4 text-lg leading-relaxed text-slate-700">
-                “{project.testimonial.quote}”
-              </blockquote>
-              <figcaption className="mt-6 flex items-center justify-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-light text-sm font-bold text-white">
-                  {project.testimonial.author.charAt(0)}
-                </span>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-secondary">
-                    {project.testimonial.author}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {project.testimonial.role}
-                  </p>
-                </div>
-              </figcaption>
-            </figure>
           </div>
         </section>
       )}

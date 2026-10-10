@@ -108,12 +108,6 @@ export const PROJECTS: import("@/lib/project-types").Project[] = [
       { label: "Pengerjaan", value: "2 minggu" },
     ],
     techStack: ["Next.js", "Tailwind CSS", "Vercel"],
-    testimonial: {
-      quote:
-        "Prosesnya cepat dan komunikatif. Website yang dibuat benar-benar membantu penjualan kami naik.",
-      author: "Andi Pratama",
-      role: "Owner, Kopi Lokal",
-    },
   },
   {
     slug: "aplikasi-absensi-sekolah",
@@ -142,12 +136,6 @@ export const PROJECTS: import("@/lib/project-types").Project[] = [
       { label: "Pengerjaan", value: "8 minggu" },
     ],
     techStack: ["React Native", "Expo", "Firebase"],
-    testimonial: {
-      quote:
-        "LKTech sangat memahami kebutuhan kami. Hasilnya rapi dan mudah dikelola oleh tim internal.",
-      author: "Siti Rahmawati",
-      role: "Direktur, EduMaju",
-    },
   },
   {
     slug: "toko-online-ritel-jaya",
@@ -176,12 +164,6 @@ export const PROJECTS: import("@/lib/project-types").Project[] = [
       { label: "Pengerjaan", value: "6 minggu" },
     ],
     techStack: ["Next.js", "Firebase", "Cloudinary"],
-    testimonial: {
-      quote:
-        "Harga masuk akal untuk kualitas sekelas agensi besar. Sistem toko online kami berjalan lancar.",
-      author: "Bayu Nugraha",
-      role: "Founder, Ritel Jaya",
-    },
   },
   {
     slug: "identitas-brand-klinik-medika",
@@ -374,35 +356,6 @@ export const TECH_STACK: TechItem[] = [
   { name: "Vercel", logo: "/tech/vercel.svg", color: "#0A0F1E", wordmark: true },
   { name: "GitHub", logo: "/tech/github.svg", color: "#1B1F23" },
   { name: "Figma", logo: "/tech/figma.svg", color: "#F24E1E" },
-];
-
-/**
- * Testimoni klien untuk beranda.
- * ⚠️ CONTOH — ganti dengan testimoni asli via dashboard (menu “Konten”)
- * sebelum situs dipromosikan agar tidak menyesatkan calon klien.
- */
-export const TESTIMONIALS = [
-  {
-    name: "Andi Pratama",
-    role: "Owner, Kopi Lokal",
-    quote:
-      "Prosesnya cepat dan komunikatif. Website yang dibuat benar-benar membantu penjualan kami naik.",
-    rating: 5,
-  },
-  {
-    name: "Siti Rahmawati",
-    role: "Direktur, EduMaju",
-    quote:
-      "LKTech sangat memahami kebutuhan kami. Hasilnya rapi dan mudah dikelola oleh tim internal.",
-    rating: 5,
-  },
-  {
-    name: "Bayu Nugraha",
-    role: "Founder, Ritel Jaya",
-    quote:
-      "Harga masuk akal untuk kualitas sekelas agensi besar. Sistem toko online kami berjalan lancar.",
-    rating: 5,
-  },
 ];
 
 export const PRICING = [

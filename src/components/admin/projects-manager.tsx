@@ -547,53 +547,6 @@ function ProjectForm({
             className={cn(fieldBase, "resize-none")}
           />
         </Field>
-
-        <div className="rounded-2xl border border-slate-200 bg-surface p-5">
-          <p className="text-sm font-semibold text-secondary">
-            Testimoni (opsional)
-          </p>
-          <div className="mt-3 grid gap-4">
-            <textarea
-              rows={2}
-              value={project.testimonial?.quote ?? ""}
-              onChange={(e) =>
-                set("testimonial", {
-                  quote: e.target.value,
-                  author: project.testimonial?.author ?? "",
-                  role: project.testimonial?.role ?? "",
-                })
-              }
-              placeholder="Kutipan testimoni"
-              className={cn(fieldBase, "resize-none")}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <input
-                value={project.testimonial?.author ?? ""}
-                onChange={(e) =>
-                  set("testimonial", {
-                    quote: project.testimonial?.quote ?? "",
-                    author: e.target.value,
-                    role: project.testimonial?.role ?? "",
-                  })
-                }
-                placeholder="Nama"
-                className={fieldBase}
-              />
-              <input
-                value={project.testimonial?.role ?? ""}
-                onChange={(e) =>
-                  set("testimonial", {
-                    quote: project.testimonial?.quote ?? "",
-                    author: project.testimonial?.author ?? "",
-                    role: e.target.value,
-                  })
-                }
-                placeholder="Jabatan, Perusahaan"
-                className={fieldBase}
-              />
-            </div>
-          </div>
-        </div>
       </div>
 
       {isNew ? (

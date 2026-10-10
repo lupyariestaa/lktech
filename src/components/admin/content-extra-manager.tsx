@@ -13,10 +13,8 @@ import { useSiteContent } from "@/components/admin/use-site-content";
 import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import {
   isDefaultStats,
-  isDefaultTestimonials,
   type ManagedProcess,
   type ManagedStat,
-  type ManagedTestimonial,
   type ManagedWhyUs,
 } from "@/lib/content-types";
 import { cn } from "@/lib/utils";
@@ -24,13 +22,12 @@ import { cn } from "@/lib/utils";
 const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
 
-type TabKey = "whyUs" | "process" | "stats" | "testimonials" | "technologies";
+type TabKey = "whyUs" | "process" | "stats" | "technologies";
 
 const TABS: { key: TabKey; label: string; hint: string }[] = [
   { key: "whyUs", label: "Keunggulan", hint: "Kartu “Kenapa memilih LKTech?”" },
   { key: "process", label: "Alur Kerja", hint: "Langkah proses di beranda & halaman layanan." },
   { key: "stats", label: "Statistik", hint: "Angka pencapaian di beranda." },
-  { key: "testimonials", label: "Testimoni", hint: "Kutipan dari klien." },
   { key: "technologies", label: "Teknologi", hint: "Logo teknologi pada marquee beranda." },
 ];
 
@@ -117,16 +114,6 @@ export function ContentExtraManager() {
       )}
 
       <p className="text-xs text-muted">{activeTab.hint}</p>
-
-      {tab === "testimonials" && isDefaultTestimonials(content.testimonials) && (
-        <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            Testimoni di bawah masih <strong>contoh</strong>. Ganti dengan
-            testimoni klien asli agar tidak menyesatkan calon klien.
-          </span>
-        </div>
-      )}
 
       {tab === "stats" && isDefaultStats(content.stats) && (
         <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -271,66 +258,6 @@ export function ContentExtraManager() {
           validate={(items) =>
             items.some((i) => !i.label.trim())
               ? "Label statistik wajib diisi."
-              : null
-          }
-        />
-      )}
-
-      {tab === "testimonials" && (
-        <ListEditor
-          items={content.testimonials}
-          empty={{ name: "", role: "", quote: "", rating: 5 }}
-          onSave={(items) =>
-            saveList("testimonials", items, "Testimoni berhasil disimpan.")
-          }
-          saving={saving}
-          disabled={loadFailed}
-          onDirtyChange={setDirty}
-          onError={reject}
-          renderRow={(item, update) => (
-            <div className="grid gap-3">
-              <div className="grid gap-3 sm:grid-cols-[1fr_1fr_100px]">
-                <input
-                  value={item.name}
-                  onChange={(e) => update({ name: e.target.value })}
-                  placeholder="Nama"
-                  className={fieldBase}
-                />
-                <input
-                  value={item.role}
-                  onChange={(e) => update({ role: e.target.value })}
-                  placeholder="Jabatan, Perusahaan"
-                  className={fieldBase}
-                />
-                <input
-                  type="number"
-                  min={1}
-                  max={5}
-                  value={item.rating}
-                  onChange={(e) =>
-                    update({
-                      rating: Math.min(
-                        5,
-                        Math.max(1, Number(e.target.value) || 5),
-                      ),
-                    })
-                  }
-                  className={fieldBase}
-                  aria-label="Rating (1-5)"
-                />
-              </div>
-              <textarea
-                rows={3}
-                value={item.quote}
-                onChange={(e) => update({ quote: e.target.value })}
-                placeholder="Kutipan testimoni"
-                className={cn(fieldBase, "resize-none")}
-              />
-            </div>
-          )}
-          validate={(items) =>
-            items.some((i) => !i.name.trim())
-              ? "Nama pemberi testimoni wajib diisi."
               : null
           }
         />
@@ -515,6 +442,5 @@ function ListEditor<T extends { [k: string]: unknown }>({
 export type {
   ManagedProcess,
   ManagedStat,
-  ManagedTestimonial,
   ManagedWhyUs,
 };

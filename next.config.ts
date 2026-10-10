@@ -17,11 +17,6 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "framer-motion"],
   },
 
-  // Pengalihan tautan lama: form testimoni pindah ke /taman/tulis (V2-3).
-  async redirects() {
-    return [{ source: "/taman/kirim", destination: "/taman/tulis", permanent: true }];
-  },
-
   images: {
     remotePatterns: [
       {

@@ -25,27 +25,6 @@
   --animate-marquee: marquee 30s linear infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-aurora: aurora 18s ease-in-out infinite alternate;
-
-  /* Taman Pixel (T7): langkah-langkah ala 8-bit (steps) agar terasa retro. */
-  --animate-taman-idle: taman-idle 2.4s steps(2, end) infinite;
-  --animate-taman-hop: taman-hop 0.4s steps(3, end) 1;
-  --animate-taman-shuffle: taman-shuffle 0.5s steps(4, end) 1;
-}
-
-@keyframes taman-idle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-
-@keyframes taman-hop {
-  0% { transform: translateY(0); }
-  40% { transform: translateY(-10px); }
-  100% { transform: translateY(0); }
-}
-
-@keyframes taman-shuffle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
 }
 
 @keyframes marquee {

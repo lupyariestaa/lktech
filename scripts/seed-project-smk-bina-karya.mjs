@@ -7,7 +7,7 @@
  * Membaca kredensial Firebase Admin dari `.env.local`.
  * Sifat: IDEMPOTEN — menjalankan ulang MENIMPA dokumen yang sama. Aman diulang.
  *
- * Catatan: tantangan/solusi/hasil/testimoni DISUSUN atas permintaan pemilik
+ * Catatan: tantangan/solusi/hasil DISUSUN atas permintaan pemilik
  * (data asli "SKIP") agar portofolio lebih menarik. Nama sekolah bersifat
  * fiktif/dummy.
  */
@@ -117,12 +117,6 @@ const project = {
     "Playwright",
     "Netlify",
   ],
-  testimonial: {
-    quote:
-      "Website sekolah kami jadi jauh lebih mudah ditemukan calon siswa — informasi jurusan dan PPDB kini tersaji rapi dalam satu tempat.",
-    author: "Humas Sekolah",
-    role: "Tim Humas SMK Bina Karya Nusantara",
-  },
   featured: false,
   order: 2,
 };

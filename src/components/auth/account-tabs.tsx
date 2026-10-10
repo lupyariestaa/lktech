@@ -10,7 +10,6 @@ export const ACCOUNT_TABS = [
   "favorit",
   "alamat",
   "profil",
-  "testimoni",
 ] as const;
 export type AccountTab = (typeof ACCOUNT_TABS)[number];
 
@@ -21,7 +20,6 @@ export const ACCOUNT_TAB_LABEL: Record<AccountTab, string> = {
   favorit: "Favorit",
   alamat: "Alamat",
   profil: "Profil",
-  testimoni: "Testimoni saya",
 };
 
 /**

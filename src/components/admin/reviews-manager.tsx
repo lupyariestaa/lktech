@@ -7,7 +7,6 @@ import {
   ExternalLink,
   Loader2,
   RefreshCw,
-  Sparkles,
   Star,
   Trash2,
   X,
@@ -18,7 +17,6 @@ import {
   fetchReviewsSummary,
   moderateReviewAdmin,
 } from "@/lib/admin-reviews-api";
-import { importTamanFromReview } from "@/lib/admin-api";
 import {
   REVIEW_STATUS_LABEL,
   REVIEW_STATUS_STYLE,
@@ -75,20 +73,6 @@ export function ReviewsManager() {
       active = false;
     };
   }, [filter, reloadKey]);
-
-  /** Angkat ulasan jadi draft testimoni taman (T6). Server menentukan aturannya. */
-  const onImportTaman = async (id: string) => {
-    if (busyId) return;
-    setBusyId(id);
-    try {
-      await importTamanFromReview(id);
-      toast.success("Diangkat jadi draft testimoni. Lengkapi persetujuan di Taman Testimoni.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal mengangkat ulasan.");
-    } finally {
-      setBusyId(null);
-    }
-  };
 
   const onModerate = async (id: string, status: "approved" | "rejected") => {
     if (busyId) return;
@@ -286,16 +270,6 @@ export function ReviewsManager() {
                   >
                     <X className="h-3.5 w-3.5" />
                     Tolak
-                  </button>
-                )}
-                {r.status === "approved" && r.rating >= 4 && (
-                  <button
-                    onClick={() => onImportTaman(r.id)}
-                    disabled={busyId === r.id}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary-50 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Angkat jadi testimoni
                   </button>
                 )}
                 <button

@@ -129,12 +129,6 @@ const project = {
     "jsPDF",
     "SheetJS",
   ],
-  testimonial: {
-    quote:
-      "Sebagai freelancer dengan income fluktuatif, dulu saya sering bingung uang lari ke mana. Fitur multi-rekening & budgeting di Duitin bikin saya bisa pisahkan dana operasional, pajak, dan tabungan pribadi secara otomatis.",
-    author: "Rian Pratama",
-    role: "Freelance UI/UX Designer & Remote Worker",
-  },
   featured: false,
   order: 1,
 };

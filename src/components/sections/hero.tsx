@@ -9,7 +9,7 @@ import { trackCtaClick } from "@/lib/analytics";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { COMPANY } from "@/lib/content";
 import type { HeroShowcase } from "@/lib/content-types";
-import { isDefaultStats, isDefaultTestimonials } from "@/lib/content-types";
+import { isDefaultStats } from "@/lib/content-types";
 import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
 import { HeroShowcaseCarousel } from "@/components/hero-showcase-carousel";
@@ -137,15 +137,13 @@ function DeviceMockups({
 export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
   const reduced = useReducedMotionPreference();
   const settings = useSettings();
-  const { hero, testimonials, stats } = useContent();
+  const { hero, stats } = useContent();
   const base = introDelay(reduced);
 
   // Kejujuran data (FASE H2): klaim sosial di bawah CTA hanya ditampilkan bila
-  // berasal dari data NYATA — bukan testimoni/stat placeholder bawaan.
-  const honestTestimonials = isDefaultTestimonials(testimonials) ? [] : testimonials;
+  // berasal dari data NYATA — bukan stat placeholder bawaan.
   const honestStats = isDefaultStats(stats) ? [] : stats;
   const clientStat = honestStats.find((s) => /klien/i.test(s.label));
-  const avatars = honestTestimonials.slice(0, 4);
 
   return (
     <section
@@ -226,19 +224,6 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
             transition={{ delay: base + 0.6, duration: 0.7 }}
             className="mt-10 flex items-center gap-6"
           >
-            {avatars.length > 0 && (
-              <div className="flex -space-x-2.5">
-                {avatars.map((t) => (
-                  <span
-                    key={t.name}
-                    className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-gradient-to-br from-primary to-primary-light text-[11px] font-bold text-white"
-                    aria-hidden="true"
-                  >
-                    {t.name.charAt(0).toUpperCase()}
-                  </span>
-                ))}
-              </div>
-            )}
             {clientStat && (
               <p className="text-sm text-muted">
                 <span className="font-semibold text-secondary">

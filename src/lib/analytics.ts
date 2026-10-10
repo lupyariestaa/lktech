@@ -1,22 +1,22 @@
-"use client";
+﻿"use client";
 
 import { track } from "@vercel/analytics";
 
 /**
  * Pelacakan event konversi terpusat (Vercel Web Analytics).
  *
- * Tujuan: mengukur aksi bernilai bisnis — klik WhatsApp, submit lead/order,
- * tambah ke keranjang, checkout — tanpa mengirim data pribadi pengguna.
+ * Tujuan: mengukur aksi bernilai bisnis â€” klik WhatsApp, submit lead/order,
+ * tambah ke keranjang, checkout â€” tanpa mengirim data pribadi pengguna.
  *
  * Prinsip:
  * - **Aman & tahan gagal**: pembungkus `trackEvent` tidak pernah melempar
- *   error (analytics tak boleh merusak UX). Bila diblokir/SSR → no-op.
+ *   error (analytics tak boleh merusak UX). Bila diblokir/SSR â†’ no-op.
  * - **Tanpa PII**: properti hanya berisi tipe/label/nilai non-sensitif
- *   (mis. nama layanan, jumlah, total) — TANPA nama/email/telepon/isi pesan.
+ *   (mis. nama layanan, jumlah, total) â€” TANPA nama/email/telepon/isi pesan.
  * - Nama event memakai gaya `snake_case` yang ringkas & konsisten.
  */
 
-/** Properti yang diizinkan pada event (primitif — sesuai batas Vercel). */
+/** Properti yang diizinkan pada event (primitif â€” sesuai batas Vercel). */
 type EventProps = Record<string, string | number | boolean | null | undefined>;
 
 /**
@@ -33,7 +33,7 @@ export function trackEvent(name: string, props?: EventProps): void {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Event terketik — satu tempat untuk nama & properti agar konsisten.          */
+/* Event terketik â€” satu tempat untuk nama & properti agar konsisten.          */
 /* -------------------------------------------------------------------------- */
 
 /**
@@ -81,7 +81,7 @@ export function trackPackageClick(service: string, pkg: string): void {
 }
 
 /**
- * Klik CTA navigasi bernilai konversi di beranda (FASE H7) — mis. "Lihat semua
+ * Klik CTA navigasi bernilai konversi di beranda (FASE H7) â€” mis. "Lihat semua
  * produk/layanan/proyek/paket". Tanpa PII: hanya konteks + tujuan.
  * @param location Konteks tempat CTA (mis. "produk-section", "services", "hero").
  * @param target   Tujuan tautan (mis. "/produk", "/layanan", "#layanan").
@@ -91,7 +91,7 @@ export function trackCtaClick(location: string, target: string): void {
 }
 
 /**
- * Kedalaman scroll beranda (FASE H7) — dipicu sekali per milestone (25/50/75/100).
+ * Kedalaman scroll beranda (FASE H7) â€” dipicu sekali per milestone (25/50/75/100).
  * Berguna mengukur seberapa jauh pengunjung membaca sebelum berkonversi.
  * @param percent Milestone kedalaman (25, 50, 75, 100).
  */
@@ -99,7 +99,7 @@ export function trackScrollDepth(percent: number): void {
   trackEvent("scroll_depth", { percent });
 }
 
-/** Pembayaran online dimulai (pembeli diarahkan ke halaman bayar — FASE P0/P6). */
+/** Pembayaran online dimulai (pembeli diarahkan ke halaman bayar â€” FASE P0/P6). */
 export function trackPaymentInitiated(props: {
   orderId?: string;
   total: number;
@@ -154,22 +154,4 @@ export function trackRelatedClick(props: { from: string; to: string; placement: 
 /** Klik CTA di halaman blog (WhatsApp, layanan, newsletter). */
 export function trackBlogCta(props: { slug: string; cta: string }): void {
   trackEvent("cta_click", { location: "blog", target: props.cta, slug: props.slug });
-}
-/* -------------------------------------------------------------------------- */
-/* Taman Testimoni (T10). Tanpa PII: hanya hewan, indeks, sumber, dan jumlah.  */
-/* -------------------------------------------------------------------------- */
-
-/** Kartu testimoni dibuka dari hewan tertentu (tanpa isi testimoni). */
-export function trackTamanOpen(props: { animal: string; index: number; via: "klik" | "keyboard" }): void {
-  trackEvent("taman_open", { animal: props.animal, index: props.index, via: props.via });
-}
-
-/** Gacha "Acak lagi": jumlah pilihan yang tersedia dan jumlah slot tampil. */
-export function trackTamanRefresh(props: { pool: number; slots: number }): void {
-  trackEvent("taman_refresh", { pool: props.pool, slots: props.slots });
-}
-
-/** Hasil kirim testimoni (berhasil/gagal). Tanpa isi pesan atau identitas. */
-export function trackTamanSubmit(props: { ok: boolean; reason?: string }): void {
-  trackEvent("taman_submit", { ok: props.ok, reason: props.reason ?? null });
 }

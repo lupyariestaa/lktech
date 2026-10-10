@@ -8,8 +8,7 @@
  * Sifat: IDEMPOTEN — menjalankan ulang MENIMPA dokumen yang sama. Aman diulang.
  *
  * Catatan: klien "KOSMO Instruments" adalah konsep merek (dummy). Tantangan/
- * solusi berasal dari temuan pengujian nyata (Puppeteer); testimoni ditambahkan
- * atas permintaan pemilik agar lebih menarik.
+ * solusi berasal dari temuan pengujian nyata (Puppeteer).
  */
 
 import { readFileSync } from "node:fs";
@@ -124,12 +123,6 @@ const project = {
     "Web Storage API",
     "WhatsApp Click-to-Chat",
   ],
-  testimonial: {
-    quote:
-      "Toko online-nya ringan banget dan checkout-nya langsung ke WhatsApp — pelanggan tidak perlu bingung daftar atau bayar pakai kartu.",
-    author: "Pemilik KOSMO Instruments",
-    role: "Founder KOSMO Instruments",
-  },
   featured: false,
   order: 3,
 };

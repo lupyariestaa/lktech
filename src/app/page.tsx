@@ -9,8 +9,6 @@ import { Process } from "@/components/sections/process";
 import { FeaturedProducts } from "@/components/sections/featured-products";
 import { Stats } from "@/components/sections/stats";
 import { PortfolioTeaser } from "@/components/sections/portfolio-teaser";
-import { TamanSection } from "@/components/taman/taman-section";
-import { TamanSchema } from "@/components/taman/taman-schema";
 import { Pricing } from "@/components/sections/pricing";
 import { Faq } from "@/components/sections/faq";
 import { CtaContact } from "@/components/sections/cta-contact";
@@ -62,8 +60,6 @@ export default function Home() {
         <Process />
         <FeaturedProducts />
         <Stats />
-        <TamanSection />
-        <TamanSchema />
         <Pricing />
         <Faq />
         <CtaContact />

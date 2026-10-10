@@ -81,13 +81,6 @@ export async function POST(req: Request) {
     techStack: Array.isArray(body.techStack)
       ? body.techStack.filter(Boolean)
       : [],
-    testimonial: body.testimonial?.quote?.trim()
-      ? {
-          quote: body.testimonial.quote.trim(),
-          author: (body.testimonial.author ?? "").trim(),
-          role: (body.testimonial.role ?? "").trim(),
-        }
-      : undefined,
   };
 
   try {

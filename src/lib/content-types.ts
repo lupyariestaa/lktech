@@ -4,7 +4,6 @@ import {
   PROCESS as DEFAULT_PROCESS,
   STATS as DEFAULT_STATS,
   TECH_STACK as DEFAULT_TECH_STACK,
-  TESTIMONIALS as DEFAULT_TESTIMONIALS,
   WHY_US as DEFAULT_WHY_US,
   type Service,
   type ServiceDetail,
@@ -88,14 +87,6 @@ export type ManagedStat = {
   label: string;
 };
 
-/** Satu testimoni klien pada beranda. */
-export type ManagedTestimonial = {
-  name: string;
-  role: string;
-  quote: string;
-  rating: number;
-};
-
 /** Satu teknologi pada marquee "Teknologi yang kami gunakan". */
 export type ManagedTechnology = {
   name: string;
@@ -116,7 +107,6 @@ export type SiteContent = {
   whyUs: ManagedWhyUs[];
   process: ManagedProcess[];
   stats: ManagedStat[];
-  testimonials: ManagedTestimonial[];
   technologies: ManagedTechnology[];
 };
 
@@ -174,19 +164,8 @@ export function defaultSiteContent(): SiteContent {
     whyUs: structuredClone(DEFAULT_WHY_US),
     process: structuredClone(DEFAULT_PROCESS),
     stats: structuredClone(DEFAULT_STATS),
-    testimonials: structuredClone(DEFAULT_TESTIMONIALS),
     technologies: DEFAULT_TECH_STACK.map((t) => ({ ...t, wordmark: t.wordmark ?? false })),
   };
-}
-
-/**
- * Apakah daftar testimoni masih sama dengan nilai contoh bawaan (placeholder)?
- * Dipakai dashboard untuk menampilkan peringatan agar diganti data asli.
- */
-export function isDefaultTestimonials(list: ManagedTestimonial[]): boolean {
-  return (
-    JSON.stringify(list) === JSON.stringify(structuredClone(DEFAULT_TESTIMONIALS))
-  );
 }
 
 /** Apakah daftar statistik masih sama dengan nilai contoh bawaan. */

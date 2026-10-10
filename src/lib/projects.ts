@@ -33,10 +33,6 @@ function normalizeProject(data: Record<string, unknown>): Project {
         )
       : [],
     techStack: strArr(data.techStack),
-    testimonial:
-      data.testimonial && typeof data.testimonial === "object"
-        ? (data.testimonial as Project["testimonial"])
-        : undefined,
     featured: data.featured === true,
     order:
       typeof data.order === "number" && Number.isFinite(data.order)
@@ -116,18 +112,11 @@ export async function saveProject(
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
 
-  // Firestore menolak nilai `undefined` — buang field testimonial bila kosong.
-  const { testimonial, ...rest } = project;
   const payload: Record<string, unknown> = {
-    ...rest,
+    ...project,
     updatedAtISO: new Date().toISOString(),
     updatedBy,
   };
-  if (testimonial && testimonial.quote?.trim()) {
-    payload.testimonial = testimonial;
-  } else {
-    payload.testimonial = null;
-  }
 
   await db
     .collection(COLLECTION)

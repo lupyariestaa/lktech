@@ -10,7 +10,6 @@ import {
   type ManagedService,
   type ManagedStat,
   type ManagedTechnology,
-  type ManagedTestimonial,
   type ManagedWhyUs,
   type SiteContent,
 } from "@/lib/content-types";
@@ -200,23 +199,6 @@ function normalizeStat(raw: unknown): ManagedStat | null {
   };
 }
 
-function normalizeTestimonial(raw: unknown): ManagedTestimonial | null {
-  if (!raw || typeof raw !== "object") return null;
-  const d = raw as Record<string, unknown>;
-  const name = str(d.name).trim();
-  if (!name) return null;
-  const ratingRaw = typeof d.rating === "number" ? d.rating : Number(d.rating);
-  const rating = Number.isFinite(ratingRaw)
-    ? Math.min(5, Math.max(1, Math.round(ratingRaw)))
-    : 5;
-  return {
-    name,
-    role: str(d.role),
-    quote: str(d.quote),
-    rating,
-  };
-}
-
 function normalizeTechnology(raw: unknown): ManagedTechnology | null {
   if (!raw || typeof raw !== "object") return null;
   const d = raw as Record<string, unknown>;
@@ -257,11 +239,6 @@ export function normalizeSiteContent(raw: Record<string, unknown>): SiteContent 
     whyUs: normalizeList(raw.whyUs, normalizeWhyUs, defaults.whyUs),
     process: normalizeList(raw.process, normalizeProcess, defaults.process),
     stats: normalizeList(raw.stats, normalizeStat, defaults.stats),
-    testimonials: normalizeList(
-      raw.testimonials,
-      normalizeTestimonial,
-      defaults.testimonials,
-    ),
     technologies: normalizeList(
       raw.technologies,
       normalizeTechnology,
@@ -312,7 +289,6 @@ export async function saveSiteContent(
         whyUs: content.whyUs,
         process: content.process,
         stats: content.stats,
-        testimonials: content.testimonials,
         technologies: content.technologies,
         updatedAtISO: new Date().toISOString(),
         updatedBy,
