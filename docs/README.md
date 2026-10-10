@@ -60,6 +60,8 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-10 | [Hapus Total Sistem Testimoni (analisis dampak + task)](2026-10-10-task-hapus-sistem-testimoni.md) | ✅ Selesai (kode) |
 | 2026-10-11 | [Hapus Total Sistem Poin / Loyalitas (analisis dampak + task)](2026-10-11-task-hapus-sistem-poin.md) | ✅ Selesai (kode) |
 | 2026-10-11 | [Audit & QA Sistem Pesanan (temuan gap: keamanan, bug, performa, UX, kualitas)](2026-10-11-audit-sistem-pesanan.md) | ✅ Batch 1–4 selesai (build hijau) |
+| 2026-10-11 | [Rekomendasi Upgrade Dashboard "Kelola Pesanan"](2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md) | 📝 Rekomendasi (approved) |
+| 2026-10-11 | [Task Eksekusi — Upgrade Dashboard "Kelola Pesanan" (fase O0–O8)](2026-10-11-task-upgrade-dashboard-pesanan.md) | ⏳ TODO (sesi berikutnya) |
 
 ### Dokumen pendukung (referensi & setup)
 
