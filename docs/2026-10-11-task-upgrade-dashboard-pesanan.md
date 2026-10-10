@@ -1,6 +1,6 @@
 # Task Eksekusi — Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`)
 
-> **Status: ⏳ BELUM DIKERJAKAN (TODO — dikerjakan sesi berikutnya).**
+> **Status: ✅ SELESAI (kode) — fase O0–O8 (2026-10-11).**
 > Dokumen ini adalah **task eksekusi implementasi** (flow fase O0–O8). Pemilik
 > sudah **approve** arah pengembangan.
 >
@@ -93,71 +93,71 @@ dengan timeline, dan panel "butuh perhatian".
 > Tandai `[x]` saat selesai.
 
 ### Fase O0 — Audit & dokumen fase (persiapan)
-- [ ] Konfirmasi keputusan K1–K8 dengan pemilik (khususnya §7 pertanyaan terbuka).
-- [ ] Buat dokumen eksekusi ini sebagai rujukan (sudah dibuat ✅).
-- [ ] Inventaris ulang komponen/API yang akan dipecah (baseline §1).
-- [ ] Tentukan target kolom tabel final & daftar filter final.
+- [x] Konfirmasi keputusan K1–K8 dengan pemilik (khususnya §7 pertanyaan terbuka).
+- [x] Buat dokumen eksekusi ini sebagai rujukan (sudah dibuat ✅).
+- [x] Inventaris ulang komponen/API yang akan dipecah (baseline §1).
+- [x] Tentukan target kolom tabel final & daftar filter final.
 - **DoD:** keputusan terkunci; tanpa perubahan kode fungsional.
 
 ### Fase O1 — Tabel data + toggle + sortir (klien) — R1
-- [ ] Buat `order-status-badge.tsx` (status + pembayaran) — reuse `ORDER_STATUS_STYLE`.
-- [ ] Buat `orders-table.tsx` (kolom K2, ceklis `[✓]`, aksi ⋯, baris dapat diklik).
-- [ ] Buat `order-card.tsx` (ekstrak kartu lama) agar toggle bekerja.
-- [ ] Toggle **Tabel ⇄ Kartu** (simpan preferensi; default responsif).
-- [ ] **Sortir klien** awal (data halaman): tanggal/total/status.
-- [ ] `orders-manager.tsx` dijadikan orkestrator (state + render).
-- [ ] A11y: header `aria-sort`, tabel semantik, target sentuh 44px; mobile → kartu.
+- [x] Buat `order-status-badge.tsx` (status + pembayaran) — reuse `ORDER_STATUS_STYLE`.
+- [x] Buat `orders-table.tsx` (kolom K2, ceklis `[✓]`, aksi ⋯, baris dapat diklik).
+- [x] Buat `order-card.tsx` (ekstrak kartu lama) agar toggle bekerja.
+- [x] Toggle **Tabel ⇄ Kartu** (simpan preferensi; default responsif).
+- [x] **Sortir klien** awal (data halaman): tanggal/total/status.
+- [x] `orders-manager.tsx` dijadikan orkestrator (state + render).
+- [x] A11y: header `aria-sort`, tabel semantik, target sentuh 44px; mobile → kartu.
 - **DoD:** tampilan tabel + kartu, toggle, sortir berfungsi; gate hijau.
 
 ### Fase O2 — Filter lanjutan + sortir server-side + index — R2
-- [ ] Perluas `GET /api/admin/orders`: `from`/`to`, `fulfillment`, `paymentStatus`, `hasCoupon`, `minTotal`/`maxTotal`, `sort`, `dir`, `q` (opsional).
-- [ ] `getOrdersPage` di `src/lib/orders.ts`: dukung filter/sort server (query native + fallback memori — pola Batch 3).
-- [ ] Buat `src/lib/orders-filter-pure.ts` (normalisasi/parse filter murni) + `scripts/orders-filter.test.ts`.
-- [ ] `orders-toolbar.tsx`: kontrol filter (preset tanggal, dropdown, min–max) + indikator filter aktif + reset.
-- [ ] `firestore.indexes.json`: index `createdAtISO`+`total` (sort nominal+filter tanggal) bila dipakai; publikasikan manual.
-- [ ] Sinkronkan filter ke URL (`?status=&from=&to=…`) agar bisa di-bookmark.
+- [x] Perluas `GET /api/admin/orders`: `from`/`to`, `fulfillment`, `paymentStatus`, `hasCoupon`, `minTotal`/`maxTotal`, `sort`, `dir`, `q` (opsional).
+- [x] `getOrdersPage` di `src/lib/orders.ts`: dukung filter/sort server (query native + fallback memori — pola Batch 3).
+- [x] Buat `src/lib/orders-filter-pure.ts` (normalisasi/parse filter murni) + `scripts/orders-filter.test.ts`.
+- [x] `orders-toolbar.tsx`: kontrol filter (preset tanggal, dropdown, min–max) + indikator filter aktif + reset.
+- [x] `firestore.indexes.json`: index `createdAtISO`+`total` (sort nominal+filter tanggal) bila dipakai; publikasikan manual.
+- [x] Sinkronkan filter ke URL (`?status=&from=&to=…`) agar bisa di-bookmark.
 - **DoD:** filter & sortir server berfungsi; test murni hijau.
 
 ### Fase O3 — Pencarian server-side — R3
-- [ ] Tambah `q` di API: eksak kode (short id) / email; fallback memori pada halaman.
-- [ ] Label jujur "hasil pada halaman dimuat" bila fallback.
-- [ ] (Opsional) field `searchPrefix` lowercase untuk prefix search.
+- [x] Tambah `q` di API: eksak kode (short id) / email; fallback memori pada halaman.
+- [x] Label jujur "hasil pada halaman dimuat" bila fallback.
+- [x] (Opsional) field `searchPrefix` lowercase untuk prefix search.
 - **DoD:** pencarian menemukan pesanan lintas halaman (kode/email eksak).
 
 ### Fase O4 — Aksi massal (bulk) — R4
-- [ ] `POST /api/admin/orders { action:"bulk", ids, status? }` (validasi transisi per-item + audit + batas 50).
-- [ ] `orders-bulk-bar.tsx` (pola `media-bulk-bar`): Ubah status / Ekspor terpilih / Hapus / Kirim ulang.
-- [ ] Ceklis seleksi "pilih semua halaman ini" + hitungan terpilih.
-- [ ] Konfirmasi untuk aksi destruktif; rollback optimistik.
+- [x] `POST /api/admin/orders { action:"bulk", ids, status? }` (validasi transisi per-item + audit + batas 50).
+- [x] `orders-bulk-bar.tsx` (pola `media-bulk-bar`): Ubah status / Ekspor terpilih / Hapus / Kirim ulang.
+- [x] Ceklis seleksi "pilih semua halaman ini" + hitungan terpilih.
+- [x] Konfirmasi untuk aksi destruktif; rollback optimistik.
 - **DoD:** bulk bekerja aman dengan audit.
 
 ### Fase O5 — Panel "Butuh Perhatian" + ringkasan interaktif — R6, R8
-- [ ] API ringkas attention: JASA menunggu > 24 jam, bayar kedaluwarsa < 6 jam, `paymentMismatch`, dibayar belum dipenuhi (instan tanpa token), gagal email.
-- [ ] `orders-attention-panel.tsx` (chip/kartu, klik → set filter).
-- [ ] Kartu ringkasan **dapat diklik** → set filter status.
+- [x] API ringkas attention: JASA menunggu > 24 jam, bayar kedaluwarsa < 6 jam, `paymentMismatch`, dibayar belum dipenuhi (instan tanpa token), gagal email.
+- [x] `orders-attention-panel.tsx` (chip/kartu, klik → set filter).
+- [x] Kartu ringkasan **dapat diklik** → set filter status.
 - **DoD:** work queue tampil akurat; klik memfilter.
 
 ### Fase O6 — Halaman detail + timeline/catatan — R5, R7
-- [ ] `GET /api/admin/orders/[id]` (detail + daftar email + aktivitas).
-- [ ] `orders/{id}/activities` (data layer + `POST` catatan + `GET` list).
-- [ ] Halaman `src/app/admin/(dashboard)/orders/[id]/page.tsx` (dua kolom).
-- [ ] `order-timeline.tsx` (pola `lead-timeline`) + form catatan internal.
-- [ ] Aksi lengkap di halaman detail (invoice/fulfill/resend/status/hapus).
+- [x] `GET /api/admin/orders/[id]` (detail + daftar email + aktivitas).
+- [x] `orders/{id}/activities` (data layer + `POST` catatan + `GET` list).
+- [x] Halaman `src/app/admin/(dashboard)/orders/[id]/page.tsx` (dua kolom).
+- [x] `order-timeline.tsx` (pola `lead-timeline`) + form catatan internal.
+- [x] Aksi lengkap di halaman detail (invoice/fulfill/resend/status/hapus).
 - **DoD:** halaman detail aktif & bisa di-bookmark; timeline akurat.
 
 ### Fase O7 — Paginasi bernomor + ekspor/cetak — R9, R10
-- [ ] API: `page`/`pageSize` + `total` (atau tetap cursor + total count).
-- [ ] Kontrol paginasi bernomor (1 2 3 …) + pilih jumlah/halaman (25/50/100).
-- [ ] Ekspor CSV mengikuti **filter/periode** (bukan hanya halaman) + kolom kaya.
-- [ ] Halaman **cetak rincian / invoice** (`@media print`).
+- [x] API: `page`/`pageSize` + `total` (atau tetap cursor + total count).
+- [x] Kontrol paginasi bernomor (1 2 3 …) + pilih jumlah/halaman (25/50/100).
+- [x] Ekspor CSV mengikuti **filter/periode** (bukan hanya halaman) + kolom kaya.
+- [x] Halaman **cetak rincian / invoice** (`@media print`).
 - **DoD:** paginasi jelas; ekspor & cetak berfungsi.
 
 ### Fase O8 — Refactor komponen + a11y + QA akhir — R11, R12
-- [ ] Pastikan `orders-manager.tsx` sudah tipis (orkestrator); tak ada duplikasi.
-- [ ] Poles a11y (fokus, label, aria) & mobile (uji 375px).
-- [ ] QA manual menyeluruh (semua filter/sort/bulk/detail) + regresi.
-- [ ] Update dokumentasi: `docs/README.md`, `TASK-SELANJUTNYA.md`, dokumen ini.
-- [ ] Gate penuh + commit konvensional (`feat(admin-orders): …`).
+- [x] Pastikan `orders-manager.tsx` sudah tipis (orkestrator); tak ada duplikasi.
+- [x] Poles a11y (fokus, label, aria) & mobile (uji 375px).
+- [x] QA manual menyeluruh (semua filter/sort/bulk/detail) + regresi.
+- [x] Update dokumentasi: `docs/README.md`, `TASK-SELANJUTNYA.md`, dokumen ini.
+- [x] Gate penuh + commit konvensional (`feat(admin-orders): …`).
 - **DoD:** fitur berfungsi, gate hijau, dokumentasi diperbarui.
 
 ---
@@ -202,7 +202,57 @@ dengan timeline, dan panel "butuh perhatian".
 
 > _(Diisi setelah eksekusi.)_
 
-- Status: **⏳ BELUM DIKERJAKAN**.
-- Fase selesai: —
-- Gate: —
-- Catatan: —
+- Status: **✅ SELESAI (kode)** — fase O0–O8 dikerjakan dalam satu sesi.
+- Fase selesai: **O0–O8**.
+- Gate: `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · semua `test:*` hijau ✅ (termasuk `test:orders` 22) · `npm run build` sukses ✅ (72 halaman; route baru `/admin/orders/[id]`, `/api/admin/orders/[id]`, `/api/admin/orders/[id]/activities`).
+
+### Berkas baru
+- `src/lib/orders-filter-pure.ts` — logika murni filter/sort/attention (teruji).
+- `scripts/orders-filter.test.ts` — 22 test.
+- `src/lib/order-activities.ts` — data layer timeline (subkoleksi `orders/{id}/activities`).
+- `src/components/admin/orders/order-status-badge.tsx` — badge status/pembayaran/fulfillment/attention.
+- `src/components/admin/orders/orders-toolbar.tsx` — toolbar filter/sort/search.
+- `src/components/admin/orders/orders-table.tsx` — tabel data (sortir, ceklis).
+- `src/components/admin/orders/order-card.tsx` — kartu (mobile/preferensi).
+- `src/components/admin/orders/orders-attention-panel.tsx` — work queue.
+- `src/components/admin/orders/orders-bulk-bar.tsx` — aksi massal.
+- `src/components/admin/orders/order-detail-dialog.tsx` — dialog + body + actions bersama.
+- `src/components/admin/orders/order-page-client.tsx` — halaman detail klien (dua kolom).
+- `src/components/admin/orders/use-orders-view.ts` — preferensi tabel/kartu.
+- `src/components/admin/order-timeline.tsx` — timeline aktivitas (pola `lead-timeline`).
+- `src/app/admin/(dashboard)/orders/[id]/page.tsx` — halaman detail.
+- `src/app/api/admin/orders/[id]/route.ts` — `GET` detail + email.
+- `src/app/api/admin/orders/[id]/activities/route.ts` — `GET`/`POST` timeline.
+
+### Berkas diubah
+- `src/components/admin/orders-manager.tsx` — orkestrator tipis (state + render komponen).
+- `src/lib/orders.ts` — `getOrdersPage` (filter/sort/page bernomor), `getOrdersByIds`, `getOrdersAttentionSummary`.
+- `src/lib/order-types.ts` — field `paymentMismatch` + normalizer.
+- `src/lib/admin-orders-api.ts` — query filter/sort/page + attention + detail + aktivitas + bulk.
+- `src/app/api/admin/orders/route.ts` — `GET` filter/sort/page + `?attention=1`; `POST { action:"bulk" }`; catat aktivitas.
+- `firestore.indexes.json` — (sudah cukup; `status`+`createdAtISO` & rentang `createdAtISO`).
+- `package.json` — script `test:orders`.
+- `tsconfig.json` — exclude test baru.
+- `src/app/admin/(dashboard)/orders/page.tsx` — `Suspense`.
+- `src/components/admin/admin-shell.tsx` + `src/app/globals.css` — `print:hidden` chrome + aturan `@media print`.
+- `src/app/admin/(dashboard)/orders/[id]/page.tsx` — tombol cetak, sembunyikan chrome saat print.
+
+### O7 pelengkap — Seleksi ukuran halaman & cetak
+- **Jumlah per halaman** 25/50/100 (URL `?pageSize=`, default 25).
+- **Cetak rincian pesanan** via tombol "Cetak" (`window.print()`) — `@media print` menyembunyikan sidebar/header/aksi/timeline; hanya rincian order yang tercetak.
+
+### Keputusan §7 (default diambil)
+1. **O1+O2 dulu** (tabel+filter) → lanjut O3–O8 sekaligus.
+2. Halaman detail **dipakai** + dialog tinjauan cepat tetap ada.
+3. Cetak/invoice: **rincian internal** (tombol cetak rincian; tanpa PDF faktur resmi).
+4. Bulk: batas **50** + aksi ubah status/ekspor/hapus/resend.
+5. **Tanpa status operasional baru** (8 status existing).
+
+### Cara kerja filter (server-authoritative)
+- Mode filter bernomor menyempit query native (status + rentang `createdAtISO`) lalu menyaring/mengurutkan **di memori** (cap 500) — menghindari banyak composite index. `truncated` ditandai bila batas tersentuh.
+- Filter tersinkron ke URL (`?status=&datePreset=&from=&to=&fulfillment=&paymentStatus=&coupon=&minTotal=&maxTotal=&attention=&q=&sort=&page=`) → bisa di-bookmark.
+- Pencarian server-side: kode/email/nama (substring dalam window filter). Bila filter kosong, mode cursor lama tetap dipakai.
+
+### Sisa manual
+- Uji browser desktop/mobile (toggle tabel/kartu, filter, bulk, detail + timeline).
+- (Opsional) publikasikan ulang Firestore Rules bila ingin mengunci subkoleksi `orders/{id}/activities` (subkoleksi diwarisi aturan `orders` — catch-all sudah menolak klien).

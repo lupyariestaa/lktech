@@ -99,8 +99,17 @@ export type Order = {
   /** Total akhir = subtotal − diskon. */
   total: number;
   status: OrderStatus;
-  /** Info pembayaran online (bila ada). Order lama: undefined. */
+/** Info pembayaran online (bila ada). Order lama: undefined. */
   payment?: OrderPayment;
+  /**
+   * Catatan kurang bayar (OR-A6): nominal webhook < total order. Order tetap
+   * `menunggu_bayar`; ini penanda agar admin melihatnya di panel "butuh perhatian".
+   */
+  paymentMismatch?: {
+    received?: number;
+    expected?: number;
+    atISO?: string;
+  };
   /** Jalur fulfillment: "instan" (unduh) atau "jasa" (konsultasi). */
   fulfillment?: FulfillmentType;
   /**
@@ -217,8 +226,25 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
     subtotal,
     coupon,
     total,
-    status,
+status,
     payment,
+    paymentMismatch:
+      data.paymentMismatch && typeof data.paymentMismatch === "object"
+        ? (() => {
+            const m = data.paymentMismatch as Record<string, unknown>;
+            return {
+              received:
+                typeof m.received === "number" && Number.isFinite(m.received)
+                  ? m.received
+                  : undefined,
+              expected:
+                typeof m.expected === "number" && Number.isFinite(m.expected)
+                  ? m.expected
+                  : undefined,
+              atISO: str(m.atISO) || undefined,
+            };
+          })()
+        : undefined,
     fulfillment,
     downloadTokenId: str(data.downloadTokenId) || undefined,
     whatsapp: str(data.whatsapp),

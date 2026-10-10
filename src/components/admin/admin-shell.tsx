@@ -114,7 +114,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         {/* Sidebar desktop (â‰¥ lg) â€” expanded â†” rail */}
         <aside
           className={cn(
-            "sticky top-0 hidden h-dvh shrink-0 self-start flex-col border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out lg:flex",
+            "sticky top-0 hidden h-dvh shrink-0 self-start flex-col border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out lg:flex print:hidden",
             collapsed ? "w-20" : "w-64",
           )}
         >
@@ -145,7 +145,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           className="flex min-h-dvh w-full min-w-0 flex-col"
           inert={open ? true : undefined}
         >
-          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur print:hidden sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               {/* Hamburger (mobile) */}
               <button

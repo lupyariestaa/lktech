@@ -8,21 +8,33 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya — BELUM dikerjakan):** **[`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md)** — upgrade **Dashboard "Kelola Pesanan"** (`/admin/orders`): tabel proper + sortir/filter, pencarian server-side, aksi massal, panel "butuh perhatian", halaman detail + timeline. **⏳ TODO — dikerjakan sesi berikutnya.** (Rekomendasi: `docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`.)
+> 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 📄 **Audit sistem pesanan (pradasar):** **[`docs/2026-10-11-audit-sistem-pesanan.md`](docs/2026-10-11-audit-sistem-pesanan.md)** — ✅ Batch 1–4 selesai.
 > ✅ **Upgrade Beranda (H0–H8):** `docs/2026-10-06-task-upgrade-beranda.md` + `docs/2026-10-06-upgrade-beranda.md`. **SELESAI.**
 
 ---
 
-## ⏭️ SESI BERIKUTNYA — Upgrade Dashboard "Kelola Pesanan" (TODO)
+## ✅ SESI INI — Upgrade Dashboard "Kelola Pesanan" (O0–O8, SELESAI)
 
-**Status: ⏳ BELUM DIKERJAKAN.** Arah sudah di-approve pemilik.
+**Status: ✅ SELESAI (kode).** Task: [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8.
 
-- **Task eksekusi (flow fase O0–O8):** **[`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md)**.
-- **Rekomendasi (latar & prioritas):** [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
-- **Cakupan:** tabel data proper + toggle kartu, sortir/filter lanjutan (tanggal/fulfillment/pembayaran/kupon/nominal), pencarian server-side, aksi massal, panel "butuh perhatian", halaman detail `/admin/orders/[id]` + timeline/catatan, paginasi bernomor, ekspor/cetak.
+- **O1/O2** — tabel proper + toggle kartu, sortir (tanggal/total/status), filter lanjutan (tanggal/fulfillment/pembayaran/kupon/nominal), filter tersinkron URL.
+- **O3** — pencarian server-side (kode/email/nama).
+- **O4** — aksi massal (ubah status/ekspor/hapus/resend, maks 50).
+- **O5** — panel "butuh perhatian" + kartu ringkasan klik-filter.
+- **O6** — halaman detail `/admin/orders/[id]` (dua kolom) + timeline aktivitas/catatan internal.
+- **O7** — paginasi bernomor + ekspor mengikuti filter.
+- **O8** — komponen terpecah di `src/components/admin/orders/*`, a11y, QA.
+- **Berkas baru:** `src/lib/orders-filter-pure.ts` (+ test 22), `src/lib/order-activities.ts`, komponen `admin/orders/*`, `admin/order-timeline.tsx`, route `orders/[id]` + `orders/[id]/activities`.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ · `build` ✅ (72 halaman).
 
-**Mulai dari fase O0** (konfirmasi keputusan K1–K8 + pertanyaan terbuka §7), lalu O1+O2.
+**Sisa manual:** uji browser desktop/mobile.
+
+---
+
+## ⏭️ SESI BERIKUTNYA — (belum ditentukan)
+
+**Status: ⏭️ Pilih inisiatif berikutnya.** Daftar kandidat: §"STATUS & PETA SEKARANG" di bawah / `docs/2026-10-06-roadmap-pengembangan.md`.
 
 ---
 

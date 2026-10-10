@@ -1,6 +1,6 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { AggregateField, type Query } from "firebase-admin/firestore";
+import { AggregateField, type Query, type QueryDocumentSnapshot } from "firebase-admin/firestore";
 import {
   isOrderExpired,
   isPaidStatus,
@@ -10,6 +10,14 @@ import {
   type Order,
   type OrderStatus,
 } from "@/lib/order-types";
+import {
+  applyFilterAndSort,
+  attentionReasons,
+  dateRangeForPreset,
+  defaultFilter as defaultOrdersFilter,
+  type OrdersFilter,
+  type OrdersSort,
+} from "@/lib/orders-filter-pure";
 
 const COLLECTION = "orders";
 
@@ -232,27 +240,125 @@ export type OrdersPageQuery = {
   status?: OrderStatus | "semua";
   cursor?: string | null;
   limit?: number;
+  /** Filter lanjutan (FASE O2/O3). Bila ada → mode bernomor (page-based). */
+  filter?: OrdersFilter;
+  /** Urutan hasil (FASE O2). Default `date_desc`. */
+  sort?: OrdersSort;
+  /** Halaman 1-based (mode filter). */
+  page?: number;
 };
 
+/** Hasil daftar pesanan; field `total`/`page*` hanya ada di mode filter. */
+export type OrdersPageResult = {
+  orders: Order[];
+  nextCursor: string | null;
+  /** Mode filter bernomor. */
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  hasMore?: boolean;
+  /** `true` bila pemindaian menyentuh batas (hasil mungkin belum lengkap). */
+  truncated?: boolean;
+};
+
+/** Batas pemindaian saat memakai penyaringan memori (mode filter). */
+const FILTER_SCAN_CAP = 500;
+
+/** Ubah `yyyy-mm-dd` (lokal) ke batas ISO [awal hari, akhir hari]. */
+function dayBoundsISO(fromDay: string, toDay: string): { fromISO?: string; toISO?: string } {
+  const out: { fromISO?: string; toISO?: string } = {};
+  if (fromDay) {
+    const d = new Date(`${fromDay}T00:00:00`);
+    if (!Number.isNaN(d.getTime())) out.fromISO = d.toISOString();
+  }
+  if (toDay) {
+    const d = new Date(`${toDay}T23:59:59.999`);
+    if (!Number.isNaN(d.getTime())) out.toISO = d.toISOString();
+  }
+  return out;
+}
+
 /**
- * Daftar seluruh pesanan (admin), terbaru lebih dulu, dengan cursor pagination.
- * `nextCursor` = `createdAtISO` item terakhir bila masih ada lagi.
+ * Daftar seluruh pesanan (admin).
  *
- * Jalur utama memakai query NATIVE (`where(status)` + `orderBy(createdAtISO)`)
- * yang dilayani composite index (`firestore.indexes.json`). Bila index belum
- * dipublikasikan (deploy lama) → fallback ke penyaringan di memori agar daftar
- * TIDAK tampak kosong (perilaku lama).
+ * Dua mode:
+ * - **Cursor** (default, `filter` kosong): query native `orderBy(createdAtISO)`
+ *   + cursor; dipakai alur lama.
+ * - **Filter bernomor** (`filter`/`sort`/`page` diisi — FASE O2/O3): menyaring &
+ *   mengurutkan di memori atas window yang dipersempit query native (status +
+ *   rentang tanggal) agar TIDAK bergantung banyak composite index. Mengembalikan
+ *   `total` (dalam batas pemindaian) + `truncated` bila batas tersentuh.
+ *
+ * Bila index belum dipublikasikan → fallback otomatis ke penyaringan memori.
  */
 export async function getOrdersPage(
   query: OrdersPageQuery = {},
-): Promise<{ orders: Order[]; nextCursor: string | null }> {
+): Promise<OrdersPageResult> {
   const db = getAdminDb();
   if (!db) return { orders: [], nextCursor: null };
 
+  // ===== Mode filter bernomor (FASE O2/O3/O7) =====
+  if (query.filter || query.sort || query.page) {
+    const filter = query.filter ?? defaultOrdersFilter();
+    const sort = query.sort ?? "date_desc";
+    const pageSize = Math.min(Math.max(query.limit ?? ORDERS_PAGE_SIZE, 1), 100);
+    const page = Math.max(query.page ?? 1, 1);
+    const now = new Date();
+
+    const { from, to } = dateRangeForPreset(filter.datePreset, now, {
+      from: filter.from,
+      to: filter.to,
+    });
+    const { fromISO, toISO } = dayBoundsISO(from, to);
+
+    let base: Query = db.collection(COLLECTION);
+    if (filter.status !== "semua") base = base.where("status", "==", filter.status);
+    if (fromISO) base = base.where("createdAtISO", ">=", fromISO);
+    if (toISO) base = base.where("createdAtISO", "<=", toISO);
+    base = base.orderBy("createdAtISO", "desc");
+
+    let docs: QueryDocumentSnapshot[] = [];
+    let truncated = false;
+    try {
+      const snap = await base.limit(FILTER_SCAN_CAP).get();
+      docs = snap.docs;
+      truncated = docs.length >= FILTER_SCAN_CAP;
+    } catch (err) {
+      if (!isMissingIndexError(err)) throw err;
+      console.warn(
+        "[orders] index filter belum tersedia — fallback saring di memori (tanpa rentang native).",
+      );
+      const snap = await db
+        .collection(COLLECTION)
+        .orderBy("createdAtISO", "desc")
+        .limit(FILTER_SCAN_CAP)
+        .get();
+      docs = snap.docs;
+      truncated = docs.length >= FILTER_SCAN_CAP;
+    }
+
+    const all = docs.map((doc) =>
+      normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
+    );
+    const filtered = applyFilterAndSort(all, filter, sort, now);
+    const total = filtered.length;
+    const start = (page - 1) * pageSize;
+    const orders = filtered.slice(start, start + pageSize);
+    return {
+      orders,
+      nextCursor: null,
+      total,
+      page,
+      pageSize,
+      hasMore: start + pageSize < total,
+      truncated,
+    };
+  }
+
+  // ===== Mode cursor (lama) =====
   const limit = Math.min(Math.max(query.limit ?? ORDERS_PAGE_SIZE, 1), 100);
   const status = query.status && query.status !== "semua" ? query.status : null;
 
-  // ===== Jalur utama: query native (butuh composite index status+createdAtISO) =====
   try {
     let ref: Query = db.collection(COLLECTION);
     if (status) ref = ref.where("status", "==", status);
@@ -280,7 +386,6 @@ export async function getOrdersPage(
     );
   }
 
-  // ===== Fallback: saring status di memori (ambil window lebih besar) =====
   const fetchLimit = status ? Math.min(limit * 4, 200) : limit;
   let ref: Query = db.collection(COLLECTION).orderBy("createdAtISO", "desc");
   if (query.cursor) ref = ref.startAfter(query.cursor);
@@ -303,6 +408,73 @@ export async function getOrdersPage(
       : null;
 
   return { orders: page, nextCursor };
+}
+
+/** Ambil banyak pesanan sekaligus berdasarkan id (untuk aksi massal). */
+export async function getOrdersByIds(ids: string[]): Promise<Order[]> {
+  const db = getAdminDb();
+  if (!db || ids.length === 0) return [];
+  const unique = [...new Set(ids)].slice(0, 50);
+  const refs = unique.map((id) => db.collection(COLLECTION).doc(id));
+  const snaps = await db.getAll(...refs);
+  return snaps
+    .filter((s) => s.exists)
+    .map((s) => normalizeOrder({ id: s.id, ...(s.data() as Record<string, unknown>) }));
+}
+
+/**
+ * Ringkasan "butuh perhatian" (FASE O5) — hitung order yang butuh tindakan admin,
+ * dari pemindaian window (cap `FILTER_SCAN_CAP`). Best-effort; `truncated` menandai
+ * bila batas tersentuh.
+ */
+export type AttentionSummary = {
+  jasa_menunggu: number;
+  bayar_segera: number;
+  kurang_bayar: number;
+  belum_dipenuhi: number;
+  email_gagal: number;
+  total: number;
+  truncated: boolean;
+};
+
+export async function getOrdersAttentionSummary(): Promise<AttentionSummary> {
+  const empty: AttentionSummary = {
+    jasa_menunggu: 0,
+    bayar_segera: 0,
+    kurang_bayar: 0,
+    belum_dipenuhi: 0,
+    email_gagal: 0,
+    total: 0,
+    truncated: false,
+  };
+  const db = getAdminDb();
+  if (!db) return empty;
+  try {
+    const snap = await db
+      .collection(COLLECTION)
+      .orderBy("createdAtISO", "desc")
+      .limit(FILTER_SCAN_CAP)
+      .get();
+    const truncated = snap.docs.length >= FILTER_SCAN_CAP;
+    const now = new Date();
+    const count: AttentionSummary = { ...empty, truncated };
+    const flagged = new Set<string>();
+    for (const doc of snap.docs) {
+      const order = normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) });
+      const reasons = attentionReasons(order, now);
+      for (const r of reasons) {
+        if (r in count && typeof count[r as keyof AttentionSummary] === "number") {
+          (count[r as keyof AttentionSummary] as number) += 1;
+        }
+        flagged.add(order.id);
+      }
+    }
+    count.total = flagged.size;
+    return count;
+  } catch (err) {
+    console.error("[orders] gagal menghitung attention:", err);
+    return empty;
+  }
 }
 
 /**

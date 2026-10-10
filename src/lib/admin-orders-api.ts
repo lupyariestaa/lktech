@@ -4,26 +4,47 @@ import {
   type Order,
   type OrderStatus,
 } from "@/lib/order-types";
+import type { OrderActivity } from "@/lib/order-activities";
+import {
+  ordersFilterToParams,
+  type OrdersFilter,
+  type OrdersSort,
+} from "@/lib/orders-filter-pure";
 import { shortOrderCode } from "@/lib/format";
-import type { OrdersSummary } from "@/lib/orders";
+import type { OrdersSummary, AttentionSummary } from "@/lib/orders";
 
 /** Opsi query daftar pesanan admin. */
 export type OrdersListQuery = {
   status?: OrderStatus | "semua";
   cursor?: string | null;
   limit?: number;
+  filter?: OrdersFilter;
+  sort?: OrdersSort;
+  page?: number;
 };
 
 export type OrdersListResult = {
   orders: Order[];
   nextCursor: string | null;
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  hasMore?: boolean;
+  truncated?: boolean;
 };
 
 function buildQuery(query: OrdersListQuery = {}): string {
   const params = new URLSearchParams();
-  if (query.status && query.status !== "semua") params.set("status", query.status);
+  if (query.filter) {
+    const fp = ordersFilterToParams(query.filter);
+    fp.forEach((v, k) => params.set(k, v));
+  } else if (query.status && query.status !== "semua") {
+    params.set("status", query.status);
+  }
   if (query.cursor) params.set("cursor", query.cursor);
   if (query.limit) params.set("limit", String(query.limit));
+  if (query.sort) params.set("sort", query.sort);
+  if (query.page) params.set("page", String(query.page));
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -41,6 +62,58 @@ export async function fetchOrdersSummary(): Promise<OrdersSummary> {
     "/api/admin/orders?summary=1",
   );
   return data.summary;
+}
+
+/** Ringkasan "butuh perhatian" (FASE O5). */
+export async function fetchOrdersAttention(): Promise<AttentionSummary> {
+  const data = await adminFetch<{ attention: AttentionSummary }>(
+    "/api/admin/orders?attention=1",
+  );
+  return data.attention;
+}
+
+/** Detail satu pesanan (FASE O6) + riwayat email. */
+export async function fetchOrderDetail(
+  id: string,
+): Promise<{ order: Order; emails: OrderEmailLog[] }> {
+  return adminFetch<{ order: Order; emails: OrderEmailLog[] }>(
+    `/api/admin/orders/${encodeURIComponent(id)}`,
+  );
+}
+
+/** Timeline aktivitas pesanan (FASE O6). */
+export async function fetchOrderActivities(id: string): Promise<OrderActivity[]> {
+  const data = await adminFetch<{ activities: OrderActivity[] }>(
+    `/api/admin/orders/${encodeURIComponent(id)}/activities`,
+  );
+  return data.activities;
+}
+
+/** Tambah catatan internal ke timeline order. */
+export async function addOrderNote(
+  id: string,
+  entry: { type?: OrderActivity["type"]; note: string },
+) {
+  return adminFetch<{ ok: boolean }>(
+    `/api/admin/orders/${encodeURIComponent(id)}/activities`,
+    { method: "POST", body: JSON.stringify(entry) },
+  );
+}
+
+/** Aksi massal (FASE O4): ubah status / hapus banyak order. */
+export async function bulkOrders(input: {
+  ids: string[];
+  status?: OrderStatus;
+  op: "status" | "delete";
+}) {
+  return adminFetch<{
+    ok: boolean;
+    applied: number;
+    skipped: { id: string; reason: string }[];
+  }>("/api/admin/orders", {
+    method: "POST",
+    body: JSON.stringify({ action: "bulk", ...input }),
+  });
 }
 
 /** Perbarui status pesanan. */

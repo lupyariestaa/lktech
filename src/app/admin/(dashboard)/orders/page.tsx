@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { OrdersManager } from "@/components/admin/orders-manager";
 
 /** Judul tab browser & riwayat navigasi. */
@@ -15,7 +16,9 @@ export default function AdminOrdersPage() {
           Kelola pesanan yang masuk dari checkout produk.
         </p>
       </div>
-      <OrdersManager />
+      <Suspense fallback={<div className="py-16 text-center text-sm text-muted">Memuat...</div>}>
+        <OrdersManager />
+      </Suspense>
     </div>
   );
 }

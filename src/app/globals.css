@@ -207,3 +207,14 @@ p {
     scroll-behavior: auto !important;
   }
 }
+
+/* Cetak rincian pesanan (FASE O7): latar putih & root statis saat print.
+   Visibilitas chrome/aksi diatur via utility `print:hidden` (Tailwind). */
+@media print {
+  [data-print-root] {
+    position: static !important;
+  }
+  body {
+    background: #fff !important;
+  }
+}

@@ -8,9 +8,12 @@ import {
   getOrdersForDay,
   getOrdersPage,
   getOrdersSummary,
+  getOrdersAttentionSummary,
+  getOrdersByIds,
   updateOrderStatus,
 } from "@/lib/orders";
 import { ORDER_STATUSES, ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/order-types";
+import { parseOrdersFilter, type OrdersSort } from "@/lib/orders-filter-pure";
 import { shortOrderCode } from "@/lib/format";
 import { sendOrderStatusToBuyer, sendOrderConfirmationToBuyer } from "@/lib/email-order";
 import {
@@ -24,6 +27,7 @@ import { shouldRestoreCoupon, isTransitionAllowed } from "@/lib/order-status-pur
 import { getSiteSettings } from "@/lib/settings";
 import { releaseOrderDownload, createManualOrderInvoice } from "@/lib/order-payment";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { addOrderActivity } from "@/lib/order-activities";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,6 +105,23 @@ export async function GET(req: Request) {
     }
   }
 
+  // Ringkasan "butuh perhatian" (FASE O5) — tanpa mengunduh daftar.
+  if (url.searchParams.get("attention") === "1") {
+    try {
+      const attention = await getOrdersAttentionSummary();
+      return NextResponse.json(
+        { attention },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } catch (err) {
+      console.error("[api/admin/orders] attention gagal:", err);
+      return NextResponse.json(
+        { error: "Gagal menghitung pesanan yang butuh perhatian." },
+        { status: 500 },
+      );
+    }
+  }
+
   const statusParam = url.searchParams.get("status");
   const status =
     statusParam && statusParam !== "semua"
@@ -110,13 +131,39 @@ export async function GET(req: Request) {
       : "semua";
   const cursor = url.searchParams.get("cursor");
   const limitRaw = Number(url.searchParams.get("limit"));
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : undefined;
+
+  // FASE O2/O3/O7: mode filter bernomor bila ada filter/sort/page/q.
+  const filter = parseOrdersFilter(url.searchParams);
+  const sortParam = url.searchParams.get("sort");
+  const sort: OrdersSort | undefined =
+    sortParam &&
+    ["date_desc", "date_asc", "total_desc", "total_asc", "status"].includes(sortParam)
+      ? (sortParam as OrdersSort)
+      : undefined;
+  const pageRaw = Number(url.searchParams.get("page"));
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : undefined;
+  const useFilterMode =
+    Boolean(sort) ||
+    Boolean(page) ||
+    filter.status !== "semua" ||
+    filter.datePreset !== "semua" ||
+    filter.fulfillment !== "semua" ||
+    filter.paymentStatus !== "semua" ||
+    filter.coupon !== "semua" ||
+    filter.minTotal !== null ||
+    filter.maxTotal !== null ||
+    filter.attention ||
+    filter.q !== "";
 
   try {
-    const { orders, nextCursor } = await getOrdersPage({
-      status,
-      cursor,
-      limit: Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : undefined,
-    });
+    if (useFilterMode) {
+      const result = await getOrdersPage({ filter, sort, page, limit });
+      return NextResponse.json(result, {
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+    const { orders, nextCursor } = await getOrdersPage({ status, cursor, limit });
     return NextResponse.json(
       { orders, nextCursor },
       { headers: { "Cache-Control": "no-store" } },
@@ -190,6 +237,13 @@ export async function PATCH(req: Request) {
       actor: check.email,
       target: id,
       meta: { from: previousStatus, to: status },
+    });
+
+    // Timeline aktivitas (FASE O6).
+    await addOrderActivity(id, {
+      type: "status",
+      note: `Status: ${ORDER_STATUS_LABEL[previousStatus ?? "baru"]} → ${ORDER_STATUS_LABEL[status as OrderStatus]}`,
+      actor: check.email,
     });
 
     // `KP-C2`: transisi → dibatalkan/kedaluwarsa mengembalikan kuota kupon
@@ -271,12 +325,105 @@ export async function POST(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  let body: { id?: string; kind?: string; action?: string };
+  let body: {
+    id?: string;
+    kind?: string;
+    action?: string;
+    ids?: string[];
+    status?: string;
+    op?: "status" | "delete";
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
+
+  // ===== Aksi massal (FASE O4) — maks 50 item, validasi per-item =====
+  if (body.action === "bulk") {
+    const ids = Array.isArray(body.ids) ? body.ids.filter((x) => typeof x === "string") : [];
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "ids wajib diisi." }, { status: 400 });
+    }
+    if (ids.length > 50) {
+      return NextResponse.json(
+        { error: "Aksi massal dibatasi maksimal 50 pesanan." },
+        { status: 400 },
+      );
+    }
+    if (body.op !== "status" && body.op !== "delete") {
+      return NextResponse.json({ error: "op tidak valid." }, { status: 400 });
+    }
+
+    const orders = await getOrdersByIds(ids);
+    const applied: string[] = [];
+    const skipped: { id: string; reason: string }[] = [];
+
+    if (body.op === "status") {
+      const target = body.status;
+      if (!target || !(ORDER_STATUSES as readonly string[]).includes(target)) {
+        return NextResponse.json({ error: "Status tidak valid." }, { status: 400 });
+      }
+      for (const order of orders) {
+        if (!isTransitionAllowed(order.status, target)) {
+          skipped.push({ id: order.id, reason: "invalid_transition" });
+          continue;
+        }
+        const { previousStatus, changed } = await updateOrderStatus(
+          order.id,
+          target as OrderStatus,
+          check.email,
+        );
+        if (!changed || previousStatus === target) {
+          skipped.push({ id: order.id, reason: "unchanged" });
+          continue;
+        }
+        if (shouldRestoreCoupon(previousStatus ?? "", target)) {
+          const fresh = await getOrderById(order.id);
+          if (fresh?.coupon?.couponId) {
+            await restoreCouponUsage(fresh.coupon.couponId, fresh.uid);
+          }
+        }
+        await recordAdminAudit({
+          action: "order.status",
+          actor: check.email,
+          target: order.id,
+          meta: { from: previousStatus, to: target, bulk: true },
+        });
+        applied.push(order.id);
+      }
+    } else {
+      for (const order of orders) {
+        if (!DELETABLE_STATUSES.includes(order.status)) {
+          skipped.push({ id: order.id, reason: "delete_blocked" });
+          continue;
+        }
+        if (order.coupon?.couponId) {
+          const restored = await restoreCouponUsage(order.coupon.couponId, order.uid);
+          if (!restored) {
+            skipped.push({ id: order.id, reason: "coupon_restore_failed" });
+            continue;
+          }
+        }
+        await deleteOrder(order.id);
+        await recordAdminAudit({
+          action: "order.delete",
+          actor: check.email,
+          target: order.id,
+          meta: { status: order.status, bulk: true },
+        });
+        applied.push(order.id);
+      }
+    }
+
+    const found = new Set(orders.map((o) => o.id));
+    for (const id of ids) {
+      if (!found.has(id)) skipped.push({ id, reason: "not_found" });
+    }
+
+    return NextResponse.json({ ok: true, applied: applied.length, skipped });
+  }
+
   const { id } = body;
   if (!id) {
     return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
@@ -307,6 +454,13 @@ export async function POST(req: Request) {
         actor: check.email,
         target: id,
         meta: { reused: res.reused ?? false },
+      });
+      await addOrderActivity(id, {
+        type: "invoice",
+        note: res.reused
+          ? "Invoice manual dipakai ulang (tautan lama)."
+          : "Invoice manual dibuat.",
+        actor: check.email,
       });
       return NextResponse.json({
         ok: true,
@@ -352,6 +506,11 @@ export async function POST(req: Request) {
         actor: check.email,
         target: id,
         meta: { files: res.files },
+      });
+      await addOrderActivity(id, {
+        type: "sistem",
+        note: `Link unduhan dibuat/disegarkan (${res.files ?? 0} berkas).`,
+        actor: check.email,
       });
       return NextResponse.json({
         ok: true,
