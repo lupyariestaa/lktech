@@ -22,6 +22,7 @@
     "test:coupon-engine": "node --experimental-strip-types --test scripts/coupon-engine.test.ts",
     "test:coupon-analytics": "node --experimental-strip-types --test scripts/coupon-analytics.test.ts",
     "test:promo": "node --experimental-strip-types --test scripts/promo-pure.test.ts",
+    "test:coupon-schema": "node --experimental-strip-types --test scripts/coupon-schema.test.ts",
     "test:order-schema": "node --experimental-strip-types --test scripts/order-schema.test.ts",
     "test:stock": "node --experimental-strip-types --test scripts/product-stock.test.ts",
     "test:cart": "node --experimental-strip-types --test scripts/cart-reminder.test.ts",

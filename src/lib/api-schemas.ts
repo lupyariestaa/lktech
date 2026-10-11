@@ -377,8 +377,20 @@ const couponBaseFields = {
     .min(3, "Kode minimal 3 karakter")
     .max(40, "Kode terlalu panjang"),
   description: z.string().trim().max(200).optional(),
-  type: z.enum(["percent", "amount"]),
+  type: z.enum(["percent", "amount", "tiered"]),
   value: z.number().finite().min(0).max(1_000_000_000),
+  /** Tier untuk tipe `tiered` (C1): daftar {minSpend,value,kind,maxDiscount}. */
+  tiers: z
+    .array(
+      z.object({
+        minSpend: z.number().finite().min(0).max(1_000_000_000),
+        value: z.number().finite().min(0).max(1_000_000_000),
+        kind: z.enum(["percent", "amount"]).optional(),
+        maxDiscount: z.number().finite().min(0).max(1_000_000_000).optional(),
+      }),
+    )
+    .max(20)
+    .optional(),
   minSpend: z.number().finite().min(0).max(1_000_000_000).default(0),
   /** Kupon bundel (FASE P3): slug produk yang wajib ada di keranjang. */
   appliesToSlugs: z.array(z.string().trim().max(200)).max(50).optional(),
@@ -389,6 +401,14 @@ const couponBaseFields = {
   endsAt: couponDateField,
   usageLimit: z.number().int().min(0).max(1_000_000).optional(),
   limitPerUser: z.number().int().min(0).max(1000).optional(),
+  // ---- Field lanjutan C1 ----
+  singleUse: z.boolean().optional(),
+  assignedEmail: z.string().trim().toLowerCase().max(200).optional(),
+  assignedUid: z.string().trim().max(200).optional(),
+  audience: z.enum(["semua", "baru", "lama"]).optional(),
+  perDayLimit: z.number().int().min(0).max(1_000_000).optional(),
+  campaign: z.string().trim().max(80).optional(),
+  stackable: z.boolean().optional(),
   active: z.boolean().default(true),
 };
 
@@ -409,8 +429,9 @@ export const couponCreateSchema = refineDateRange(
   z.object(couponBaseFields) as z.ZodType<{
     code: string;
     description?: string;
-    type: "percent" | "amount";
+    type: "percent" | "amount" | "tiered";
     value: number;
+    tiers?: { minSpend: number; value: number; kind?: "percent" | "amount"; maxDiscount?: number }[];
     minSpend: number;
     appliesToSlugs?: string[];
     minItems?: number;
@@ -419,6 +440,13 @@ export const couponCreateSchema = refineDateRange(
     endsAt?: string;
     usageLimit?: number;
     limitPerUser?: number;
+    singleUse?: boolean;
+    assignedEmail?: string;
+    assignedUid?: string;
+    audience?: "semua" | "baru" | "lama";
+    perDayLimit?: number;
+    campaign?: string;
+    stackable?: boolean;
     active: boolean;
   }>,
 );
@@ -429,6 +457,7 @@ export const couponUpdateSchema = refineDateRange(
     description: couponBaseFields.description,
     type: couponBaseFields.type.optional(),
     value: couponBaseFields.value.optional(),
+    tiers: couponBaseFields.tiers,
     minSpend: couponBaseFields.minSpend.optional(),
     appliesToSlugs: couponBaseFields.appliesToSlugs,
     minItems: couponBaseFields.minItems,
@@ -437,12 +466,20 @@ export const couponUpdateSchema = refineDateRange(
     endsAt: couponBaseFields.endsAt,
     usageLimit: couponBaseFields.usageLimit,
     limitPerUser: couponBaseFields.limitPerUser,
+    singleUse: couponBaseFields.singleUse,
+    assignedEmail: couponBaseFields.assignedEmail,
+    assignedUid: couponBaseFields.assignedUid,
+    audience: couponBaseFields.audience,
+    perDayLimit: couponBaseFields.perDayLimit,
+    campaign: couponBaseFields.campaign,
+    stackable: couponBaseFields.stackable,
     active: z.boolean().optional(),
   }) as z.ZodType<{
     code?: string;
     description?: string;
-    type?: "percent" | "amount";
+    type?: "percent" | "amount" | "tiered";
     value?: number;
+    tiers?: { minSpend: number; value: number; kind?: "percent" | "amount"; maxDiscount?: number }[];
     minSpend?: number;
     appliesToSlugs?: string[];
     minItems?: number;
@@ -451,6 +488,13 @@ export const couponUpdateSchema = refineDateRange(
     endsAt?: string;
     usageLimit?: number;
     limitPerUser?: number;
+    singleUse?: boolean;
+    assignedEmail?: string;
+    assignedUid?: string;
+    audience?: "semua" | "baru" | "lama";
+    perDayLimit?: number;
+    campaign?: string;
+    stackable?: boolean;
     active?: boolean;
   }>,
 );

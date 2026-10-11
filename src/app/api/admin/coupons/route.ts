@@ -68,6 +68,7 @@ function toInput(
     description?: string;
     type: string;
     value: number;
+    tiers?: { minSpend: number; value: number; kind?: "percent" | "amount"; maxDiscount?: number }[];
     minSpend: number;
     appliesToSlugs?: string[];
     minItems?: number;
@@ -76,6 +77,13 @@ function toInput(
     endsAt?: string;
     usageLimit?: number;
     limitPerUser?: number;
+    singleUse?: boolean;
+    assignedEmail?: string;
+    assignedUid?: string;
+    audience?: "semua" | "baru" | "lama";
+    perDayLimit?: number;
+    campaign?: string;
+    stackable?: boolean;
     active: boolean;
   },
 ): CouponInput {
@@ -88,11 +96,23 @@ function toInput(
         new Set(data.appliesToSlugs.map((s) => s.trim()).filter(Boolean)),
       )
     : [];
+  // Tier (C1): bersihkan, urut menaik `minSpend`, ambil maks 20.
+  const tiers =
+    type === "tiered" && Array.isArray(data.tiers)
+      ? data.tiers
+          .filter((t) => t && t.value > 0 && t.minSpend >= 0)
+          .sort((a, b) => a.minSpend - b.minSpend)
+          .slice(0, 20)
+      : undefined;
   return {
     code: normalizeCouponCode(data.code),
     description: data.description,
     type,
-    value: data.type === "percent" ? Math.min(100, Math.max(0, data.value)) : Math.max(0, data.value),
+    value:
+      type === "percent"
+        ? Math.min(100, Math.max(0, data.value))
+        : Math.max(0, data.value),
+    tiers: tiers && tiers.length ? tiers : undefined,
     minSpend: Math.max(0, data.minSpend),
     appliesToSlugs: appliesToSlugs.length ? appliesToSlugs : undefined,
     minItems:
@@ -110,9 +130,19 @@ function toInput(
         ? Math.floor(data.usageLimit)
         : undefined,
     limitPerUser:
-      typeof data.limitPerUser === "number" && data.limitPerUser > 0
+      typeof data.limitPerUser === "number" && data.limitPerUser >= 0
         ? Math.floor(data.limitPerUser)
         : 1,
+    singleUse: data.singleUse === true ? true : undefined,
+    assignedEmail: data.assignedEmail?.trim().toLowerCase() || undefined,
+    assignedUid: data.assignedUid?.trim() || undefined,
+    audience: data.audience && data.audience !== "semua" ? data.audience : undefined,
+    perDayLimit:
+      typeof data.perDayLimit === "number" && data.perDayLimit > 0
+        ? Math.floor(data.perDayLimit)
+        : undefined,
+    campaign: data.campaign?.trim() || undefined,
+    stackable: data.stackable === true ? true : undefined,
     active: data.active !== false,
   };
 }

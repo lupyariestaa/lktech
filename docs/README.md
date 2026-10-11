@@ -67,6 +67,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-11 | [Perbaikan Sistem Newsletter & Broadcast — P1/P2/P3 (UI daftar, pratinjau, riwayat, dll)](2026-10-11-perbaikan-newsletter-broadcast-p1.md) | ✅ Selesai (P1–P3, kode) |
 | 2026-10-11 | [Perbaikan & Upgrade Sistem Kupon (K0–K6)](2026-10-11-task-perbaikan-kupon.md) | ✅ Selesai (kode) |
 | 2026-10-11 | [Upgrade Sistem Kupon — Rencana Optimalisasi (C0–C9)](2026-10-11-upgrade-sistem-kupon.md) | ✅ Selesai (kode) |
+| 2026-10-11 | [Upgrade UI/UX Dialog Kupon (Proper)](2026-10-11-upgrade-ui-dialog-kupon.md) | ✅ Selesai (kode) |
 
 ### Dokumen pendukung (referensi & setup)
 
