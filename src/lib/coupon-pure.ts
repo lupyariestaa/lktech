@@ -10,7 +10,17 @@
  * tanpa alias resolver — pola sama seperti `orders-filter-pure.ts`.
  */
 
-export type CouponTypeName = "percent" | "amount";
+export type CouponTypeName = "percent" | "amount" | "tiered";
+
+/** Tingkat diskon untuk kupon `tiered`. */
+export type CouponTier = {
+  minSpend: number;
+  value: number;
+  maxDiscount?: number;
+  kind?: "percent" | "amount";
+};
+
+export type CouponAudienceName = "semua" | "baru" | "lama";
 
 /**
  * Subset kupon yang dibutuhkan validasi. Generic `T` memastikan objek yang
@@ -30,6 +40,15 @@ export type ValidatableCoupon = {
   type: CouponTypeName;
   value: number;
   maxDiscount?: number;
+  // ---- Field lanjutan (C1; semua opsional → backward-compatible) ----
+  tiers?: CouponTier[];
+  singleUse?: boolean;
+  assignedEmail?: string;
+  assignedUid?: string;
+  audience?: CouponAudienceName;
+  perDayLimit?: number;
+  campaign?: string;
+  stackable?: boolean;
 };
 
 /** Konteks validasi kupon. */
@@ -41,6 +60,15 @@ export type CouponValidationContext = {
   userUsageCount?: number;
   slugs?: readonly string[];
   itemCount?: number;
+  // ---- Konteks lanjutan (C1) ----
+  /** Email pembeli (lowercase) — untuk cek `assignedEmail`. */
+  buyerEmail?: string;
+  /** `true` bila pembeli belum pernah beli (`orderCount === 0`). */
+  isFirstPurchase?: boolean;
+  /** Pemakaian kupon ini HARI INI (zona Asia/Jakarta) — untuk `perDayLimit`. */
+  dayUsageCount?: number;
+  /** `true` bila kupon single-use SUDAH pernah sukses pada order aktif. */
+  singleUseConsumed?: boolean;
 };
 
 export type CouponValidation<T = ValidatableCoupon> =
@@ -86,27 +114,79 @@ export function checkBundleRules(
 }
 
 /**
+ * Hitung diskon satu TINGKAT (persen/nominal) dengan batas `maxDiscount`.
+ * Murni; mengembalikan Rupiah (belum dibatasi subtotal kecuali oleh pemanggil).
+ */
+function applyRate(
+  kind: "percent" | "amount",
+  value: number,
+  subtotal: number,
+  maxDiscount?: number,
+): number {
+  if (kind === "percent") {
+    let d = (subtotal * value) / 100;
+    if (typeof maxDiscount === "number" && maxDiscount > 0) {
+      d = Math.min(d, maxDiscount);
+    }
+    return d;
+  }
+  return value;
+}
+
+/**
+ * Pilih tier untuk kupon `tiered`: tier dengan `minSpend` TERBESAR yang ≤ subtotal.
+ * Mengembalikan `null` bila tak ada tier yang memenuhi (subtotal < minSpend terkecil).
+ */
+export function pickTier(
+  tiers: readonly CouponTier[] | undefined,
+  subtotal: number,
+): CouponTier | null {
+  if (!tiers || tiers.length === 0) return null;
+  let best: CouponTier | null = null;
+  for (const t of tiers) {
+    if (t.minSpend <= subtotal && (!best || t.minSpend > best.minSpend)) {
+      best = t;
+    }
+  }
+  return best;
+}
+
+/**
+ * Hitung diskon untuk kupon `tiered` (Rupiah, sudah dibatasi subtotal ≥ 0).
+ * `kind` tier default `percent` bila tak diisi.
+ */
+export function tieredDiscount(
+  tiers: readonly CouponTier[] | undefined,
+  subtotal: number,
+): number {
+  const tier = pickTier(tiers, subtotal);
+  if (!tier) return 0;
+  const kind = tier.kind ?? "percent";
+  const raw = applyRate(kind, tier.value, subtotal, tier.maxDiscount);
+  return Math.min(Math.floor(Math.max(0, raw)), subtotal);
+}
+
+/**
  * Hitung jumlah diskon (Rupiah) untuk sebuah kupon & subtotal.
- * Selalu dibatasi ≤ subtotal (diskon tak boleh melebihi belanja) dan ≥ 0.
+ * Mendukung `percent`/`amount`/`tiered`. Selalu dibatasi ≤ subtotal & ≥ 0.
  */
 export function computeDiscount(
-  coupon: Pick<ValidatableCoupon, "type" | "value" | "maxDiscount">,
+  coupon: Pick<ValidatableCoupon, "type" | "value" | "maxDiscount" | "tiers">,
   subtotal: number,
 ): number {
   if (subtotal <= 0) return 0;
 
-  let discount = 0;
-  if (coupon.type === "percent") {
-    discount = (subtotal * coupon.value) / 100;
-    if (typeof coupon.maxDiscount === "number" && coupon.maxDiscount > 0) {
-      discount = Math.min(discount, coupon.maxDiscount);
-    }
-  } else {
-    discount = coupon.value;
+  if (coupon.type === "tiered") {
+    return tieredDiscount(coupon.tiers, subtotal);
   }
 
-  discount = Math.floor(Math.max(0, discount));
-  return Math.min(discount, subtotal);
+  const raw = applyRate(
+    coupon.type === "amount" ? "amount" : "percent",
+    coupon.value,
+    subtotal,
+    coupon.maxDiscount,
+  );
+  return Math.min(Math.floor(Math.max(0, raw)), subtotal);
 }
 
 /**
@@ -145,6 +225,38 @@ export function validateCoupon<T extends ValidatableCoupon>(
     }
   }
 
+  // ===== Aturan AUDIENCE (C1/K8) =====
+  const audience = coupon.audience ?? "semua";
+  if (audience === "baru" && opts.isFirstPurchase === false) {
+    return {
+      ok: false,
+      reason: "Kode ini khusus untuk pelanggan baru (belum pernah berbelanja).",
+    };
+  }
+  if (audience === "lama" && opts.isFirstPurchase === true) {
+    return {
+      ok: false,
+      reason: "Kode ini khusus untuk pelanggan yang sudah pernah berbelanja.",
+    };
+  }
+
+  // ===== Aturan KEPEMILIKAN kode (C1/K3) =====
+  if (coupon.assignedUid && opts.uid && coupon.assignedUid !== opts.uid) {
+    return { ok: false, reason: "Kode ini tidak berlaku untuk akun Anda." };
+  }
+  if (
+    coupon.assignedEmail &&
+    opts.buyerEmail &&
+    coupon.assignedEmail.trim().toLowerCase() !== opts.buyerEmail.trim().toLowerCase()
+  ) {
+    return { ok: false, reason: "Kode ini tidak berlaku untuk akun Anda." };
+  }
+
+  // ===== Aturan SINGLE-USE (C1/K3) =====
+  if (coupon.singleUse && opts.singleUseConsumed === true) {
+    return { ok: false, reason: "Kode ini hanya dapat dipakai satu kali." };
+  }
+
   if (coupon.minSpend > 0 && opts.subtotal < coupon.minSpend) {
     return {
       ok: false,
@@ -160,6 +272,19 @@ export function validateCoupon<T extends ValidatableCoupon>(
 
   if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
     return { ok: false, reason: "Kuota kode promo sudah habis." };
+  }
+
+  // ===== Aturan KUOTA HARIAN (C1/K7) =====
+  if (
+    coupon.perDayLimit &&
+    coupon.perDayLimit > 0 &&
+    typeof opts.dayUsageCount === "number" &&
+    opts.dayUsageCount >= coupon.perDayLimit
+  ) {
+    return {
+      ok: false,
+      reason: "Kuota harian kode promo ini sudah habis. Coba lagi besok.",
+    };
   }
 
   if (opts.uid && coupon.limitPerUser > 0) {
@@ -186,6 +311,28 @@ export function validateCoupon<T extends ValidatableCoupon>(
   return { ok: true, coupon, discount };
 }
 
+/**
+ * KUPON OTOMATIS (C1/K2) — pilih kupon TERBAIK (diskon terbesar) yang valid
+ * untuk keranjang & pembeli. Mengembalikan `{ coupon, discount }` atau `null`.
+ *
+ * Murni: pemanggil menyediakan daftar kupon KANDIDAT (mis. dari halaman
+ * `/promo` atau query kode aktif) + konteks. Kupon yang gagal validasi dilewati.
+ */
+export function pickBestCoupon<T extends ValidatableCoupon>(
+  coupons: readonly T[],
+  opts: CouponValidationContext,
+): { coupon: T; discount: number } | null {
+  let best: { coupon: T; discount: number } | null = null;
+  for (const coupon of coupons) {
+    const res = validateCoupon(coupon, opts);
+    if (!res.ok) continue;
+    if (!best || res.discount > best.discount) {
+      best = { coupon: res.coupon, discount: res.discount };
+    }
+  }
+  return best;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Validasi FORM kupon (admin) — murni & teruji (audit K4)                    */
 /* -------------------------------------------------------------------------- */
@@ -201,18 +348,26 @@ export type CouponFormValues = {
   endsAt?: string;
   usageLimit?: number;
   limitPerUser?: number;
+  // ---- Field lanjutan (C1) ----
+  tiers?: readonly CouponTier[];
+  perDayLimit?: number;
+  assignedEmail?: string;
+  singleUse?: boolean;
 };
 
 export type CouponFormErrors = Partial<
   Record<
     | "code"
     | "value"
+    | "tiers"
     | "minSpend"
     | "maxDiscount"
     | "startsAt"
     | "endsAt"
     | "usageLimit"
-    | "limitPerUser",
+    | "limitPerUser"
+    | "perDayLimit"
+    | "assignedEmail",
     string
   >
 >;
@@ -241,7 +396,25 @@ export function validateCouponForm(v: CouponFormValues): CouponFormValidation {
     errors.code = "Kode kupon hanya boleh huruf & angka (tanpa spasi/simbol).";
   }
 
-  if (!isFiniteNumber(v.value)) {
+  if (v.type === "tiered") {
+    // Kupon bertingkat: butuh >=1 tier valid, terurut & menaik.
+    const tiers = v.tiers ?? [];
+    if (tiers.length === 0) {
+      errors.tiers = "Tambahkan minimal 1 tingkat diskon.";
+    } else {
+      let prev = -1;
+      let bad = false;
+      for (const t of tiers) {
+        if (!isFiniteNumber(t.minSpend) || t.minSpend <= prev || t.value <= 0) bad = true;
+        if ((t.kind ?? "percent") === "percent" && t.value > 100) bad = true;
+        if (isFiniteNumber(t.minSpend)) prev = t.minSpend;
+      }
+      if (bad) {
+        errors.tiers =
+          "Tingkat tidak valid: ambang naik, nilai > 0, persen ≤ 100, tanpa duplikat ambang.";
+      }
+    }
+  } else if (!isFiniteNumber(v.value)) {
     errors.value = "Nilai diskon wajib diisi.";
   } else if (v.type === "percent") {
     if (v.value < 1 || v.value > 100) {
@@ -267,10 +440,20 @@ export function validateCouponForm(v: CouponFormValues): CouponFormValidation {
     }
   }
 
+  if (v.perDayLimit !== undefined && v.perDayLimit !== null) {
+    if (!isFiniteNumber(v.perDayLimit) || v.perDayLimit < 1) {
+      errors.perDayLimit = "Kuota harian minimal 1 (kosongkan untuk tanpa batas).";
+    }
+  }
+
   if (v.limitPerUser !== undefined && v.limitPerUser !== null) {
     if (!isFiniteNumber(v.limitPerUser) || v.limitPerUser < 0) {
       errors.limitPerUser = "Batas per user tidak boleh negatif (0 = tanpa batas).";
     }
+  }
+
+  if (v.assignedEmail && !/.+@.+\..+/.test(v.assignedEmail.trim())) {
+    errors.assignedEmail = "Email penerima tidak valid.";
   }
 
   // Rentang tanggal: mulai harus sebelum berakhir.

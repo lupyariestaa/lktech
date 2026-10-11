@@ -1,6 +1,6 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 🔄 DIKERJAKAN (C0 ✅ selesai — keputusan terkunci; C1–C9 pending).**
+> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅ selesai; C2–C9 pending).**
 > Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
 > target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
 > rencana uji.
@@ -244,13 +244,21 @@ logika murni teruji ✓.
 - [x] Kunci definisi taksonomi `type` & field baru — lihat **§13.3**.
 - **DoD:** keputusan terkunci; tanpa perubahan kode fungsional. ✅
 
-### Fase C1 — Fondasi murni & tipe (K1, K3, K6, K7, K8)
-- [ ] Perluas `coupon-types.ts` (field baru, backward-compatible) + label.
-- [ ] `coupon-engine-pure.ts`: `validateCouponExtended` (audience, single-use,
-      assigned, periode, stacking), `matchesTier`, `pickBestCoupon`. Re-export dari `coupon-pure`.
-- [ ] `normalizeCoupon` (server) membaca field baru dgn default aman.
-- [ ] `scripts/coupon-engine.test.ts` (≥ 25 test).
-- **DoD:** logika murni baru teruji; tipe siap; gate hijau.
+### Fase C1 — Fondasi murni & tipe (K1, K3, K6, K7, K8) — ✅ SELESAI
+- [x] Perluas `coupon-types.ts`: `type` + `"tiered"`; `tiers`, `singleUse`,
+      `assignedEmail`, `assignedUid`, `audience`, `perDayLimit`, `campaign`,
+      `stackable`; label `COUPON_AUDIENCE_LABEL`; `CouponTier`.
+- [x] Logika murni: `pickTier`, `tieredDiscount`, `computeDiscount` (dukung tiered),
+      `validateCoupon` (audience/assigned/single-use/perDayLimit), `pickBestCoupon`
+      (kupon otomatis) — di `coupon-pure.ts`; re-ekspor dari `coupons.ts`.
+      *(Catatan: tetap satu file `coupon-pure.ts` alih-alih pecah ke `coupon-engine-pure.ts`
+      karena keterbatasan resolusi impor Node/TS — lihat §13.5.)*
+- [x] `validateCouponForm` mendukung `tiered` (validasi tingkat) + `perDayLimit`/`assignedEmail`.
+- [x] `normalizeCoupon` baca field baru (default aman) + **fix** `limitPerUser` 0
+      tidak lagi dipaksa 1 (K6).
+- [x] `order-types.ts`: `OrderCoupon.type` + `"tiered"` (snapshot order).
+- [x] `scripts/coupon-engine.test.ts` — **26 test**; script `test:coupon-engine`.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **436** ✅ · `build` ✅.
 
 ### Fase C2 — Server: aturan baru di checkout & reservasi (K3, K7, K8)
 - [ ] `checkout.ts`: terapkan single-use/assigned/audience/periode/stacking.
@@ -517,5 +525,6 @@ export type Coupon = {
 
 ### 13.6 Status fase
 - **C0 ✅ SELESAI** (keputusan terkunci; tanpa perubahan kode).
-- Berikutnya: **C1** (fondasi murni & tipe) → **C2** (server aturan baru) → **C3**
+- **C1 ✅ SELESAI** (fondasi murni & tipe; logika lanjutan teruji).
+- Berikutnya: **C2** (server aturan baru di checkout & reservasi) → **C3**
   (kupon otomatis) → C5 → C6 → C4 → C7 → C8 → C9.

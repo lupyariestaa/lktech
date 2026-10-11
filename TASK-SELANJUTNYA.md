@@ -8,7 +8,7 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0 ✅ SELESAI** (keputusan K1–K12 & 10 pertanyaan terjawab terkunci di §13 dokumen). Berikutnya **C1** (fondasi murni & tipe) → C2 → C3 → C5 → C6 → C4 → C7 → C8 → C9. Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0 ✅ & C1 ✅ SELESAI**. Berikutnya **C2** (server aturan baru: single-use/assigned/audience/periode di checkout & reservasi) → C3 → C5 → C6 → C4 → C7 → C8 → C9. Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
@@ -19,31 +19,30 @@
 
 ---
 
-## 🔄 SESI INI — Upgrade Sistem Kupon: C0 (Keputusan Terkunci)
+## 🔄 SESI INI — Upgrade Sistem Kupon: C1 (Fondasi Murni & Tipe)
 
-**Status: 🔄 DIKERJAKAN — C0 ✅ selesai; C1–C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+**Status: 🔄 DIKERJAKAN — C0 ✅, C1 ✅ selesai; C2–C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 
-Fase **C0 = audit & keputusan** (tanpa perubahan kode). Semua keputusan desain &
-pertanyaan terbuka **dikunci** di §13 dokumen.
+**C1 = fondasi murni & tipe** (tidak mengubah perilaku checkout; hanya menambah
+kemampuan + default aman).
 
-**Keputusan final (ringkas):**
-1. Tipe baru **`tiered`**; `bundle` tetap implisit.
-2. Kupon otomatis = **saran opt-in** (bukan auto-apply).
-3. **Single-use/personal** (terikat email/uid) — didukung.
-4. Generate massal batas **500**/aksi.
-5. Stacking: **satu kupon/keranjang** (MVP); field disiapkan.
-6. Kuota periode **harian** (`perDayLimit`).
-7. Analitik **ROI + AOV** dgn/tanpa kupon.
-8. Kampanye = **string bebas** `campaign`.
-9. Halaman detail + **ekspor CSV pemakai**.
-10. `analytics_daily` **ditunda** (cache cukup).
+- **Tipe:** `coupon-types.ts` diperluas — `type` + `"tiered"`; field baru
+  `tiers`, `singleUse`, `assignedEmail`, `assignedUid`, `audience`, `perDayLimit`,
+  `campaign`, `stackable` (semua **opsional** → backward-compatible).
+- **Logika murni** (`coupon-pure.ts`, re-ekspor dari `coupons.ts`): `pickTier`,
+  `tieredDiscount`, `computeDiscount` (dukung tiered), `validateCoupon`
+  (audience/assigned/single-use/perDayLimit), **`pickBestCoupon`** (kupon otomatis).
+- **`normalizeCoupon`** baca field baru dgn default aman + **fix** `limitPerUser` 0
+  tidak lagi dipaksa 1.
+- **Berkas:** `OrderCoupon.type` + `"tiered"` (snapshot order).
+- **Test baru:** `test:coupon-engine` (**26**). `validateCouponForm` dukung `tiered`.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**436** test) · `build` ✅.
 
-**Skema field baru (semua opsional, backward-compatible):** `tiers`, `singleUse`,
-`assignedEmail`, `assignedUid`, `audience`, `perDayLimit`, `campaign`, `stackable`.
+**Berikutnya:** **C2** (terapkan aturan baru di `checkout.ts` & `redeemCoupon`).
 
-**Urutan eksekusi:** C0 ✅ → **C1** → C2 → C3 → C5 → C6 → C4 → C7 → C8 → C9.
+---
 
-**Tidak ada perubahan kode** — sesi ini hanya keputusan & dokumen.
+## 📝 SESI SEBELUMNYA — Upgrade Sistem Kupon: C0 (Keputusan Terkunci)
 
 ---
 

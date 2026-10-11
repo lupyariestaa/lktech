@@ -77,7 +77,7 @@ export type OrderItem = {
 /** Kupon yang tercatat pada sebuah order (snapshot saat checkout). */
 export type OrderCoupon = {
   code: string;
-  type: "percent" | "amount";
+  type: "percent" | "amount" | "tiered";
   /** Jumlah diskon (Rupiah) yang diterapkan. */
   discount: number;
   /**
@@ -218,7 +218,12 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
     if (code) {
       coupon = {
         code,
-        type: str(c.type) === "amount" ? "amount" : "percent",
+        type:
+          str(c.type) === "amount"
+            ? "amount"
+            : str(c.type) === "tiered"
+              ? "tiered"
+              : "percent",
         discount: num(c.discount),
         couponId: str(c.couponId) || undefined,
       };

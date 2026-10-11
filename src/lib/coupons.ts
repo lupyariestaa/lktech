@@ -5,14 +5,25 @@ import {
   COUPON_TYPES,
   MAX_COUPON_USED_BY,
   type Coupon,
+  type CouponAudience,
+  type CouponTier,
   type CouponType,
   type CouponsSummary,
 } from "@/lib/coupon-types";
 // Logika murni kupon (diskon & validasi) dipindah ke `@/lib/coupon-pure`
 // (bebas `server-only` + diuji Node — audit K5). Re-ekspor agar pemanggil lama
 // (`@/lib/coupons`) tetap bekerja.
-export { computeDiscount, validateCoupon } from "@/lib/coupon-pure";
-export type { CouponValidation } from "@/lib/coupon-pure";
+export {
+  computeDiscount,
+  validateCoupon,
+  pickBestCoupon,
+  pickTier,
+  tieredDiscount,
+} from "@/lib/coupon-pure";
+export type {
+  CouponValidation,
+  CouponTier as CouponTierPure,
+} from "@/lib/coupon-pure";
 import {
   aggregateCouponStats,
   type CouponStat,
@@ -56,6 +67,32 @@ export function normalizeCouponCode(input: string): string {
   return input.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+/** Normalisasi daftar tier untuk kupon `tiered` (C1). */
+function normalizeTiers(v: unknown): CouponTier[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out: CouponTier[] = [];
+  for (const raw of v) {
+    if (!raw || typeof raw !== "object") continue;
+    const t = raw as Record<string, unknown>;
+    const minSpend = num(t.minSpend, -1);
+    const value = num(t.value, -1);
+    if (minSpend < 0 || value <= 0) continue;
+    const kind = t.kind === "amount" ? "amount" : "percent";
+    out.push({
+      minSpend: Math.floor(minSpend),
+      value,
+      maxDiscount:
+        typeof t.maxDiscount === "number" && t.maxDiscount > 0
+          ? t.maxDiscount
+          : undefined,
+      kind,
+    });
+    if (out.length >= 20) break;
+  }
+  out.sort((a, b) => a.minSpend - b.minSpend);
+  return out.length ? out : undefined;
+}
+
 /** Normalisasi dokumen kupon mentah dari Firestore. */
 export function normalizeCoupon(
   id: string,
@@ -73,12 +110,16 @@ export function normalizeCoupon(
         .slice(0, MAX_COUPON_USED_BY)
     : [];
 
+  const audience: CouponAudience =
+    data.audience === "baru" || data.audience === "lama" ? data.audience : "semua";
+
   return {
     id,
     code: normalizeCouponCode(str(data.code)),
     description: str(data.description) || undefined,
     type,
     value: num(data.value),
+    tiers: normalizeTiers(data.tiers),
     minSpend: num(data.minSpend),
     appliesToSlugs: normalizeSlugList(data.appliesToSlugs),
     minItems:
@@ -92,10 +133,21 @@ export function normalizeCoupon(
       typeof data.usageLimit === "number" && data.usageLimit > 0
         ? data.usageLimit
         : undefined,
+    // `limitPerUser` 0 = tanpa batas (K6) — JANGAN dipaksa 1. Default 1 bila kosong.
     limitPerUser:
-      typeof data.limitPerUser === "number" && data.limitPerUser > 0
-        ? data.limitPerUser
+      typeof data.limitPerUser === "number" && data.limitPerUser >= 0
+        ? Math.floor(data.limitPerUser)
         : 1,
+    singleUse: data.singleUse === true ? true : undefined,
+    assignedEmail: str(data.assignedEmail).trim().toLowerCase() || undefined,
+    assignedUid: str(data.assignedUid) || undefined,
+    audience,
+    perDayLimit:
+      typeof data.perDayLimit === "number" && data.perDayLimit > 0
+        ? Math.floor(data.perDayLimit)
+        : undefined,
+    campaign: str(data.campaign).trim() || undefined,
+    stackable: data.stackable === true ? true : undefined,
     active: data.active !== false,
     archived: data.archived === true,
     usageCount: num(data.usageCount),
