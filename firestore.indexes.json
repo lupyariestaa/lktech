@@ -15,6 +15,15 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "createdAtISO", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "coupons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" },
+        { "fieldPath": "active", "order": "ASCENDING" },
+        { "fieldPath": "campaign", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -8,6 +8,7 @@ import {
   duplicateCoupon,
   getCouponsSummary,
   getCouponStats,
+  getCampaignAnalytics,
   isCouponCodeTaken,
   listCoupons,
   normalizeCouponCode,
@@ -45,6 +46,12 @@ export async function GET(req: Request) {
     if (url.searchParams.get("stats") === "1") {
       const stats = await getCouponStats();
       return NextResponse.json({ stats }, { headers: { "Cache-Control": "no-store" } });
+    }
+    // Analitik per kampanye (C8/K5).
+    if (url.searchParams.get("campaigns") === "1") {
+      const days = Number(url.searchParams.get("days")) || 30;
+      const campaigns = await getCampaignAnalytics(days);
+      return NextResponse.json({ campaigns }, { headers: { "Cache-Control": "no-store" } });
     }
     const coupons = await listCoupons();
     return NextResponse.json({ coupons }, { headers: { "Cache-Control": "no-store" } });

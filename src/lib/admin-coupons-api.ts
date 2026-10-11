@@ -6,7 +6,7 @@ import {
   type CouponsSummary,
 } from "@/lib/coupon-types";
 import type { CouponStat } from "@/lib/coupon-pure";
-import type { CouponAnalytics } from "@/lib/coupon-analytics-pure";
+import type { CouponAnalytics, CampaignGlobalStat } from "@/lib/coupon-analytics-pure";
 
 /** Daftar kupon (admin). */
 export async function fetchCoupons(): Promise<Coupon[]> {
@@ -31,6 +31,14 @@ export async function fetchCouponStats(): Promise<Record<string, CouponStat>> {
     "/api/admin/coupons?stats=1",
   );
   return data.stats;
+}
+
+/** Analitik per kampanye (C8/K5). */
+export async function fetchCampaignAnalytics(days = 30): Promise<CampaignGlobalStat[]> {
+  const data = await adminFetch<{ campaigns: CampaignGlobalStat[] }>(
+    `/api/admin/coupons?campaigns=1&days=${days}`,
+  );
+  return data.campaigns;
 }
 
 /** Satu entri pemakaian kupon (dari redemptions). */
@@ -186,6 +194,7 @@ export function exportCouponsToCsv(
     "Kuota",
     "Dipakai",
     "Batas/User",
+    "Kampanye",
     "Aktif",
     "Arsip",
     "Jumlah Order",
@@ -209,6 +218,7 @@ export function exportCouponsToCsv(
       c.usageLimit ?? "∞",
       c.usageCount,
       c.limitPerUser,
+      c.campaign ?? "",
       c.active ? "Ya" : "Tidak",
       c.archived ? "Ya" : "Tidak",
       s?.orderCount ?? 0,

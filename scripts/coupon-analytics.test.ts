@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   computeCouponAnalytics,
+  computeCampaignsGlobal,
   dayKeyJakarta,
   formatPercent,
   formatRoi,
@@ -125,4 +126,53 @@ test("formatPercent & formatRoi", () => {
   assert.equal(formatRoi(10), "10×");
   assert.equal(formatRoi(0), "0×");
   assert.ok(formatPercent(1 / 3).includes("33,3"));
+});
+
+/* ------------------------------ computeCampaignsGlobal ------------------------- */
+
+test("computeCampaignsGlobal: agregasi per kampanye", () => {
+  const map = new Map([
+    ["c1", "Ramadan"],
+    ["c2", "Lebaran"],
+  ]);
+  const rows = [
+    row({ total: 100_000, coupon: { code: "A", couponId: "c1", discount: 10_000 } }),
+    row({ total: 300_000, coupon: { code: "B", couponId: "c2", discount: 30_000 } }),
+    row({ total: 50_000, coupon: { code: "A", couponId: "c1", discount: 5_000 } }),
+  ];
+  const stats = computeCampaignsGlobal(rows, map);
+  // Terurut revenue menurun: Lebaran (300k) lalu Ramadan (150k).
+  assert.equal(stats[0].campaign, "Lebaran");
+  assert.equal(stats[0].revenue, 300_000);
+  assert.equal(stats[0].roi, 10);
+  assert.equal(stats[1].campaign, "Ramadan");
+  assert.equal(stats[1].orders, 2);
+  assert.equal(stats[1].couponCount, 1); // hanya kode A
+  assert.equal(stats[1].discount, 15_000);
+});
+
+test("computeCampaignsGlobal: kampanye tanpa map → 'Tanpa kampanye'", () => {
+  const rows = [row({ coupon: { code: "A", couponId: "x", discount: 1_000 } })];
+  const stats = computeCampaignsGlobal(rows, new Map());
+  assert.equal(stats[0].campaign, "Tanpa kampanye");
+});
+
+test("computeCampaignsGlobal: abaikan non-kupon & dibatalkan", () => {
+  const rows = [
+    row({ coupon: null }),
+    row({ status: "dibatalkan", coupon: { code: "A", couponId: "c1", discount: 1_000 } }),
+  ];
+  assert.deepEqual(computeCampaignsGlobal(rows, new Map()), []);
+});
+
+test("computeCampaignsGlobal: hitung kode unik per kampanye", () => {
+  const map = new Map([["c1", "X"]]);
+  const rows = [
+    row({ coupon: { code: "A", couponId: "c1", discount: 1_000 } }),
+    row({ coupon: { code: "B", couponId: "c1", discount: 1_000 } }),
+    row({ coupon: { code: "A", couponId: "c1", discount: 1_000 } }),
+  ];
+  const stats = computeCampaignsGlobal(rows, map);
+  assert.equal(stats[0].couponCount, 2);
+  assert.equal(stats[0].orders, 3);
 });

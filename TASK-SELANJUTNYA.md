@@ -8,7 +8,7 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0–C7 ✅ SELESAI**. Berikutnya **C8** (kampanye & skala) → C9 (refactor UI + QA akhir). Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0–C8 ✅ SELESAI**. Berikutnya **C9** (refactor UI + a11y + QA akhir + rilis — fase terakhir). Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
@@ -19,23 +19,26 @@
 
 ---
 
-## 🔄 SESI INI — Upgrade Sistem Kupon: C7 (`/promo` Dinamis)
+## 🔄 SESI INI — Upgrade Sistem Kupon: C8 (Kampanye & Skala)
 
-**Status: 🔄 DIKERJAKAN — C0–C7 ✅ selesai; C8, C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+**Status: 🔄 DIKERJAKAN — C0–C8 ✅ selesai; C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 
-**C7 = halaman `/promo` dinamis & discovery.**
+**C8 = kampanye & skala.**
 
-- **`promo-pure.ts`** (murni, teruji): `computePromoStatus`, `countdownLabel`,
-  `promoRequirement`, `tierSummary` (+11 test → script `test:promo`).
-- **`promos.ts`**: `PublicPromo` diperkaya (`status`, `tierSummary`, `requirement`);
-  menyertakan kupon aktif/akan datang/berakhir segera (≤30 hari).
-- **`promo-list.tsx`**: filter status (Semua/Aktif/Berakhir segera/Akan datang),
-  urut (relevan/hemat terbesar/segera berakhir), hitung mundur, badge "Sisa N
-  pemakaian", ringkasan tier & syarat.
-- **Halaman `/promo`**: teks disesuaikan.
-- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**464** test) · `build` ✅.
+- **Filter kampanye** di `/admin/coupons` (dropdown kampanye unik + "Tanpa kampanye");
+  pencarian juga mencocokkan `campaign`.
+- **Kolom "Kampanye"** di ekspor CSV.
+- **Analitik per kampanye (global)**: `computeCampaignsGlobal` murni (+4 test) +
+  `getCampaignAnalytics(days)` + `GET ?campaigns=1`; kartu tabel **Kampanye (30 hari)**
+  (kode/order/omzet/Σ diskon/ROI).
+- **`firestore.indexes.json`**: index `coupons` (archived, active, campaign).
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**468** test) · `build` ✅.
 
-**Berikutnya:** **C8** (kampanye & skala) → C9 (refactor UI + QA akhir).
+**Berikutnya:** **C9** (refactor komponen UI + a11y + QA akhir + rilis — menutup inisiatif).
+
+---
+
+## 🔄 SESI SEBELUMNYA — Upgrade Sistem Kupon: C7 (`/promo` Dinamis)
 
 ---
 

@@ -21,6 +21,7 @@ import {
   deleteCoupon,
   duplicateCouponRequest,
   exportCouponsToCsv,
+  fetchCampaignAnalytics,
   fetchCoupons,
   fetchCouponsSummary,
   fetchCouponStats,
@@ -29,6 +30,7 @@ import {
   type CouponFormInput,
   type CouponStat,
 } from "@/lib/admin-coupons-api";
+import type { CampaignGlobalStat } from "@/lib/coupon-analytics-pure";
 import {
   COUPON_TYPE_LABEL,
   type Coupon,
@@ -79,10 +81,12 @@ export function CouponsManager() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [summary, setSummary] = useState<CouponsSummary | null>(null);
   const [stats, setStats] = useState<Record<string, CouponStat>>({});
+  const [campaignStats, setCampaignStats] = useState<CampaignGlobalStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [campaignFilter, setCampaignFilter] = useState<string>("semua");
   const [reloadKey, setReloadKey] = useState(0);
 
   const [editing, setEditing] = useState<Coupon | null>(null);
@@ -111,6 +115,12 @@ export function CouponsManager() {
             if (active) setStats(s);
           })
           .catch(() => {});
+        // Analitik per kampanye (C8) — dimuat terpisah.
+        fetchCampaignAnalytics(30)
+          .then((c) => {
+            if (active) setCampaignStats(c);
+          })
+          .catch(() => {});
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Gagal memuat kupon.");
@@ -129,13 +139,33 @@ export function CouponsManager() {
     const q = query.trim().toLowerCase();
     return coupons.filter((c) => {
       if (showArchived ? !c.archived : c.archived) return false;
+      if (campaignFilter !== "semua") {
+        const camp = c.campaign?.trim() || "";
+        if (campaignFilter === "__none__" ? camp !== "" : camp !== campaignFilter) {
+          return false;
+        }
+      }
       if (!q) return true;
       return (
         c.code.toLowerCase().includes(q) ||
-        (c.description ?? "").toLowerCase().includes(q)
+        (c.description ?? "").toLowerCase().includes(q) ||
+        (c.campaign ?? "").toLowerCase().includes(q)
       );
     });
-  }, [coupons, query, showArchived]);
+  }, [coupons, query, showArchived, campaignFilter]);
+
+  // Daftar kampanye unik (untuk filter) dari kupon non-arsip.
+  const campaigns = useMemo(() => {
+    const set = new Set<string>();
+    let hasNone = false;
+    for (const c of coupons) {
+      if (c.archived) continue;
+      const camp = c.campaign?.trim();
+      if (camp) set.add(camp);
+      else hasNone = true;
+    }
+    return { list: Array.from(set).sort((a, b) => a.localeCompare(b)), hasNone };
+  }, [coupons]);
 
   const archivedCount = useMemo(
     () => coupons.filter((c) => c.archived).length,
@@ -214,6 +244,45 @@ export function CouponsManager() {
         <StatCard label="Total Pemakaian" value={summary?.totalUsage ?? 0} icon={RefreshCw} accent="bg-amber-50 text-amber-600" />
       </div>
 
+      {/* Analitik per kampanye (C8) */}
+      {campaignStats.length > 0 && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-5">
+          <h2 className="text-sm font-bold text-secondary">Kampanye (30 hari)</h2>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[520px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+                  <th className="px-3 py-2">Kampanye</th>
+                  <th className="px-3 py-2 text-right">Kode</th>
+                  <th className="px-3 py-2 text-right">Order</th>
+                  <th className="px-3 py-2 text-right">Omzet</th>
+                  <th className="px-3 py-2 text-right">Σ Diskon</th>
+                  <th className="px-3 py-2 text-right">ROI</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {campaignStats.map((c) => (
+                  <tr key={c.campaign} className="hover:bg-surface">
+                    <td className="px-3 py-2 font-medium text-secondary">{c.campaign}</td>
+                    <td className="px-3 py-2 text-right text-muted">{c.couponCount}</td>
+                    <td className="px-3 py-2 text-right text-muted">{c.orders}</td>
+                    <td className="px-3 py-2 text-right font-semibold text-secondary">
+                      {formatRupiah(c.revenue)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-muted">
+                      {formatRupiah(c.discount)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-semibold text-emerald-600">
+                      {c.roi > 0 ? `${c.roi.toLocaleString("id-ID", { maximumFractionDigits: 2 })}×` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
@@ -226,6 +295,22 @@ export function CouponsManager() {
           />
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {(campaigns.list.length > 0 || campaigns.hasNone) && (
+            <select
+              value={campaignFilter}
+              onChange={(e) => setCampaignFilter(e.target.value)}
+              aria-label="Filter kampanye"
+              className="rounded-full border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none"
+            >
+              <option value="semua">Semua kampanye</option>
+              {campaigns.list.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+              {campaigns.hasNone && <option value="__none__">Tanpa kampanye</option>}
+            </select>
+          )}
           {archivedCount > 0 && (
             <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-secondary">
               <input

@@ -33,8 +33,10 @@ import {
 } from "@/lib/coupon-pure";
 import {
   computeCouponAnalytics,
+  computeCampaignsGlobal,
   type CouponAnalytics,
   type CouponAnalyticsRow,
+  type CampaignGlobalStat,
 } from "@/lib/coupon-analytics-pure";
 
 const COLLECTION = "coupons";
@@ -877,5 +879,57 @@ export async function getCouponAnalytics(
   } catch (err) {
     console.error("[coupons] gagal menghitung analitik kupon:", err);
     return null;
+  }
+}
+
+/**
+ * Analitik per KAMPANYE (global) — C8/K5. Memuat order berkupon dalam `days` hari
+ * terakhir + peta idKupon→kampanye dari koleksi `coupons`. Best-effort.
+ */
+export async function getCampaignAnalytics(
+  days = 30,
+): Promise<CampaignGlobalStat[]> {
+  const db = getAdminDb();
+  if (!db) return [];
+  try {
+    const safeDays = Math.min(Math.max(Math.floor(days), 1), 365);
+    const cutoff = new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000).toISOString();
+
+    const [ordersSnap, couponsSnap] = await Promise.all([
+      db
+        .collection("orders")
+        .where("createdAtISO", ">=", cutoff)
+        .select("status", "total", "createdAtISO", "coupon")
+        .get(),
+      db.collection(COLLECTION).select("campaign", "code").get(),
+    ]);
+
+    // Peta idKupon → kampanye.
+    const campaignByCouponId = new Map<string, string>();
+    const campaignByCode = new Map<string, string>();
+    couponsSnap.forEach((doc) => {
+      const camp = String(doc.get("campaign") ?? "").trim();
+      if (!camp) return;
+      campaignByCouponId.set(doc.id, camp);
+      const code = normalizeCouponCode(String(doc.get("code") ?? ""));
+      if (code) campaignByCode.set(code, camp);
+    });
+
+    const rows: CouponAnalyticsRow[] = ordersSnap.docs.map((doc) => ({
+      status: String(doc.get("status") ?? ""),
+      total: num(doc.get("total")),
+      createdAt: String(doc.get("createdAtISO") ?? ""),
+      coupon: doc.get("coupon") as CouponAnalyticsRow["coupon"],
+    }));
+
+    // Gabungkan peta (id & kode) — fungsi murni hanya menerima satu peta;
+    // tambahkan fallback kode ke peta utama.
+    const merged = new Map<string, string>(campaignByCouponId);
+    for (const [code, camp] of campaignByCode) merged.set(`code:${code}`, camp);
+
+    return computeCampaignsGlobal(rows, merged);
+  } catch (err) {
+    console.error("[coupons] gagal menghitung analitik kampanye:", err);
+    return [];
   }
 }

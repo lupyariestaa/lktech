@@ -196,3 +196,69 @@ export function formatRoi(roi: number): string {
   if (!Number.isFinite(roi) || roi <= 0) return "0×";
   return `${roi.toLocaleString("id-ID", { maximumFractionDigits: 2 })}×`;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Analitik per KAMPANYE (global) — C8/K5                                     */
+/* -------------------------------------------------------------------------- */
+
+export type CampaignGlobalStat = {
+  campaign: string;
+  /** Jumlah order berkupon non-batal pada kampanye ini. */
+  orders: number;
+  /** Σ omzet order berkupon non-batal. */
+  revenue: number;
+  /** Σ diskon (Rp). */
+  discount: number;
+  /** ROI = revenue ÷ discount (0 bila diskon 0). */
+  roi: number;
+  /** Jumlah kode kupon berbeda dalam kampanye ini. */
+  couponCount: number;
+};
+
+/**
+ * Agregasi analitik per KAMPANYE dari banyak order + peta idKupon→kampanye.
+ * Hanya menghitung order berkupon non-batal. Terurut omzet menurun.
+ */
+export function computeCampaignsGlobal(
+  rows: readonly CouponAnalyticsRow[],
+  campaignByCouponId: ReadonlyMap<string, string>,
+): CampaignGlobalStat[] {
+  const map = new Map<string, CampaignGlobalStat & { _codes: Set<string> }>();
+  for (const row of rows) {
+    const coupon = row.coupon;
+    if (!coupon || (!coupon.code && !coupon.couponId)) continue;
+    if (NON_CONVERTING.has(row.status)) continue;
+    const couponId = coupon.couponId ?? `code:${coupon.code ?? ""}`;
+    const campaign = campaignByCouponId.get(couponId) || "Tanpa kampanye";
+    const disc =
+      typeof coupon.discount === "number" && Number.isFinite(coupon.discount)
+        ? coupon.discount
+        : 0;
+    const entry =
+      map.get(campaign) ??
+      {
+        campaign,
+        orders: 0,
+        revenue: 0,
+        discount: 0,
+        roi: 0,
+        couponCount: 0,
+        _codes: new Set<string>(),
+      };
+    entry.orders += 1;
+    entry.revenue += row.total;
+    entry.discount += disc;
+    entry._codes.add(coupon.code ?? couponId);
+    map.set(campaign, entry);
+  }
+  return Array.from(map.values())
+    .map((e) => ({
+      campaign: e.campaign,
+      orders: e.orders,
+      revenue: e.revenue,
+      discount: e.discount,
+      roi: e.discount > 0 ? e.revenue / e.discount : 0,
+      couponCount: e._codes.size,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+}

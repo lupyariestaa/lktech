@@ -1,6 +1,6 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 🔄 DIKERJAKAN (C0–C7 ✅ selesai; C8, C9 pending).**
+> **Status: 🔄 DIKERJAKAN (C0–C8 ✅ selesai; C9 pending).**
 > Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
 > target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
 > rencana uji.
@@ -333,11 +333,21 @@ logika murni teruji ✓.
 - [x] Halaman `/promo`: teks disesuaikan (jumlah promo tersedia).
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **464** ✅ · `build` ✅.
 
-### Fase C8 — Kampanye & skala (K5, O16, O19, O22)
-- [ ] Field `campaign` + filter di admin; agregasi per kampanye di analitik.
-- [ ] `firestore.indexes.json` untuk query baru (status+endsAt, campaign).
-- [ ] Catat strategi skala `getCouponStats` (agregasi harian `analytics_daily` — opsional).
-- **DoD:** kupon dapat dikelompokkan & diukur per kampanye.
+### Fase C8 — Kampanye & skala (K5, O16, O19, O22) — ✅ SELESAI
+- [x] **Filter kampanye** di `/admin/coupons` (dropdown dari kampanye unik +
+      "Tanpa kampanye"); pencarian `q` kini juga mencocokkan `campaign`.
+- [x] **Kolom "Kampanye"** ditambahkan di ekspor CSV kupon.
+- [x] **Analitik per kampanye (global)** — `computeCampaignsGlobal` murni (+4 test)
+      + `getCampaignAnalytics(days)` + `GET /api/admin/coupons?campaigns=1&days=`.
+      Kartu ringkas tabel **Kampanye (30 hari)** di `/admin/coupons`
+      (kode/order/omzet/Σ diskon/ROI).
+- [x] `firestore.indexes.json` — index `coupons` (`archived`,`active`,`campaign`)
+      untuk kesiapan query skala.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **468** ✅ · `build` ✅.
+
+> **Catatan skala (`O19`):** `getCouponStats`/`getCampaignAnalytics` memuat koleksi
+> `orders` dalam jendela (dgn `.select` field minimal + cache TTL 60 dtk). Untuk
+> skala besar, lanjutkan ke agregasi harian `analytics_daily` (ditunda — §10/§13).
 
 ### Fase C9 — Refactor UI, a11y, QA & rilis
 - [ ] Ekstrak `coupons-manager` → komponen terpisah (toolbar, form, batch, analytics).
@@ -561,4 +571,5 @@ export type Coupon = {
 - **C6 ✅ SELESAI** (analitik kupon: konversi/AOV/ROI/tren/kampanye).
 - **C4 ✅ SELESAI** (generate massal kode unik + duplikat kupon).
 - **C7 ✅ SELESAI** (`/promo` dinamis: filter status, urut, hitung mundur, badge sisa, tier).
-- Berikutnya: **C8** (kampanye & skala) → C9 (refactor UI + QA akhir).
+- **C8 ✅ SELESAI** (filter kampanye + kolom CSV + analitik per kampanye + index).
+- Berikutnya: **C9** (refactor UI + a11y + QA akhir + rilis — fase terakhir).
