@@ -8,7 +8,8 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
+> 🎯 **TASK AKTIF (berikutnya):** 📝 **Perbaikan & Upgrade Sistem Kupon** — audit menemukan 14 gap (1 kritis, 4 tinggi). **Rencana fase K0–K6** sudah disusun: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md). **Belum dieksekusi.**
+> **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
 > 📧 **Perbaikan Newsletter & Broadcast ✅ SELESAI (P0, 2026-10-11):** tautan unsubscribe (newsletter & cart) rusak total karena mismatch HMAC → diperbaiki. Lihat [`docs/2026-10-11-perbaikan-newsletter-broadcast.md`](docs/2026-10-11-perbaikan-newsletter-broadcast.md).
 > 📧 **Newsletter & Broadcast P1–P3 ✅ SELESAI (2026-10-11):** UI daftar pelanggan + ekspor, pratinjau/kirim-uji/estimasi penerima, riwayat broadcast, segmen akurat dari orders, header List-Unsubscribe. Lihat [`docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md`](docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md).
@@ -17,7 +18,39 @@
 
 ---
 
-## ✅ SESI INI — Perbaikan Newsletter & Broadcast P1–P3 (SELESAI)
+## 📝 SESI INI — Audit Sistem Kupon → Flow Task (RENCANA)
+
+**Status: 📝 RENCANA.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
+
+Audit mandiri sistem kupon (data layer, API, UI admin, keranjang, halaman `/promo`)
+menemukan **14 gap** (1 kritis, 4 tinggi, 4 sedang, 4 rendah). **Belum ada kode yang diubah.**
+
+Ringkas temuan:
+- **K1 (kritis):** kupon tetap "terpasang" (diskon basi) setelah logout/token hilang
+  — re-validasi `catch {}` menelan error (`cart-view.tsx:75-107`).
+- **K2 (tinggi):** feedback "kupon dicabut" ditaruh di state `error` checkout global
+  → salah tempat & mudah tertimpa (`cart-view.tsx:93-95`).
+- **K3 (tinggi):** preview `/api/coupons/validate` tak kirim `userUsageCount` →
+  bisa salah utk `limitPerUser` pada user banyak.
+- **K4 (tinggi):** validasi form admin minim (hanya kode ≥ 3).
+- **K5 (tinggi):** logika inti (`computeDiscount`/`validateCoupon`) **tak teruji**.
+- **K6–K9 (sedang):** `limitPerUser` tak bisa 0; a11y keranjang; dialog tanpa
+  focus-trap; statistik membingungkan (orderCount mencakup dibatalkan).
+- **K10–K13 (rendah):** kode mati (`couponValueLabel`), inkonsistensi rate-limit,
+  `aria-invalid`/`aria-describedby` absen, normalisasi kode tak di schema.
+
+**Flow task:** fase **K0 (selesai: audit) → K1 (logika murni + test) → K2 (UX
+keranjang) → K3 (form admin + a11y) → K4 (preview + statistik) → K5 (kebersihan)
+→ K6 (QA & rilis)**.
+
+**Catatan:** klaim "description tidak bisa di-clear" **dibantah** (schema `.optional()`
+menerima string kosong).
+
+**Tidak ada perubahan kode** — sesi ini hanya audit & perencanaan.
+
+---
+
+## ✅ SESI SEBELUMNYA — Perbaikan Newsletter & Broadcast P1–P3 (SELESAI)
 
 **Status: ✅ SELESAI (P1–P3, kode).** Dokumen: [`docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md`](docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md).
 

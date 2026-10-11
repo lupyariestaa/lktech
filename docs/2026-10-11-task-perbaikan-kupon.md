@@ -1,0 +1,154 @@
+# Task Eksekusi — Perbaikan & Upgrade Sistem Kupon
+
+> **Status: 📝 RENCANA (belum dieksekusi).** Hasil audit mandiri sistem kupon
+> (data layer, API, UI admin, keranjang, halaman promo publik).
+> Disusun: 2026-10-11. **Target: sesi berikutnya.**
+
+---
+
+## 0. Ringkasan
+
+Audit sistem kupon menemukan **13 gap** (1 kritis, 4 tinggi, 4 sedang, 4 rendah).
+Sebagian besar fitur inti **sudah benar & kuat** (server-authoritative, reservasi
+kuota atomik, restore saat batal, anti-duplikat kode, soft-delete + restore,
+statistik per-kupon, ekspor CSV, halaman `/promo`). Gap terbesar ada pada
+**feedback UX kupon di keranjang**, **validasi form admin**, **cakupan a11y**, dan
+**logika inti yang tak teruji**.
+
+**Prinsip (wajib):**
+- **Dokumentasi dulu → kode.** Tiap fase tutup gate: `tsc` · `eslint` · semua
+  `test:*` · `build`.
+- **Server-authoritative:** harga/diskon/kuota hanya divalidasi server.
+- **Backward-compatible:** data & order lama tetap valid.
+- **Reuse pola existing:** `ConfirmDialog`, `useAsyncList`, `useDrawerFocus`, `toast`.
+
+---
+
+## 1. Temuan (terverifikasi)
+
+### 🔴 Kritis
+- **K1 — Kupon tetap "terpasang" (diskon basi) setelah sesi berubah.** Re-validasi
+  kupon (`cart-view.tsx:75-107`) `catch {}` menelan error. Bila user login → apply
+  kupon → logout (atau token kedaluwarsa), `appliedCoupon` tidak direset & diskon
+  lama tetap tampil sampai checkout (yang baru gagal `coupon_invalid`). Total
+  tampilan ≠ tagihan → menyesatkan.
+
+### 🟠 Tinggi
+- **K2 — Feedback "kupon dicabut" salah tempat & mudah hilang.** `setError(reason)`
+  (`cart-view.tsx:93-95`) menaruh pesan kupon ke **state `error` checkout global**
+  yang dipakai bergantian oleh domain lain (blokir akun, error checkout) →
+  pesan bisa tertimpa / muncul di blok yang salah, jauh dari widget kupon.
+- **K3 — Preview validasi kupon bisa salah utk `limitPerUser`.** `/api/coupons/validate`
+  (`route.ts:57`) memanggil `validateCoupon` **tanpa** `userUsageCount` → fallback
+  ke `usedBy` yang dibatasi `MAX_COUPON_USED_BY` (1000). Untuk user ke-1001+
+  (atau data lama), preview bisa keliru (server checkout tetap benar).
+- **K4 — Validasi form admin minim.** `coupons-manager.tsx:519` hanya cek panjang
+  kode ≥ 3. Tidak ada cek: `value` persen ≤ 100 (server clamp, tapi UX buruk),
+  `startsAt < endsAt`, rentang nominal. Error baru muncul setelah round-trip server.
+- **K5 — Logika inti kupon TIDAK teruji.** `computeDiscount` & `validateCoupon`
+  terkurung di `coupons.ts` (`server-only` + impor Firestore) sehingga tidak masuk
+  suite Node. Hanya `checkBundleRules` yang diuji (`test:bundle`). Regresi diskon/
+  aturan bisa lolos tanpa terdeteksi.
+
+### 🟡 Sedang
+- **K6 — `limitPerUser` tak bisa 0 dari UI.** `coupons-manager.tsx:702`
+  (`Math.max(1, ...)`) memblokir nilai 0, padahal server memaknainya "tanpa batas
+  per user" (`coupons.ts:188`). Semantik tak terjangkau.
+- **K7 — a11y kupon di keranjang.** Input kode promo tanpa `<label>`
+  (`cart-coupon.tsx:119`); pesan error tanpa `role="alert"`/`aria-live`;
+  pesan kupon-dicabut di blok global tanpa `aria-live` (`cart-view.tsx:431`).
+- **K8 — Dialog form kupon tanpa focus-trap / autoFocus / restore-focus**
+  (`coupons-manager.tsx:560-565`). Hanya `Escape`. Beda dari standar
+  (`useDrawerFocus` sudah tersedia di proyek).
+- **K9 — Statistik per-kupon membingungkan.** `getCouponStats` (`coupons.ts:620-628`):
+  `orderCount` **mencakup** order dibatalkan, `totalDiscount` **tidak**. Label UI
+  "Order / Σ diskon / Dibatalkan" tanpa penjelasan sumber → mudah disalahartikan.
+
+### 🔵 Rendah
+- **K10 — Kode mati:** `couponValueLabel` (`admin-coupons-api.ts:101`) tidak dipakai.
+- **K11 — Inkonsistensi rate-limit:** order pakai `rateLimit` (sync),
+  coupons/validate pakai `checkRateLimit` (async).
+- **K12 — `aria-invalid`/`aria-describedby` tidak ada** pada field form kupon &
+  input kode promo saat error.
+- **K13 — Normalisasi kode kupon tidak di schema.** `order-schema.ts:20` menerima
+  kode apa adanya; normalisasi hanya di server. Minor (server aman).
+- **K14 — `getCouponStats` memuat SELURUH koleksi `orders`** (cap ada via cache TTL
+  60s). Catatan performa skala (`KP-P2`).
+
+> **Catatan audit:** klaim "description tidak bisa di-clear" **dibantah** —
+> schema `.optional()` menerima string kosong & `stripUndefined` hanya membuang
+> `undefined`, jadi deskripsi **bisa** dikosongkan. Tidak ada perbaikan diperlukan.
+
+---
+
+## 2. Flow Task (Fase K0–K6)
+
+> Tiap fase: kerjakan → gate `tsc`+`lint`+test+`build` → update checklist.
+
+### Fase K0 — Audit & dokumen (selesai)
+- [x] Petakan seluruh file & verifikasi temuan.
+- [x] Tulis dokumen ini.
+- **DoD:** daftar gap terkunci.
+
+### Fase K1 — Ekstrak logika murni + test (K5)
+- [ ] Pindahkan `computeDiscount` & `validateCoupon` ke `src/lib/coupon-pure.ts`
+      (murni, bebas impor alias), re-ekspor dari `coupons.ts` agar pemanggil tetap.
+- [ ] `scripts/coupon-pure.test.ts` — diskon persen/nominal, `maxDiscount`, batas
+      ≤ subtotal, min belanja, tanggal, kuota, per-user, bundel, edge (subtotal 0).
+- [ ] Script `test:coupon` + daftar di `tsconfig.json` exclude.
+- **DoD:** logika inti teruji; gate hijau.
+
+### Fase K2 — UX kupon di keranjang (K1, K2, K7)
+- [ ] State error khusus kupon di `cart-view` (mis. `couponNotice`) — bukan `error`
+      checkout global; tampilkan di widget kupon.
+- [ ] Re-validasi: bedakan gagal-jaringan (pertahankan + beri tahu "tidak bisa
+      memverifikasi") vs tidak-valid (cabut + alasan). Tangani sesi hilang.
+- [ ] `cart-coupon.tsx`: tambah `<label>` (sr-only) + `role="alert"` pada error.
+- [ ] `aria-live` untuk pesan kupon dicabut.
+- **DoD:** feedback kupon jelas & andal; a11y dasar.
+
+### Fase K3 — Validasi & form admin (K4, K6, K8, K12)
+- [ ] Validasi klien form kupon: persen 1–100, nominal > 0, `startsAt < endsAt`,
+      `minSpend`/`maxDiscount` ≥ 0, `usageLimit` ≥ 1.
+- [ ] `limitPerUser` izinkan 0 (= tanpa batas) + label jelas.
+- [ ] Tambah `aria-invalid` + `aria-describedby` untuk field error.
+- [ ] Dialog form: focus-trap via `useDrawerFocus`, `autoFocus` field pertama,
+      restore-focus.
+- **DoD:** form ramah & aksesibel; gate hijau.
+
+### Fase K4 — Perbaikan preview & statistik (K3, K9)
+- [ ] `/api/coupons/validate`: sertakan `userUsageCount` (via `getUserCouponUsage`)
+      agar preview akurat.
+- [ ] Perjelas statistik: tambah `activeOrders = orderCount − cancelledOrders`
+      (baca/tampil) atau beri tooltip label. Sesuaikan CSV.
+- **DoD:** preview akurat; statistik tidak menyesatkan.
+
+### Fase K5 — Kebersihan & konsistensi (K10, K11, K13)
+- [ ] Hapus `couponValueLabel` (kode mati) atau pakai konsisten.
+- [ ] Samakan rate-limit helper (`checkRateLimit` di kedua endpoint).
+- [ ] Opsional: normalisasi kode di `order-schema` (transform uppercase).
+- **DoD:** tak ada kode mati; konsisten.
+
+### Fase K6 — QA, docs & rilis
+- [ ] Gate penuh (`tsc`/`eslint`/semua `test:*`/`build`).
+- [ ] Uji browser: apply/clear kupon, kupon bundel dicabut, edit/aktif/arsip/restore,
+      ekspor CSV, `/promo` pakai kode.
+- [ ] Update `docs/README.md` + `TASK-SELANJUTNYA.md`.
+- [ ] Commit konvensional + push.
+
+---
+
+## 3. Definition of Done
+1. Logika inti kupon **teruji** (`coupon-pure.test.ts`).
+2. Feedback kupon di keranjang **akurat & jelas** (dicabut/berubah terlihat).
+3. Form admin **validasi klien** + aksesibel (focus-trap, aria).
+4. Preview validasi **akurat** (per-user).
+5. Tidak ada kode mati; helper rate-limit konsisten.
+6. `tsc`/`lint`/semua `test:*`/`build` hijau; dokumentasi diperbarui.
+
+## 4. Pertanyaan Terbuka
+1. **K9:** tampilkan `activeOrders` (order non-batal) sebagai metrik utama, atau
+   beri tooltip? (default: tampilkan `activeOrders` + `cancelledOrders`).
+2. **K6:** izinkan `limitPerUser = 0` (tanpa batas) atau tetap minimal 1 dengan
+   label eksplisit? (default: izinkan 0 + label "0 = tanpa batas").
+3. **K13:** normalisasi kode di schema (transform) atau biarkan server? (default: transform).
