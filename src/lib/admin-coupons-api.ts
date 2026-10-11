@@ -92,6 +92,15 @@ export type CouponFormInput = {
   endsAt?: string;
   usageLimit?: number;
   limitPerUser?: number;
+  // ---- Field lanjutan (C1) ----
+  tiers?: { minSpend: number; value: number; maxDiscount?: number; kind?: "percent" | "amount" }[];
+  singleUse?: boolean;
+  assignedEmail?: string;
+  assignedUid?: string;
+  audience?: "semua" | "baru" | "lama";
+  perDayLimit?: number;
+  campaign?: string;
+  stackable?: boolean;
   active: boolean;
 };
 
@@ -127,6 +136,28 @@ export async function restoreCoupon(id: string): Promise<void> {
     `/api/admin/coupons?id=${encodeURIComponent(id)}&restore=1`,
     { method: "DELETE" },
   );
+}
+
+/** Generate massal kode unik (C4/K4). */
+export async function createCouponBatch(input: {
+  count: number;
+  prefix: string;
+  suffixLen?: number;
+  settings: Omit<CouponFormInput, "code">;
+}): Promise<{ created: string[]; failed: { code: string; reason: string }[] }> {
+  return adminFetch("/api/admin/coupons", {
+    method: "POST",
+    body: JSON.stringify({ action: "batch", ...input }),
+  });
+}
+
+/** Duplikat kupon sebagai draft nonaktif (C4/O15). */
+export async function duplicateCouponRequest(id: string): Promise<Coupon> {
+  const data = await adminFetch<{ coupon: Coupon }>("/api/admin/coupons", {
+    method: "POST",
+    body: JSON.stringify({ action: "duplicate", id }),
+  });
+  return data.coupon;
 }
 
 /** Quote satu sel CSV. */

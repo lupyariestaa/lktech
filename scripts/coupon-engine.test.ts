@@ -7,6 +7,8 @@ import {
   validateCoupon,
   pickBestCoupon,
   jakartaDateKey,
+  generateBatchCodes,
+  normalizeCodePrefix,
   type ValidatableCoupon,
 } from "../src/lib/coupon-pure.ts";
 
@@ -251,4 +253,51 @@ test("jakartaDateKey: memakai zona Asia/Jakarta (UTC+7)", () => {
 
 test("jakartaDateKey: tengah malam UTC belum ganti hari WIB", () => {
   assert.equal(jakartaDateKey(new Date("2026-03-10T00:00:00Z")), "2026-03-10");
+});
+
+/* ------------------------------- generateBatchCodes ----------------------- */
+
+test("normalizeCodePrefix: uppercase, buang non-A-Z0-9, potong 12", () => {
+  assert.equal(normalizeCodePrefix("promo 10!"), "PROMO10");
+  assert.equal(normalizeCodePrefix(""), "");
+  assert.equal(normalizeCodePrefix("abcdefghijklmnop").length, 12);
+});
+
+test("generateBatchCodes: prefix + count kode unik", () => {
+  let seed = 7;
+  const rand = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  const r = generateBatchCodes("PROMO", 20, 6, rand);
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.codes.length, 20);
+    assert.equal(new Set(r.codes).size, 20);
+    for (const c of r.codes) assert.ok(c.startsWith("PROMO"));
+    assert.ok(r.codes[0].length > "PROMO".length);
+  }
+});
+
+test("generateBatchCodes: validasi prefix & jumlah", () => {
+  assert.equal(generateBatchCodes("", 10).ok, false);
+  assert.equal(generateBatchCodes("PROMO", 0).ok, false);
+  assert.equal(generateBatchCodes("PROMO", 501).ok, false);
+});
+
+test("generateBatchCodes: deterministik dengan rand tetap (unik)", () => {
+  // rand tetap → suffix sama → hanya 1 kode unik; batch gagal mencapai count.
+  const r = generateBatchCodes("X", 5, 6, () => 0.1);
+  assert.equal(r.ok, false);
+});
+
+test("generateBatchCodes: rand bervariasi menghasilkan unik", () => {
+  let seed = 1;
+  const rand = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  const r = generateBatchCodes("EV", 50, 6, rand);
+  assert.equal(r.ok, true);
+  if (r.ok) assert.equal(new Set(r.codes).size, 50);
 });

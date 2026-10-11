@@ -1,6 +1,6 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅, C3 ✅, C5 ✅, C6 ✅ selesai; C4, C7–C9 pending).**
+> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅, C3 ✅, C4 ✅, C5 ✅, C6 ✅ selesai; C7–C9 pending).**
 > Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
 > target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
 > rencana uji.
@@ -288,12 +288,16 @@ logika murni teruji ✓.
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **438** ✅ · `build` ✅
       (route baru `/api/coupons/best`).
 
-### Fase C4 — Generate massal & duplikat (K4, O4, O15)
-- [ ] `POST /api/admin/coupons { action:"batch" }` (prefix + N kode unik, batas aman,
-      audit `coupon.save`).
-- [ ] `POST { action:"duplicate" }` (salin sebagai draft nonaktif).
-- [ ] `coupon-batch-dialog.tsx` + tombol "Buat massal"/"Duplikat".
-- **DoD:** generate massal aman (tanpa tabrakan kode), teraudit.
+### Fase C4 — Generate massal & duplikat (K4, O4, O15) — ✅ SELESAI
+- [x] `coupon-pure.ts`: `generateBatchCodes` (prefix + akhiran acak, alfabet bebas
+      ambigu, batas 500, unik dalam batch) + `normalizeCodePrefix`/`CODE_ALPHABET` (+5 test).
+- [x] `coupons.ts`: `createCouponBatch` (klaim penanda atomik per-kode; laporan
+      created/failed) & `duplicateCoupon` (draft **nonaktif**, kode `…COPY`, kuota reset).
+- [x] `POST /api/admin/coupons { action:"batch"|"duplicate" }` + audit.
+- [x] Klien `createCouponBatch`/`duplicateCouponRequest`; **`CouponFormInput`**
+      diperluas (field C1).
+- [x] UI: tombol **"Buat Massal"** + `BatchDialog`; tombol **Duplikat** pada kartu.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **453** ✅ · `build` ✅.
 
 ### Fase C5 — Halaman detail + timeline + riwayat pemakaian (K9, O13, O14) — ✅ SELESAI
 - [x] `GET /api/admin/coupons/[id]` — detail + statistik (`stat`) + daftar pemakai
@@ -551,4 +555,5 @@ export type Coupon = {
 - **C3 ✅ SELESAI** (kupon otomatis/best coupon opt-in + event analitik + souvenir kode).
 - **C5 ✅ SELESAI** (halaman detail + timeline + riwayat pemakai + ekspor CSV).
 - **C6 ✅ SELESAI** (analitik kupon: konversi/AOV/ROI/tren/kampanye).
-- Berikutnya: **C4** (generate massal + duplikat) → C7 → C8 → C9.
+- **C4 ✅ SELESAI** (generate massal kode unik + duplikat kupon).
+- Berikutnya: **C7** (`/promo` dinamis) → C8 → C9.

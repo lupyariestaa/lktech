@@ -8,7 +8,7 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0 ✅, C1 ✅, C2 ✅, C3 ✅, C5 ✅, C6 ✅ SELESAI**. Berikutnya **C4** (generate massal + duplikat) → C7 → C8 → C9. Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0 ✅, C1 ✅, C2 ✅, C3 ✅, C4 ✅, C5 ✅, C6 ✅ SELESAI**. Berikutnya **C7** (`/promo` dinamis) → C8 → C9. Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
@@ -19,23 +19,26 @@
 
 ---
 
-## 🔄 SESI INI — Upgrade Sistem Kupon: C6 (Analitik Kupon)
+## 🔄 SESI INI — Upgrade Sistem Kupon: C4 (Generate Massal & Duplikat)
 
-**Status: 🔄 DIKERJAKAN — C0 ✅, C1 ✅, C2 ✅, C3 ✅, C5 ✅, C6 ✅ selesai; C4, C7–C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+**Status: 🔄 DIKERJAKAN — C0 ✅, C1 ✅, C2 ✅, C3 ✅, C4 ✅, C5 ✅, C6 ✅ selesai; C7–C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 
-**C6 = analitik kupon (konversi/AOV/ROI/tren/kampanye).**
+**C4 = generate massal kode unik + duplikat kupon.**
 
-- **`coupon-analytics-pure.ts`** (murni, teruji): `computeCouponAnalytics` —
-  konversi (order berkupon non-batal ÷ order berkupon), pangsa kupon, AOV dgn/tanpa,
-  **ROI**, tren harian (Asia/Jakarta), breakdown kampanye; `formatPercent`/`formatRoi`.
-- **`coupons.ts`**: `getCouponAnalytics(couponId, days)` — order berkupon dalam
-  jendela `createdAtISO` → agregasi murni.
-- **API**: `GET /api/admin/coupons/[id]?analytics=1&days=30`.
-- **UI**: panel **Analitik (30 hari)** di halaman detail (kartu metrik + tren bar + kampanye).
-- **Test baru**: `test:coupon-analytics` (**10**).
-- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**448** test) · `build` ✅.
+- **`coupon-pure.ts`**: `generateBatchCodes` (prefix + akhiran acak, alfabet bebas
+  ambigu, batas 500, unik) + `normalizeCodePrefix` (+5 test → `test:coupon-engine` **33**).
+- **`coupons.ts`**: `createCouponBatch` (klaim penanda atomik per-kode; laporan
+  created/failed); `duplicateCoupon` (draft **nonaktif**, kode `…COPY`, kuota reset).
+- **API**: `POST /api/admin/coupons { action:"batch"|"duplicate" }` + audit.
+- **UI**: tombol **"Buat Massal"** + `BatchDialog` (prefix, jumlah, jenis, nilai,
+  min belanja, batas/user, kampanye); tombol **Duplikat** pada setiap kartu.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**453** test) · `build` ✅.
 
-**Berikutnya:** **C4** (generate massal kode unik + duplikat kupon).
+**Berikutnya:** **C7** (`/promo` dinamis: filter status, urut, hitung mundur, badge sisa).
+
+---
+
+## 🔄 SESI SEBELUMNYA — Upgrade Sistem Kupon: C6 (Analitik Kupon)
 
 ---
 

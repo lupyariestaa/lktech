@@ -486,6 +486,79 @@ export function validateCouponForm(v: CouponFormValues): CouponFormValidation {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Generator kode massal (C4/K4) — murni & teruji                             */
+/* -------------------------------------------------------------------------- */
+
+/** Alfabet kode acak (tanpa karakter ambigu: 0/O, 1/I/L). */
+export const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+/** Batas jumlah kode per aksi generate massal (K4). */
+export const MAX_BATCH_CODES = 500;
+
+/** Batas panjang prefix (agar kode tetap wajar). */
+export const MAX_CODE_PREFIX_LEN = 12;
+
+/** Normalisasi prefix: uppercase, hanya A-Z0-9, dipotong. */
+export function normalizeCodePrefix(prefix: string): string {
+  return prefix
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, MAX_CODE_PREFIX_LEN);
+}
+
+export type BatchCodeResult =
+  | { ok: true; codes: string[] }
+  | { ok: false; error: string };
+
+/**
+ * Generate `count` kode unik dengan `prefix` + `suffixLen` karakter acak.
+ * `rand` disuntikkan agar deterministik saat diuji (default `Math.random`).
+ *
+ * Mengembalikan daftar kode TERUNIK (dalam batch). Keunikan lintas-batch
+ * dijamin server (penanda `couponCodes/{code}` atomik).
+ */
+export function generateBatchCodes(
+  prefix: string,
+  count: number,
+  suffixLen = 6,
+  rand: () => number = Math.random,
+): BatchCodeResult {
+  const cleanPrefix = normalizeCodePrefix(prefix);
+  if (!cleanPrefix) {
+    return { ok: false, error: "Prefix kode wajib diisi (huruf/angka)." };
+  }
+  if (!Number.isInteger(count) || count < 1) {
+    return { ok: false, error: "Jumlah kode minimal 1." };
+  }
+  if (count > MAX_BATCH_CODES) {
+    return { ok: false, error: `Maksimal ${MAX_BATCH_CODES} kode per aksi.` };
+  }
+  const len = Math.min(Math.max(Math.floor(suffixLen), 4), 12);
+
+  const seen = new Set<string>();
+  const codes: string[] = [];
+  // Batas percobaan agar tak loop selamanya bila ruang kode habis.
+  const maxAttempts = count * 20;
+  let attempts = 0;
+  while (codes.length < count && attempts < maxAttempts) {
+    attempts += 1;
+    let suffix = "";
+    for (let i = 0; i < len; i++) {
+      suffix += CODE_ALPHABET[Math.floor(rand() * CODE_ALPHABET.length)];
+    }
+    const code = `${cleanPrefix}${suffix}`;
+    if (seen.has(code)) continue;
+    seen.add(code);
+    codes.push(code);
+  }
+  if (codes.length < count) {
+    return { ok: false, error: "Gagal membuat kode unik. Coba lagi." };
+  }
+  return { ok: true, codes };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Agregasi statistik per-kupon (murni & teruji — audit K9)                    */
 /* -------------------------------------------------------------------------- */
 

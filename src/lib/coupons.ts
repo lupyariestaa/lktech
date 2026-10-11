@@ -359,6 +359,100 @@ export async function createCoupon(
   );
 }
 
+/**
+ * Buat BANYAK kupon sekaligus (C4/K4) — tiap kode diklaim penanda atomik.
+ * `baseInput` = pengaturan bersama (kode diabaikan; diganti `codes`). Mengembalikan
+ * kode yang BERHASIL dibuat & yang GAGAL (mis. kode kebetulan sudah dipakai).
+ */
+export async function createCouponBatch(
+  baseInput: Omit<CouponInput, "code">,
+  codes: string[],
+  createdBy: string,
+): Promise<{ created: string[]; failed: { code: string; reason: string }[] }> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+
+  const created: string[] = [];
+  const failed: { code: string; reason: string }[] = [];
+
+  for (const raw of codes) {
+    const code = normalizeCouponCode(raw);
+    if (!code) {
+      failed.push({ code: raw, reason: "kode_tidak_valid" });
+      continue;
+    }
+    const couponRef = db.collection(COLLECTION).doc();
+    const markerRef = db.collection("couponCodes").doc(code);
+    const nowISO = new Date().toISOString();
+    try {
+      await db.runTransaction(async (tx) => {
+        const marker = await tx.get(markerRef);
+        if (marker.exists) throw new Error("code_taken");
+        tx.set(couponRef, {
+          ...stripUndefined({ ...baseInput, code } as Record<string, unknown>),
+          code,
+          usageCount: 0,
+          usedBy: [],
+          createdAtISO: nowISO,
+          createdBy,
+        });
+        tx.set(markerRef, { couponId: couponRef.id, code, createdAtISO: nowISO });
+      });
+      created.push(code);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : "gagal";
+      failed.push({ code, reason: reason === "code_taken" ? "kode_sudah_dipakai" : reason });
+    }
+  }
+  return { created, failed };
+}
+
+/**
+ * Duplikat kupon (C4/O15) sebagai DRAFT baru: **nonaktif**, kuota/pemakaian
+ * direset, kode baru (`copy`). Menyalin pengaturan (diskon, syarat, jadwal, dst).
+ */
+export async function duplicateCoupon(
+  id: string,
+  createdBy: string,
+): Promise<Coupon | null> {
+  const source = await getCouponById(id);
+  if (!source) return null;
+
+  // Kode baru: `{CODE}-COPY` (di-unique-kan; bila dipakai, tambah akhiran angka).
+  const baseCode = normalizeCouponCode(`${source.code}COPY`).slice(0, 30) || "COPY";
+  let newCode = baseCode;
+  for (let i = 2; i <= 50; i++) {
+    if (!(await isCouponCodeTaken(newCode))) break;
+    newCode = `${baseCode}${i}`;
+  }
+
+  const input: CouponInput = {
+    code: newCode,
+    description: source.description,
+    type: source.type,
+    value: source.value,
+    tiers: source.tiers,
+    minSpend: source.minSpend,
+    appliesToSlugs: source.appliesToSlugs,
+    minItems: source.minItems,
+    maxDiscount: source.maxDiscount,
+    startsAt: source.startsAt,
+    endsAt: source.endsAt,
+    usageLimit: source.usageLimit,
+    limitPerUser: source.limitPerUser,
+    singleUse: source.singleUse,
+    assignedEmail: source.assignedEmail,
+    assignedUid: source.assignedUid,
+    audience: source.audience,
+    perDayLimit: source.perDayLimit,
+    campaign: source.campaign,
+    stackable: source.stackable,
+    // DRAFT: nonaktif agar admin meninjau sebelum mengaktifkan.
+    active: false,
+  };
+  return createCoupon(input, createdBy);
+}
+
 /** Perbarui kupon (partial). Kode (bila diubah) dinormalisasi + penanda dipindah. */
 export async function updateCoupon(
   id: string,

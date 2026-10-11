@@ -3,7 +3,9 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import {
   createCoupon,
+  createCouponBatch,
   deleteCoupon,
+  duplicateCoupon,
   getCouponsSummary,
   getCouponStats,
   isCouponCodeTaken,
@@ -13,6 +15,7 @@ import {
   updateCoupon,
   type CouponInput,
 } from "@/lib/coupons";
+import { generateBatchCodes } from "@/lib/coupon-pure";
 import { couponCreateSchema, couponUpdateSchema } from "@/lib/api-schemas";
 import { COUPON_TYPES } from "@/lib/coupon-types";
 import { recordAdminAudit } from "@/lib/admin-audit";
@@ -122,6 +125,80 @@ export async function POST(req: Request) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
+  }
+
+  // ===== Aksi: generate massal (C4/K4) =====
+  const action = (body as { action?: string } | null)?.action;
+  if (action === "batch") {
+    const b = body as {
+      count?: number;
+      prefix?: string;
+      suffixLen?: number;
+      settings?: Record<string, unknown>;
+    };
+    const gen = generateBatchCodes(
+      typeof b.prefix === "string" ? b.prefix : "",
+      typeof b.count === "number" ? b.count : 0,
+      typeof b.suffixLen === "number" ? b.suffixLen : 6,
+    );
+    if (!gen.ok) {
+      return NextResponse.json({ error: gen.error }, { status: 400 });
+    }
+    // Validasi pengaturan bersama (kode diisi per-batch).
+    const parsedSettings = couponCreateSchema.safeParse({
+      ...(b.settings ?? {}),
+      code: "TEMPCODE",
+    });
+    if (!parsedSettings.success) {
+      return NextResponse.json(
+        { error: parsedSettings.error.issues[0]?.message ?? "Pengaturan tidak valid." },
+        { status: 400 },
+      );
+    }
+    try {
+      const baseInput = toInput(parsedSettings.data);
+      const { code: _omit, ...baseWithoutCode } = baseInput;
+      void _omit;
+      const result = await createCouponBatch(baseWithoutCode, gen.codes, check.email);
+      await recordAdminAudit({
+        action: "coupon.save",
+        actor: check.email,
+        target: `batch:${gen.codes.length}`,
+        meta: { created: result.created.length, failed: result.failed.length },
+      });
+      return NextResponse.json({
+        ok: true,
+        created: result.created,
+        failed: result.failed,
+      });
+    } catch (err) {
+      console.error("[api/admin/coupons] batch gagal:", err);
+      return NextResponse.json({ error: "Gagal membuat kupon massal." }, { status: 500 });
+    }
+  }
+
+  // ===== Aksi: duplikat kupon (C4/O15) =====
+  if (action === "duplicate") {
+    const sourceId = (body as { id?: string } | null)?.id;
+    if (!sourceId) {
+      return NextResponse.json({ error: "id sumber wajib diisi." }, { status: 400 });
+    }
+    try {
+      const coupon = await duplicateCoupon(sourceId, check.email);
+      if (!coupon) {
+        return NextResponse.json({ error: "Kupon sumber tidak ditemukan." }, { status: 404 });
+      }
+      await recordAdminAudit({
+        action: "coupon.save",
+        actor: check.email,
+        target: coupon.code,
+        meta: { duplicatedFrom: sourceId },
+      });
+      return NextResponse.json({ ok: true, coupon });
+    } catch (err) {
+      console.error("[api/admin/coupons] duplicate gagal:", err);
+      return NextResponse.json({ error: "Gagal menduplikat kupon." }, { status: 500 });
+    }
   }
 
   const parsed = couponCreateSchema.safeParse(body);
