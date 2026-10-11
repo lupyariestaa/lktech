@@ -1,8 +1,9 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 📝 RENCANA (belum dieksekusi).** Dokumen **super lengkap**: visi, baseline,
-> analisis peluang, keputusan desain, target berkas, flow fase, matrix prioritas,
-> risiko, DoD, pertanyaan terbuka, dan rencana uji.
+> **Status: 🔄 DIKERJAKAN (C0 ✅ selesai — keputusan terkunci; C1–C9 pending).**
+> Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
+> target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
+> rencana uji.
 >
 > **Turunan dari:** audit & perbaikan kupon yang sudah selesai —
 > [`2026-10-11-task-perbaikan-kupon.md`](2026-10-11-task-perbaikan-kupon.md) (K0–K6 ✅).
@@ -237,11 +238,11 @@ logika murni teruji ✓.
 > Setiap fase: kerjakan → gate `npx tsc --noEmit` · `npx eslint .` · semua `test:*`
 > · `npm run build` → update checklist (tandai `[x]`).
 
-### Fase C0 — Audit & dokumen (persiapan)
-- [ ] Konfirmasi keputusan K1–K12 & §10 (pertanyaan terbuka).
-- [ ] Inventaris ulang berkas/API (baseline §1) & tandai titik refactor.
-- [ ] Kunci definisi taksonomi `type` & field baru.
-- **DoD:** keputusan terkunci; tanpa perubahan kode fungsional.
+### Fase C0 — Audit & dokumen (persiapan) — ✅ SELESAI
+- [x] Konfirmasi keputusan K1–K12 & §10 (pertanyaan terbuka) — lihat **§13 Keputusan Final**.
+- [x] Inventaris ulang berkas/API (baseline §1) & tandai titik refactor.
+- [x] Kunci definisi taksonomi `type` & field baru — lihat **§13.3**.
+- **DoD:** keputusan terkunci; tanpa perubahan kode fungsional. ✅
 
 ### Fase C1 — Fondasi murni & tipe (K1, K3, K6, K7, K8)
 - [ ] Perluas `coupon-types.ts` (field baru, backward-compatible) + label.
@@ -430,3 +431,91 @@ logika murni teruji ✓.
 ## 12. Hasil Eksekusi
 
 > _(Diisi setelah eksekusi.)_
+
+---
+
+## 13. Keputusan Final (C0 — TERKUNCI)
+
+> Dikunci saat fase C0. Menjadi acuan eksekusi C1–C9. Pemilik menyerahkan pemilihan
+> opsi kepada pelaksana; dipilih opsi terbaik (aman, terukur, backward-compatible).
+
+### 13.1 Jawaban pertanyaan terbuka (§10)
+| # | Pertanyaan | Keputusan | Alasan |
+| --- | --- | --- | --- |
+| 1 | Tipe baru `tiered` / `bundle` | **Tambah `tiered`**; `bundle` **tetap implisit** (slug/minItems) | `tiered` menambah nilai konversi; `bundle` implisit sudah cukup & hindari migrasi |
+| 2 | Kupon otomatis | **Saran opt-in** ("Terapkan kode terbaik") | Transparansi & kontrol pembeli; hindari diskon tak diminta |
+| 3 | Single-use/personal | **Ya** — dukung `singleUse` + `assignedEmail`/`assignedUid` | Kode welcome/winback/gift; cegah kebocoran |
+| 4 | Batas generate massal | **500 kode/aksi** | Aman untuk serverless + penanda atomik |
+| 5 | Stacking | **Satu kupon/keranjang** (MVP); field `stackable` disiapkan | Hindari kompleksitas & risiko kerugian uang |
+| 6 | Kuota periode | **Harian** (`perDayLimit`) | Kasus umum flash sale |
+| 7 | Analitik | **ROI** + **AOV dgn/tanpa** disertakan | Inti penilaian efektivitas |
+| 8 | Kampanye | **String bebas** `campaign` (tanpa koleksi) | Ringan, cukup untuk grup & filter |
+| 9 | Halaman detail | **Sertakan ekspor CSV pemakai** | Operasional & audit |
+| 10 | Skala `analytics_daily` | **Tunda** (cache TTL cukup kini) | Hindari over-engineering; catat sebagai lanjutan |
+
+### 13.2 Keputusan desain K1–K12 (final)
+- **K1** — `type` menjadi `"percent" ｜ "amount" ｜ "tiered"`. `bundle` **tidak**
+  menjadi tipe eksplisit (tetap via `appliesToSlugs`/`minItems`).
+- **K2** — Kupon otomatis = **saran opt-in** (`POST /api/coupons/best`). Tidak auto-apply.
+- **K3** — `singleUse?: boolean`, `assignedEmail?: string`, `assignedUid?: string`.
+- **K4** — `POST /api/admin/coupons { action:"batch", count, prefix, ... }` (maks 500).
+- **K5** — `campaign?: string` (string bebas) — dipakai filter & agregasi.
+- **K6** — `stackable?: boolean` (default `false`); MVP tetap 1 kupon/keranjang.
+- **K7** — `perDayLimit?: number` (kuota harian, zona waktu `Asia/Jakarta`).
+- **K8** — `audience?: "semua" ｜ "baru" ｜ "lama"` (dari `users/{uid}.orderCount`).
+- **K9** — Halaman detail `/admin/coupons/[id]` (dua kolom + timeline + pemakai + ekspor).
+- **K10** — `computeCouponAnalytics` murni (konversi, AOV dgn/tanpa, ROI, tren, kampanye).
+- **K11** — `/promo` dinamis (filter status/urut/hitung mundur/badge sisa).
+- **K12** — Event `coupon_view`/`coupon_apply_success`/`coupon_apply_fail`/`coupon_removed`/`coupon_autopick`.
+
+### 13.3 Taksonomi & field baru (SKEMA FINAL — terkunci)
+
+```ts
+// coupon-types.ts (perluasan)
+export const COUPON_TYPES = ["percent", "amount", "tiered"] as const;
+
+export type CouponTier = { minSpend: number; value: number; maxDiscount?: number };
+
+export type Coupon = {
+  // ... field lama tetap ...
+  type: CouponType;                          // + "tiered"
+  tiers?: CouponTier[];                      // untuk tipe "tiered" (>=1, terurut minSpend)
+  singleUse?: boolean;                       // 1x pakai global
+  assignedEmail?: string;                    // (opsional) terikat email pembeli
+  assignedUid?: string;                      // (opsional) terikat uid pembeli
+  audience?: "semua" | "baru" | "lama";      // syarat kustomer (default "semua")
+  perDayLimit?: number;                      // kuota harian (>=1)
+  campaign?: string;                         // grup kampanye (string bebas)
+  stackable?: boolean;                       // (disiapkan; MVP tidak dipakai)
+};
+```
+
+**Semua field baru OPSIONAL** → kupon lama tetap valid (default aman di `normalizeCoupon`).
+
+### 13.4 Aturan validasi final (acuan C1–C2)
+1. **Urutan aturan** (semua server): `active` → tanggal → `audience` → `assigned*` →
+   `singleUse` → `minSpend` → bundel (`appliesToSlugs`/`minItems`) → `usageLimit` →
+   `perDayLimit` → `limitPerUser` → `tiered`/`computeDiscount` > 0.
+2. **`tiered`**: pilih tier dengan `minSpend` **terbesar** yang ≤ subtotal; hitung
+   diskon dari tier itu (persen atau nominal); hormati `maxDiscount` tier.
+3. **`singleUse`**: ditolak bila sudah ada pemakaian sukses pada order **aktif**
+   (bukan batal/kedaluwarsa). Restore saat batal mengembalikan kelayakan.
+4. **`assignedEmail`/`assignedUid`**: hanya pemilik cocok yang boleh pakai (cek
+   server dari token; `assignedEmail` dibandingkan lowercase).
+5. **`audience`**: `"baru"` = `users/{uid}.orderCount === 0`; `"lama"` = `> 0`.
+6. **`perDayLimit`**: hitung pemakaian hari ini (Asia/Jakarta) dari subkoleksi
+   redemptions/counter harian; tolak bila tercapai.
+7. **`stackable`**: MVP tetap satu kupon/keranjang (diabaikan bila lebih dari satu).
+
+### 13.5 Titik refactor (ditandai untuk C9)
+- `src/components/admin/coupons-manager.tsx` (**806 baris**) → dipecah ke
+  `admin/coupons/*` (toolbar, form, batch, analytics, list).
+- `src/lib/coupons.ts` (**464 baris**) → tetap, tapi logika aturan baru ke
+  `coupon-engine-pure.ts` (murni).
+- `src/lib/coupon-pure.ts` (**320 baris**) → re-export dari `coupon-engine-pure`
+  agar tidak membengkak.
+
+### 13.6 Status fase
+- **C0 ✅ SELESAI** (keputusan terkunci; tanpa perubahan kode).
+- Berikutnya: **C1** (fondasi murni & tipe) → **C2** (server aturan baru) → **C3**
+  (kupon otomatis) → C5 → C6 → C4 → C7 → C8 → C9.
