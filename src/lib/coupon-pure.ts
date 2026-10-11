@@ -81,6 +81,23 @@ function rupiah(n: number): string {
 }
 
 /**
+ * Kunci tanggal `yyyy-mm-dd` untuk zona **Asia/Jakarta** (C1/C2 — kuota harian).
+ * Murni (memakai `Intl`), aman untuk test Node.
+ */
+export function jakartaDateKey(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const y = parts.find((p) => p.type === "year")?.value ?? "0000";
+  const m = parts.find((p) => p.type === "month")?.value ?? "00";
+  const d = parts.find((p) => p.type === "day")?.value ?? "00";
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * Aturan KUPON BUNDEL (FASE P3) — murni.
  * - `appliesToSlugs` (bila ada): keranjang WAJIB memuat ≥1 slug dari daftar.
  * - `minItems` (bila > 0): total jumlah item (qty) minimal.

@@ -3,8 +3,10 @@ import { requireActiveUser } from "@/lib/admin-guard";
 import {
   getCouponByCode,
   getUserCouponUsage,
+  getCouponUsageSnapshot,
   validateCoupon,
 } from "@/lib/coupons";
+import { getUserProfile } from "@/lib/user-profile";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -63,10 +65,19 @@ export async function POST(req: Request) {
     const userUsageCount = coupon
       ? await getUserCouponUsage(coupon.id, check.uid)
       : 0;
+    // C2: konteks lanjutan (audience/single-use/kuota harian/assigned).
+    const usageSnapshot = coupon
+      ? await getCouponUsageSnapshot(coupon)
+      : { dayUsageCount: 0, singleUseConsumed: false };
+    const profile = await getUserProfile(check.uid).catch(() => null);
     const result = validateCoupon(coupon, {
       subtotal: parsed.data.subtotal,
       uid: check.uid,
+      buyerEmail: check.email,
+      isFirstPurchase: (profile?.orderCount ?? 0) === 0,
       userUsageCount,
+      dayUsageCount: usageSnapshot.dayUsageCount,
+      singleUseConsumed: usageSnapshot.singleUseConsumed,
       slugs: parsed.data.slugs,
       itemCount: parsed.data.itemCount,
     });

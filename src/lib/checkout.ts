@@ -11,6 +11,7 @@ import { sendOrderConfirmationToBuyer } from "@/lib/email-order";
 import {
   getCouponByCode,
   getUserCouponUsage,
+  getCouponUsageSnapshot,
   redeemCoupon,
   restoreCouponUsage,
   validateCoupon,
@@ -79,6 +80,22 @@ function fail(
   return { ok: false, status, body };
 }
 
+/** Pesan ramah untuk kegagalan reservasi kupon (C2). */
+function couponRedeemMessage(reason: string): string {
+  switch (reason) {
+    case "usage_limit_reached":
+      return "Kuota kode promo sudah habis.";
+    case "per_user_limit_reached":
+      return "Anda sudah pernah memakai kode promo ini.";
+    case "single_use_reached":
+      return "Kode ini hanya dapat dipakai satu kali.";
+    case "daily_limit_reached":
+      return "Kuota harian kode promo ini sudah habis. Coba lagi besok.";
+    default:
+      return "Kode promo tidak lagi tersedia.";
+  }
+}
+
 /** Jalankan alur checkout lengkap dari input yang SUDAH divalidasi skema. */
 export async function performCheckout(
   input: CheckoutInput,
@@ -145,6 +162,12 @@ export async function performCheckout(
   const subtotal = items.reduce((sum, it) => sum + it.subtotal, 0);
   const settings = await getSiteSettings();
 
+  // Ambil profil SEKALI (foto pembeli, nomor WA, & cek pembeli pertama).
+  const buyerProfile = await getUserProfile(actor.uid).catch(() => null);
+  const buyerPhotoUrl = (buyerProfile?.photoURL ?? "").trim();
+  // `isFirstPurchase` = belum pernah membuat pesanan sukses (orderCount 0).
+  const isFirstPurchase = (buyerProfile?.orderCount ?? 0) === 0;
+
   // ===== Kupon (opsional) — divalidasi & dihitung SERVER =====
   let discount = 0;
   let orderCoupon: OrderCoupon | undefined;
@@ -155,10 +178,18 @@ export async function performCheckout(
     const userUsageCount = coupon
       ? await getUserCouponUsage(coupon.id, actor.uid)
       : 0;
+    // Snapshot kuota harian & single-use (C2) dalam satu panggilan.
+    const usageSnapshot = coupon
+      ? await getCouponUsageSnapshot(coupon)
+      : { dayUsageCount: 0, singleUseConsumed: false };
     const result = validateCoupon(coupon, {
       subtotal,
       uid: actor.uid,
+      buyerEmail: actor.email,
+      isFirstPurchase,
       userUsageCount,
+      dayUsageCount: usageSnapshot.dayUsageCount,
+      singleUseConsumed: usageSnapshot.singleUseConsumed,
       slugs: items.map((it) => it.slug),
       itemCount: items.reduce((n, it) => n + it.qty, 0),
     });
@@ -177,17 +208,13 @@ export async function performCheckout(
 
   const total = Math.max(0, subtotal - discount);
 
-  // `KP-C1`: reservasi kuota kupon ATOMIK sebelum membuat order.
+  // `KP-C1`/C2: reservasi kuota kupon ATOMIK sebelum membuat order
+  // (single-use, kuota total, per-user, & kuota harian dicek di dalam transaksi).
   if (couponId) {
     const reserved = await redeemCoupon(couponId, actor.uid);
     if (!reserved.ok) {
       return fail(409, {
-        error:
-          reserved.reason === "usage_limit_reached"
-            ? "Kuota kode promo sudah habis."
-            : reserved.reason === "per_user_limit_reached"
-              ? "Anda sudah pernah memakai kode promo ini."
-              : "Kode promo tidak lagi tersedia.",
+        error: couponRedeemMessage(reserved.reason),
         code: "coupon_unavailable",
       });
     }
@@ -199,10 +226,6 @@ export async function performCheckout(
     { name: buyerName, email: actor.email },
     { subtotal, discount, couponCode: orderCoupon?.code },
   );
-
-  // Ambil profil sekali — untuk foto pembeli (avatar dashboard) & nomor WA.
-  const buyerProfile = await getUserProfile(actor.uid).catch(() => null);
-  const buyerPhotoUrl = (buyerProfile?.photoURL ?? "").trim();
 
   const fulfillment: FulfillmentType = fulfillmentTypeForCategories(categories);
   const initialStatus =

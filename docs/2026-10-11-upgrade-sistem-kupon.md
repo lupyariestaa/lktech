@@ -1,6 +1,6 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅ selesai; C2–C9 pending).**
+> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅ selesai; C3–C9 pending).**
 > Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
 > target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
 > rencana uji.
@@ -260,13 +260,20 @@ logika murni teruji ✓.
 - [x] `scripts/coupon-engine.test.ts` — **26 test**; script `test:coupon-engine`.
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **436** ✅ · `build` ✅.
 
-### Fase C2 — Server: aturan baru di checkout & reservasi (K3, K7, K8)
-- [ ] `checkout.ts`: terapkan single-use/assigned/audience/periode/stacking.
-- [ ] `redeemCoupon`: enforce single-use (batas absolut 1) & `perDayLimit` (counter
-      harian atomik di `redemptions`/`dayUsage`).
-- [ ] `/api/coupons/validate`: validasi aturan baru (tanpa membocorkan detail sensitif).
-- [ ] Uji regresi (kuota/batal/restore tetap benar).
-- **DoD:** aturan baru ditegakkan server; uang & akses tetap server-authoritative.
+### Fase C2 — Server: aturan baru di checkout & reservasi (K3, K7, K8) — ✅ SELESAI
+- [x] `checkout.ts`: ambil profil sekali (foto + nomor WA + cek pembeli pertama);
+      teruskan ke `validateCoupon` konteks `buyerEmail`/`isFirstPurchase`/
+      `dayUsageCount`/`singleUseConsumed`. Pesan gagal reservasi diperjelas
+      (`couponRedeemMessage`: single-use, kuota harian, dst).
+- [x] `redeemCoupon` (ATOMIK): tegakkan **single-use** (`usageCount >= 1`) &
+      **kuota harian** (counter `coupons/{id}/daily/{yyyymmdd}`, zona Asia/Jakarta)
+      di dalam transaksi; reason baru `single_use_reached`/`daily_limit_reached`.
+- [x] `restoreCouponUsage`: turunkan **counter harian** juga (kuota kembali saat batal).
+- [x] Helper baru `getCouponDayUsage`, `getCouponUsageSnapshot`, `jakartaDateKey`
+      (murni, di `coupon-pure.ts`).
+- [x] `/api/coupons/validate`: sertakan konteks baru (preview konsisten dgn checkout).
+- [x] Test `jakartaDateKey` (+2) → `test:coupon-engine` **28**.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **438** ✅ · `build` ✅.
 
 ### Fase C3 — Kupon otomatis & UX keranjang (K2, O9, O11)
 - [ ] `POST /api/coupons/best` (login) → kode terbaik untuk keranjang.
@@ -526,5 +533,5 @@ export type Coupon = {
 ### 13.6 Status fase
 - **C0 ✅ SELESAI** (keputusan terkunci; tanpa perubahan kode).
 - **C1 ✅ SELESAI** (fondasi murni & tipe; logika lanjutan teruji).
-- Berikutnya: **C2** (server aturan baru di checkout & reservasi) → **C3**
-  (kupon otomatis) → C5 → C6 → C4 → C7 → C8 → C9.
+- **C2 ✅ SELESAI** (aturan server ditegakkan: single-use/assigned/audience/periode).
+- Berikutnya: **C3** (kupon otomatis) → C5 → C6 → C4 → C7 → C8 → C9.

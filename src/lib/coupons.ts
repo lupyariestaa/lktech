@@ -19,6 +19,7 @@ export {
   pickBestCoupon,
   pickTier,
   tieredDiscount,
+  jakartaDateKey,
 } from "@/lib/coupon-pure";
 export type {
   CouponValidation,
@@ -26,6 +27,7 @@ export type {
 } from "@/lib/coupon-pure";
 import {
   aggregateCouponStats,
+  jakartaDateKey,
   type CouponStat,
   type CouponStatRow,
 } from "@/lib/coupon-pure";
@@ -380,6 +382,8 @@ export async function redeemCoupon(
 
   const ref = db.collection(COLLECTION).doc(id);
   const redemptionRef = ref.collection(REDEMPTIONS).doc(uid);
+  const dayKey = jakartaDateKey();
+  const dailyRef = ref.collection(DAILY).doc(dayKey);
 
   try {
     await db.runTransaction(async (tx) => {
@@ -387,6 +391,11 @@ export async function redeemCoupon(
       if (!snap.exists) throw new Error("coupon_not_found");
       const coupon = normalizeCoupon(id, snap.data() as Record<string, unknown>);
       if (coupon.archived) throw new Error("coupon_archived");
+
+      // C2/K3: single-use hanya 1× total (pada order aktif).
+      if (coupon.singleUse && coupon.usageCount >= 1) {
+        throw new Error("single_use_reached");
+      }
       if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
         throw new Error("usage_limit_reached");
       }
@@ -395,6 +404,20 @@ export async function redeemCoupon(
       const used = redemption.exists ? num(redemption.get("count")) : 0;
       if (coupon.limitPerUser > 0 && used >= coupon.limitPerUser) {
         throw new Error("per_user_limit_reached");
+      }
+
+      // C2/K7: kuota harian (counter per tanggal, atomik dalam transaksi).
+      if (coupon.perDayLimit && coupon.perDayLimit > 0) {
+        const daily = await tx.get(dailyRef);
+        const dayUsed = daily.exists ? num(daily.get("count")) : 0;
+        if (dayUsed >= coupon.perDayLimit) {
+          throw new Error("daily_limit_reached");
+        }
+        tx.set(
+          dailyRef,
+          { date: dayKey, count: FieldValue.increment(1), updatedAtISO: new Date().toISOString() },
+          { merge: true },
+        );
       }
 
       tx.update(ref, {
@@ -442,6 +465,8 @@ export async function restoreCouponUsage(
 
   const ref = db.collection(COLLECTION).doc(id);
   const redemptionRef = ref.collection(REDEMPTIONS).doc(uid);
+  const dayKey = jakartaDateKey();
+  const dailyRef = ref.collection(DAILY).doc(dayKey);
 
   try {
     await db.runTransaction(async (tx) => {
@@ -465,6 +490,21 @@ export async function restoreCouponUsage(
           { uid, count: used - 1, lastRedeemedAtISO: new Date().toISOString() },
           { merge: true },
         );
+      }
+
+      // C2/K7: turunkan counter harian (bila ada) agar kuota harian kembali.
+      if (coupon.perDayLimit && coupon.perDayLimit > 0) {
+        const daily = await tx.get(dailyRef);
+        const dayUsed = daily.exists ? num(daily.get("count")) : 0;
+        if (dayUsed <= 1) {
+          tx.delete(dailyRef);
+        } else {
+          tx.set(
+            dailyRef,
+            { date: dayKey, count: dayUsed - 1, updatedAtISO: new Date().toISOString() },
+            { merge: true },
+          );
+        }
       }
     });
     return true;
@@ -492,6 +532,54 @@ export async function getUserCouponUsage(
   } catch {
     return 0;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Kuota harian (C2/K7) — counter per tanggal (Asia/Jakarta)                  */
+/* -------------------------------------------------------------------------- */
+
+/** Subkoleksi counter harian: `coupons/{id}/daily/{yyyymmdd}`. */
+const DAILY = "daily";
+
+/** Jumlah pemakaian kupon ini HARI INI (Asia/Jakarta). */
+export async function getCouponDayUsage(
+  id: string,
+  now: Date = new Date(),
+): Promise<number> {
+  const db = getAdminDb();
+  if (!db) return 0;
+  try {
+    const doc = await db
+      .collection(COLLECTION)
+      .doc(id)
+      .collection(DAILY)
+      .doc(jakartaDateKey(now))
+      .get();
+    return doc.exists ? num(doc.get("count")) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Snapshot penggunaan kupon (untuk validasi server) dalam satu panggilan:
+ * - `dayUsageCount` — pemakaian hari ini (Asia/Jakarta).
+ * - `singleUseConsumed` — `true` bila single-use sudah terpakai (order aktif /
+ *   `usageCount >= 1`). Restore saat batal menurunkan `usageCount` → boleh lagi.
+ */
+export async function getCouponUsageSnapshot(
+  coupon: Coupon,
+  now: Date = new Date(),
+): Promise<{ dayUsageCount: number; singleUseConsumed: boolean }> {
+  const dayUsageCount = coupon.perDayLimit
+    ? await getCouponDayUsage(coupon.id, now)
+    : 0;
+  return {
+    dayUsageCount,
+    // `usageCount` = jumlah pemakaian pada order aktif (naik saat sukses, turun
+    // saat restore). Cukup untuk menentukan single-use terpakai.
+    singleUseConsumed: coupon.singleUse ? coupon.usageCount >= 1 : false,
+  };
 }
 
 /** Ringkasan statistik kupon. */

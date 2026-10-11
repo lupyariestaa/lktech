@@ -8,7 +8,7 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0 ✅ & C1 ✅ SELESAI**. Berikutnya **C2** (server aturan baru: single-use/assigned/audience/periode di checkout & reservasi) → C3 → C5 → C6 → C4 → C7 → C8 → C9. Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0 ✅, C1 ✅, C2 ✅ SELESAI**. Berikutnya **C3** (kupon otomatis/best coupon di keranjang) → C5 → C6 → C4 → C7 → C8 → C9. Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
@@ -19,26 +19,29 @@
 
 ---
 
-## 🔄 SESI INI — Upgrade Sistem Kupon: C1 (Fondasi Murni & Tipe)
+## 🔄 SESI INI — Upgrade Sistem Kupon: C2 (Aturan Server)
 
-**Status: 🔄 DIKERJAKAN — C0 ✅, C1 ✅ selesai; C2–C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+**Status: 🔄 DIKERJAKAN — C0 ✅, C1 ✅, C2 ✅ selesai; C3–C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 
-**C1 = fondasi murni & tipe** (tidak mengubah perilaku checkout; hanya menambah
-kemampuan + default aman).
+**C2 = menegakkan aturan baru di server** (checkout & reservasi).
 
-- **Tipe:** `coupon-types.ts` diperluas — `type` + `"tiered"`; field baru
-  `tiers`, `singleUse`, `assignedEmail`, `assignedUid`, `audience`, `perDayLimit`,
-  `campaign`, `stackable` (semua **opsional** → backward-compatible).
-- **Logika murni** (`coupon-pure.ts`, re-ekspor dari `coupons.ts`): `pickTier`,
-  `tieredDiscount`, `computeDiscount` (dukung tiered), `validateCoupon`
-  (audience/assigned/single-use/perDayLimit), **`pickBestCoupon`** (kupon otomatis).
-- **`normalizeCoupon`** baca field baru dgn default aman + **fix** `limitPerUser` 0
-  tidak lagi dipaksa 1.
-- **Berkas:** `OrderCoupon.type` + `"tiered"` (snapshot order).
-- **Test baru:** `test:coupon-engine` (**26**). `validateCouponForm` dukung `tiered`.
-- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**436** test) · `build` ✅.
+- **`checkout.ts`**: profil pembeli diambil sekali (foto + nomor WA + `isFirstPurchase`);
+  `validateCoupon` menerima `buyerEmail`/`isFirstPurchase`/`dayUsageCount`/`singleUseConsumed`.
+  Pesan gagal reservasi diperjelas.
+- **`redeemCoupon` (ATOMIK)**: menegakkan **single-use** & **kuota harian**
+  (counter `coupons/{id}/daily/{yyyymmdd}`, zona Asia/Jakarta) dalam transaksi;
+  reason baru `single_use_reached`/`daily_limit_reached`.
+- **`restoreCouponUsage`**: turunkan counter harian (kuota kembali saat batal).
+- **`/api/coupons/validate`**: konteks baru → preview konsisten dgn checkout.
+- **Helper murni**: `jakartaDateKey` (diuji) + `getCouponUsageSnapshot`.
+- **Test:** `test:coupon-engine` **28**.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**438** test) · `build` ✅.
 
-**Berikutnya:** **C2** (terapkan aturan baru di `checkout.ts` & `redeemCoupon`).
+**Berikutnya:** **C3** (kupon otomatis/best coupon di keranjang — opt-in).
+
+---
+
+## 📝 SESI SEBELUMNYA — Upgrade Sistem Kupon: C1 (Fondasi Murni & Tipe)
 
 ---
 

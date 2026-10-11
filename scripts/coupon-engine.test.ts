@@ -6,6 +6,7 @@ import {
   tieredDiscount,
   validateCoupon,
   pickBestCoupon,
+  jakartaDateKey,
   type ValidatableCoupon,
 } from "../src/lib/coupon-pure.ts";
 
@@ -237,4 +238,17 @@ test("pickBestCoupon: hasil menyertakan objek kupon pemenang", () => {
     now: NOW,
   });
   assert.equal(best?.coupon, winner);
+});
+
+/* ------------------------------- jakartaDateKey -------------------------- */
+
+test("jakartaDateKey: memakai zona Asia/Jakarta (UTC+7)", () => {
+  // 2026-11-01T18:30:00Z = 2026-11-02T01:30 WIB → sudah ganti hari.
+  assert.equal(jakartaDateKey(new Date("2026-11-01T18:30:00Z")), "2026-11-02");
+  // 2026-11-01T16:59:00Z = 2026-11-01T23:59 WIB → masih hari yang sama.
+  assert.equal(jakartaDateKey(new Date("2026-11-01T16:59:00Z")), "2026-11-01");
+});
+
+test("jakartaDateKey: tengah malam UTC belum ganti hari WIB", () => {
+  assert.equal(jakartaDateKey(new Date("2026-03-10T00:00:00Z")), "2026-03-10");
 });
