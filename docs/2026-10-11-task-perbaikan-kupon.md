@@ -3,6 +3,11 @@
 > **Status: ✅ SELESAI (kode) — K0–K6.** Audit mandiri sistem kupon (data layer, API,
 > UI admin, keranjang, halaman promo publik). Seluruh 14 gap (K1–K13) tertutup.
 > Disusun & dieksekusi: 2026-10-11.
+>
+> ⏭️ **Lanjutan (optimalisasi, bukan perbaikan):** lihat
+> **[`2026-10-11-upgrade-sistem-kupon.md`](2026-10-11-upgrade-sistem-kupon.md)**
+> (rencana upgrade fitur kupon — fase C0–C9: kupon otomatis, single-use/personal,
+> analitik, generate massal, halaman detail, `/promo` dinamis, dll).
 
 ---
 
