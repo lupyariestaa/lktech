@@ -44,6 +44,7 @@
     "scripts/coupon-bundle.test.ts",
     "scripts/product-stock.test.ts",
     "scripts/cart-reminder.test.ts",
+    "scripts/unsubscribe-token.test.ts",
     "scripts/order-status.test.ts",
     "scripts/orders-filter.test.ts",
     "scripts/review-rating.test.ts",

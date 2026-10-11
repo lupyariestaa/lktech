@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { parseToken } from "@/lib/download-token";
+import { verifyCartUnsub } from "@/lib/unsubscribe-token";
 import { setCartOptOut } from "@/lib/cart-draft";
 
 export const runtime = "nodejs";
@@ -60,8 +60,8 @@ export async function GET(req: Request) {
     return page("Tautan tidak valid", "Parameter tidak lengkap.", 400);
   }
 
-  const verified = parseToken(`${uid}.${sig}`, s);
-  if (verified !== uid) {
+  // F-N2: verifikasi dengan tokenId ber-prefix yang sama dgn penandatanganan.
+  if (!verifyCartUnsub(uid, sig, s)) {
     return page("Tautan tidak valid", "Signature tidak cocok / sudah kedaluwarsa.", 401);
   }
 

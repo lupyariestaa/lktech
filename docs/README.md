@@ -63,6 +63,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-11 | [Rekomendasi Upgrade Dashboard "Kelola Pesanan"](2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md) | 📝 Rekomendasi (approved) |
 | 2026-10-11 | [Task Eksekusi — Upgrade Dashboard "Kelola Pesanan" (fase O0–O8)](2026-10-11-task-upgrade-dashboard-pesanan.md) | ✅ Selesai (O0–O8, kode) |
 | 2026-10-11 | [Perbaikan Menu "Kelola Pesanan" — Audit & Remediasi Gap (G1–G23)](2026-10-11-perbaikan-menu-pesanan.md) | ✅ Selesai (kode) |
+| 2026-10-11 | [Perbaikan Sistem Newsletter & Broadcast — Remediasi P0 (unsubscribe rusak)](2026-10-11-perbaikan-newsletter-broadcast.md) | ✅ Selesai (P0, kode) |
 
 ### Dokumen pendukung (referensi & setup)
 

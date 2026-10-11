@@ -1,5 +1,5 @@
 import "server-only";
-import { signTokenId } from "@/lib/download-token";
+import { signCartUnsub } from "@/lib/unsubscribe-token";
 import { SITE_URL } from "@/lib/site";
 import { getSiteSettings } from "@/lib/settings";
 import { listRemindableCarts, markCartReminded } from "@/lib/cart-draft";
@@ -16,7 +16,7 @@ import { obs } from "@/lib/observability";
  */
 
 /** Secret untuk menandatangani tautan opt-out (HMAC). */
-function unsubSecret(): string {
+export function cartUnsubSecret(): string {
   return (
     process.env.CART_UNSUB_SECRET?.trim() ||
     process.env.DOWNLOAD_TOKEN_SECRET?.trim() ||
@@ -25,10 +25,12 @@ function unsubSecret(): string {
   );
 }
 
-/** Tanda tangan `uid` untuk tautan opt-out (kosong → tanpa tanda tangan). */
+/**
+ * Tanda tangan `uid` untuk tautan opt-out (kosong → tanpa tanda tangan).
+ * F-N2: memakai tokenId ber-prefix yang SAMA dgn verifikasi (`verifyCartUnsub`).
+ */
 export function signUnsub(uid: string): string {
-  const secret = unsubSecret();
-  return secret ? signTokenId(`cart-unsub:${uid}`, secret) : "";
+  return signCartUnsub(uid, cartUnsubSecret());
 }
 
 export type CartReminderResult = {

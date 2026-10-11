@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { parseToken } from "@/lib/download-token";
+import { verifyNewsletterUnsubToken } from "@/lib/unsubscribe-token";
 import { unsubscribeEmail } from "@/lib/newsletter";
 
 export const runtime = "nodejs";
@@ -44,8 +44,8 @@ export async function GET(req: Request) {
   if (!s) return page("Belum siap", "Endpoint belum dikonfigurasi.", 503);
   if (!email || !sig) return page("Tautan tidak valid", "Parameter tidak lengkap.", 400);
 
-  const verified = parseToken(`${email}.${sig}`, s);
-  if (verified !== email) {
+  // F-N1: verifikasi dengan tokenId ber-prefix yang sama dgn penandatanganan.
+  if (!verifyNewsletterUnsubToken(email, sig, s)) {
     return page("Tautan tidak valid", "Signature tidak cocok.", 401);
   }
 

@@ -10,12 +10,39 @@
 >
 > 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
+> 📧 **Perbaikan Newsletter & Broadcast ✅ SELESAI (P0, 2026-10-11):** tautan unsubscribe (newsletter & cart) rusak total karena mismatch HMAC → diperbaiki. Lihat [`docs/2026-10-11-perbaikan-newsletter-broadcast.md`](docs/2026-10-11-perbaikan-newsletter-broadcast.md).
 > 📄 **Audit sistem pesanan (pradasar):** **[`docs/2026-10-11-audit-sistem-pesanan.md`](docs/2026-10-11-audit-sistem-pesanan.md)** — ✅ Batch 1–4 selesai.
 > ✅ **Upgrade Beranda (H0–H8):** `docs/2026-10-06-task-upgrade-beranda.md` + `docs/2026-10-06-upgrade-beranda.md`. **SELESAI.**
 
 ---
 
-## ✅ SESI INI — Perbaikan Menu "Kelola Pesanan" (G1–G23, SELESAI)
+## ✅ SESI INI — Perbaikan Newsletter & Broadcast (P0, SELESAI)
+
+**Status: ✅ SELESAI (P0, kode).** Dokumen: [`docs/2026-10-11-perbaikan-newsletter-broadcast.md`](docs/2026-10-11-perbaikan-newsletter-broadcast.md).
+
+Audit sistem Newsletter & Broadcast menemukan **bug kritis**: tautan
+"Berhenti berlangganan" (newsletter) **&** "Berhenti diingatkan" (pengingat
+keranjang) **selalu ditolak** karena mismatch tanda tangan HMAC
+(penandatangan pakai tokenId ber-prefix, verifikasi pakai id mentah).
+
+- **F-N1** — unsubscribe newsletter rusak 100% → verifikasi kini memakai
+  `verifyNewsletterUnsubToken` (tokenId ber-prefix sama).
+- **F-N2** — unsubscribe cart rusak 100% (bug identik) → `verifyCartUnsub`.
+- **Berkas baru:** `src/lib/unsubscribe-token.ts` (murni) +
+  `scripts/unsubscribe-token.test.ts` (10 test).
+- **Kompatibilitas:** tanda tangan tak berubah — hanya verifikasi diperbaiki →
+  **tautan lama tetap valid** (tanpa migrasi).
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**354** test) · `build` ✅.
+
+**Sisa P1+ (belum):** UI daftar subscriber, pratinjau/kirim-uji, perbaikan
+`segmentCounts` cacat, header `List-Unsubscribe`, riwayat broadcast, akurasi
+segmen "pernah beli", ketahanan pengiriman.
+
+**Sisa manual:** uji klik tautan unsubscribe dari email broadcast & pengingat keranjang → harus 200.
+
+---
+
+## ✅ SESI SEBELUMNYA — Perbaikan Menu "Kelola Pesanan" (G1–G23, SELESAI)
 
 **Status: ✅ SELESAI (kode).** Dokumen: [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
 

@@ -1,6 +1,6 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { signTokenId } from "@/lib/download-token";
+import { signNewsletterUnsubToken } from "@/lib/unsubscribe-token";
 import type { BroadcastSegment, Subscriber } from "@/lib/newsletter-types";
 
 export type { BroadcastSegment, Subscriber } from "@/lib/newsletter-types";
@@ -142,7 +142,7 @@ export async function resolveSegmentEmails(
 }
 
 /** Secret HMAC untuk tautan unsubscribe. */
-function unsubSecret(): string {
+export function unsubSecret(): string {
   return (
     process.env.NEWSLETTER_UNSUB_SECRET?.trim() ||
     process.env.DOWNLOAD_TOKEN_SECRET?.trim() ||
@@ -151,8 +151,11 @@ function unsubSecret(): string {
   );
 }
 
-/** Tanda tangan email untuk tautan unsubscribe (kosong = tanpa tanda tangan). */
+/**
+ * Tanda tangan email untuk tautan unsubscribe (kosong = tanpa tanda tangan).
+ * F-N1: memakai tokenId ber-prefix yang SAMA dengan verifikasi
+ * (`verifyNewsletterUnsubToken`) agar tidak lagi mismatch.
+ */
 export function signNewsletterUnsub(email: string): string {
-  const secret = unsubSecret();
-  return secret ? signTokenId(`newsletter-unsub:${email.toLowerCase()}`, secret) : "";
+  return signNewsletterUnsubToken(email, unsubSecret());
 }
