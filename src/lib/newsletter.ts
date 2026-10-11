@@ -1,7 +1,14 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { signNewsletterUnsubToken } from "@/lib/unsubscribe-token";
-import type { BroadcastSegment, Subscriber } from "@/lib/newsletter-types";
+import {
+  normalizeSubscriber,
+  summarizeSubscribers,
+  countSegmentRecipients,
+  matchesSegment,
+  type BroadcastSegment,
+} from "@/lib/newsletter-pure";
+import type { Subscriber } from "@/lib/newsletter-types";
 
 export type { BroadcastSegment, Subscriber } from "@/lib/newsletter-types";
 export { BROADCAST_SEGMENT_LABEL } from "@/lib/newsletter-types";
@@ -17,27 +24,22 @@ export { BROADCAST_SEGMENT_LABEL } from "@/lib/newsletter-types";
  */
 
 const COLLECTION = "subscribers";
+const ORDERS_COLLECTION = "orders";
+
+/** Batas dokumen saat memindai (hindari biaya/loop tak terbatas). */
+const SCAN_CAP = 10000;
 
 /** Normalisasi email → id dokumen aman (lowercase, ganti char tak aman). */
 export function subscriberId(email: string): string {
   return email.trim().toLowerCase().replace(/[^a-z0-9@._-]/g, "_").slice(0, 200);
 }
 
-function normalize(v: unknown): Subscriber | null {
-  if (!v || typeof v !== "object") return null;
-  const d = v as Record<string, unknown>;
-  const email = typeof d.email === "string" ? d.email : "";
-  if (!email) return null;
-  return {
-    email,
-    name: typeof d.name === "string" ? d.name : undefined,
-    source: typeof d.source === "string" ? d.source : "unknown",
-    createdAtISO: typeof d.createdAtISO === "string" ? d.createdAtISO : "",
-    unsubscribed: d.unsubscribed === true,
-  };
-}
-
-/** Daftarkan email ke newsletter (idempoten). */
+/**
+ * Daftarkan email ke newsletter (idempoten).
+ *
+ * F-N11: re-subscribe AMAN — bila subscriber sudah ada, `createdAtISO` asli
+ * dipertahankan & `unsubscribedAtISO` dibersihkan (bukan menimpa createdAt).
+ */
 export async function subscribeEmail(
   email: string,
   opts: { name?: string; source?: string } = {},
@@ -46,20 +48,19 @@ export async function subscribeEmail(
   if (!db) return false;
   const clean = email.trim().toLowerCase();
   if (!/.+@.+\..+/.test(clean)) return false;
+  const ref = db.collection(COLLECTION).doc(subscriberId(clean));
   try {
-    await db
-      .collection(COLLECTION)
-      .doc(subscriberId(clean))
-      .set(
-        {
-          email: clean,
-          name: (opts.name ?? "").trim().slice(0, 80),
-          source: opts.source ?? "website",
-          unsubscribed: false,
-          createdAtISO: new Date().toISOString(),
-        },
-        { merge: true },
-      );
+    const data: Record<string, unknown> = {
+      email: clean,
+      name: (opts.name ?? "").trim().slice(0, 80),
+      source: opts.source ?? "website",
+      unsubscribed: false,
+      unsubscribedAtISO: null,
+    };
+    // Pertahankan createdAtISO asli bila sudah ada.
+    const existing = await ref.get();
+    if (!existing.exists) data.createdAtISO = new Date().toISOString();
+    await ref.set(data, { merge: true });
     return true;
   } catch (err) {
     console.error("[newsletter] gagal subscribe:", err);
@@ -75,7 +76,10 @@ export async function unsubscribeEmail(email: string): Promise<boolean> {
     await db
       .collection(COLLECTION)
       .doc(subscriberId(email))
-      .set({ unsubscribed: true, unsubscribedAtISO: new Date().toISOString() }, { merge: true });
+      .set(
+        { unsubscribed: true, unsubscribedAtISO: new Date().toISOString() },
+        { merge: true },
+      );
     return true;
   } catch (err) {
     console.error("[newsletter] gagal unsubscribe:", err);
@@ -87,29 +91,60 @@ export async function unsubscribeEmail(email: string): Promise<boolean> {
 export async function listSubscribers(): Promise<Subscriber[]> {
   const db = getAdminDb();
   if (!db) return [];
-  const snap = await db.collection(COLLECTION).limit(2000).get();
+  const snap = await db.collection(COLLECTION).limit(SCAN_CAP).get();
   return snap.docs
-    .map((doc) => normalize(doc.data()))
+    .map((doc) => normalizeSubscriber(doc.data()))
     .filter((s): s is Subscriber => s !== null)
     .sort((a, b) => b.createdAtISO.localeCompare(a.createdAtISO));
 }
 
-/** Ringkasan subscriber. */
-export async function getSubscribersSummary(): Promise<{
-  total: number;
-  active: number;
-  unsubscribed: number;
-}> {
-  const all = await listSubscribers();
-  const unsub = all.filter((s) => s.unsubscribed).length;
-  return { total: all.length, active: all.length - unsub, unsubscribed: unsub };
+/**
+ * Kumpulkan SEMUA email yang pernah membeli (sumber kebenaran: koleksi `orders`,
+ * bukan field `orderCount` yang bisa drift). F-N9.
+ *
+ * Order dibatalkan/kedaluwarsa tidak dihitung. Mengembalikan himpunan email
+ * lowercase. Best-effort.
+ */
+export async function getBuyerEmails(): Promise<Set<string>> {
+  const db = getAdminDb();
+  if (!db) return new Set();
+  const buyers = new Set<string>();
+  try {
+    const snap = await db
+      .collection(ORDERS_COLLECTION)
+      .select("buyerEmail", "status")
+      .limit(SCAN_CAP)
+      .get();
+    snap.forEach((doc) => {
+      const status = String(doc.get("status") ?? "");
+      if (status === "dibatalkan" || status === "kedaluwarsa") return;
+      const email = String(doc.get("buyerEmail") ?? "").trim().toLowerCase();
+      if (email) buyers.add(email);
+    });
+  } catch (err) {
+    console.error("[newsletter] gagal memuat pembeli dari orders:", err);
+  }
+  return buyers;
 }
 
-/** Segmen broadcast (tipe di `newsletter-types`). */
+/**
+ * Ringkasan + jumlah per segmen dalam SATU pemuatan subscriber (hindari
+ * `listSubscribers` dipanggil dua kali pada endpoint yang sama).
+ */
+export async function getBroadcastOverview(): Promise<{
+  summary: { total: number; active: number; unsubscribed: number };
+  segmentCounts: Record<BroadcastSegment, number>;
+}> {
+  const [subs, buyers] = await Promise.all([listSubscribers(), getBuyerEmails()]);
+  return {
+    summary: summarizeSubscribers(subs),
+    segmentCounts: countSegmentRecipients(subs, buyers),
+  };
+}
 
 /**
  * Kumpulkan email penerima untuk segmen tertentu (hanya yang aktif/subscribed
- * & belum unsubscribe). Sumber "pernah beli" dari koleksi `users` (orderCount>0).
+ * & belum unsubscribe). Sumber "pernah beli" dari koleksi `orders` (F-N9).
  */
 export async function resolveSegmentEmails(
   segment: BroadcastSegment,
@@ -117,27 +152,11 @@ export async function resolveSegmentEmails(
   const db = getAdminDb();
   if (!db) return [];
 
-  // Peta email→pernahBeli dari users.
-  const buyers = new Set<string>();
-  try {
-    const usersSnap = await db.collection("users").limit(5000).get();
-    usersSnap.forEach((doc) => {
-      const count = doc.get("orderCount");
-      const email = String(doc.get("email") ?? "").toLowerCase();
-      if (email && typeof count === "number" && count > 0) buyers.add(email);
-    });
-  } catch (err) {
-    console.error("[newsletter] gagal memuat users:", err);
-  }
-
-  const subs = (await listSubscribers()).filter((s) => !s.unsubscribed);
+  const [subs, buyers] = await Promise.all([listSubscribers(), getBuyerEmails()]);
   const emails = subs
-    .map((s) => s.email)
-    .filter((email) => {
-      if (segment === "semua") return true;
-      if (segment === "beli") return buyers.has(email);
-      return !buyers.has(email);
-    });
+    .filter((s) => !s.unsubscribed)
+    .filter((s) => matchesSegment(segment, buyers.has(s.email.toLowerCase())))
+    .map((s) => s.email);
   return Array.from(new Set(emails));
 }
 

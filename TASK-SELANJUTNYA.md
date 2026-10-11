@@ -11,12 +11,36 @@
 > 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
 > 📧 **Perbaikan Newsletter & Broadcast ✅ SELESAI (P0, 2026-10-11):** tautan unsubscribe (newsletter & cart) rusak total karena mismatch HMAC → diperbaiki. Lihat [`docs/2026-10-11-perbaikan-newsletter-broadcast.md`](docs/2026-10-11-perbaikan-newsletter-broadcast.md).
+> 📧 **Newsletter & Broadcast P1–P3 ✅ SELESAI (2026-10-11):** UI daftar pelanggan + ekspor, pratinjau/kirim-uji/estimasi penerima, riwayat broadcast, segmen akurat dari orders, header List-Unsubscribe. Lihat [`docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md`](docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md).
 > 📄 **Audit sistem pesanan (pradasar):** **[`docs/2026-10-11-audit-sistem-pesanan.md`](docs/2026-10-11-audit-sistem-pesanan.md)** — ✅ Batch 1–4 selesai.
 > ✅ **Upgrade Beranda (H0–H8):** `docs/2026-10-06-task-upgrade-beranda.md` + `docs/2026-10-06-upgrade-beranda.md`. **SELESAI.**
 
 ---
 
-## ✅ SESI INI — Perbaikan Newsletter & Broadcast (P0, SELESAI)
+## ✅ SESI INI — Perbaikan Newsletter & Broadcast P1–P3 (SELESAI)
+
+**Status: ✅ SELESAI (P1–P3, kode).** Dokumen: [`docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md`](docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md).
+
+Melanjutkan P0 (bug unsubscribe). Menuntaskan sisa gap:
+
+- **F-N3** — UI **daftar pelanggan** (cari, filter status, ekspor CSV).
+- **F-N5** — **pratinjau** email + **kirim uji** + **estimasi penerima** per segmen.
+- **F-N4** — `segmentCounts` kini lengkap (semua/beli/belum) & dipakai UI; GET satu pemuatan.
+- **F-N6** — header `List-Unsubscribe` + `List-Unsubscribe-Post` di email broadcast.
+- **F-N8** — **riwayat broadcast** (`broadcasts/{id}`) + aksi audit baru `broadcast.send`.
+- **F-N9** — segmen "pernah beli" dari koleksi `orders` (bukan `orderCount`).
+- **F-N7** — batas kirim per-batch (200) + flag `truncated` (anti-timeout).
+- **F-N10/N11** — `unsubscribedAtISO` ikut dinormalisasi; re-subscribe aman (createdAt asli dipertahankan).
+- **Berkas baru:** `src/lib/newsletter-pure.ts`, `src/lib/broadcast-log.ts`,
+  komponen `admin/broadcast/*` (composer, subscribers-panel, history),
+  `scripts/newsletter-pure.test.ts`.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**365** test) · `build` ✅.
+
+**Sisa manual:** publish ulang Firestore Rules (koleksi `broadcasts`); uji browser (daftar, pratinjau, kirim uji, kirim, riwayat).
+
+---
+
+## ✅ SESI SEBELUMNYA — Perbaikan Newsletter & Broadcast (P0, SELESAI)
 
 **Status: ✅ SELESAI (P0, kode).** Dokumen: [`docs/2026-10-11-perbaikan-newsletter-broadcast.md`](docs/2026-10-11-perbaikan-newsletter-broadcast.md).
 

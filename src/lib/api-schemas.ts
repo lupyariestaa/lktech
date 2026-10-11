@@ -350,14 +350,8 @@ export const newsletterSchema = z.object({
   website: z.string().max(200).optional(),
 });
 
-/** Kirim broadcast (admin). */
-export const broadcastSchema = z.object({
-  subject: z.string().trim().min(3, "Subjek minimal 3 karakter").max(150),
-  body: z.string().trim().min(3, "Isi minimal 3 karakter").max(8000),
-  segment: z.enum(["semua", "beli", "belum"]).default("semua"),
-  ctaLabel: z.string().trim().max(60).optional(),
-  ctaUrl: z.string().trim().url("URL tombol tidak valid").max(500).optional(),
-});
+// Catatan: validasi payload BROADCAST kini memakai `validateBroadcast` murni
+// (`@/lib/newsletter-pure`) agar dapat diuji & dipakai bersama UI.
 
 // ===== Kupon =====
 /**

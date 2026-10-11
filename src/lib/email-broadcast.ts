@@ -20,11 +20,18 @@ const apiKey = getResendApiKey();
 const fromEmail = getFromEmail();
 const replyTo = getReplyTo();
 
+/** Batas kirim per pemanggilan (cegah timeout serverless) — F-N7. */
+export const BROADCAST_MAX_PER_RUN = 200;
+
 export type BroadcastResult = {
   ok: boolean;
   skipped?: boolean;
   sent: number;
   failed: number;
+  /** Jumlah penerima yang DIMINTA (bisa > diproses bila melebihi batas). */
+  requested: number;
+  /** `true` bila pemrosesan dihentikan karena batas per-run. */
+  truncated?: boolean;
   error?: string;
 };
 
@@ -70,12 +77,26 @@ export function buildBroadcastHtml(params: {
   </div>`;
 }
 
+/** Bangun versi teks polos. */
+export function buildBroadcastText(params: {
+  subject: string;
+  body: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  unsubUrl: string;
+}): string {
+  return `${params.subject}\n\n${params.body}\n\n${
+    params.ctaUrl ? `${params.ctaLabel ?? "Selengkapnya"}: ${params.ctaUrl}\n\n` : ""
+  }Berhenti berlangganan: ${params.unsubUrl}\n\n${SITE.name}`;
+}
+
 /** Kirim satu email broadcast ke satu alamat. */
 async function sendOne(
   to: string,
   subject: string,
   text: string,
   html: string,
+  unsubUrl: string,
 ): Promise<boolean> {
   try {
     const res = await fetch(RESEND_ENDPOINT, {
@@ -91,6 +112,12 @@ async function sendOne(
         subject,
         text,
         html,
+        // F-N6: header standar untuk unsubscribe (Gmail/Outlook menampilkan
+        // tombol bawaan; mengurangi risiko ditandai spam).
+        headers: {
+          "List-Unsubscribe": `<${unsubUrl}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
       }),
     });
     if (!res.ok) {
@@ -106,8 +133,13 @@ async function sendOne(
 }
 
 /**
- * Kirim broadcast ke daftar penerima. Untuk setiap penerima, tombol CTA sama,
- * hanya tautan unsubscribe yang dipersonalisasi (via `unsubUrlFor`).
+ * Kirim broadcast ke daftar penerima. Untuk setiap penerima, isi sama; hanya
+ * tautan unsubscribe yang dipersonalisasi (via `unsubUrlFor`).
+ *
+ * F-N7: dibatasi `BROADCAST_MAX_PER_RUN` per pemanggilan (anti-timeout); bila
+ * penerima melebihi batas, `truncated=true` & sisanya harus dikirim pada batch
+ * berikutnya (sementara: admin mengirim ulang ke segmen yang sama — penerima
+ * yang sudah terkirim tetap ikut; lihat catatan di TASK).
  */
 export async function sendBroadcast(params: {
   recipients: string[];
@@ -118,14 +150,18 @@ export async function sendBroadcast(params: {
   /** Bangun tautan unsubscribe per email. */
   unsubUrlFor: (email: string) => string;
 }): Promise<BroadcastResult> {
-  if (!apiKey) return { ok: false, skipped: true, sent: 0, failed: 0 };
-  if (params.recipients.length === 0) {
-    return { ok: false, skipped: true, sent: 0, failed: 0 };
+  const requested = params.recipients.length;
+  if (!apiKey) return { ok: false, skipped: true, sent: 0, failed: 0, requested };
+  if (requested === 0) {
+    return { ok: false, skipped: true, sent: 0, failed: 0, requested };
   }
+
+  const targets = params.recipients.slice(0, BROADCAST_MAX_PER_RUN);
+  const truncated = requested > targets.length;
 
   let sent = 0;
   let failed = 0;
-  for (const to of params.recipients) {
+  for (const to of targets) {
     const unsubUrl = params.unsubUrlFor(to);
     const html = buildBroadcastHtml({
       subject: params.subject,
@@ -134,13 +170,48 @@ export async function sendBroadcast(params: {
       ctaUrl: params.ctaUrl,
       unsubUrl,
     });
-    const text = `${params.subject}\n\n${params.body}\n\n${
-      params.ctaUrl ? `${params.ctaLabel ?? "Selengkapnya"}: ${params.ctaUrl}\n\n` : ""
-    }Berhenti berlangganan: ${unsubUrl}\n\n${SITE.name}`;
-    const ok = await sendOne(to, params.subject, text, html);
+    const text = buildBroadcastText({
+      subject: params.subject,
+      body: params.body,
+      ctaLabel: params.ctaLabel,
+      ctaUrl: params.ctaUrl,
+      unsubUrl,
+    });
+    const ok = await sendOne(to, params.subject, text, html, unsubUrl);
     if (ok) sent += 1;
     else failed += 1;
   }
 
-  return { ok: failed === 0, sent, failed };
+  return { ok: failed === 0, sent, failed, requested, truncated };
+}
+
+/**
+ * Kirim SATU email uji (pratinjau) ke `to` — F-N5. Tidak memengaruhi subscriber.
+ * Mengembalikan hasil kirim sederhana.
+ */
+export async function sendTestBroadcast(params: {
+  to: string;
+  subject: string;
+  body: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  unsubUrl: string;
+}): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  if (!apiKey) return { ok: false, skipped: true };
+  const html = buildBroadcastHtml({
+    subject: params.subject,
+    body: params.body,
+    ctaLabel: params.ctaLabel,
+    ctaUrl: params.ctaUrl,
+    unsubUrl: params.unsubUrl,
+  });
+  const text = buildBroadcastText({
+    subject: params.subject,
+    body: params.body,
+    ctaLabel: params.ctaLabel,
+    ctaUrl: params.ctaUrl,
+    unsubUrl: params.unsubUrl,
+  });
+  const ok = await sendOne(params.to, `[Uji] ${params.subject}`, text, html, params.unsubUrl);
+  return ok ? { ok: true } : { ok: false, error: "Gagal mengirim email uji." };
 }

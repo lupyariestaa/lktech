@@ -21,6 +21,7 @@
     "test:stock": "node --experimental-strip-types --test scripts/product-stock.test.ts",
     "test:cart": "node --experimental-strip-types --test scripts/cart-reminder.test.ts",
     "test:unsub": "node --experimental-strip-types --test scripts/unsubscribe-token.test.ts",
+    "test:newsletter": "node --experimental-strip-types --test scripts/newsletter-pure.test.ts",
     "test:status": "node --experimental-strip-types --test scripts/order-status.test.ts",
     "test:orders": "node --experimental-strip-types --test scripts/orders-filter.test.ts",
     "test:reviews": "node --experimental-strip-types --test scripts/review-rating.test.ts",

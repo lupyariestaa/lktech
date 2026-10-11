@@ -1,22 +1,16 @@
 /**
  * Tipe & konstanta NEWSLETTER — AMAN untuk klien (tanpa `server-only`).
- * Data layer (I/O) ada di `@/lib/newsletter`.
+ * Data layer (I/O) ada di `@/lib/newsletter`; logika murni di `@/lib/newsletter-pure`.
  */
 
-/** Satu pelanggan newsletter. */
-export type Subscriber = {
-  email: string;
-  name?: string;
-  source: string;
-  createdAtISO: string;
-  unsubscribed?: boolean;
-};
+export type {
+  BroadcastSegment,
+  NormalizedSubscriber,
+} from "@/lib/newsletter-pure";
 
-/** Segmen broadcast. */
-export type BroadcastSegment = "semua" | "beli" | "belum";
+export { BROADCAST_SEGMENT_LABEL, BROADCAST_SEGMENTS } from "@/lib/newsletter-pure";
 
-export const BROADCAST_SEGMENT_LABEL: Record<BroadcastSegment, string> = {
-  semua: "Semua pelanggan",
-  beli: "Pernah membeli",
-  belum: "Belum pernah membeli",
-};
+import type { NormalizedSubscriber } from "@/lib/newsletter-pure";
+
+/** Satu pelanggan newsletter (bentuk tampilan/API). */
+export type Subscriber = NormalizedSubscriber;

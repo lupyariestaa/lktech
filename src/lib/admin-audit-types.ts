@@ -27,6 +27,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   "article.unpublish",
   "article.duplicate",
   "article.bulk",
+  "broadcast.send",
 ] as const;
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];
@@ -56,6 +57,7 @@ export const ADMIN_AUDIT_ACTION_LABEL: Record<AdminAuditAction, string> = {
   "article.unpublish": "Tarik artikel ke draft",
   "article.duplicate": "Duplikat artikel",
   "article.bulk": "Aksi massal artikel",
+  "broadcast.send": "Kirim broadcast newsletter",
 };
 
 /** Entri audit tersimpan. */
