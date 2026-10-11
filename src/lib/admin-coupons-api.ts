@@ -6,6 +6,7 @@ import {
   type CouponsSummary,
 } from "@/lib/coupon-types";
 import type { CouponStat } from "@/lib/coupon-pure";
+import type { CouponAnalytics } from "@/lib/coupon-analytics-pure";
 
 /** Daftar kupon (admin). */
 export async function fetchCoupons(): Promise<Coupon[]> {
@@ -55,13 +56,23 @@ export type CouponDetailResult = {
   stat: CouponStat | null;
   redemptions: CouponRedemption[];
   dayUsage: number;
+  analytics: CouponAnalytics | null;
   timeline: CouponTimelineEntry[];
 };
 
-/** Detail satu kupon + statistik + pemakai + timeline (FASE C5). */
-export async function fetchCouponDetail(id: string): Promise<CouponDetailResult> {
+/** Detail satu kupon + statistik + pemakai + timeline (FASE C5) + analitik (C6). */
+export async function fetchCouponDetail(
+  id: string,
+  opts: { analytics?: boolean; days?: number } = {},
+): Promise<CouponDetailResult> {
+  const q = new URLSearchParams();
+  if (opts.analytics) {
+    q.set("analytics", "1");
+    if (opts.days) q.set("days", String(opts.days));
+  }
+  const qs = q.toString();
   return adminFetch<CouponDetailResult>(
-    `/api/admin/coupons/${encodeURIComponent(id)}`,
+    `/api/admin/coupons/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`,
   );
 }
 

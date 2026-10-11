@@ -5,6 +5,7 @@ import {
   listCouponRedemptions,
   getCouponStats,
   getCouponDayUsage,
+  getCouponAnalytics,
 } from "@/lib/coupons";
 import type { CouponStat } from "@/lib/coupon-pure";
 import { listAdminAudit } from "@/lib/admin-audit";
@@ -50,12 +51,21 @@ export async function GET(
 
     const stat = stats[id] ?? stats[`code:${code}`] ?? null;
 
+    // Analitik (C6) — hanya bila diminta (query berat).
+    const url = new URL(req.url);
+    let analytics = null;
+    if (url.searchParams.get("analytics") === "1") {
+      const days = Number(url.searchParams.get("days")) || 30;
+      analytics = await getCouponAnalytics(id, days).catch(() => null);
+    }
+
     return NextResponse.json(
       {
         coupon,
         stat,
         redemptions,
         dayUsage,
+        analytics,
         timeline: timeline.slice(0, 100),
       },
       { headers: { "Cache-Control": "no-store" } },

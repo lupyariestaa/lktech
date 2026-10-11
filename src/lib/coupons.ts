@@ -31,6 +31,11 @@ import {
   type CouponStat,
   type CouponStatRow,
 } from "@/lib/coupon-pure";
+import {
+  computeCouponAnalytics,
+  type CouponAnalytics,
+  type CouponAnalyticsRow,
+} from "@/lib/coupon-analytics-pure";
 
 const COLLECTION = "coupons";
 /** Subkoleksi pencatatan pemakaian per user (sumber kebenaran `limitPerUser`). */
@@ -730,4 +735,53 @@ function stripUndefined(value: Record<string, unknown>): Record<string, unknown>
     if (v !== undefined) out[k] = v;
   }
   return out;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Analitik kupon (C6/K10)                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Hitung analitik efektivitas untuk SATU kupon dalam `days` hari terakhir
+ * (zona Asia/Jakarta, default 30). Memuat order dalam jendela lalu mendelegasikan
+ * ke logika murni `computeCouponAnalytics` (memfilter order berkupon ini saja).
+ * Best-effort — `null` bila Admin SDK tak tersedia.
+ */
+export async function getCouponAnalytics(
+  couponId: string,
+  days = 30,
+): Promise<CouponAnalytics | null> {
+  const db = getAdminDb();
+  if (!db) return null;
+  try {
+    const safeDays = Math.min(Math.max(Math.floor(days), 1), 365);
+    const cutoff = new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000).toISOString();
+    const snap = await db
+      .collection("orders")
+      .where("createdAtISO", ">=", cutoff)
+      .select("status", "total", "createdAtISO", "coupon")
+      .get();
+
+    const rows: CouponAnalyticsRow[] = [];
+    for (const doc of snap.docs) {
+      const coupon = doc.get("coupon") as CouponAnalyticsRow["coupon"];
+      // Hanya order yang memakai kupon INI (by couponId, fallback kode).
+      const cid = coupon && typeof coupon === "object" ? coupon.couponId : undefined;
+      if (cid !== couponId) {
+        // Fallback: cocokkan kode (order lama tanpa couponId tidak dapat dipetakan
+        // by-id; lewati agar tidak salah hitung).
+        continue;
+      }
+      rows.push({
+        status: String(doc.get("status") ?? ""),
+        total: num(doc.get("total")),
+        createdAt: String(doc.get("createdAtISO") ?? ""),
+        coupon,
+      });
+    }
+    return computeCouponAnalytics(rows);
+  } catch (err) {
+    console.error("[coupons] gagal menghitung analitik kupon:", err);
+    return null;
+  }
 }

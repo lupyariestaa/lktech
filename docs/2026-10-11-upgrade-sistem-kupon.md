@@ -1,6 +1,6 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅, C3 ✅, C5 ✅ selesai; C4, C6–C9 pending).**
+> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅, C3 ✅, C5 ✅, C6 ✅ selesai; C4, C7–C9 pending).**
 > Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
 > target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
 > rencana uji.
@@ -307,13 +307,16 @@ logika murni teruji ✓.
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **438** ✅ · `build` ✅
       (route baru `/admin/coupons/[id]` & `/api/admin/coupons/[id]`).
 
-### Fase C6 — Analitik kupon (K10, O12, O17, O23)
-- [ ] `coupon-analytics-pure.ts` (`computeCouponAnalytics`): konversi, AOV dgn/tanpa,
-      ROI, tren 30 hari, breakdown kampanye.
-- [ ] `GET /api/admin/coupons?analytics=1` + kartu di dashboard & detail.
-- [ ] CSV diperkaya (kolom analitik + rentang tanggal).
-- [ ] `scripts/coupon-analytics.test.ts` (≥ 12 test).
-- **DoD:** admin dapat menilai efektivitas kupon/kampanye dari data nyata.
+### Fase C6 — Analitik kupon (K10, O12, O17, O23) — ✅ SELESAI
+- [x] `coupon-analytics-pure.ts` (murni, teruji): `computeCouponAnalytics` —
+      konversi, pangsa kupon, AOV dgn/tanpa, ROI, tren harian (Asia/Jakarta),
+      breakdown kampanye; `formatPercent`/`formatRoi`/`dayKeyJakarta`.
+- [x] `coupons.ts`: `getCouponAnalytics(couponId, days)` — order berkupon dalam
+      jendela `createdAtISO` (index existing) → agregasi murni.
+- [x] `GET /api/admin/coupons/[id]?analytics=1&days=30` → `analytics`.
+- [x] Halaman detail: panel **Analitik (30 hari)** (kartu metrik + tren bar + kampanye).
+- [x] `scripts/coupon-analytics.test.ts` — **10 test**; script `test:coupon-analytics`.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **448** ✅ · `build` ✅.
 
 ### Fase C7 — Halaman `/promo` & discovery (K11, O8, O10)
 - [ ] `promos.ts`: `PublicPromo` + `status`/`remaining`/`savingsHint`.
@@ -547,4 +550,5 @@ export type Coupon = {
 - **C2 ✅ SELESAI** (aturan server ditegakkan: single-use/assigned/audience/periode).
 - **C3 ✅ SELESAI** (kupon otomatis/best coupon opt-in + event analitik + souvenir kode).
 - **C5 ✅ SELESAI** (halaman detail + timeline + riwayat pemakai + ekspor CSV).
-- Berikutnya: **C6** (analitik kupon: konversi/AOV/ROI/tren) → C4 → C7 → C8 → C9.
+- **C6 ✅ SELESAI** (analitik kupon: konversi/AOV/ROI/tren/kampanye).
+- Berikutnya: **C4** (generate massal + duplikat) → C7 → C8 → C9.

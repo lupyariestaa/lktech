@@ -44,6 +44,7 @@
     "scripts/coupon-bundle.test.ts",
     "scripts/coupon-pure.test.ts",
     "scripts/coupon-engine.test.ts",
+    "scripts/coupon-analytics.test.ts",
     "scripts/order-schema.test.ts",
     "scripts/product-stock.test.ts",
     "scripts/cart-reminder.test.ts",

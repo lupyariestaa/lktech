@@ -21,6 +21,11 @@ import {
   type Coupon,
 } from "@/lib/coupon-types";
 import { ADMIN_AUDIT_ACTION_LABEL } from "@/lib/admin-audit-types";
+import {
+  formatPercent,
+  formatRoi,
+  type CouponAnalytics,
+} from "@/lib/coupon-analytics-pure";
 import { formatRupiah, formatDateTime } from "@/lib/format";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
@@ -79,7 +84,7 @@ export function CouponDetailClient({ coupon: initial }: { coupon: Coupon }) {
     let active = true;
     (async () => {
       try {
-        const result = await fetchCouponDetail(initial.id);
+        const result = await fetchCouponDetail(initial.id, { analytics: true, days: 30 });
         if (active) setData(result);
       } catch (err) {
         if (active) {
@@ -252,6 +257,22 @@ export function CouponDetailClient({ coupon: initial }: { coupon: Coupon }) {
             </div>
           )}
         </div>
+
+        {/* Analitik 30 hari (C6) */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-5">
+          <h2 className="text-sm font-bold text-secondary">Analitik (30 hari)</h2>
+          {loading ? (
+            <p className="mt-3 flex items-center gap-2 text-sm text-muted">
+              <Loader2 className="h-4 w-4 animate-spin" /> Memuat…
+            </p>
+          ) : !data?.analytics ? (
+            <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-surface px-4 py-3 text-xs text-muted">
+              Belum ada data analitik.
+            </p>
+          ) : (
+            <AnalyticsPanel analytics={data.analytics} />
+          )}
+        </div>
       </div>
 
       {/* Kolom kanan: aksi + pemakai + timeline */}
@@ -386,6 +407,68 @@ function Info({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-muted">{label}</dt>
       <dd className="font-semibold text-secondary">{value}</dd>
+    </div>
+  );
+}
+
+/** Panel analitik kupon (C6). */
+function AnalyticsPanel({ analytics }: { analytics: CouponAnalytics }) {
+  const a = analytics;
+  return (
+    <div className="mt-4 flex flex-col gap-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Konversi" value={formatPercent(a.conversionRate)} tone="emerald" />
+        <Stat label="AOV berkupon" value={formatRupiah(Math.round(a.couponAov))} tone="primary" />
+        <Stat label="AOV non-kupon" value={formatRupiah(Math.round(a.nonCouponAov))} />
+        <Stat label="ROI" value={formatRoi(a.roi)} tone="emerald" />
+        <Stat label="Omzet berkupon" value={formatRupiah(a.couponRevenue)} tone="primary" />
+        <Stat label="Σ diskon" value={formatRupiah(a.totalDiscount)} />
+        <Stat label="Order berkupon" value={a.convertedOrders} />
+        <Stat label="Pangsa kupon" value={formatPercent(a.couponShare)} />
+      </div>
+
+      {/* Tren harian (bar sederhana) */}
+      {a.trend.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+            Tren order harian
+          </p>
+          <div className="mt-2 flex items-end gap-1 overflow-x-auto pb-1">
+            {a.trend.map((p) => {
+              const max = Math.max(...a.trend.map((t) => t.orders), 1);
+              const h = Math.max(4, Math.round((p.orders / max) * 48));
+              return (
+                <div
+                  key={p.date}
+                  className="flex w-3 shrink-0 flex-col items-center gap-1"
+                  title={`${p.date}: ${p.orders} order · ${formatRupiah(p.discount)}`}
+                >
+                  <span className="w-full rounded-t bg-primary/70" style={{ height: `${h}px` }} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Breakdown kampanye */}
+      {a.campaigns.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+            Per kampanye
+          </p>
+          <ul className="mt-2 flex flex-col divide-y divide-slate-100 text-xs">
+            {a.campaigns.map((c) => (
+              <li key={c.campaign} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="font-medium text-secondary">{c.campaign}</span>
+                <span className="text-muted">
+                  {c.orders} order · {formatRupiah(c.revenue)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
