@@ -8,7 +8,7 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Upgrade UI/UX Dialog Kupon ✅ SELESAI (2026-10-11)** — dialog buat/edit kupon dirombak proper (2 kolom + pratinjau, section bergrup, editor tier, opsi lanjutan) + schema/`toInput` kini menerima semua field C1. Lihat [`docs/2026-10-11-upgrade-ui-dialog-kupon.md`](docs/2026-10-11-upgrade-ui-dialog-kupon.md). **Upgrade Sistem Kupon (C0–C9) ✅ SELESAI** — [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+> 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Upgrade UI/UX Form Kupon ✅ SELESAI (2026-10-11)** — buat/edit kupon kini **halaman khusus** (`/admin/coupons/new` & `/admin/coupons/[id]/edit`), 2 kolom + pratinjau, section bergrup, editor tier, opsi lanjutan; schema/`toInput` menerima semua field C1. Lihat [`docs/2026-10-11-upgrade-ui-dialog-kupon.md`](docs/2026-10-11-upgrade-ui-dialog-kupon.md). **Upgrade Sistem Kupon (C0–C9) ✅ SELESAI** — [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
@@ -19,24 +19,30 @@
 
 ---
 
-## ✅ SESI INI — Upgrade UI/UX Dialog Kupon (Proper)
+## ✅ SESI INI — Upgrade UI/UX Form Kupon (Halaman Khusus)
 
 **Status: ✅ SELESAI (kode).** Dokumen: [`docs/2026-10-11-upgrade-ui-dialog-kupon.md`](docs/2026-10-11-upgrade-ui-dialog-kupon.md).
 
-Dialog buat/edit kupon dirombak jadi **proper** + menutup gap fungsional (field C1
-sebelumnya tak bisa diisi dari UI karena schema server membuangnya).
+Buat/edit kupon kini memakai **halaman khusus** (bukan popup), sesuai permintaan
+pemilik — pola seperti halaman form portfolio.
 
-- **Backend:** `api-schemas.ts` + `toInput` kini menerima `tiers`, `campaign`,
-  `audience`, `singleUse`, `assignedEmail`, `assignedUid`, `perDayLimit`, `stackable`,
-  `type:"tiered"`; `limitPerUser` 0 dipertahankan.
-- **UI dialog:** tata letak **2 kolom** (form + **pratinjau live** sticky), **header
-  berikon** + tombol tutup (X), **section bergrup** (Dasar · Diskon & Syarat ·
-  Batas & Kuota · Jadwal · Penargetan/Bundel lanjutan), **editor tier dinamis**
-  (tipe `tiered`), **opsi lanjutan** kolaps, **footer** ringkasan nilai + status.
-- **Test baru:** `test:coupon-schema` (**7**).
-- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**475** test) · `build` ✅.
+- **Route baru:** `/admin/coupons/new` (buat) & `/admin/coupons/[id]/edit` (edit);
+  komponen `coupon-form.tsx` (halaman penuh).
+- **UI:** 2 kolom (form + pratinjau live), header berikon, section bergrup
+  (Dasar · Diskon & Syarat · Batas & Kuota · Jadwal · Penargetan/Bundel lanjutan),
+  editor tier dinamis (`tiered`), opsi lanjutan kolaps, footer ringkasan.
+- **Navigasi:** tombol "Buat Kupon" → `/admin/coupons/new`; tombol Edit (kartu &
+  halaman detail) → `/admin/coupons/[id]/edit`.
+- **Backend:** schema & `toInput` menerima field C1 (`tiered`, kampanye, audience,
+  single-use, email khusus, kuota harian, stackable).
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**475** test) · `build` ✅
+  (route `/admin/coupons/new` & `/admin/coupons/[id]/edit` terdaftar).
 
-**Sisa manual:** uji browser dialog (semua tipe & opsi lanjutan).
+**Sisa manual:** uji browser halaman form (semua tipe & opsi lanjutan).
+
+---
+
+## ✅ SESI SEBELUMNYA — Upgrade UI/UX Dialog Kupon (Proper)
 
 ---
 

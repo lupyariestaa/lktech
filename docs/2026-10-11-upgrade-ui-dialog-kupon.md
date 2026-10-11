@@ -1,8 +1,17 @@
-# Task Eksekusi — Upgrade UI/UX Dialog Kupon (Proper)
+# Task Eksekusi — Upgrade UI/UX Form Kupon (Halaman Khusus)
 
 > **Status: ✅ SELESAI (kode).** Melanjutkan inisiatif kupon (C0–C9) — **polem UI/UX
-> popup buat/edit kupon** + menutup gap fungsional (field C1 belum bisa diisi dari UI).
+> form buat/edit kupon** + menutup gap fungsional (field C1 belum bisa diisi dari UI).
+> **Revisi keputusan pemilik:** form buat/edit kupon = **HALAMAN KHUSUS** (route
+> sendiri), **bukan popup** — pola seperti halaman form portfolio.
 > Disusun & dieksekusi: 2026-10-11.
+
+> **Perubahan arah (2026-10-11):** awalnya diimplementasikan sebagai popup/dialog;
+> atas permintaan pemilik, dipindah menjadi **halaman khusus**:
+> - `/admin/coupons/new` — halaman **buat** kupon.
+> - `/admin/coupons/[id]/edit` — halaman **edit** kupon.
+> Komponen `coupon-form.tsx` (halaman penuh, bukan dialog). Dialog batch (generate
+> massal) tetap popup (aksi massal).
 
 ---
 
@@ -106,11 +115,13 @@ menjadi **pusat pembuatan kupon yang jelas, terkelompok, dan lengkap**.
 
 **Status: ✅ SELESAI (kode).**
 - `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**475** test; `test:coupon-schema` baru = 7) · `build` ✅.
-- Dialog kini **lengkap & proper**: semua tipe (percent/amount/tiered) & semua field
-  C1 dapat diisi dari UI; header berikon, section bergrup, **pratinjau live**, footer ringkas.
-- **Backend:** schema & `toInput` menerima field C1 (sebelumnya dibuang zod) — gap
-  fungsional tertutup.
-- Sisa manual: uji browser dialog (semua tipe & opsi lanjutan).
+- Form kupon = **halaman khusus**: `/admin/coupons/new` & `/admin/coupons/[id]/edit`
+  (komponen `coupon-form.tsx`), 2 kolom + **pratinjau live**, header berikon, section
+  bergrup, editor tier, opsi lanjutan, footer ringkasan.
+- Daftar kupon: tombol "Buat Kupon" → `/admin/coupons/new`; tombol **Edit** kartu &
+  detail → `/admin/coupons/[id]/edit`.
+- **Backend:** schema & `toInput` menerima field C1 (sebelumnya dibuang zod).
+- Sisa manual: uji browser halaman form (semua tipe & opsi lanjutan).
 
 ---
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BadgePercent, RefreshCw, Ticket } from "lucide-react";
 import {
   deleteCoupon,
@@ -21,12 +22,12 @@ import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { CouponsToolbar } from "@/components/admin/coupons/coupons-toolbar";
 import { CouponCard } from "@/components/admin/coupons/coupon-card";
 import { CampaignSummary } from "@/components/admin/coupons/campaign-summary";
-import { CouponFormDialog } from "@/components/admin/coupons/coupon-form-dialog";
 import { BatchDialog } from "@/components/admin/coupons/coupon-batch-dialog";
 import { cn } from "@/lib/utils";
 
 export function CouponsManager() {
   const toast = useToast();
+  const router = useRouter();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [summary, setSummary] = useState<CouponsSummary | null>(null);
   const [stats, setStats] = useState<Record<string, CouponStat>>({});
@@ -38,8 +39,6 @@ export function CouponsManager() {
   const [campaignFilter, setCampaignFilter] = useState<string>("semua");
   const [reloadKey, setReloadKey] = useState(0);
 
-  const [editing, setEditing] = useState<Coupon | null>(null);
-  const [creating, setCreating] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Coupon | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -201,10 +200,7 @@ export function CouponsManager() {
         loading={loading}
         onRefresh={refresh}
         onExport={onExport}
-        onCreate={() => {
-          setEditing(null);
-          setCreating(true);
-        }}
+        onCreate={() => router.push("/admin/coupons/new")}
         onBatch={() => setBatchOpen(true)}
       />
 
@@ -241,31 +237,13 @@ export function CouponsManager() {
               stat={stats[c.id] ?? stats[`code:${c.code}`]}
               busy={busyId === c.id}
               onToggleActive={onToggleActive}
-              onEdit={(x) => {
-                setCreating(false);
-                setEditing(x);
-              }}
+              onEdit={(x) => router.push(`/admin/coupons/${x.id}/edit`)}
               onArchive={setToDelete}
               onRestore={onRestore}
               onDuplicate={onDuplicate}
             />
           ))}
         </ul>
-      )}
-
-      {(creating || editing) && (
-        <CouponFormDialog
-          coupon={editing}
-          onClose={() => {
-            setCreating(false);
-            setEditing(null);
-          }}
-          onSaved={() => {
-            setCreating(false);
-            setEditing(null);
-            refresh();
-          }}
-        />
       )}
 
       {batchOpen && (

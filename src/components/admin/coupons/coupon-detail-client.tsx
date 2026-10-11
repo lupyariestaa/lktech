@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Check,
   Copy,
   Download,
   Loader2,
+  Pencil,
   Users,
 } from "lucide-react";
 import {
@@ -292,6 +294,13 @@ export function CouponDetailClient({ coupon: initial }: { coupon: Coupon }) {
               </button>
             ) : (
               <>
+                <Link
+                  href={`/admin/coupons/${coupon.id}/edit`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-secondary transition-colors hover:border-primary/30 hover:text-primary"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Link>
                 <button
                   type="button"
                   onClick={onToggleActive}
@@ -312,9 +321,6 @@ export function CouponDetailClient({ coupon: initial }: { coupon: Coupon }) {
               </>
             )}
           </div>
-          <p className="mt-3 text-[11px] text-muted">
-            Ubah rincian kupon dari daftar kupon (tombol edit).
-          </p>
         </div>
 
         {/* Daftar pemakai */}
