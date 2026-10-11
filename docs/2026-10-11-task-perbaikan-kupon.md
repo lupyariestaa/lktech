@@ -1,8 +1,8 @@
 # Task Eksekusi — Perbaikan & Upgrade Sistem Kupon
 
-> **Status: 🔄 DIKERJAKAN (K1 ✅, K2 ✅, K3 ✅, K4 ✅, K5 ✅; K6 pending).** Hasil audit
-> mandiri sistem kupon (data layer, API, UI admin, keranjang, halaman promo publik).
-> Disusun: 2026-10-11.
+> **Status: ✅ SELESAI (kode) — K0–K6.** Audit mandiri sistem kupon (data layer, API,
+> UI admin, keranjang, halaman promo publik). Seluruh 14 gap (K1–K13) tertutup.
+> Disusun & dieksekusi: 2026-10-11.
 
 ---
 
@@ -144,26 +144,50 @@ statistik per-kupon, ekspor CSV, halaman `/promo`). Gap terbesar ada pada
       buang non-A-Z0-9) + test baru `test:order-schema` (**5 test**) (K13).
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **410** ✅ · `build` ✅.
 
-### Fase K6 — QA, docs & rilis
-- [ ] Gate penuh (`tsc`/`eslint`/semua `test:*`/`build`).
-- [ ] Uji browser: apply/clear kupon, kupon bundel dicabut, edit/aktif/arsip/restore,
-      ekspor CSV, `/promo` pakai kode.
-- [ ] Update `docs/README.md` + `TASK-SELANJUTNYA.md`.
-- [ ] Commit konvensional + push.
+### Fase K6 — QA, docs & rilis — ✅ SELESAI
+- [x] Gate penuh (`tsc`/`eslint`/semua `test:*`/`build`) — semua hijau.
+- [x] Audit akhir: tak ada sisa `coupon-rules`/`couponValueLabel`/`rateLimit` (sync);
+      `CouponStat` satu sumber (`coupon-pure.ts`).
+- [x] Update `docs/README.md` + `TASK-SELANJUTNYA.md`.
+- [x] Commit konvensional + push.
+- **Uji browser (manual, pemilik):** apply/clear kupon, kupon bundel dicabut saat
+      item syarat hilang, edit/aktif/arsip/restore kupon, ekspor CSV, `/promo` "Pakai Kode".
 
 ---
 
-## 3. Definition of Done
-1. Logika inti kupon **teruji** (`coupon-pure.test.ts`).
-2. Feedback kupon di keranjang **akurat & jelas** (dicabut/berubah terlihat).
-3. Form admin **validasi klien** + aksesibel (focus-trap, aria).
-4. Preview validasi **akurat** (per-user).
-5. Tidak ada kode mati; helper rate-limit konsisten.
-6. `tsc`/`lint`/semua `test:*`/`build` hijau; dokumentasi diperbarui.
+## 3. Hasil
 
-## 4. Pertanyaan Terbuka
-1. **K9:** tampilkan `activeOrders` (order non-batal) sebagai metrik utama, atau
-   beri tooltip? (default: tampilkan `activeOrders` + `cancelledOrders`).
-2. **K6:** izinkan `limitPerUser = 0` (tanpa batas) atau tetap minimal 1 dengan
-   label eksplisit? (default: izinkan 0 + label "0 = tanpa batas").
-3. **K13:** normalisasi kode di schema (transform) atau biarkan server? (default: transform).
+**Status: ✅ SELESAI (kode) — K0–K6.** Seluruh 14 gap (K1–K13) tertutup.
+
+### Gate
+- `npx tsc --noEmit` bersih ✅
+- `npx eslint . --max-warnings=0` bersih ✅
+- Semua `test:*` hijau ✅ (**410** test; `test:coupon` **40**, `test:order-schema` **5**)
+- `npm run build` sukses ✅
+
+### Ringkasan per fase
+- **K1 (K5-gap):** logika murni `coupon-pure.ts` (`computeDiscount`, `validateCoupon`,
+  `checkBundleRules`, `validateCouponForm`, `aggregateCouponStats`) + test; `coupon-rules.ts` dihapus.
+- **K2 (K1/K2/K7):** UX kupon keranjang — `couponNotice` khusus, `CouponSessionError`
+  (sesi hilang vs jaringan), re-validasi cerdas (pertahankan bila jaringan; cabut bila
+  sesi hilang/tak valid), logout memicu cek, a11y widget.
+- **K3 (K4/K6/K8/K12):** validasi form admin murni + error per-field; `limitPerUser`
+  boleh 0 (tanpa batas); a11y (`aria-invalid`/`aria-describedby`/`role="alert"`);
+  dialog focus-trap + `data-autofocus`.
+- **K4 (K3/K9):** preview validasi akurat (`userUsageCount`); statistik `activeOrders`
+  (aktor utama) + tooltip + kolom CSV.
+- **K5 (K10/K11/K13):** hapus kode mati; seragamkan rate-limit (`checkRateLimit` di 7
+  endpoint); normalisasi `couponCode` via `.transform()`.
+- **K6:** QA akhir + dokumentasi + rilis.
+
+### Keputusan pemilik (diterapkan)
+1. Statistik per-kupon → `activeOrders` (non-batal) sebagai metrik utama + `cancelledOrders` terpisah. ✅
+2. `limitPerUser` → izinkan 0 (= tanpa batas) + label. ✅
+3. Normalisasi kode → `.transform()` di schema (uppercase). ✅
+
+### Catatan
+- Klaim audit "description tidak bisa di-clear" **dibantah** (schema `.optional()`
+  menerima string kosong) — tidak ada perubahan diperlukan.
+
+### Sisa manual (pemilik)
+- Uji browser alur kupon (keranjang & `/promo`) + dashboard admin.

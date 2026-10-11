@@ -5,6 +5,7 @@ import {
   type CouponType,
   type CouponsSummary,
 } from "@/lib/coupon-types";
+import type { CouponStat } from "@/lib/coupon-pure";
 
 /** Daftar kupon (admin). */
 export async function fetchCoupons(): Promise<Coupon[]> {
@@ -20,17 +21,8 @@ export async function fetchCouponsSummary(): Promise<CouponsSummary> {
   return data.summary;
 }
 
-/** Statistik dampak per-kupon (`KP-M2`): jumlah order & Σ diskon. */
-export type CouponStat = {
-  couponId: string;
-  code: string;
-  /** Total pesanan (termasuk dibatalkan). */
-  orderCount: number;
-  /** Pesanan aktif (tidak dibatalkan) — metrik utama (audit K9). */
-  activeOrders: number;
-  totalDiscount: number;
-  cancelledOrders: number;
-};
+/** Statistik dampak per-kupon (`KP-M2`) — sumber tunggal di `coupon-pure`. */
+export type { CouponStat } from "@/lib/coupon-pure";
 
 /** Ambil statistik per-kupon (dihitung dari pesanan). */
 export async function fetchCouponStats(): Promise<Record<string, CouponStat>> {

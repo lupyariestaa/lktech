@@ -8,7 +8,7 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 📝 **Perbaikan & Upgrade Sistem Kupon** — audit menemukan 14 gap (1 kritis, 4 tinggi). **Rencana fase K0–K6** sudah disusun: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md). **Belum dieksekusi.**
+> 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Perbaikan & Upgrade Sistem Kupon ✅ SELESAI (K0–K6, 2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
 > 📧 **Perbaikan Newsletter & Broadcast ✅ SELESAI (P0, 2026-10-11):** tautan unsubscribe (newsletter & cart) rusak total karena mismatch HMAC → diperbaiki. Lihat [`docs/2026-10-11-perbaikan-newsletter-broadcast.md`](docs/2026-10-11-perbaikan-newsletter-broadcast.md).
@@ -18,21 +18,30 @@
 
 ---
 
-## 📝 SESI INI — Audit Sistem Kupon + K1–K5
+## ✅ SESI INI — Perbaikan & Upgrade Sistem Kupon (K0–K6, SELESAI)
 
-**Status: 🔄 DIKERJAKAN — K1–K5 ✅ selesai; K6 (QA & rilis) pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
+**Status: ✅ SELESAI (kode).** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 
-Audit mandiri sistem kupon menemukan **14 gap**; keputusan pemilik diterapkan semua.
+Audit mandiri sistem kupon menemukan **14 gap** (1 kritis, 4 tinggi, 4 sedang,
+4 rendah); **semuanya diperbaiki** dalam fase K1–K6.
 
-- ✅ **K1** — logika murni `coupon-pure.ts` (+test).
-- ✅ **K2** — UX kupon keranjang (notice khusus, sesi hilang vs jaringan, a11y).
-- ✅ **K3** — validasi form admin (`validateCouponForm`), `limitPerUser` boleh 0, a11y + focus-trap.
-- ✅ **K4** — preview validasi akurat (`userUsageCount`), statistik `activeOrders` + tooltip/CSV.
-- ✅ **K5** — hapus kode mati `couponValueLabel`; samakan rate-limit (`checkRateLimit` di 7 endpoint); normalisasi kode via `.transform()` (+`test:order-schema`).
+- **K1 — logika murni + test:** modul `src/lib/coupon-pure.ts`
+  (`computeDiscount`, `validateCoupon`, `checkBundleRules`, `validateCouponForm`,
+  `aggregateCouponStats`); `coupon-rules.ts` dihapus.
+- **K2 — UX kupon keranjang (K1 kritis):** `couponNotice` khusus (terpisah dari error
+  checkout); `CouponSessionError` bedakan sesi hilang vs jaringan; re-validasi cerdas
+  (pertahankan bila jaringan, cabut bila sesi hilang/tak valid); logout memicu cek; a11y.
+- **K3 — form admin:** `validateCouponForm` murni + error per-field; **`limitPerUser` boleh 0**
+  (tanpa batas); `aria-invalid`/`aria-describedby`/`role="alert"`; dialog focus-trap + `data-autofocus`.
+- **K4 — preview & statistik:** `/api/coupons/validate` sertakan `userUsageCount`;
+  statistik **`activeOrders`** + tooltip + kolom CSV "Order Aktif".
+- **K5 — kebersihan:** hapus kode mati `couponValueLabel`; seragamkan **`checkRateLimit`**
+  (async/Upstash-ready) di 7 endpoint; normalisasi `couponCode` via `.transform()`.
+- **K6 — QA & rilis:** audit akhir (tak ada sisa kode mati; `CouponStat` satu sumber) + dokumentasi.
+- **Test baru:** `test:coupon` (**40**), `test:order-schema` (**5**).
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**410** test) · `build` ✅.
 
-**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**410** test) · `build` ✅.
-
-**Berikutnya:** **K6 (QA menyeluruh + uji browser + rilis)** — fase terakhir. Lalu tutup inisiatif kupon.
+**Sisa manual:** uji browser alur kupon (keranjang & `/promo`) + dashboard admin.
 
 ---
 
