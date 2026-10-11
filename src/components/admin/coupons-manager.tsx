@@ -31,8 +31,10 @@ import {
   type CouponsSummary,
 } from "@/lib/coupon-types";
 import { formatRupiah } from "@/lib/format";
+import { validateCouponForm, type CouponFormErrors } from "@/lib/coupon-pure";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import { cn } from "@/lib/utils";
 
 const EMPTY_FORM: CouponFormInput = {
@@ -501,7 +503,11 @@ function CouponFormDialog({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<CouponFormErrors>({});
+  // Focus-trap + kembalikan fokus ke pemicu saat ditutup (audit K8).
+  const { ref: panelRef } = useDrawerFocus<HTMLFormElement>(true);
 
+  // Escape menutup dialog (focus-trap ditangani `useDrawerFocus`).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -513,31 +519,46 @@ function CouponFormDialog({
   const set = <K extends keyof CouponFormInput>(k: K, v: CouponFormInput[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  /** Bangun payload final dari form (normalisasi). */
+  const buildPayload = (): CouponFormInput => ({
+    ...form,
+    code: form.code.trim().toUpperCase(),
+    startsAt: localToIso(form.startsAt),
+    endsAt: localToIso(form.endsAt),
+    appliesToSlugs:
+      form.appliesToSlugs && form.appliesToSlugs.length ? form.appliesToSlugs : undefined,
+    minItems:
+      typeof form.minItems === "number" && form.minItems > 0 ? form.minItems : undefined,
+    maxDiscount:
+      form.type === "percent" && form.maxDiscount ? form.maxDiscount : undefined,
+  });
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (form.code.trim().length < 3) {
-      setError("Kode kupon minimal 3 karakter.");
+
+    // Validasi klien (audit K4) — pesan per-field sebelum round-trip server.
+    const payload = buildPayload();
+    const validation = validateCouponForm({
+      code: payload.code,
+      type: payload.type,
+      value: payload.value,
+      minSpend: payload.minSpend,
+      maxDiscount: payload.maxDiscount,
+      startsAt: payload.startsAt,
+      endsAt: payload.endsAt,
+      usageLimit: payload.usageLimit,
+      limitPerUser: payload.limitPerUser,
+    });
+    if (!validation.ok) {
+      setFieldErrors(validation.errors);
+      setError("Periksa kembali isian yang ditandai.");
       return;
     }
+    setFieldErrors({});
+
     setSaving(true);
     try {
-      const payload: CouponFormInput = {
-        ...form,
-        code: form.code.trim().toUpperCase(),
-        startsAt: localToIso(form.startsAt),
-        endsAt: localToIso(form.endsAt),
-        appliesToSlugs:
-          form.appliesToSlugs && form.appliesToSlugs.length
-            ? form.appliesToSlugs
-            : undefined,
-        minItems:
-          typeof form.minItems === "number" && form.minItems > 0
-            ? form.minItems
-            : undefined,
-        maxDiscount:
-          form.type === "percent" && form.maxDiscount ? form.maxDiscount : undefined,
-      };
       if (isEdit && coupon) {
         await updateCoupon(coupon.id, payload);
         toast.success("Kupon diperbarui.");
@@ -557,6 +578,22 @@ function CouponFormDialog({
     "w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-secondary placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30";
   const labelCls = "text-xs font-semibold text-secondary";
 
+  /** Atribut a11y untuk field (id error + aria). */
+  const fieldA11y = (name: keyof CouponFormErrors) =>
+    fieldErrors[name]
+      ? { "aria-invalid": true as const, "aria-describedby": `coupon-${name}-error` }
+      : {};
+  const fieldBorder = (name: keyof CouponFormErrors) =>
+    fieldErrors[name] ? " border-rose-300" : "";
+  // Catatan: sengaja berupa fungsi biasa (bukan komponen) agar tidak dianggap
+  // komponen yang dibuat saat render (aturan React).
+  const renderFieldError = (name: keyof CouponFormErrors) =>
+    fieldErrors[name] ? (
+      <span id={`coupon-${name}-error`} role="alert" className="text-[11px] text-rose-500">
+        {fieldErrors[name]}
+      </span>
+    ) : null;
+
   return (
     <div
       className="fixed inset-0 z-[12000] flex items-end justify-center p-0 sm:items-center sm:p-4"
@@ -570,6 +607,7 @@ function CouponFormDialog({
         aria-hidden="true"
       />
       <form
+        ref={panelRef}
         onSubmit={submit}
         className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-xl sm:rounded-3xl"
       >
@@ -591,11 +629,14 @@ function CouponFormDialog({
             <label className="flex flex-col gap-1.5 sm:col-span-2">
               <span className={labelCls}>Kode Kupon</span>
               <input
+                data-autofocus
                 value={form.code}
                 onChange={(e) => set("code", e.target.value.toUpperCase())}
                 placeholder="PROMO10"
-                className={cn(field, "font-mono tracking-wide")}
+                className={cn(field, "font-mono tracking-wide", fieldBorder("code"))}
+                {...fieldA11y("code")}
               />
+              {renderFieldError("code")}
             </label>
 
             <label className="flex flex-col gap-1.5 sm:col-span-2">
@@ -626,12 +667,14 @@ function CouponFormDialog({
               </span>
               <input
                 type="number"
-                min={0}
+                min={form.type === "percent" ? 1 : 0}
                 max={form.type === "percent" ? 100 : undefined}
                 value={form.value}
                 onChange={(e) => set("value", Number(e.target.value))}
-                className={field}
+                className={cn(field, fieldBorder("value"))}
+                {...fieldA11y("value")}
               />
+              {renderFieldError("value")}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -641,8 +684,10 @@ function CouponFormDialog({
                 min={0}
                 value={form.minSpend}
                 onChange={(e) => set("minSpend", Number(e.target.value))}
-                className={field}
+                className={cn(field, fieldBorder("minSpend"))}
+                {...fieldA11y("minSpend")}
               />
+              {renderFieldError("minSpend")}
             </label>
 
             {form.type === "percent" && (
@@ -655,8 +700,10 @@ function CouponFormDialog({
                   onChange={(e) =>
                     set("maxDiscount", e.target.value ? Number(e.target.value) : undefined)
                   }
-                  className={field}
+                  className={cn(field, fieldBorder("maxDiscount"))}
+                  {...fieldA11y("maxDiscount")}
                 />
+                {renderFieldError("maxDiscount")}
               </label>
             )}
 
@@ -666,8 +713,10 @@ function CouponFormDialog({
                 type="datetime-local"
                 value={form.startsAt ?? ""}
                 onChange={(e) => set("startsAt", e.target.value)}
-                className={field}
+                className={cn(field, fieldBorder("startsAt"))}
+                {...fieldA11y("startsAt")}
               />
+              {renderFieldError("startsAt")}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -676,32 +725,38 @@ function CouponFormDialog({
                 type="datetime-local"
                 value={form.endsAt ?? ""}
                 onChange={(e) => set("endsAt", e.target.value)}
-                className={field}
+                className={cn(field, fieldBorder("endsAt"))}
+                {...fieldA11y("endsAt")}
               />
+              {renderFieldError("endsAt")}
             </label>
 
             <label className="flex flex-col gap-1.5">
               <span className={labelCls}>Kuota Total (kosong = ∞)</span>
               <input
                 type="number"
-                min={0}
+                min={1}
                 value={form.usageLimit ?? ""}
                 onChange={(e) =>
                   set("usageLimit", e.target.value ? Number(e.target.value) : undefined)
                 }
-                className={field}
+                className={cn(field, fieldBorder("usageLimit"))}
+                {...fieldA11y("usageLimit")}
               />
+              {renderFieldError("usageLimit")}
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className={labelCls}>Batas per User</span>
+              <span className={labelCls}>Batas per User (0 = tanpa batas)</span>
               <input
                 type="number"
-                min={1}
-                value={form.limitPerUser ?? 1}
-                onChange={(e) => set("limitPerUser", Math.max(1, Number(e.target.value)))}
-                className={field}
+                min={0}
+                value={form.limitPerUser ?? 0}
+                onChange={(e) => set("limitPerUser", Math.max(0, Number(e.target.value)))}
+                className={cn(field, fieldBorder("limitPerUser"))}
+                {...fieldA11y("limitPerUser")}
               />
+              {renderFieldError("limitPerUser")}
             </label>
           </div>
 
@@ -762,7 +817,7 @@ function CouponFormDialog({
           </label>
 
           {error && (
-            <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
+            <p role="alert" className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
               {error}
             </p>
           )}

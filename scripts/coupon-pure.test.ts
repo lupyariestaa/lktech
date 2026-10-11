@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   computeDiscount,
   validateCoupon,
+  validateCouponForm,
   type ValidatableCoupon,
 } from "../src/lib/coupon-pure.ts";
 
@@ -205,4 +206,80 @@ test("validateCoupon: sukses mengembalikan objek kupon & diskon", () => {
     assert.equal(r.discount, 10_000);
     assert.equal(r.coupon, c); // referensi objek yang sama
   }
+});
+
+/* ------------------------------ validateCouponForm ----------------------------- */
+
+function form(partial: Partial<Parameters<typeof validateCouponForm>[0]> = {}) {
+  return {
+    code: "PROMO10",
+    type: "percent" as const,
+    value: 10,
+    minSpend: 0,
+    ...partial,
+  };
+}
+
+test("validateCouponForm: form valid → ok", () => {
+  assert.deepEqual(validateCouponForm(form()), { ok: true });
+});
+
+test("validateCouponForm: kode terlalu pendek", () => {
+  const r = validateCouponForm(form({ code: "AB" }));
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.ok(r.errors.code);
+});
+
+test("validateCouponForm: kode dengan spasi/simbol ditolak", () => {
+  const r = validateCouponForm(form({ code: "PROMO 10!" }));
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.ok(r.errors.code);
+});
+
+test("validateCouponForm: persen di luar 1–100", () => {
+  assert.equal(validateCouponForm(form({ value: 0 })).ok, false);
+  assert.equal(validateCouponForm(form({ value: 101 })).ok, false);
+  assert.equal(validateCouponForm(form({ value: 100 })).ok, true);
+  assert.equal(validateCouponForm(form({ value: 1 })).ok, true);
+});
+
+test("validateCouponForm: nominal harus > 0", () => {
+  assert.equal(validateCouponForm(form({ type: "amount", value: 0 })).ok, false);
+  assert.equal(validateCouponForm(form({ type: "amount", value: 5000 })).ok, true);
+});
+
+test("validateCouponForm: minSpend negatif ditolak", () => {
+  assert.equal(validateCouponForm(form({ minSpend: -1 })).ok, false);
+});
+
+test("validateCouponForm: maxDiscount negatif ditolak", () => {
+  assert.equal(validateCouponForm(form({ maxDiscount: -5 })).ok, false);
+  assert.equal(validateCouponForm(form({ maxDiscount: 0 })).ok, true);
+});
+
+test("validateCouponForm: usageLimit < 1 ditolak", () => {
+  assert.equal(validateCouponForm(form({ usageLimit: 0 })).ok, false);
+  assert.equal(validateCouponForm(form({ usageLimit: 1 })).ok, true);
+});
+
+test("validateCouponForm: limitPerUser 0 = tanpa batas (valid)", () => {
+  assert.equal(validateCouponForm(form({ limitPerUser: 0 })).ok, true);
+  assert.equal(validateCouponForm(form({ limitPerUser: -1 })).ok, false);
+});
+
+test("validateCouponForm: rentang tanggal (mulai harus < berakhir)", () => {
+  const bad = validateCouponForm(
+    form({ startsAt: "2026-02-01T00:00:00Z", endsAt: "2026-01-01T00:00:00Z" }),
+  );
+  assert.equal(bad.ok, false);
+  if (!bad.ok) assert.ok(bad.errors.endsAt);
+
+  const good = validateCouponForm(
+    form({ startsAt: "2026-01-01T00:00:00Z", endsAt: "2026-02-01T00:00:00Z" }),
+  );
+  assert.equal(good.ok, true);
+});
+
+test("validateCouponForm: value NaN ditolak", () => {
+  assert.equal(validateCouponForm(form({ value: NaN })).ok, false);
 });

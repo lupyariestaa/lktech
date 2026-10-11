@@ -18,32 +18,32 @@
 
 ---
 
-## 📝 SESI INI — Audit Sistem Kupon + K1 & K2
+## 📝 SESI INI — Audit Sistem Kupon + K1, K2 & K3
 
-**Status: 🔄 DIKERJAKAN — K1 ✅, K2 ✅ selesai; K3–K6 pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
+**Status: 🔄 DIKERJAKAN — K1 ✅, K2 ✅, K3 ✅ selesai; K4–K6 pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 
 Audit mandiri sistem kupon menemukan **14 gap** (1 kritis, 4 tinggi, 4 sedang,
-4 rendah). **Keputusan pemilik** untuk 3 pertanyaan terbuka:
+4 rendah). **Keputusan pemilik**:
 1. Statistik per-kupon → tampilkan **`activeOrders`** (non-batal) sebagai metrik utama (nanti di K4).
-2. `limitPerUser` → **izinkan 0** (= tanpa batas) + label (nanti di K3).
+2. `limitPerUser` → **izinkan 0** (= tanpa batas) + label ✅ (diterapkan di K3).
 3. Normalisasi kode → **transform di schema** (nanti di K5).
 
-### ✅ K1 selesai — Logika murni + test (K5)
-- Modul baru `src/lib/coupon-pure.ts` (mandiri): `computeDiscount`, `validateCoupon`,
-  `checkBundleRules`. `coupon-rules.ts` dihapus. `coupons.ts` re-ekspor.
-- Test `scripts/coupon-pure.test.ts` (**24 test**) + script `test:coupon`.
+### ✅ K1 — Logika murni + test (K5)
+- Modul `src/lib/coupon-pure.ts` (`computeDiscount`, `validateCoupon`, `checkBundleRules`).
+  `coupon-rules.ts` dihapus; `coupons.ts` re-ekspor.
 
-### ✅ K2 selesai — UX kupon di keranjang (K1/K2/K7)
-- State `couponNotice` khusus kupon (terpisah dari error checkout) → ditampilkan di widget kupon.
-- `coupon-api`: `CouponSessionError` (sesi hilang) vs error jaringan.
-- Re-validasi cerdas: tak-valid → cabut+alasan; **sesi hilang → cabut+"masuk kembali"**;
-  **jaringan → pertahankan + "tak bisa diverifikasi"**; valid → perbarui diskon.
-- **Logout** memicu re-validasi → kupon basi dicabut (F-K1 kritis).
-- a11y: `<label>` sr-only, `aria-invalid`/`aria-describedby`, `role="alert"` & `role="status" aria-live`.
+### ✅ K2 — UX kupon di keranjang (K1/K2/K7)
+- State `couponNotice` khusus kupon; `CouponSessionError` bedakan sesi hilang vs jaringan;
+  re-validasi cerdas; logout memicu cek; a11y widget kupon.
 
-**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**389** test) · `build` ✅.
+### ✅ K3 — Validasi & form admin (K4/K6/K8/K12)
+- `validateCouponForm` murni + 11 test; `limitPerUser` boleh 0 (tanpa batas);
+  `aria-invalid`/`aria-describedby`/`role="alert"` per field; dialog focus-trap +
+  `data-autofocus` + Escape.
 
-**Berikutnya:** K3 (form admin + a11y) → K4 (preview + statistik) → K5 (kebersihan) → K6 (QA & rilis).
+**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**400** test) · `build` ✅.
+
+**Berikutnya:** K4 (preview akurat + statistik) → K5 (kebersihan) → K6 (QA & rilis).
 
 ---
 

@@ -185,3 +185,102 @@ export function validateCoupon<T extends ValidatableCoupon>(
 
   return { ok: true, coupon, discount };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Validasi FORM kupon (admin) — murni & teruji (audit K4)                    */
+/* -------------------------------------------------------------------------- */
+
+/** Bentuk input form kupon (subset yang divalidasi). */
+export type CouponFormValues = {
+  code: string;
+  type: CouponTypeName;
+  value: number;
+  minSpend: number;
+  maxDiscount?: number;
+  startsAt?: string;
+  endsAt?: string;
+  usageLimit?: number;
+  limitPerUser?: number;
+};
+
+export type CouponFormErrors = Partial<
+  Record<
+    | "code"
+    | "value"
+    | "minSpend"
+    | "maxDiscount"
+    | "startsAt"
+    | "endsAt"
+    | "usageLimit"
+    | "limitPerUser",
+    string
+  >
+>;
+
+export type CouponFormValidation =
+  | { ok: true }
+  | { ok: false; errors: CouponFormErrors };
+
+/** Apakah nilai numerik valid (finite). */
+function isFiniteNumber(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
+/**
+ * Validasi input form kupon (admin) — MURNI. Mengembalikan peta error per field.
+ * Semua aturan dicerminkan dari schema server agar pesan bisa tampil sebelum
+ * round-trip (server tetap memvalidasi ulang sebagai sumber kebenaran).
+ */
+export function validateCouponForm(v: CouponFormValues): CouponFormValidation {
+  const errors: CouponFormErrors = {};
+
+  const code = v.code.trim();
+  if (code.length < 3) {
+    errors.code = "Kode kupon minimal 3 karakter.";
+  } else if (!/^[A-Za-z0-9]+$/.test(code)) {
+    errors.code = "Kode kupon hanya boleh huruf & angka (tanpa spasi/simbol).";
+  }
+
+  if (!isFiniteNumber(v.value)) {
+    errors.value = "Nilai diskon wajib diisi.";
+  } else if (v.type === "percent") {
+    if (v.value < 1 || v.value > 100) {
+      errors.value = "Diskon persen harus antara 1–100.";
+    }
+  } else if (v.value <= 0) {
+    errors.value = "Diskon nominal harus lebih dari 0.";
+  }
+
+  if (!isFiniteNumber(v.minSpend) || v.minSpend < 0) {
+    errors.minSpend = "Minimal belanja tidak boleh negatif.";
+  }
+
+  if (v.maxDiscount !== undefined && v.maxDiscount !== null) {
+    if (!isFiniteNumber(v.maxDiscount) || v.maxDiscount < 0) {
+      errors.maxDiscount = "Maksimal diskon tidak boleh negatif.";
+    }
+  }
+
+  if (v.usageLimit !== undefined && v.usageLimit !== null) {
+    if (!isFiniteNumber(v.usageLimit) || v.usageLimit < 1) {
+      errors.usageLimit = "Kuota minimal 1 (kosongkan untuk tanpa batas).";
+    }
+  }
+
+  if (v.limitPerUser !== undefined && v.limitPerUser !== null) {
+    if (!isFiniteNumber(v.limitPerUser) || v.limitPerUser < 0) {
+      errors.limitPerUser = "Batas per user tidak boleh negatif (0 = tanpa batas).";
+    }
+  }
+
+  // Rentang tanggal: mulai harus sebelum berakhir.
+  if (v.startsAt && v.endsAt) {
+    const s = new Date(v.startsAt).getTime();
+    const e = new Date(v.endsAt).getTime();
+    if (!Number.isNaN(s) && !Number.isNaN(e) && s >= e) {
+      errors.endsAt = "Waktu berakhir harus setelah waktu mulai.";
+    }
+  }
+
+  return Object.keys(errors).length === 0 ? { ok: true } : { ok: false, errors };
+}

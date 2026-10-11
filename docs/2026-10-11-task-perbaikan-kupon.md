@@ -1,7 +1,7 @@
 # Task Eksekusi — Perbaikan & Upgrade Sistem Kupon
 
-> **Status: 🔄 DIKERJAKAN (K1 ✅, K2 ✅ selesai).** Hasil audit mandiri sistem kupon
-> (data layer, API, UI admin, keranjang, halaman promo publik).
+> **Status: 🔄 DIKERJAKAN (K1 ✅, K2 ✅, K3 ✅ selesai).** Hasil audit mandiri sistem
+> kupon (data layer, API, UI admin, keranjang, halaman promo publik).
 > Disusun: 2026-10-11.
 
 ---
@@ -115,14 +115,15 @@ statistik per-kupon, ekspor CSV, halaman `/promo`). Gap terbesar ada pada
       `role="alert"` pada error, `role="status" aria-live` pada notice.
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **389** ✅ · `build` ✅.
 
-### Fase K3 — Validasi & form admin (K4, K6, K8, K12)
-- [ ] Validasi klien form kupon: persen 1–100, nominal > 0, `startsAt < endsAt`,
-      `minSpend`/`maxDiscount` ≥ 0, `usageLimit` ≥ 1.
-- [ ] `limitPerUser` izinkan 0 (= tanpa batas) + label jelas.
-- [ ] Tambah `aria-invalid` + `aria-describedby` untuk field error.
-- [ ] Dialog form: focus-trap via `useDrawerFocus`, `autoFocus` field pertama,
-      restore-focus.
-- **DoD:** form ramah & aksesibel; gate hijau.
+### Fase K3 — Validasi & form admin (K4, K6, K8, K12) — ✅ SELESAI
+- [x] Validasi klien murni `validateCouponForm` (`coupon-pure.ts`): kode (≥3, A-Z0-9),
+      persen 1–100, nominal >0, `minSpend`≥0, `maxDiscount`≥0, `startsAt < endsAt`,
+      `usageLimit`≥1, `limitPerUser`≥0. **+11 test** (`test:coupon` 35).
+- [x] `limitPerUser` kini **boleh 0** (= tanpa batas) + label jelas (keputusan pemilik).
+- [x] `aria-invalid` + `aria-describedby` + `role="alert"` per field error (K12).
+- [x] Dialog: focus-trap via `useDrawerFocus`, `data-autofocus` field pertama,
+      restore-focus (K8); Escape tetap berfungsi.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **400** ✅ · `build` ✅.
 
 ### Fase K4 — Perbaikan preview & statistik (K3, K9)
 - [ ] `/api/coupons/validate`: sertakan `userUsageCount` (via `getUserCouponUsage`)
