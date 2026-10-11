@@ -155,3 +155,43 @@ export function trackRelatedClick(props: { from: string; to: string; placement: 
 export function trackBlogCta(props: { slug: string; cta: string }): void {
   trackEvent("cta_click", { location: "blog", target: props.cta, slug: props.slug });
 }
+
+/* -------------------------------------------------------------------------- */
+/* Kupon (C3). Tanpa PII: hanya kode & angka (bukan email/uid).                 */
+/* -------------------------------------------------------------------------- */
+
+/** Kode kupon dilihat (widget keranjang tampil / halaman promo dibuka). */
+export function trackCouponView(props: { code?: string; placement: string }): void {
+  trackEvent("coupon_view", { code: props.code ?? null, placement: props.placement });
+}
+
+/** Kode kupon berhasil diterapkan. */
+export function trackCouponApplySuccess(props: {
+  code: string;
+  discount: number;
+  auto?: boolean;
+}): void {
+  trackEvent("coupon_apply_success", {
+    code: props.code,
+    discount: props.discount,
+    auto: props.auto ?? false,
+  });
+}
+
+/** Percobaan memakai kode kupon gagal. */
+export function trackCouponApplyFail(props: { code?: string; reason?: string }): void {
+  trackEvent("coupon_apply_fail", {
+    code: props.code ?? null,
+    reason: props.reason ?? null,
+  });
+}
+
+/** Kode kupon dilepas/dicabut. */
+export function trackCouponRemoved(props: { code: string; auto?: boolean }): void {
+  trackEvent("coupon_removed", { code: props.code, auto: props.auto ?? false });
+}
+
+/** Saran "kode terbaik" diterapkan otomatis (C3). */
+export function trackCouponAutopick(props: { code: string; discount: number }): void {
+  trackEvent("coupon_autopick", { code: props.code, discount: props.discount });
+}

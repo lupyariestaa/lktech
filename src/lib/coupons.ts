@@ -175,6 +175,29 @@ export async function listCoupons(): Promise<Coupon[]> {
 }
 
 /**
+ * Kupon KANDIDAT untuk "kode terbaik" (C3/K2): kupon aktif, non-arsip, & (bila
+ * dibatasi) masih dalam rentang tanggal. Validasi penuh tetap dilakukan
+ * `pickBestCoupon` per keranjang/pembeli. Best-effort.
+ */
+export async function listCandidateCoupons(now: Date = new Date()): Promise<Coupon[]> {
+  const all = await listCoupons();
+  const t = now.getTime();
+  return all.filter((c) => {
+    if (c.archived || !c.active) return false;
+    if (c.startsAt) {
+      const s = new Date(c.startsAt).getTime();
+      if (!Number.isNaN(s) && t < s) return false;
+    }
+    if (c.endsAt) {
+      const e = new Date(c.endsAt).getTime();
+      if (!Number.isNaN(e) && t > e) return false;
+    }
+    if (c.usageLimit && c.usageCount >= c.usageLimit) return false;
+    return true;
+  });
+}
+
+/**
  * Ambil kupon berdasarkan kode (case-insensitive).
  * `KP-H2`: menggunakan koleksi penanda `couponCodes/{code}` untuk lookup unik
  * atomik (satu kode = satu penanda). Fallback ke query `code ==` untuk data

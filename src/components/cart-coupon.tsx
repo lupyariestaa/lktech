@@ -1,12 +1,25 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BadgePercent, Check, Loader2, Tag, X } from "lucide-react";
+import { BadgePercent, Check, Loader2, Sparkles, Tag, X } from "lucide-react";
 import { validateCouponRequest, CouponSessionError } from "@/lib/coupon-api";
 import { formatRupiah } from "@/lib/format";
+import {
+  trackCouponApplyFail,
+  trackCouponApplySuccess,
+  trackCouponAutopick,
+  trackCouponView,
+} from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 export type AppliedCoupon = {
+  code: string;
+  discount: number;
+  description?: string | null;
+};
+
+/** Saran "kode terbaik" (C3) untuk ditampilkan sebagai tombol cepat. */
+export type BestCouponHint = {
   code: string;
   discount: number;
   description?: string | null;
@@ -20,6 +33,9 @@ export type AppliedCoupon = {
  *
  * `notice` = pesan dari induk (mis. kupon dicabut karena syarat berubah) yang
  * ditampilkan DI WIDGET kupon ini — bukan di area error checkout (F-K2).
+ *
+ * `bestHint` = saran kode terbaik (C3/K2). Bila ada & belum ada kupon aktif,
+ * tampil tombol "Terapkan kode terbaik" (opt-in, 1 klik).
  */
 export function CartCoupon({
   subtotal,
@@ -31,6 +47,7 @@ export function CartCoupon({
   slugs,
   itemCount,
   notice,
+  bestHint,
 }: {
   subtotal: number;
   applied: AppliedCoupon | null;
@@ -45,11 +62,21 @@ export function CartCoupon({
   itemCount?: number;
   /** Pesan info/peringatan dari induk (mis. kupon dicabut otomatis). */
   notice?: string | null;
+  /** Saran kode terbaik (C3). */
+  bestHint?: BestCouponHint | null;
 }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const prefilledRef = useRef(false);
+  const viewedRef = useRef(false);
+
+  // Event `coupon_view` (sekali) — widget kupon tampil.
+  useEffect(() => {
+    if (viewedRef.current) return;
+    viewedRef.current = true;
+    trackCouponView({ placement: "cart" });
+  }, []);
 
   // `KP-P1`: prefill kode dari URL (`/keranjang?promo=LAUNCH`).
   useEffect(() => {
@@ -71,6 +98,7 @@ export function CartCoupon({
       });
       if (!result.valid) {
         setError(result.reason);
+        trackCouponApplyFail({ code: value, reason: result.reason });
         return;
       }
       onApplied({
@@ -78,6 +106,7 @@ export function CartCoupon({
         discount: result.discount,
         description: result.description,
       });
+      trackCouponApplySuccess({ code: result.code, discount: result.discount });
       setCode("");
     } catch (err) {
       if (err instanceof CouponSessionError) {
@@ -85,9 +114,20 @@ export function CartCoupon({
       } else {
         setError(err instanceof Error ? err.message : "Gagal memvalidasi kode.");
       }
+      trackCouponApplyFail({ code: value });
     } finally {
       setBusy(false);
     }
+  };
+
+  const onApplyBest = () => {
+    if (!bestHint || disabled) return;
+    onApplied({
+      code: bestHint.code,
+      discount: bestHint.discount,
+      description: bestHint.description,
+    });
+    trackCouponAutopick({ code: bestHint.code, discount: bestHint.discount });
   };
 
   if (applied) {
@@ -157,6 +197,19 @@ export function CartCoupon({
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Terapkan"}
         </button>
       </form>
+
+      {/* Saran kode terbaik (C3/K2) — opt-in, 1 klik. */}
+      {bestHint && !disabled && (
+        <button
+          type="button"
+          onClick={onApplyBest}
+          className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-primary-50 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-100"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          Pakai kode terbaik: {bestHint.code} (hemat {formatRupiah(bestHint.discount)})
+        </button>
+      )}
+
       {error && (
         <p id="cart-coupon-error" role="alert" className="mt-2 text-xs text-rose-500">
           {error}

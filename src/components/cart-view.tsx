@@ -17,18 +17,31 @@ import {
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
-import { CartCoupon, type AppliedCoupon } from "@/components/cart-coupon";
+import { CartCoupon, type AppliedCoupon, type BestCouponHint } from "@/components/cart-coupon";
 import { CartCrossSell } from "@/components/cart-cross-sell";
 import { TrustBadges } from "@/components/trust-badges";
 import { createOrderRequest } from "@/lib/order-api";
-import { validateCouponRequest, CouponSessionError } from "@/lib/coupon-api";
+import {
+  validateCouponRequest,
+  suggestBestCouponRequest,
+  CouponSessionError,
+} from "@/lib/coupon-api";
 import { getIdToken } from "@/lib/auth";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
 import { formatRupiah } from "@/lib/format";
-import { trackCheckout, trackEvent, trackPaymentInitiated, trackAbandonedRecovered } from "@/lib/analytics";
+import {
+  trackCheckout,
+  trackEvent,
+  trackPaymentInitiated,
+  trackAbandonedRecovered,
+  trackCouponRemoved,
+} from "@/lib/analytics";
 import { waLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
+
+/** Kunci penyimpanan kode kupon terakhir (souvenir — C3/O11). */
+const COUPON_STORAGE_KEY = "lktech.cart.coupon";
 
 export function CartView({ promoCode }: { promoCode?: string }) {
   const { items, subtotal, ready, setQty, remove, clear } = useCart();
@@ -41,6 +54,9 @@ export function CartView({ promoCode }: { promoCode?: string }) {
   // Pesan KHUSUS kupon (dicabut otomatis / tak bisa diverifikasi) — ditampilkan
   // di widget kupon, TERPISAH dari `error` checkout global (F-K2).
   const [couponNotice, setCouponNotice] = useState<string | null>(null);
+
+  // Saran "kode terbaik" (C3/K2) — opt-in. Diambil saat keranjang berubah.
+  const [bestHint, setBestHint] = useState<BestCouponHint | null>(null);
 
   // Diskon bila kupon diterapkan (server memverifikasi ulang saat checkout).
   const discount = appliedCoupon?.discount ?? 0;
@@ -124,6 +140,44 @@ export function CartView({ promoCode }: { promoCode?: string }) {
     // user (mis. logout) memicu re-validasi → sesi hilang → kupon dicabut (F-K1).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartSignature, user?.uid]);
+
+  // C3/O11: ingat kode kupon terakhir (souvenir) agar pembeli tak menempel ulang.
+  // Hanya saat ADA kupon aktif (jangan hapus otomatis saat kosong).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (appliedCoupon?.code) {
+        window.localStorage.setItem(COUPON_STORAGE_KEY, appliedCoupon.code);
+      }
+    } catch {
+      /* localStorage bisa diblokir — abaikan */
+    }
+  }, [appliedCoupon?.code]);
+
+  // C3/K2: ambil saran "kode terbaik" bila sudah login & BELUM ada kupon aktif.
+  // Opt-in (hanya saran) — server-authoritative. Diam bila gagal.
+  useEffect(() => {
+    if (!user || appliedCoupon || items.length === 0) return;
+    let active = true;
+    (async () => {
+      try {
+        const slugs = Array.from(new Set(items.map((it) => it.slug)));
+        const itemCount = items.reduce((n, it) => n + it.qty, 0);
+        const hint = await suggestBestCouponRequest(subtotal, { slugs, itemCount });
+        if (active) setBestHint(hint);
+      } catch {
+        if (active) setBestHint(null);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartSignature, user?.uid, appliedCoupon?.code]);
+
+  // Nilai turunan: saran hanya ditampilkan bila layak (tanpa setState di render).
+  const visibleBestHint: BestCouponHint | null =
+    !user || appliedCoupon || items.length === 0 ? null : bestHint;
 
   const onCheckout = async () => {
     setError(null);
@@ -417,8 +471,10 @@ export function CartView({ promoCode }: { promoCode?: string }) {
                 onApplied={(c) => {
                   setAppliedCoupon(c);
                   setCouponNotice(null);
+                  setBestHint(null);
                 }}
                 onCleared={() => {
+                  if (appliedCoupon?.code) trackCouponRemoved({ code: appliedCoupon.code });
                   setAppliedCoupon(null);
                   setCouponNotice(null);
                 }}
@@ -427,6 +483,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
                 slugs={Array.from(new Set(items.map((it) => it.slug)))}
                 itemCount={items.reduce((n, it) => n + it.qty, 0)}
                 notice={couponNotice}
+                bestHint={visibleBestHint}
               />
             </div>
 

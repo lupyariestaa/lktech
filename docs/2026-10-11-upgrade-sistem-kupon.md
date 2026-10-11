@@ -1,6 +1,6 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅ selesai; C3–C9 pending).**
+> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅, C3 ✅ selesai; C4–C9 pending).**
 > Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
 > target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
 > rencana uji.
@@ -275,12 +275,18 @@ logika murni teruji ✓.
 - [x] Test `jakartaDateKey` (+2) → `test:coupon-engine` **28**.
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **438** ✅ · `build` ✅.
 
-### Fase C3 — Kupon otomatis & UX keranjang (K2, O9, O11)
-- [ ] `POST /api/coupons/best` (login) → kode terbaik untuk keranjang.
-- [ ] `cart-coupon.tsx`: tombol **"Terapkan kode terbaik"** + ingat kode di
-      `localStorage` (opsional, dapat dibersihkan).
-- [ ] Event `coupon_autopick` / `coupon_apply_*`.
-- **DoD:** pembeli bisa menerapkan kode terbaik 1 klik; UX jujur & a11y.
+### Fase C3 — Kupon otomatis & UX keranjang (K2, O9, O11) — ✅ SELESAI
+- [x] `POST /api/coupons/best` — saran kode terbaik (server-authoritative, opt-in,
+      rate-limit); pakai `listCandidateCoupons` + `pickBestCoupon` per kandidat.
+- [x] `coupon-api.ts`: `suggestBestCouponRequest` (+ `CouponSessionError`).
+- [x] `cart-coupon.tsx`: tombol **"Pakai kode terbaik: KODEx (hemat Rp…)"** (1 klik);
+      prop `bestHint`; event `coupon_view`/`coupon_apply_success`/`coupon_apply_fail`/
+      `coupon_autopick`.
+- [x] `cart-view.tsx`: fetch saran saat keranjang berubah (bila login & belum ada
+      kupon), souvenir kode di `localStorage` (O11), event `coupon_removed` saat clear.
+- [x] `analytics.ts`: event kupon baru (tanpa PII).
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **438** ✅ · `build` ✅
+      (route baru `/api/coupons/best`).
 
 ### Fase C4 — Generate massal & duplikat (K4, O4, O15)
 - [ ] `POST /api/admin/coupons { action:"batch" }` (prefix + N kode unik, batas aman,
@@ -534,4 +540,5 @@ export type Coupon = {
 - **C0 ✅ SELESAI** (keputusan terkunci; tanpa perubahan kode).
 - **C1 ✅ SELESAI** (fondasi murni & tipe; logika lanjutan teruji).
 - **C2 ✅ SELESAI** (aturan server ditegakkan: single-use/assigned/audience/periode).
-- Berikutnya: **C3** (kupon otomatis) → C5 → C6 → C4 → C7 → C8 → C9.
+- **C3 ✅ SELESAI** (kupon otomatis/best coupon opt-in + event analitik + souvenir kode).
+- Berikutnya: **C5** (halaman detail kupon + timeline + riwayat pemakai) → C6 → C4 → C7 → C8 → C9.

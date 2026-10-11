@@ -64,3 +64,44 @@ export async function validateCouponRequest(
   }
   return data as CouponValidationResult;
 }
+
+/** Saran kode terbaik (C3/K2) — null bila tak ada yang valid. */
+export type BestCouponSuggestion = {
+  code: string;
+  discount: number;
+  description: string | null;
+} | null;
+
+/**
+ * Minta saran kode terbaik untuk isi keranjang (C3/K2). Opt-in: hanya dipanggil
+ * bila pengguna memilih "Terapkan kode terbaik" atau saat widget dimuat.
+ * Melempar `CouponSessionError` bila tak login (pemanggil boleh mengabaikan).
+ */
+export async function suggestBestCouponRequest(
+  subtotal: number,
+  context?: { slugs?: string[]; itemCount?: number },
+): Promise<BestCouponSuggestion> {
+  const token = await getIdToken();
+  if (!token) throw new CouponSessionError();
+
+  const res = await fetch("/api/coupons/best", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      subtotal,
+      slugs: context?.slugs,
+      itemCount: context?.itemCount,
+    }),
+  });
+
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) throw new CouponSessionError();
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error ?? "Gagal mencari kode terbaik.");
+  }
+  const data = (await res.json().catch(() => ({}))) as { best?: BestCouponSuggestion };
+  return data.best ?? null;
+}
