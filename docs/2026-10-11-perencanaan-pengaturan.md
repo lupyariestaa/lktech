@@ -1,15 +1,17 @@
 # Perencanaan — Sistem Pengaturan (Settings) Super Proper & Terintegrasi
 
-> **Status: 📝 RENCANA (belum dieksekusi).** Dokumen perencanaan lengkap untuk
+> **Status: ✅ SIAP EKSEKUSI (belum ada kode).** Dokumen perencanaan lengkap untuk
 > meng-upgrade **menu Pengaturan** dari **satu halaman** menjadi **pusat pengaturan
 > ber-submenu** yang lengkap, aman, dan **benar-benar berfungsi** (bukan UI kosong).
-> Disusun: 2026-10-11. **Target: setelah approval pemilik.**
+> Disusun: 2026-10-11. **Seluruh keputusan pemilik TERKUNCI** (§3, §3.4) — siap
+> dieksekusi mulai **Fase S0**.
 >
-> **Keputusan pemilik (sesi ini) sudah dikunci** — lihat §3. Pemilik meminta: submenu
-> bersifat **generik** (bisa dipakai menu lain), **multi-admin** (kelola akun admin),
-> **backup/restore**, **status+uji integrasi** (bukan menyimpan secret), tanpa
-> Toko/pajak/ongkir, tanpa Kupon (sudah ada menu sendiri), tanpa Tema/Tampilan,
-> tanpa multi-bahasa.
+> **Keputusan pemilik (terkunci):** submenu **generik** (bisa dipakai menu lain),
+> **multi-admin** (satu role `admin`; **owner `lupyariestaa@gmail.com`** tak bisa
+> dihapus), **backup/restore pilih data**, **status+uji (ping) integrasi** (tanpa
+> menyimpan secret), **maintenance + halaman publik ber-konten**, tanpa
+> Toko/pajak/ongkir, tanpa Kupon (sudah ada menu), tanpa Tema/Tampilan, tanpa
+> multi-bahasa, tanpa Pengiriman/Produk.
 
 ---
 
@@ -111,25 +113,38 @@ nyata & terhubung ke sistem (bukan sekadar form). Dilengkapi:
 | **Kontak & Identitas** | ✅ | email, WhatsApp, lokasi, sosmed, + identitas (nama brand, tagline). |
 | **Notifikasi** | ✅ | toggle email pembeli (konfirmasi/status/pengingat), + uji kirim. |
 | **Pembayaran (Mayar)** | ✅ (disesuaikan) | **HANYA** kesehatan & metrik Mayar (tanpa ongkir/PPN/rekening). |
-| **Integrasi & API** | ✅ | status kredensial + tombol uji (Mayar/Resend/Cloudinary/Upstash/Cron). |
+| **Integrasi & API** | ✅ | status kredensial + tombol uji (**termasuk ping**). |
 | **SEO & Situs** | ✅ | meta default, OG default, verifikasi Search Console, robots. |
-| **Keamanan & Akses** | ✅ | kelola admin, sesi, rate-limit, maintenance. |
-| **Backup & Restore** | ✅ | ekspor/impor seluruh pengaturan (JSON), validasi ketat. |
-| **Lanjutan/Sistem** | ✅ | maintenance mode, bersihkan cache, info sistem, ekspor audit. |
+| **Keamanan & Akses** | ✅ | **kelola admin** (multi-admin), sesi, rate-limit, maintenance. |
+| **Backup & Restore** | ✅ | ekspor/impor **pilihan data** (select/unselect), validasi ketat. |
+| **Lanjutan/Sistem** | ✅ | maintenance (halaman khusus), bersihkan cache, info sistem, ekspor audit CSV. |
 | **Kelola Admin** | ✅ (di Keamanan & Akses) | tambah/hapus akun Google sebagai admin (aman). |
 | ~~Toko & Pembayaran (PPN/ongkir/rekening)~~ | ❌ | tidak relevan (tanpa ongkir/pajak). |
 | ~~Kupon & Promo~~ | ❌ | sudah punya menu sendiri — hindari duplikasi. |
 | ~~Tampilan/Tema~~ | ❌ | dihindari (landing page dikelola manual). |
 | ~~Multi-bahasa~~ | ❌ | tidak perlu. |
-| **Pengiriman/Produk** | ⚠️ opsional | hanya bila benar-benar dibutuhkan; tanpa fitur menggantung. |
+| ~~Pengiriman/Produk~~ | ❌ | **diputuskan LEWATI** (tidak ada sistem peraturan produk/pengiriman). |
 
-### 3.3 Keputusan lain
+### 3.3 Keputusan lain (final)
 4. **Rahasia (API key)** → **tidak** disimpan/diedit di DB. Dashboard hanya **status
-   + uji**. (Env tetap di Vercel.)
-5. **Backup/restore** → **ya**, dibuat & terintegrasi penuh.
-6. **Audit & riwayat** → **ya** (penting untuk multi-admin).
+   + uji** (termasuk **ping** bila memungkinkan). Env tetap di Vercel.
+5. **Backup/restore** → **ya**; pengguna dapat **memilih (select/unselect)** data apa
+   yang di-backup (pengaturan, produk, kupon, pesanan, portofolio, blog, dst) — §9.
+6. **Audit & riwayat** → **ya** (penting untuk multi-admin) + **ekspor audit CSV**.
 7. **Multi-bahasa** → tidak.
-8. **Improve bebas** selama **tidak ribet dikelola**.
+
+### 3.4 Keputusan hasil sesi tanya-jawab (TERKUNCI — 2026-10-11)
+| # | Pertanyaan | Keputusan |
+| --- | --- | --- |
+| 1 | Uji koneksi Mayar | **Boleh ping** (uji koneksi ringan/aman, bukan transaksi berbiaya). |
+| 2 | Role admin | **Hanya SATU role** (`admin`) — **multi-admin saja**, tanpa multi-role/role khusus. |
+| 3 | Owner | **`lupyariestaa@gmail.com`** = **OWNER**; **tidak bisa dihapus oleh siapa pun** (termasuk dirinya). |
+| 4 | Maintenance mode | **Ya**, dengan **halaman khusus** ber-konten (gambar + teks yang bisa diatur dari Pengaturan) — lihat §9.1. |
+| 5 | Cakupan backup | **Bisa pilih/unselect** sumber data (settings, produk, kupon, pesanan, dll) — bukan hanya pengaturan. |
+| 6 | Pengiriman/Produk | **Lewati** (tidak ada sistem peraturan produk/pengiriman). |
+| 7 | Ekspor audit CSV | **Ya**. |
+| 8 | Nama menu | **"Pengaturan"** (tetap). |
+
 
 ---
 
@@ -187,12 +202,16 @@ export type AdminNavChild = {
 | S3 | `/admin/settings/pembayaran` | **Pembayaran (Mayar)** | kesehatan Mayar + **metrik** (invoice, dibayar, kedaluwarsa, mismatch, konversi). |
 | S4 | `/admin/settings/integrasi` | **Integrasi & API** | status Mayar/Resend/Cloudinary/Upstash/Cron + tombol **uji koneksi**. |
 | S5 | `/admin/settings/seo` | **SEO & Situs** | meta title/desc default, OG default, Search Console, robots, sitemap link. |
-| S6 | `/admin/settings/keamanan` | **Keamanan & Akses** | **kelola admin**, sesi, rate-limit, maintenance mode. |
-| S7 | `/admin/settings/backup` | **Backup & Restore** | ekspor JSON semua pengaturan, impor (validasi ketat + konfirmasi). |
-| S8 | `/admin/settings/lanjutan` | **Lanjutan/Sistem** | maintenance, bersihkan cache, info build/env, pratinjau audit. |
+| S6 | `/admin/settings/keamanan` | **Keamanan & Akses** | **kelola admin**, sesi, rate-limit, tautan maintenance mode. |
+| S7 | `/admin/settings/backup` | **Backup & Restore** | ekspor/impor **pilihan data** (select/unselect), validasi ketat + konfirmasi. |
+| S8 | `/admin/settings/lanjutan` | **Lanjutan/Sistem** | **maintenance mode + konten halaman maintenance (gambar & teks)**, bersihkan cache, info build/env, ekspor audit CSV. |
 
 > Setiap halaman = **route sendiri** + komponen klien sendiri di
 > `src/components/admin/settings/*`. Halaman induk `/admin/settings` = ringkasan.
+>
+> **Halaman publik maintenance:** `/maintenance` (di luar `/admin`) — menampilkan
+> gambar + teks yang diatur dari S8; middleware mengarahkan pengunjung (kecuali admin)
+> ke sini saat maintenance aktif (§9.1).
 
 ---
 
@@ -206,17 +225,30 @@ type SiteSettings = {
   brandName?: string;
   tagline?: string;
   seo?: { title?: string; description?: string; ogImage?: string; searchConsoleId?: string };
-  maintenance?: { enabled?: boolean; message?: string };
-  // Pengaturan bisnis ringan (tanpa ongkir/pajak):
-  order?: { minPurchase?: number; invoiceTtlMinutes?: number };
+  maintenance?: {
+    enabled?: boolean;
+    /** Judul & pesan singkat (opsional). */
+    title?: string;
+    message?: string;
+    /** Konten kaya halaman maintenance (gambar + teks). */
+    imageUrl?: string;
+    imageAlt?: string;
+    /** ETA selesai (opsional, ISO) & kontak hubungi. */
+    etaISO?: string;
+    contactEmail?: string;
+  };
+  /** Preferensi default backup (boleh kosong; dipilih saat unduh). */
+  backup?: { include?: string[] };
 };
 ```
 
 ### 6.2 Koleksi baru: `admins/{email}` (Manajemen Admin)
-- `{ email, addedBy, addedAtISO, role: "owner" | "admin", name? }`.
-- **Owner** = `ADMIN_EMAILS` env (tidak bisa dihapus dari UI) — *root of trust*.
+- `{ email, addedBy, addedAtISO, name? }` — **hanya satu role: admin** (tanpa
+  multi-role, sesuai keputusan §3.4 #2).
+- **OWNER** = **`lupyariestaa@gmail.com`** (tetap, via env `ADMIN_EMAILS`) —
+  **tidak dapat dihapus oleh siapa pun** (termasuk dirinya), *root of trust*.
 - Guard `requireAdmin` diperluas: **env whitelist OR** dokumen `admins/{email}`
-  (aktif). Ini menjaga keamanan: env tetap jalur utama; DB = tambahan.
+  (aktif). Env tetap jalur utama (owner & keamanan); DB = tambahan admin.
 ```ts
 // admin-guard.ts (rencana)
 async function isAdminEmail(email): Promise<boolean> {
@@ -224,11 +256,13 @@ async function isAdminEmail(email): Promise<boolean> {
   const doc = await db.collection("admins").doc(email).get();
   return doc.exists && doc.get("active") !== false;
 }
+const OWNER_EMAIL = "lupyariestaa@gmail.com"; // tidak bisa dihapus
 ```
 
 ### 6.3 Audit
 - Aksi baru di `admin-audit-types.ts`: `admin.add`, `admin.remove`,
-  `settings.restore`, `settings.cache_clear`, `settings.maintenance`.
+  `settings.restore`, `settings.backup_export`, `settings.cache_clear`,
+  `settings.maintenance`.
 
 ---
 
@@ -237,14 +271,15 @@ async function isAdminEmail(email): Promise<boolean> {
 ### 7.1 Panel Integrasi (S4)
 - **Sumber status:** `api/health/payment` diperluas + endpoint `api/admin/integrations`
   (status per layanan: terkonfigurasi?, mode, catatan) — **tanpa** membocorkan nilai.
-- **Uji koneksi (server, aman):**
-  - **Mayar** → panggil endpoint ringan (mis. get invoice dummy? **tanpa** biaya) /
-    cek `isMayarConfigured` + ping. Bila tak ada endpoint aman → tampilkan "terkonfigurasi"
-    saja (jangan uji yang berbiaya).
+- **Uji koneksi (server, aman) — termasuk PING (keputusan §3.4 #1):**
+  - **Mayar** → **ping** endpoint ringan (mis. cek saldo/health API Mayar, atau request
+    ringan yang **tidak** membuat transaksi berbiaya); hasil: OK / gagal / mode.
   - **Resend** → **sudah ada** `api/admin/email/test` (kirim email uji ke diri sendiri).
-  - **Cloudinary** → cek `isCloudinaryConfigured` (bila ada helper).
-  - **Upstash** → cek env; opsi uji `PING`.
+  - **Cloudinary** → cek kredensial + `PING` (admin API `ping`).
+  - **Upstash** → `PING` Redis (bila env terisi).
   - **Cron** → cek `CRON_SECRET` terisi + tautan endpoint.
+- **Semua uji fail-safe:** tanpa kredensial → tampilkan "belum dikonfigurasi", tidak error.
+- **Rate-limit** tiap uji agar tidak dispam.
 
 ### 7.2 Pembayaran/Mayar (S3)
 - **Kesehatan:** mode (sandbox/produksi), webhook token set, invoice TTL, status terakhir.
@@ -271,14 +306,33 @@ async function isAdminEmail(email): Promise<boolean> {
 
 ---
 
-## 9. Backup & Restore (S7)
+## 9. Backup & Restore (S7) + Maintenance (S8)
 
-- **Ekspor:** tombol unduh JSON berisi `{ settings, admins?, meta (versi, waktu, oleh) }`.
-  (Rahasia/secret **tidak** diekspor.) 
-- **Impor:** unggah JSON → validasi zod ketat → **pratinjau diff** → konfirmasi →
-  tulis (transaksional per-dokumen) → audit `settings.restore`.
-- **Snapshot otomatis** sebelum restore (disimpan ke `settings/_backup_<ts>`).
-- **Logika murni teruji:** `validateSettingsBackup(json)` (parsing, versi, batas).
+### 9.1 Halaman Maintenance (S8 + halaman publik) — keputusan §3.4 #4
+- **Pengaturan di S8:** toggle **maintenance aktif**, plus editor konten halaman:
+  **judul**, **pesan**, **gambar** (via MediaPicker), `alt` gambar, **ETA** (opsional),
+  **email kontak** (opsional).
+- **Halaman publik** `/maintenance`: menampilkan **gambar (hero) + teks** dengan desain
+  rapi (background, tipografi brand), responsif. Menyembunyikan situs normal.
+- **Enforcement:** middleware mengarahkan semua rute publik → `/maintenance` saat aktif;
+  **`/admin` & `/api` dikecualikan** (admin tetap bisa kerja). `/maintenance` sendiri
+  dikecualikan (hindari loop).
+- **Fail-safe:** preview di dashboard; aktif/nonaktif dicatat audit.
+- **A11y & SEO:** halaman maintenance `noindex`, kontras AA.
+
+### 9.2 Backup & Restore (pilih data) — keputusan §3.4 #5
+- **Pilih sumber data (select/unselect)** yang mau di-backup — mis.:
+  `settings`, `admins`, `products`, `coupons`, `orders`, `projects`, `articles`,
+  `content`, `users`, `subscribers`, `reviews`, `media` (metadata). Rahasia/secret
+  **tidak** ikut.
+- **Ekspor:** unduh JSON `{ meta:{versi,waktu,oleh,sumber[]}, data:{...} }`.
+- **Impor:** unggah → **validasi zod ketat** per-sumber → **pratinjau diff/jumlah** →
+  konfirmasi → tulis (batch, best-effort terlaporkan) → audit `settings.restore`.
+- **Snapshot otomatis** sebelum restore (`backups/{ts}`) + opsi **batalkan/undo**.
+- **Batas aman:** ukuran file, jumlah dokumen per-sumber, tolak field tak dikenal.
+- **Logika murni teruji:** `validateBackupBundle(json)`, `summarizeBackup(bundle)`,
+  `diffBackup(bundle, current)`.
+- **Catatan:** hanya admin (owner & admin) boleh ekspor/impor; rate-limit; audit wajib.
 
 ---
 
@@ -321,22 +375,23 @@ async function isAdminEmail(email): Promise<boolean> {
 
 ### Fase S5 — Integrasi & API + Pembayaran/Mayar (G4, G5) (S3, S4)
 - [ ] `api/admin/integrations` (status per layanan, tanpa rahasia).
-- [ ] Uji koneksi aman (Resend=ada; mayar/cloudinary/upstash/cron sesuai kemampuan).
+- [ ] Uji koneksi **PING** (Mayar/Cloudinary/Upstash; Resend=uji email; Cron=status) — rate-limit.
 - [ ] Halaman S3 (kesehatan + metrik Mayar) & S4 (integrasi).
 - [ ] Metrik murni `computePaymentMetrics` + test.
 - **DoD:** status akurat; uji berfungsi; metrik dari data nyata.
 
-### Fase S6 — SEO & Situs + Lanjutan/Sistem (G8)
+### Fase S6 — SEO & Situs + Maintenance + Lanjutan/Sistem (G8)
 - [ ] Halaman S5 (meta/OG/Search Console/robots) + integrasi ke `metadata`.
-- [ ] Halaman S8 (maintenance mode, bersihkan cache, info sistem).
-- [ ] `mergeSettings` + efek nyata (maintenance → halaman/blokir, cache → invalidate).
-- **DoD:** pengaturan SEO dipakai; maintenance benar-benar bekerja.
+- [ ] Halaman S8: **maintenance toggle + editor konten (gambar & teks)** + bersihkan cache + info sistem + ekspor audit CSV.
+- [ ] **Halaman publik `/maintenance`** + **middleware** mengarahkan rute publik (kecuali `/admin`, `/api`, `/maintenance`).
+- [ ] `mergeSettings` + efek nyata (maintenance → alihkan, cache → invalidate).
+- **DoD:** SEO dipakai; maintenance benar-benar bekerja (halaman publik tampil); cache bersih.
 
-### Fase S7 — Backup & Restore (G6) (S7)
-- [ ] `admin-api`/`backup.ts`: ekspor JSON; impor + validasi zod + snapshot.
-- [ ] Halaman S7 (unduh, unggah, pratinjau, konfirmasi).
-- [ ] Test murni `validateSettingsBackup`.
-- **DoD:** ekspor/impor bekerja & aman; teraudit.
+### Fase S7 — Backup & Restore (pilih data) (G6) (S7)
+- [ ] `backup.ts`: ekspor **pilihan sumber** (select/unselect); impor + validasi zod per-sumber + snapshot.
+- [ ] Halaman S7 (pilih sumber, unduh, unggah, pratinjau diff/jumlah, konfirmasi, undo).
+- [ ] Test murni `validateBackupBundle`/`summarizeBackup`/`diffBackup`.
+- **DoD:** ekspor/impor bekerja & aman (multi-sumber); teraudit.
 
 ### Fase S8 — Ringkasan induk + Audit pengaturan (G7)
 - [ ] Halaman `/admin/settings` (induk) = kartu status + pintasan anak.
@@ -358,7 +413,7 @@ async function isAdminEmail(email): Promise<boolean> {
 | R1 | Submenu mengganggu menu lain | Regresi nav | Ekstensi **opsional** (`children?`); item lama tak berubah; test |
 | R2 | Kelola admin melemahkan keamanan | Akses tak sah | Owner=env; email terverifikasi; audit; rate-limit; cegah lockout |
 | R3 | Restore backup menimpa data salah | Kehilangan data | Validasi zod + snapshot sebelum restore + konfirmasi ganda |
-| R4 | Uji koneksi berbiaya (Mayar) | Biaya | Hanya uji yang **aman/gratis**; selain itu tampilkan status saja |
+| R4 | Uji koneksi berbiaya (Mayar) | Biaya | **PING** aman (tanpa transaksi berbiaya) + rate-limit; gagal → tampilkan status |
 | R5 | Fitur tampil tapi tak jalan | Pelanggaran prinsip | Setiap kontrol WAJIB punya API+efek; review per fase |
 | R6 | Field baru merusak data lama | Error render | Semua field opsional + default di `mergeSettings` |
 | R7 | URL anak bentrok | 404 | `matchAdminItem` cocokkan anak (prefix terpanjang) |
@@ -378,23 +433,22 @@ async function isAdminEmail(email): Promise<boolean> {
 
 ---
 
-## 13. Pertanyaan Terbuka (konfirmasi saat S0)
+## 13. Pertanyaan Terbuka → **TERJAWAB (terkunci §3.4)**
 
-1. **Uji koneksi Mayar:** cukup "terkonfigurasi + mode" — **[default]** — atau perlu
-   ping endpoint aman bila tersedia?
-2. **Kelola admin — role:** hanya **owner(env) + admin(DB)** — **[default]** — atau
-   perlu role lain (mis. "editor" dengan akses terbatas)?
-3. **Hapus admin:** bolehkan owner menghapus dirinya sendiri bila masih ada admin lain —
-   **[default: tidak, owner env abadi]**.
-4. **Maintenance mode:** menampilkan halaman "sedang pemeliharaan" untuk publik
-   (kecuali admin) — **[default: ya]** — atau cukup banner di dashboard?
-5. **Bersihkan cache:** tombol invalidate cache internal (summary/stats) — **[default: ya]**.
-6. **Pengiriman/Produk (§3.2 opsional):** lewati dulu — **[default]** — atau sertakan
-   (mis. low-stock threshold, prefix kode produk)?
-7. **Backup:** hanya **pengaturan** — **[default]** — atau termasuk **admin** juga?
-8. **Ekspor audit** (CSV) dari halaman Lanjutan — perlu — **[default: ya]**.
-9. **Halaman induk `/admin/settings`:** kartu status + pintasan — **[default]** — setuju?
-10. **Penamaan menu induk** tetap "Pengaturan" — **[default]** — atau "Setelan"?
+> Semua pertanyaan berikut **sudah dijawab pemilik** (2026-10-11). Tercatat di §3.4.
+
+1. **Uji koneksi Mayar** → ✅ **boleh ping** (uji ringan/aman).
+2. **Role admin** → ✅ **hanya satu role** (`admin`); **multi-admin saja**.
+3. **Hapus admin/owner** → ✅ owner = **`lupyariestaa@gmail.com`**, **tidak bisa dihapus siapa pun**.
+4. **Maintenance mode** → ✅ **ya**, dengan **halaman publik + konten (gambar & teks)** diatur dari Pengaturan.
+5. **Bersihkan cache** → ✅ ya (default diadopsi).
+6. **Pengiriman/Produk** → ✅ **lewati** (tidak ada sistem peraturan produk/pengiriman).
+7. **Backup** → ✅ **bisa pilih/unselect** sumber data (settings, produk, kupon, pesanan, dll).
+8. **Ekspor audit CSV** → ✅ ya.
+9. **Halaman induk `/admin/settings`** → ✅ kartu status + pintasan (default diadopsi).
+10. **Nama menu** → ✅ tetap **"Pengaturan"**.
+
+**Status dokumen: SIAP EKSEKUSI** (semua keputusan terkunci). Mulai dari **Fase S0**.
 
 ---
 

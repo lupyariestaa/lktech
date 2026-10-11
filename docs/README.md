@@ -68,7 +68,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-11 | [Perbaikan & Upgrade Sistem Kupon (K0–K6)](2026-10-11-task-perbaikan-kupon.md) | ✅ Selesai (kode) |
 | 2026-10-11 | [Upgrade Sistem Kupon — Rencana Optimalisasi (C0–C9)](2026-10-11-upgrade-sistem-kupon.md) | ✅ Selesai (kode) |
 | 2026-10-11 | [Upgrade UI/UX Dialog Kupon (Proper)](2026-10-11-upgrade-ui-dialog-kupon.md) | ✅ Selesai (kode) |
-| 2026-10-11 | [Perencanaan — Sistem Pengaturan (Settings) Super Proper & Terintegrasi](2026-10-11-perencanaan-pengaturan.md) | 📝 Rencana (belum dieksekusi) |
+| 2026-10-11 | [Perencanaan — Sistem Pengaturan (Settings) Super Proper & Terintegrasi](2026-10-11-perencanaan-pengaturan.md) | ✅ Siap eksekusi (belum ada kode) |
 
 ### Dokumen pendukung (referensi & setup)
 
