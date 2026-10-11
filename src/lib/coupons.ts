@@ -13,6 +13,11 @@ import {
 // (`@/lib/coupons`) tetap bekerja.
 export { computeDiscount, validateCoupon } from "@/lib/coupon-pure";
 export type { CouponValidation } from "@/lib/coupon-pure";
+import {
+  aggregateCouponStats,
+  type CouponStat,
+  type CouponStatRow,
+} from "@/lib/coupon-pure";
 
 const COLLECTION = "coupons";
 /** Subkoleksi pencatatan pemakaian per user (sumber kebenaran `limitPerUser`). */
@@ -453,16 +458,7 @@ export async function getCouponsSummary(): Promise<CouponsSummary> {
 /* -------------------------------------------------------------------------- */
 
 /** Statistik dampak satu kupon dari pesanan (bukan `ar`/estimasi). */
-export type CouponStat = {
-  couponId: string;
-  code: string;
-  /** Jumlah pesanan yang memakai kupon ini. */
-  orderCount: number;
-  /** Total diskon yang diberikan (Rp). */
-  totalDiscount: number;
-  /** Jumlah pesanan yang dibatalkan (diskon tak jadi). */
-  cancelledOrders: number;
-};
+export type { CouponStat } from "@/lib/coupon-pure";
 
 /**
  * Hitung statistik per-kupon dari koleksi `orders` (agregasi di memori).
@@ -496,30 +492,12 @@ export async function getCouponStats(
       .select("status", "coupon")
       .get();
 
-    const stats: Record<string, CouponStat> = {};
-    snap.forEach((doc) => {
-      const coupon = doc.get("coupon") as Record<string, unknown> | undefined;
-      if (!coupon || typeof coupon !== "object") return;
-      const code = typeof coupon.code === "string" ? coupon.code : "";
-      const couponId =
-        typeof coupon.couponId === "string" ? coupon.couponId : `code:${code}`;
-      const discount =
-        typeof coupon.discount === "number" && Number.isFinite(coupon.discount)
-          ? coupon.discount
-          : 0;
-      const status = doc.get("status") as string;
-
-      const entry =
-        stats[couponId] ??
-        { couponId, code, orderCount: 0, totalDiscount: 0, cancelledOrders: 0 };
-      entry.orderCount += 1;
-      if (status === "dibatalkan") {
-        entry.cancelledOrders += 1;
-      } else {
-        entry.totalDiscount += discount;
-      }
-      stats[couponId] = entry;
-    });
+    // Agregasi MURNI (teruji — audit K9).
+    const rows = snap.docs.map((doc) => ({
+      status: String(doc.get("status") ?? ""),
+      coupon: doc.get("coupon") as CouponStatRow["coupon"],
+    }));
+    const stats = aggregateCouponStats(rows);
     couponStatsCache = { at: Date.now(), value: stats };
     return stats;
   } catch (err) {

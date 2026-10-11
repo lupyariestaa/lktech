@@ -350,9 +350,17 @@ export function CouponsManager() {
                 )}
               </dl>
 
-              {/* Dampak pemakaian (`KP-M2`) */}
+              {/* Dampak pemakaian (`KP-M2`) — metrik utama order AKTIF (audit K9) */}
               <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1.5 rounded-xl bg-surface px-3 py-2 text-[11px]">
-                <Info label="Order" value={String(stat?.orderCount ?? 0)} />
+                <div title="Jumlah pesanan aktif (tidak dibatalkan) yang memakai kupon ini">
+                  <dt className="text-muted">Order aktif</dt>
+                  <dd className="font-semibold text-secondary">
+                    {String(stat?.activeOrders ?? 0)}
+                    <span className="ml-1 text-slate-400">
+                      /{stat?.orderCount ?? 0}
+                    </span>
+                  </dd>
+                </div>
                 <Info
                   label="Σ diskon"
                   value={formatRupiah(stat?.totalDiscount ?? 0)}

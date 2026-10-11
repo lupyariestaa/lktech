@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireActiveUser } from "@/lib/admin-guard";
-import { getCouponByCode, validateCoupon } from "@/lib/coupons";
+import {
+  getCouponByCode,
+  getUserCouponUsage,
+  validateCoupon,
+} from "@/lib/coupons";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -54,9 +58,15 @@ export async function POST(req: Request) {
 
   try {
     const coupon = await getCouponByCode(parsed.data.code);
+    // Audit K3: sertakan pemakaian user ini agar aturan `limitPerUser` akurat
+    // (fallback `usedBy` terbatas `MAX_COUPON_USED_BY`).
+    const userUsageCount = coupon
+      ? await getUserCouponUsage(coupon.id, check.uid)
+      : 0;
     const result = validateCoupon(coupon, {
       subtotal: parsed.data.subtotal,
       uid: check.uid,
+      userUsageCount,
       slugs: parsed.data.slugs,
       itemCount: parsed.data.itemCount,
     });

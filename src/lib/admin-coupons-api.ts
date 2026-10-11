@@ -25,7 +25,10 @@ export async function fetchCouponsSummary(): Promise<CouponsSummary> {
 export type CouponStat = {
   couponId: string;
   code: string;
+  /** Total pesanan (termasuk dibatalkan). */
   orderCount: number;
+  /** Pesanan aktif (tidak dibatalkan) — metrik utama (audit K9). */
+  activeOrders: number;
   totalDiscount: number;
   cancelledOrders: number;
 };
@@ -127,6 +130,7 @@ export function exportCouponsToCsv(
     "Aktif",
     "Arsip",
     "Jumlah Order",
+    "Order Aktif",
     "Total Diskon",
     "Order Dibatalkan",
   ];
@@ -149,6 +153,7 @@ export function exportCouponsToCsv(
       c.active ? "Ya" : "Tidak",
       c.archived ? "Ya" : "Tidak",
       s?.orderCount ?? 0,
+      s?.activeOrders ?? 0,
       s?.totalDiscount ?? 0,
       s?.cancelledOrders ?? 0,
     ]

@@ -18,32 +18,34 @@
 
 ---
 
-## 📝 SESI INI — Audit Sistem Kupon + K1, K2 & K3
+## 📝 SESI INI — Audit Sistem Kupon + K1–K4
 
-**Status: 🔄 DIKERJAKAN — K1 ✅, K2 ✅, K3 ✅ selesai; K4–K6 pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
+**Status: 🔄 DIKERJAKAN — K1 ✅, K2 ✅, K3 ✅, K4 ✅ selesai; K5–K6 pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 
-Audit mandiri sistem kupon menemukan **14 gap** (1 kritis, 4 tinggi, 4 sedang,
-4 rendah). **Keputusan pemilik**:
-1. Statistik per-kupon → tampilkan **`activeOrders`** (non-batal) sebagai metrik utama (nanti di K4).
-2. `limitPerUser` → **izinkan 0** (= tanpa batas) + label ✅ (diterapkan di K3).
-3. Normalisasi kode → **transform di schema** (nanti di K5).
+Audit mandiri sistem kupon menemukan **14 gap**. **Keputusan pemilik** sudah diterapkan:
+1. Statistik per-kupon → `activeOrders` (non-batal) sebagai metrik utama ✅ (K4).
+2. `limitPerUser` → izinkan 0 = tanpa batas ✅ (K3).
+3. Normalisasi kode → transform di schema (nanti di K5).
 
-### ✅ K1 — Logika murni + test (K5)
-- Modul `src/lib/coupon-pure.ts` (`computeDiscount`, `validateCoupon`, `checkBundleRules`).
+### ✅ K1 — Logika murni + test
+- `src/lib/coupon-pure.ts` (`computeDiscount`, `validateCoupon`, `checkBundleRules`);
   `coupon-rules.ts` dihapus; `coupons.ts` re-ekspor.
 
-### ✅ K2 — UX kupon di keranjang (K1/K2/K7)
-- State `couponNotice` khusus kupon; `CouponSessionError` bedakan sesi hilang vs jaringan;
+### ✅ K2 — UX kupon di keranjang
+- `couponNotice` khusus kupon; `CouponSessionError` (sesi hilang vs jaringan);
   re-validasi cerdas; logout memicu cek; a11y widget kupon.
 
-### ✅ K3 — Validasi & form admin (K4/K6/K8/K12)
-- `validateCouponForm` murni + 11 test; `limitPerUser` boleh 0 (tanpa batas);
-  `aria-invalid`/`aria-describedby`/`role="alert"` per field; dialog focus-trap +
-  `data-autofocus` + Escape.
+### ✅ K3 — Validasi & form admin
+- `validateCouponForm` murni; `limitPerUser` boleh 0; a11y per-field;
+  dialog focus-trap + `data-autofocus`.
 
-**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**400** test) · `build` ✅.
+### ✅ K4 — Preview akurat & statistik
+- `/api/coupons/validate` menyertakan `userUsageCount` (preview `limitPerUser` akurat).
+- `aggregateCouponStats` murni (+test); UI "Order aktif (n/total)" + tooltip; CSV menambah kolom.
 
-**Berikutnya:** K4 (preview akurat + statistik) → K5 (kebersihan) → K6 (QA & rilis).
+**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**405** test) · `build` ✅.
+
+**Berikutnya:** K5 (kebersihan: hapus kode mati, konsistensi rate-limit, normalisasi kode) → K6 (QA & rilis).
 
 ---
 

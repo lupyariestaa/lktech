@@ -1,7 +1,7 @@
 # Task Eksekusi — Perbaikan & Upgrade Sistem Kupon
 
-> **Status: 🔄 DIKERJAKAN (K1 ✅, K2 ✅, K3 ✅ selesai).** Hasil audit mandiri sistem
-> kupon (data layer, API, UI admin, keranjang, halaman promo publik).
+> **Status: 🔄 DIKERJAKAN (K1 ✅, K2 ✅, K3 ✅, K4 ✅ selesai).** Hasil audit mandiri
+> sistem kupon (data layer, API, UI admin, keranjang, halaman promo publik).
 > Disusun: 2026-10-11.
 
 ---
@@ -125,12 +125,14 @@ statistik per-kupon, ekspor CSV, halaman `/promo`). Gap terbesar ada pada
       restore-focus (K8); Escape tetap berfungsi.
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **400** ✅ · `build` ✅.
 
-### Fase K4 — Perbaikan preview & statistik (K3, K9)
-- [ ] `/api/coupons/validate`: sertakan `userUsageCount` (via `getUserCouponUsage`)
-      agar preview akurat.
-- [ ] Perjelas statistik: tambah `activeOrders = orderCount − cancelledOrders`
-      (baca/tampil) atau beri tooltip label. Sesuaikan CSV.
-- **DoD:** preview akurat; statistik tidak menyesatkan.
+### Fase K4 — Perbaikan preview & statistik (K3, K9) — ✅ SELESAI
+- [x] `/api/coupons/validate`: sertakan `userUsageCount` (via `getUserCouponUsage`)
+      agar preview aturan `limitPerUser` akurat (K3).
+- [x] Statistik: `CouponStat` + `activeOrders` (non-batal) sebagai metrik utama;
+      agregasi diekstrak ke fungsi murni `aggregateCouponStats` (`coupon-pure.ts`)
+      dan diuji (**+5 test**). UI kartu: "Order aktif (n/total)", "Σ diskon",
+      "Dibatalkan" + tooltip; CSV menambah kolom "Order Aktif" (K9).
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **405** ✅ · `build` ✅.
 
 ### Fase K5 — Kebersihan & konsistensi (K10, K11, K13)
 - [ ] Hapus `couponValueLabel` (kode mati) atau pakai konsisten.

@@ -4,6 +4,7 @@ import {
   computeDiscount,
   validateCoupon,
   validateCouponForm,
+  aggregateCouponStats,
   type ValidatableCoupon,
 } from "../src/lib/coupon-pure.ts";
 
@@ -282,4 +283,57 @@ test("validateCouponForm: rentang tanggal (mulai harus < berakhir)", () => {
 
 test("validateCouponForm: value NaN ditolak", () => {
   assert.equal(validateCouponForm(form({ value: NaN })).ok, false);
+});
+
+/* ------------------------------ aggregateCouponStats --------------------------- */
+
+test("aggregateCouponStats: kelompokkan per couponId + hitung aktif/batal", () => {
+  const stats = aggregateCouponStats([
+    { status: "dibayar", coupon: { couponId: "c1", code: "PROMO", discount: 10_000 } },
+    { status: "selesai", coupon: { couponId: "c1", code: "PROMO", discount: 5_000 } },
+    { status: "dibatalkan", coupon: { couponId: "c1", code: "PROMO", discount: 7_000 } },
+  ]);
+  const c1 = stats.c1;
+  assert.equal(c1.orderCount, 3);
+  assert.equal(c1.activeOrders, 2);
+  assert.equal(c1.cancelledOrders, 1);
+  assert.equal(c1.totalDiscount, 15_000); // hanya order aktif
+});
+
+test("aggregateCouponStats: order lama tanpa couponId → key code:<KODE>", () => {
+  const stats = aggregateCouponStats([
+    { status: "dibayar", coupon: { code: "LAMA", discount: 1_000 } },
+    { status: "dibayar", coupon: { code: "LAMA", discount: 2_000 } },
+  ]);
+  assert.equal(stats["code:LAMA"].activeOrders, 2);
+  assert.equal(stats["code:LAMA"].totalDiscount, 3_000);
+});
+
+test("aggregateCouponStats: abaikan baris tanpa kupon / kupon null", () => {
+  const stats = aggregateCouponStats([
+    { status: "dibayar", coupon: null },
+    { status: "dibayar" },
+    { status: "dibayar", coupon: { couponId: "c1", code: "X", discount: 1_000 } },
+  ]);
+  assert.deepEqual(Object.keys(stats), ["c1"]);
+});
+
+test("aggregateCouponStats: discount tak valid dianggap 0", () => {
+  const stats = aggregateCouponStats([
+    {
+      status: "selesai",
+      coupon: { couponId: "c1", code: "X", discount: Number.NaN },
+    },
+  ]);
+  assert.equal(stats.c1.totalDiscount, 0);
+  assert.equal(stats.c1.activeOrders, 1);
+});
+
+test("aggregateCouponStats: kupon berbeda dipisah", () => {
+  const stats = aggregateCouponStats([
+    { status: "dibayar", coupon: { couponId: "a", code: "A", discount: 1_000 } },
+    { status: "dibayar", coupon: { couponId: "b", code: "B", discount: 2_000 } },
+  ]);
+  assert.equal(stats.a.totalDiscount, 1_000);
+  assert.equal(stats.b.totalDiscount, 2_000);
 });

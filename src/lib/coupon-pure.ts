@@ -284,3 +284,74 @@ export function validateCouponForm(v: CouponFormValues): CouponFormValidation {
 
   return Object.keys(errors).length === 0 ? { ok: true } : { ok: false, errors };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Agregasi statistik per-kupon (murni & teruji — audit K9)                    */
+/* -------------------------------------------------------------------------- */
+
+/** Statistik dampak satu kupon. */
+export type CouponStat = {
+  couponId: string;
+  code: string;
+  /** TOTAL pesanan (termasuk dibatalkan). */
+  orderCount: number;
+  /** Pesanan AKTIF (tidak dibatalkan) — metrik utama. */
+  activeOrders: number;
+  /** Total diskon (Rp) dari pesanan aktif. */
+  totalDiscount: number;
+  /** Pesanan dibatalkan. */
+  cancelledOrders: number;
+};
+
+/** Baris order minimal untuk agregasi (subset field `coupon`). */
+export type CouponStatRow = {
+  status: string;
+  coupon?: { code?: string; couponId?: string; discount?: number } | null;
+};
+
+/**
+ * Agregasi statistik per-kupon dari baris pesanan. Mengelompokkan berdasarkan
+ * `couponId` (fallback `code:<KODE>` untuk order lama tanpa couponId).
+ *
+ * - `orderCount` = semua order ber-kupon.
+ * - `activeOrders` = order non-`dibatalkan` (metrik utama).
+ * - `totalDiscount` = Σ diskon dari order AKTIF saja.
+ */
+export function aggregateCouponStats(
+  rows: readonly CouponStatRow[],
+): Record<string, CouponStat> {
+  const stats: Record<string, CouponStat> = {};
+  for (const row of rows) {
+    const coupon = row.coupon;
+    if (!coupon || typeof coupon !== "object") continue;
+    const code = typeof coupon.code === "string" ? coupon.code : "";
+    const couponId =
+      typeof coupon.couponId === "string" && coupon.couponId
+        ? coupon.couponId
+        : `code:${code}`;
+    const discount =
+      typeof coupon.discount === "number" && Number.isFinite(coupon.discount)
+        ? coupon.discount
+        : 0;
+
+    const entry =
+      stats[couponId] ??
+      {
+        couponId,
+        code,
+        orderCount: 0,
+        activeOrders: 0,
+        totalDiscount: 0,
+        cancelledOrders: 0,
+      };
+    entry.orderCount += 1;
+    if (row.status === "dibatalkan") {
+      entry.cancelledOrders += 1;
+    } else {
+      entry.activeOrders += 1;
+      entry.totalDiscount += discount;
+    }
+    stats[couponId] = entry;
+  }
+  return stats;
+}
