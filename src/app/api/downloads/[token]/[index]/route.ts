@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGrantByToken, recordDownloadHit } from "@/lib/downloads";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ token: string; index: string }> },
 ) {
-  const rl = rateLimit(`download:${clientIp(req)}`, 60, 60_000);
+  const rl = await checkRateLimit(`download:${clientIp(req)}`, 60, 60_000);
   if (!rl.ok) {
     return NextResponse.json(
       { error: "Terlalu banyak permintaan unduhan. Coba lagi nanti." },

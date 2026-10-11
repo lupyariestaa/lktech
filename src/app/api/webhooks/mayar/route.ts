@@ -3,7 +3,7 @@ import { getAdminDb } from "@/lib/firebase-admin";
 import { getOrderById, markOrderPaid } from "@/lib/orders";
 import { fulfillOrder } from "@/lib/order-payment";
 import { obs } from "@/lib/observability";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { OrderStatus } from "@/lib/order-types";
 
 export const runtime = "nodejs";
@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic";
  *    best-effort.
  */
 export async function POST(req: Request) {
-  const rl = rateLimit("webhook:mayar", 60, 60_000);
+  const rl = await checkRateLimit("webhook:mayar", 60, 60_000);
   if (!rl.ok) {
     // Tetap 200 agar pengirim tidak menumpuk retry; cukup log.
     console.warn("[webhook/mayar] rate limited", rl.retryAfter);

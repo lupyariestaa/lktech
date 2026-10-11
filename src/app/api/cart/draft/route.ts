@@ -7,7 +7,7 @@ import {
   setCartOptOut,
 } from "@/lib/cart-draft";
 import { cartDraftSchema } from "@/lib/api-schemas";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const check = await requireUser(req);
   if (!check.ok) return check.response;
 
-  const rl = rateLimit(`cart-draft:${check.uid}`, 120, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`cart-draft:${check.uid}`, 120, 10 * 60 * 1000);
   if (!rl.ok) {
     // Best-effort: jangan ganggu UX; cukup balas 200 tanpa menyimpan.
     return NextResponse.json({ ok: true, throttled: true });

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { leadSchema } from "@/lib/lead-schema";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { sendLeadNotification } from "@/lib/email";
-import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { clientIp, checkRateLimit } from "@/lib/rate-limit";
 import { computeLeadScore } from "@/lib/lead-scoring-pure";
 import { waLink } from "@/lib/whatsapp";
 
@@ -44,7 +44,7 @@ function fallbackWhatsApp(lead: {
 export async function POST(req: Request) {
   // Anti-spam: batasi jumlah kiriman per IP.
   const ip = clientIp(req);
-  const rl = rateLimit(`lead:${ip}`, RATE_LIMIT, RATE_WINDOW_MS);
+  const rl = await checkRateLimit(`lead:${ip}`, RATE_LIMIT, RATE_WINDOW_MS);
   if (!rl.ok) {
     return NextResponse.json(
       {

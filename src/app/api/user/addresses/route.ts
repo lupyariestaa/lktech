@@ -7,7 +7,7 @@ import {
   updateAddress,
 } from "@/lib/user-profile";
 import { addressSchema } from "@/lib/api-schemas";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const check = await requireActiveUser(req);
   if (!check.ok) return check.response;
 
-  const rl = rateLimit(`address:${check.uid}`, RATE_LIMIT, RATE_WINDOW_MS);
+  const rl = await checkRateLimit(`address:${check.uid}`, RATE_LIMIT, RATE_WINDOW_MS);
   if (!rl.ok) {
     return NextResponse.json(
       { error: "Terlalu banyak permintaan. Coba lagi nanti." },

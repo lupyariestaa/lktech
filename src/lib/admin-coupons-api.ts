@@ -5,7 +5,6 @@ import {
   type CouponType,
   type CouponsSummary,
 } from "@/lib/coupon-types";
-import { formatRupiah } from "@/lib/format";
 
 /** Daftar kupon (admin). */
 export async function fetchCoupons(): Promise<Coupon[]> {
@@ -98,13 +97,6 @@ export async function restoreCoupon(id: string): Promise<void> {
 function csvCell(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
   return `"${s.replace(/"/g, '""')}"`;
-}
-
-/** Label nilai kupon (mis. "10%" atau "Rp50.000"). */
-export function couponValueLabel(coupon: Coupon): string {
-  return coupon.type === "percent"
-    ? `${coupon.value}%`
-    : formatRupiah(coupon.value);
 }
 
 /** Ekspor daftar kupon ke CSV (opsional menyertakan statistik dampak). */

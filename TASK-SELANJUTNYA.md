@@ -18,34 +18,21 @@
 
 ---
 
-## 📝 SESI INI — Audit Sistem Kupon + K1–K4
+## 📝 SESI INI — Audit Sistem Kupon + K1–K5
 
-**Status: 🔄 DIKERJAKAN — K1 ✅, K2 ✅, K3 ✅, K4 ✅ selesai; K5–K6 pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
+**Status: 🔄 DIKERJAKAN — K1–K5 ✅ selesai; K6 (QA & rilis) pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 
-Audit mandiri sistem kupon menemukan **14 gap**. **Keputusan pemilik** sudah diterapkan:
-1. Statistik per-kupon → `activeOrders` (non-batal) sebagai metrik utama ✅ (K4).
-2. `limitPerUser` → izinkan 0 = tanpa batas ✅ (K3).
-3. Normalisasi kode → transform di schema (nanti di K5).
+Audit mandiri sistem kupon menemukan **14 gap**; keputusan pemilik diterapkan semua.
 
-### ✅ K1 — Logika murni + test
-- `src/lib/coupon-pure.ts` (`computeDiscount`, `validateCoupon`, `checkBundleRules`);
-  `coupon-rules.ts` dihapus; `coupons.ts` re-ekspor.
+- ✅ **K1** — logika murni `coupon-pure.ts` (+test).
+- ✅ **K2** — UX kupon keranjang (notice khusus, sesi hilang vs jaringan, a11y).
+- ✅ **K3** — validasi form admin (`validateCouponForm`), `limitPerUser` boleh 0, a11y + focus-trap.
+- ✅ **K4** — preview validasi akurat (`userUsageCount`), statistik `activeOrders` + tooltip/CSV.
+- ✅ **K5** — hapus kode mati `couponValueLabel`; samakan rate-limit (`checkRateLimit` di 7 endpoint); normalisasi kode via `.transform()` (+`test:order-schema`).
 
-### ✅ K2 — UX kupon di keranjang
-- `couponNotice` khusus kupon; `CouponSessionError` (sesi hilang vs jaringan);
-  re-validasi cerdas; logout memicu cek; a11y widget kupon.
+**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**410** test) · `build` ✅.
 
-### ✅ K3 — Validasi & form admin
-- `validateCouponForm` murni; `limitPerUser` boleh 0; a11y per-field;
-  dialog focus-trap + `data-autofocus`.
-
-### ✅ K4 — Preview akurat & statistik
-- `/api/coupons/validate` menyertakan `userUsageCount` (preview `limitPerUser` akurat).
-- `aggregateCouponStats` murni (+test); UI "Order aktif (n/total)" + tooltip; CSV menambah kolom.
-
-**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**405** test) · `build` ✅.
-
-**Berikutnya:** K5 (kebersihan: hapus kode mati, konsistensi rate-limit, normalisasi kode) → K6 (QA & rilis).
+**Berikutnya:** **K6 (QA menyeluruh + uji browser + rilis)** — fase terakhir. Lalu tutup inisiatif kupon.
 
 ---
 

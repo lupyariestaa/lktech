@@ -5,7 +5,7 @@ import { getOrdersByUser } from "@/lib/orders";
 import { performCheckout } from "@/lib/checkout";
 import { makeToken, downloadUrl } from "@/lib/downloads";
 import { SITE_URL } from "@/lib/site";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   const check = await requireActiveUser(req);
   if (!check.ok) return check.response;
 
-  const rl = rateLimit(`order:${check.uid}`, RATE_LIMIT, RATE_WINDOW_MS);
+  const rl = await checkRateLimit(`order:${check.uid}`, RATE_LIMIT, RATE_WINDOW_MS);
   if (!rl.ok) {
     return NextResponse.json(
       { error: "Terlalu banyak percobaan checkout. Coba lagi beberapa saat." },

@@ -1,7 +1,7 @@
 # Task Eksekusi — Perbaikan & Upgrade Sistem Kupon
 
-> **Status: 🔄 DIKERJAKAN (K1 ✅, K2 ✅, K3 ✅, K4 ✅ selesai).** Hasil audit mandiri
-> sistem kupon (data layer, API, UI admin, keranjang, halaman promo publik).
+> **Status: 🔄 DIKERJAKAN (K1 ✅, K2 ✅, K3 ✅, K4 ✅, K5 ✅; K6 pending).** Hasil audit
+> mandiri sistem kupon (data layer, API, UI admin, keranjang, halaman promo publik).
 > Disusun: 2026-10-11.
 
 ---
@@ -134,11 +134,15 @@ statistik per-kupon, ekspor CSV, halaman `/promo`). Gap terbesar ada pada
       "Dibatalkan" + tooltip; CSV menambah kolom "Order Aktif" (K9).
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **405** ✅ · `build` ✅.
 
-### Fase K5 — Kebersihan & konsistensi (K10, K11, K13)
-- [ ] Hapus `couponValueLabel` (kode mati) atau pakai konsisten.
-- [ ] Samakan rate-limit helper (`checkRateLimit` di kedua endpoint).
-- [ ] Opsional: normalisasi kode di `order-schema` (transform uppercase).
-- **DoD:** tak ada kode mati; konsisten.
+### Fase K5 — Kebersihan & konsistensi (K10, K11, K13) — ✅ SELESAI
+- [x] Hapus kode mati `couponValueLabel` (+ impor `formatRupiah` yang jadi tak terpakai) (K10).
+- [x] Samakan rate-limit helper: **semua** endpoint yang masih memakai `rateLimit`
+      (sync) → `checkRateLimit` (async, Upstash-ready, fail-safe): `orders`,
+      `cart/draft`, `lead`, `downloads/[token]/[index]`, `user/addresses`,
+      `user/wishlist`, `webhooks/mayar` (K11).
+- [x] Normalisasi kode kupon via `.transform()` di `order-schema.ts` (uppercase,
+      buang non-A-Z0-9) + test baru `test:order-schema` (**5 test**) (K13).
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **410** ✅ · `build` ✅.
 
 ### Fase K6 — QA, docs & rilis
 - [ ] Gate penuh (`tsc`/`eslint`/semua `test:*`/`build`).
