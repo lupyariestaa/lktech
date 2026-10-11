@@ -12,16 +12,19 @@ import {
 import {
   bulkOrders,
   exportOrdersToCsv,
+  fetchAllOrdersForExport,
   fetchOrdersAdmin,
   fetchOrdersAttention,
   fetchOrdersSummary,
-  resendOrderEmail,
   type OrdersListResult,
 } from "@/lib/admin-orders-api";
-import type { Order } from "@/lib/order-types";
+import type { Order, OrderStatus } from "@/lib/order-types";
+import { ORDER_STATUSES } from "@/lib/order-types";
+import { isTransitionAllowed } from "@/lib/order-status-pure";
 import type { AttentionSummary, OrdersSummary } from "@/lib/orders";
 import {
   defaultFilter,
+  hasActiveFilter,
   ordersFilterToParams,
   parseOrdersFilter,
   type OrdersFilter,
@@ -42,12 +45,20 @@ import { cn } from "@/lib/utils";
 const PAGE_SIZES = [25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 25;
 
+/** Status yang boleh dihapus (selaras dgn `DELETABLE_STATUSES` di server). */
+const DELETABLE_ORDER_STATUSES: readonly OrderStatus[] = [
+  "baru",
+  "menunggu_bayar",
+  "menunggu_konfirmasi",
+  "kedaluwarsa",
+];
+
 /** Kartu ringkasan (OR-D3: lengkap semua status). */
 const SUMMARY_CARDS: Array<{ key: keyof OrdersSummary; label: string; accent: string }> = [
   { key: "total", label: "Total Pesanan", accent: "bg-primary-50 text-primary" },
   { key: "baru", label: "Baru", accent: "bg-blue-50 text-blue-600" },
   { key: "menunggu_bayar", label: "Menunggu Bayar", accent: "bg-amber-50 text-amber-600" },
-  { key: "menunggu_konfirmasi", label: "Perlu Konfirmasi", accent: "bg-purple-50 text-purple-600" },
+  { key: "menunggu_konfirmasi", label: "Menunggu Konfirmasi", accent: "bg-purple-50 text-purple-600" },
   { key: "dibayar", label: "Dibayar", accent: "bg-emerald-50 text-emerald-600" },
   { key: "diproses", label: "Diproses", accent: "bg-amber-50 text-amber-600" },
   { key: "selesai", label: "Selesai", accent: "bg-emerald-50 text-emerald-600" },
@@ -81,11 +92,10 @@ export function OrdersManager() {
   const [detail, setDetail] = useState<Order | null>(null);
 
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [confirm, setConfirm] = useState<
-    | { kind: "delete"; ids: string[] }
-    | { kind: "delete-one"; order: Order }
-    | null
-  >(null);
+  const [exporting, setExporting] = useState(false);
+  const [confirm, setConfirm] = useState<{ kind: "delete"; ids: string[] } | null>(
+    null,
+  );
 
   // Preferensi tampilan ditangani hook `useOrdersView` (useSyncExternalStore).
 
@@ -139,7 +149,7 @@ export function OrdersManager() {
     };
   }, [data]);
 
-  const orders = data?.orders ?? [];
+  const orders = useMemo(() => data?.orders ?? [], [data]);
   const total = data?.total ?? orders.length;
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
@@ -186,14 +196,59 @@ export function OrdersManager() {
 
   const selectedIds = [...selected];
 
-  const onExport = () => {
-    const rows = selected.size > 0 ? orders.filter((o) => selected.has(o.id)) : orders;
-    if (rows.length === 0) {
-      toast.error("Tidak ada pesanan untuk diekspor.");
+  // Status tujuan yang valid untuk SEMUA pesanan terpilih (irisan matriks) — F-G12.
+  // Hanya target yang benar-benar mengubah minimal satu order (hindari no-op).
+  const bulkSelectableStatuses = useMemo<OrderStatus[]>(() => {
+    const picked = orders.filter((o) => selected.has(o.id));
+    if (picked.length === 0) return [];
+    return ORDER_STATUSES.filter(
+      (target) =>
+        picked.some((o) => o.status !== target) &&
+        picked.every((o) => isTransitionAllowed(o.status, target)),
+    );
+  }, [orders, selected]);
+
+  // Boleh hapus massal bila minimal satu pesanan terpilih berstatus deletable — F-G2.
+  const bulkCanDelete = useMemo(
+    () =>
+      orders.some(
+        (o) => selected.has(o.id) && DELETABLE_ORDER_STATUSES.includes(o.status),
+      ),
+    [orders, selected],
+  );
+
+  const onExport = async () => {
+    // Bila ada yang terpilih → ekspor hanya yang terpilih (halaman ini).
+    if (selected.size > 0) {
+      const rows = orders.filter((o) => selected.has(o.id));
+      if (rows.length === 0) {
+        toast.error("Tidak ada pesanan untuk diekspor.");
+        return;
+      }
+      exportOrdersToCsv(rows, `pesanan-terpilih-${rows.length}.csv`);
+      toast.success(`${rows.length} pesanan terpilih diekspor.`);
       return;
     }
-    exportOrdersToCsv(rows);
-    toast.success(`${rows.length} pesanan diekspor (halaman ini).`);
+    // Tanpa seleksi → ekspor SELURUH hasil filter (bukan hanya halaman) — F-G4.
+    setExporting(true);
+    try {
+      const { orders: all, total, truncated } = await fetchAllOrdersForExport(
+        filter,
+        sort,
+      );
+      if (all.length === 0) {
+        toast.error("Tidak ada pesanan untuk diekspor.");
+        return;
+      }
+      exportOrdersToCsv(all);
+      toast.success(
+        `${all.length} pesanan diekspor${truncated ? ` (dibatasi pemindaian dari ${total})` : ""}.`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal mengekspor pesanan.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const runBulk = async (action: BulkAction) => {
@@ -218,17 +273,11 @@ export function OrdersManager() {
           `${res.applied} pesanan diperbarui${res.skipped.length ? `, ${res.skipped.length} dilewati` : ""}.`,
         );
       } else {
-        // resend email — loop (endpoint per-order).
-        let ok = 0;
-        for (const id of selectedIds) {
-          try {
-            await resendOrderEmail(id);
-            ok += 1;
-          } catch {
-            /* lewati */
-          }
-        }
-        toast.success(`Email dikirim ulang untuk ${ok}/${selectedIds.length} pesanan.`);
+        // resend email — diproses di server (F-G8): atomik per-order + audit.
+        const res = await bulkOrders({ ids: selectedIds, op: "resend" });
+        toast.success(
+          `${res.applied} email dikirim ulang${res.skipped.length ? `, ${res.skipped.length} gagal` : ""}.`,
+        );
       }
       refresh();
     } catch (err) {
@@ -242,12 +291,10 @@ export function OrdersManager() {
     if (!confirm) return;
     setBulkBusy(true);
     try {
-      if (confirm.kind === "delete") {
-        const res = await bulkOrders({ ids: confirm.ids, op: "delete" });
-        toast.success(
-          `${res.applied} pesanan dihapus${res.skipped.length ? `, ${res.skipped.length} dilewati` : ""}.`,
-        );
-      }
+      const res = await bulkOrders({ ids: confirm.ids, op: "delete" });
+      toast.success(
+        `${res.applied} pesanan dihapus${res.skipped.length ? `, ${res.skipped.length} dilewati` : ""}.`,
+      );
       refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal menghapus.");
@@ -265,6 +312,9 @@ export function OrdersManager() {
           <OrdersAttentionPanel
             attention={attention}
             onFocus={() => onFilter({ ...defaultFilter(), attention: true })}
+            onFocusReason={(reason) =>
+              onFilter({ ...defaultFilter(), attention: true, attentionReason: reason })
+            }
           />
         </div>
       )}
@@ -314,11 +364,12 @@ export function OrdersManager() {
         filter={filter}
         sort={sort}
         loading={loading}
+        exporting={exporting}
         onFilter={onFilter}
         onSort={onSort}
         onRefresh={refresh}
         onExport={onExport}
-        exportDisabled={orders.length === 0}
+        exportDisabled={orders.length === 0 && !hasActiveFilter(filter)}
       />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -421,6 +472,7 @@ export function OrdersManager() {
               order={order}
               selected={selected.has(order.id)}
               onToggle={toggle}
+              onOpen={(o) => setDetail(o)}
             />
           ))}
         </div>
@@ -434,6 +486,7 @@ export function OrdersManager() {
       {/* Dialog tinjauan cepat */}
       {detail && (
         <OrderDetailDialog
+          key={detail.id}
           order={detail}
           onClose={() => setDetail(null)}
           onChanged={refresh}
@@ -445,6 +498,8 @@ export function OrdersManager() {
         <OrdersBulkBar
           count={selected.size}
           busy={bulkBusy}
+          selectableStatuses={bulkSelectableStatuses}
+          canDelete={bulkCanDelete}
           onClear={() => setSelected(new Set())}
           onAction={runBulk}
         />
@@ -452,11 +507,7 @@ export function OrdersManager() {
 
       <ConfirmDialog
         open={confirm !== null}
-        title={
-          confirm?.kind === "delete"
-            ? `Hapus ${confirm.ids.length} pesanan?`
-            : "Hapus pesanan ini?"
-        }
+        title={confirm ? `Hapus ${confirm.ids.length} pesanan?` : "Hapus pesanan?"}
         description="Hanya pesanan yang belum diproses yang dapat dihapus. Pesanan lain akan dilewati. Tindakan ini permanen."
         confirmLabel="Hapus"
         busy={bulkBusy}

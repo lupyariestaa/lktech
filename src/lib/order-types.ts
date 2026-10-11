@@ -42,8 +42,11 @@ export const ORDER_STATUS_STYLE: Record<OrderStatus, string> = {
   menunggu_bayar: "bg-amber-50 text-amber-600 border-amber-100",
   dibayar: "bg-emerald-50 text-emerald-600 border-emerald-100",
   menunggu_konfirmasi: "bg-purple-50 text-purple-600 border-purple-100",
-  diproses: "bg-amber-50 text-amber-600 border-amber-100",
-  selesai: "bg-emerald-50 text-emerald-600 border-emerald-100",
+  // F-G18: `diproses` dibedakan dari `menunggu_bayar` (yang memakai amber) agar
+  // "uang belum masuk" vs "sedang dikerjakan" tidak tertukar.
+  diproses: "bg-indigo-50 text-indigo-600 border-indigo-100",
+  // F-G18: `selesai` dibedakan dari `dibayar` (yang memakai emerald).
+  selesai: "bg-teal-50 text-teal-700 border-teal-100",
   dibatalkan: "bg-slate-100 text-slate-500 border-slate-200",
   kedaluwarsa: "bg-slate-100 text-slate-500 border-slate-200",
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Printer } from "lucide-react";
 import { fetchOrderDetail } from "@/lib/admin-orders-api";
 import type { Order } from "@/lib/order-types";
@@ -18,20 +19,28 @@ import { useToast } from "@/components/admin/toast";
  */
 export function OrderPageClient({ order: initial }: { order: Order }) {
   const toast = useToast();
+  const router = useRouter();
   const [order, setOrder] = useState<Order>(initial);
   const [refreshing, setRefreshing] = useState(false);
+  // Menandai "belum ditulis" agar timeline dimuat ulang setelah aksi (F-G6).
+  const [timelineKey, setTimelineKey] = useState(0);
 
   const onChanged = useCallback(async () => {
     setRefreshing(true);
     try {
       const { order: fresh } = await fetchOrderDetail(initial.id);
       setOrder(fresh);
+      setTimelineKey((k) => k + 1);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal memuat ulang pesanan.");
     } finally {
       setRefreshing(false);
     }
   }, [initial.id, toast]);
+
+  const onDeleted = useCallback(() => {
+    router.push("/admin/orders");
+  }, [router]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -64,11 +73,11 @@ export function OrderPageClient({ order: initial }: { order: Order }) {
       <div className="flex flex-col gap-6 print:hidden">
         <div className="rounded-3xl border border-slate-200 bg-white p-5">
           <h2 className="mb-3 text-sm font-bold text-secondary">Aksi</h2>
-          <OrderActionsBar order={order} onChanged={onChanged} />
+          <OrderActionsBar order={order} onChanged={onChanged} onDeleted={onDeleted} />
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-5">
-          <OrderTimeline orderId={order.id} />
+          <OrderTimeline key={timelineKey} orderId={order.id} />
         </div>
       </div>
     </div>

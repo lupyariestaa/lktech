@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Loader2,
   Trash2,
@@ -9,7 +9,7 @@ import {
   ChevronUp,
   RefreshCw,
 } from "lucide-react";
-import { ORDER_STATUSES, ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/order-types";
+import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/order-types";
 import { cn } from "@/lib/utils";
 
 export type BulkAction =
@@ -25,15 +25,46 @@ export type BulkAction =
 export function OrdersBulkBar({
   count,
   busy,
+  selectableStatuses,
+  canDelete,
   onClear,
   onAction,
 }: {
   count: number;
   busy: boolean;
+  /**
+   * Status tujuan yang valid untuk SEMUA pesanan terpilih (irisan matriks
+   * transisi) — F-G12. Bila kosong, dropdown status disembunyikan.
+   */
+  selectableStatuses: OrderStatus[];
+  /** True bila minimal satu pesanan terpilih boleh dihapus (F-G2). */
+  canDelete: boolean;
   onClear: () => void;
   onAction: (action: BulkAction) => void;
 }) {
   const [statusOpen, setStatusOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Tutup dropdown saat klik di luar / Escape (F-G19).
+  useEffect(() => {
+    if (!statusOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setStatusOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setStatusOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [statusOpen]);
+
+  const statusChoices = selectableStatuses;
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[11500] flex justify-center px-4">
@@ -47,36 +78,45 @@ export function OrdersBulkBar({
         </span>
         <span className="mx-1 h-6 w-px bg-slate-200" />
 
-        <div className="relative">
-          <BulkButton
-            icon={<RefreshCw className="h-4 w-4" />}
-            label="Ubah status"
-            busy={busy}
-            iconRight={
-              <ChevronUp
-                className={cn("h-3.5 w-3.5 transition-transform", statusOpen && "rotate-180")}
-              />
-            }
-            onClick={() => setStatusOpen((v) => !v)}
-          />
-          {statusOpen && (
-            <div className="absolute bottom-12 left-1/2 max-h-64 w-48 -translate-x-1/2 overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1.5 shadow-xl">
-              {ORDER_STATUSES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => {
-                    setStatusOpen(false);
-                    onAction({ action: "status", status: s });
-                  }}
-                  className="block w-full px-4 py-2 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-surface hover:text-secondary"
-                >
-                  {ORDER_STATUS_LABEL[s]}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {statusChoices.length > 0 && (
+          <div className="relative" ref={menuRef}>
+            <BulkButton
+              icon={<RefreshCw className="h-4 w-4" />}
+              label="Ubah status"
+              busy={busy}
+              ariaHasPopup
+              ariaExpanded={statusOpen}
+              iconRight={
+                <ChevronUp
+                  className={cn("h-3.5 w-3.5 transition-transform", statusOpen && "rotate-180")}
+                />
+              }
+              onClick={() => setStatusOpen((v) => !v)}
+            />
+            {statusOpen && (
+              <div
+                role="menu"
+                aria-label="Pilih status tujuan"
+                className="absolute bottom-12 left-1/2 max-h-64 w-48 -translate-x-1/2 overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1.5 shadow-xl"
+              >
+                {statusChoices.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setStatusOpen(false);
+                      onAction({ action: "status", status: s });
+                    }}
+                    className="block w-full px-4 py-2 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-surface hover:text-secondary"
+                  >
+                    {ORDER_STATUS_LABEL[s]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <BulkButton
           icon={<Download className="h-4 w-4" />}
@@ -92,13 +132,15 @@ export function OrdersBulkBar({
           onClick={() => onAction({ action: "resend" })}
         />
 
-        <BulkButton
-          icon={<Trash2 className="h-4 w-4" />}
-          label="Hapus"
-          tone="danger"
-          busy={busy}
-          onClick={() => onAction({ action: "delete" })}
-        />
+        {canDelete && (
+          <BulkButton
+            icon={<Trash2 className="h-4 w-4" />}
+            label="Hapus"
+            tone="danger"
+            busy={busy}
+            onClick={() => onAction({ action: "delete" })}
+          />
+        )}
 
         <span className="mx-1 h-6 w-px bg-slate-200" />
         <button
@@ -121,6 +163,8 @@ function BulkButton({
   onClick,
   busy,
   tone = "default",
+  ariaHasPopup,
+  ariaExpanded,
 }: {
   icon: React.ReactNode;
   iconRight?: React.ReactNode;
@@ -128,12 +172,16 @@ function BulkButton({
   onClick: () => void;
   busy?: boolean;
   tone?: "default" | "danger";
+  ariaHasPopup?: boolean;
+  ariaExpanded?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={busy}
+      aria-haspopup={ariaHasPopup ? "menu" : undefined}
+      aria-expanded={ariaHasPopup ? ariaExpanded : undefined}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         tone === "danger"

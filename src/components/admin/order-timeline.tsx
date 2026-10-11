@@ -33,15 +33,29 @@ const TYPE_STYLE: Record<OrderActivity["type"], string> = {
  */
 export function OrderTimeline({ orderId }: { orderId: string }) {
   const toast = useToast();
-  const [activities, setActivities] = useState<OrderActivity[] | null>(null);
+  // Simpan orderId bersama data agar pergantian orderId otomatis menampilkan
+  // status "memuat" tanpa `setState` sinkron di dalam efek (hindari cascading).
+  const [state, setState] = useState<{
+    orderId: string;
+    activities: OrderActivity[] | null;
+    error: boolean;
+  }>({ orderId, activities: null, error: false });
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const activities = state.orderId === orderId ? state.activities : null;
+  const loadError = state.orderId === orderId ? state.error : false;
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const list = await fetchOrderActivities(orderId).catch(() => []);
-      if (active) setActivities(list);
+      try {
+        const list = await fetchOrderActivities(orderId);
+        if (active) setState({ orderId, activities: list, error: false });
+      } catch {
+        // Bedakan "gagal memuat" dari "kosong" (F-G15).
+        if (active) setState({ orderId, activities: [], error: true });
+      }
     })();
     return () => {
       active = false;
@@ -54,8 +68,8 @@ export function OrderTimeline({ orderId }: { orderId: string }) {
     setBusy(true);
     try {
       await addOrderNote(orderId, { type: "catatan", note: note.trim() });
-      const list = await fetchOrderActivities(orderId).catch(() => []);
-      setActivities(list);
+      const list = await fetchOrderActivities(orderId);
+      setState({ orderId, activities: list, error: false });
       setNote("");
       toast.success("Catatan ditambahkan.");
     } catch (err) {
@@ -99,6 +113,10 @@ export function OrderTimeline({ orderId }: { orderId: string }) {
         <p className="mt-3 flex items-center gap-2 text-xs text-muted">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           Memuat aktivitas...
+        </p>
+      ) : loadError ? (
+        <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600">
+          Gagal memuat aktivitas. Coba muat ulang halaman.
         </p>
       ) : activities.length === 0 ? (
         <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-surface px-4 py-3 text-xs text-muted">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Search,
   SlidersHorizontal,
@@ -30,6 +30,8 @@ const DATE_PRESETS: Array<{ value: DatePreset; label: string }> = [
   { value: "kustom", label: "Kustom" },
 ];
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 /**
  * Toolbar filter/sort/pencarian daftar pesanan (FASE O2/O3).
  * Semua perubahan dikirim ke pemanggil (`onChange`), yang menyinkron ke URL &
@@ -39,6 +41,7 @@ export function OrdersToolbar({
   filter,
   sort,
   loading,
+  exporting,
   onFilter,
   onSort,
   onRefresh,
@@ -48,6 +51,7 @@ export function OrdersToolbar({
   filter: OrdersFilter;
   sort: OrdersSort;
   loading: boolean;
+  exporting?: boolean;
   onFilter: (next: OrdersFilter) => void;
   onSort: (sort: OrdersSort) => void;
   onRefresh: () => void;
@@ -57,6 +61,37 @@ export function OrdersToolbar({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const active = hasActiveFilter(filter);
 
+  // Pencarian: input lokal + debounce agar tidak memicu navigasi tiap ketikan
+  // (F-G10). Sinkron bila filter.q berubah dari luar (mis. reset / tombol kembali)
+  // memakai pola "adjust state during render" (diizinkan React, tanpa efek).
+  const [search, setSearch] = useState(filter.q);
+  const [prevFilterQ, setPrevFilterQ] = useState(filter.q);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onFilterRef = useRef(onFilter);
+
+  useEffect(() => {
+    onFilterRef.current = onFilter;
+  }, [onFilter]);
+
+  if (filter.q !== prevFilterQ) {
+    setPrevFilterQ(filter.q);
+    setSearch(filter.q);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const onSearchChange = (value: string) => {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onFilterRef.current({ ...filter, q: value });
+    }, SEARCH_DEBOUNCE_MS);
+  };
+
   const set = (patch: Partial<OrdersFilter>) => onFilter({ ...filter, ...patch });
 
   return (
@@ -65,8 +100,8 @@ export function OrdersToolbar({
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
-            value={filter.q}
-            onChange={(e) => set({ q: e.target.value })}
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Cari kode, email, atau nama pembeli..."
             aria-label="Cari pesanan"
             className="w-full rounded-full border border-slate-200 bg-white py-2.5 pr-4 pl-10 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none"
@@ -121,16 +156,22 @@ export function OrdersToolbar({
         </button>
 
         <button
+          type="button"
           onClick={onExport}
-          disabled={loading || exportDisabled}
+          disabled={loading || exporting || exportDisabled}
           className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
           title="Ekspor hasil filter ke CSV"
         >
-          <Download className="h-4 w-4" />
+          {exporting ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
           Ekspor
         </button>
 
         <button
+          type="button"
           onClick={onRefresh}
           disabled={loading}
           aria-label="Muat ulang"
@@ -262,7 +303,7 @@ export function OrdersToolbar({
             <div className="flex items-end">
               <button
                 type="button"
-                onClick={() => onFilter(resetFilter(filter))}
+                onClick={() => onFilter(resetFilter())}
                 className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-500"
               >
                 <X className="h-3.5 w-3.5" />
@@ -274,17 +315,33 @@ export function OrdersToolbar({
       )}
 
       {active && (
-        <p className="flex items-center gap-1.5 text-[11px] text-primary">
-          <Filter className="h-3 w-3" />
-          Filter aktif — hasil disaring di server.
-        </p>
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-primary">
+          <span className="inline-flex items-center gap-1.5">
+            <Filter className="h-3 w-3" />
+            Filter aktif
+          </span>
+          {filter.attention && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-700">
+              Hanya butuh perhatian
+              <button
+                type="button"
+                onClick={() => set({ attention: false })}
+                aria-label="Hapus filter butuh perhatian"
+                className="ml-0.5 rounded-full text-amber-700 hover:text-amber-900"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          <span className="text-muted">— hasil disaring di server.</span>
+        </div>
       )}
     </div>
   );
 }
 
-/** Reset filter tetapi pertahankan pencarian cepat? Tidak — reset penuh. */
-function resetFilter(current: OrdersFilter): OrdersFilter {
+/** Reset SEMUA filter (termasuk pencarian) — F-G14. */
+function resetFilter(): OrdersFilter {
   return {
     status: "semua",
     datePreset: "semua",
@@ -296,6 +353,7 @@ function resetFilter(current: OrdersFilter): OrdersFilter {
     minTotal: null,
     maxTotal: null,
     attention: false,
-    q: current.q,
+    attentionReason: "",
+    q: "",
   };
 }

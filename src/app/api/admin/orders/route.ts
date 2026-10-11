@@ -34,6 +34,97 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
+ * Hitung jumlah percobaan KIRIM ULANG email untuk sebuah order (`F-G16`).
+ * Sebelumnya menghitung `kind === kind` padahal log resend tercatat dengan
+ * `kind:"resend"`, sehingga `attempt` selalu salah. Kini menghitung entri
+ * ber-`kind:"resend"` (semua resend = percobaan), ditambah 1 untuk percobaan ini.
+ */
+async function countResendAttempts(orderId: string): Promise<number> {
+  const previous = await listOrderEmails(orderId, 200);
+  return previous.filter((e) => e.kind === "resend").length + 1;
+}
+
+/**
+ * Efek samping perubahan status pesanan yang SAMA untuk aksi tunggal (PATCH) &
+ * massal (bulk) — agar perilaku konsisten (F-G3): catat timeline, kembalikan
+ * kuota kupon, kirim email update status + notifikasi WhatsApp (via `after()`).
+ *
+ * Asumsi: status sudah berubah (`previousStatus !== next`). Pemanggil sudah
+ * mencatat audit di jalurnya masing-masing.
+ */
+async function applyStatusChangeEffects(input: {
+  id: string;
+  previousStatus: OrderStatus | null;
+  next: OrderStatus;
+  actor: string;
+}): Promise<void> {
+  const { id, previousStatus, next, actor } = input;
+
+  // Timeline aktivitas.
+  await addOrderActivity(id, {
+    type: "status",
+    note: `Status: ${ORDER_STATUS_LABEL[previousStatus ?? "baru"]} → ${ORDER_STATUS_LABEL[next]}`,
+    actor,
+  });
+
+  // `KP-C2`: transisi → dibatalkan/kedaluwarsa mengembalikan kuota kupon.
+  if (shouldRestoreCoupon(previousStatus ?? "", next)) {
+    const order = await getOrderById(id);
+    if (order?.coupon?.couponId) {
+      await restoreCouponUsage(order.coupon.couponId, order.uid);
+    }
+  }
+}
+
+/**
+ * Kirim email update status + notifikasi WhatsApp ke pembeli via `after()`
+ * (andalkan Next.js, bukan background `.then()` yang bisa hilang di serverless).
+ * Dipakai aksi tunggal & massal agar konsisten (F-G3).
+ */
+function queueBuyerStatusNotifications(id: string, next: OrderStatus): void {
+  after(async () => {
+    try {
+      const settings = await getSiteSettings();
+      if (!settings.notifyBuyerOnStatus) return;
+      const order = await getOrderById(id);
+      if (!order) return;
+      if (order.lastNotifiedStatus === next) return;
+      const result = await sendOrderStatusToBuyer(order, next);
+      await recordStatusEmail(id, next, result);
+      await logOrderEmail(id, {
+        kind: "status",
+        to: order.buyerEmail,
+        result,
+      });
+    } catch (err) {
+      console.error("[api/admin/orders] gagal kirim email status:", err);
+    }
+
+    try {
+      const { isWhatsAppConfigured, notifyWhatsAppOrderStatus } = await import(
+        "@/lib/whatsapp-notify"
+      );
+      if (isWhatsAppConfigured()) {
+        const { getUserProfile } = await import("@/lib/user-profile");
+        const fresh = await getOrderById(id);
+        const profile = fresh ? await getUserProfile(fresh.uid).catch(() => null) : null;
+        const phone = profile?.whatsapp ?? "";
+        if (fresh && phone) {
+          await notifyWhatsAppOrderStatus(
+            phone,
+            shortOrderCode(fresh.id),
+            ORDER_STATUS_LABEL[next],
+            fresh.total,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("[api/admin/orders] gagal kirim WhatsApp:", err);
+    }
+  });
+}
+
+/**
  * GET /api/admin/orders — daftar pesanan (terbaru dulu) + filter & paginasi.
  *   Query: ?status=baru|menunggu_bayar|dibayar|menunggu_konfirmasi|diproses|selesai|dibatalkan|kedaluwarsa|semua
  *          ?limit=<1..100>  ?cursor=<createdAtISO>
@@ -107,6 +198,9 @@ export async function GET(req: Request) {
   }
 
   // Ringkasan "butuh perhatian" (FASE O5) — tanpa mengunduh daftar.
+  // PENTING (F-G1): param `attention=1` HANYA untuk mode ringkasan ini. Filter
+  // daftar "butuh perhatian" memakai `attentionFilter=1` agar tidak bertabrakan
+  // (mode ini `return` lebih dulu, sehingga filter daftar tak akan pernah jalan).
   if (url.searchParams.get("attention") === "1") {
     try {
       const attention = await getOrdersAttentionSummary();
@@ -159,6 +253,26 @@ export async function GET(req: Request) {
 
   try {
     if (useFilterMode) {
+      // Mode ekspor (F-G4): kembalikan SELURUH hasil filter (tanpa paginasi)
+      // agar CSV mengikuti filter, bukan hanya halaman aktif.
+      if (url.searchParams.get("export") === "1") {
+        const result = await getOrdersPage({
+          filter,
+          sort,
+          page: 1,
+          limit: 100,
+          all: true,
+        });
+        result.orders = await attachBuyerPhotos(result.orders);
+        return NextResponse.json(
+          {
+            orders: result.orders,
+            total: result.total ?? result.orders.length,
+            truncated: result.truncated ?? false,
+          },
+          { headers: { "Cache-Control": "no-store" } },
+        );
+      }
       const result = await getOrdersPage({ filter, sort, page, limit });
       result.orders = await attachBuyerPhotos(result.orders);
       return NextResponse.json(result, {
@@ -241,68 +355,16 @@ export async function PATCH(req: Request) {
       meta: { from: previousStatus, to: status },
     });
 
-    // Timeline aktivitas (FASE O6).
-    await addOrderActivity(id, {
-      type: "status",
-      note: `Status: ${ORDER_STATUS_LABEL[previousStatus ?? "baru"]} → ${ORDER_STATUS_LABEL[status as OrderStatus]}`,
+    // Efek samping bersama (timeline + restore kupon) — sama dgn bulk (F-G3).
+    await applyStatusChangeEffects({
+      id,
+      previousStatus,
+      next: status as OrderStatus,
       actor: check.email,
     });
 
-    // `KP-C2`: transisi → dibatalkan/kedaluwarsa mengembalikan kuota kupon
-    // (sekali saja, karena hanya terjadi pada transisi status).
-    if (shouldRestoreCoupon(previousStatus ?? "", status)) {
-      const order = await getOrderById(id);
-      if (order?.coupon?.couponId) {
-        await restoreCouponUsage(order.coupon.couponId, order.uid);
-      }
-    }
-
-    // Email update status ke pembeli (`EM-C2`/`EM-H3`): dijalankan SETELAH
-    // respons via `after()` (andalkan Next.js, bukan background `.then()` yang
-    // bisa hilang di serverless). Status kirim dicatat ke order.
-    after(async () => {
-      try {
-        const settings = await getSiteSettings();
-        if (!settings.notifyBuyerOnStatus) return;
-        const order = await getOrderById(id);
-        if (!order) return;
-        // Hindari email ganda untuk status yang sama (cek ulang dari order).
-        if (order.lastNotifiedStatus === status) return;
-        const result = await sendOrderStatusToBuyer(order, status as OrderStatus);
-        await recordStatusEmail(id, status, result);
-        await logOrderEmail(id, {
-          kind: "status",
-          to: order.buyerEmail,
-          result,
-        });
-      } catch (err) {
-        console.error("[api/admin/orders] gagal kirim email status:", err);
-      }
-
-      // Notifikasi WhatsApp (Tema 2.3) — OPSIONAL & fail-safe. Aktif hanya bila
-      // WhatsApp Cloud API dikonfigurasi & pembeli punya nomor WA.
-      try {
-        const { isWhatsAppConfigured, notifyWhatsAppOrderStatus } = await import(
-          "@/lib/whatsapp-notify"
-        );
-        if (isWhatsAppConfigured()) {
-          const { getUserProfile } = await import("@/lib/user-profile");
-          const fresh = await getOrderById(id);
-          const profile = fresh ? await getUserProfile(fresh.uid).catch(() => null) : null;
-          const phone = profile?.whatsapp ?? "";
-          if (fresh && phone) {
-            await notifyWhatsAppOrderStatus(
-              phone,
-              shortOrderCode(fresh.id),
-              ORDER_STATUS_LABEL[status as OrderStatus],
-              fresh.total,
-            );
-          }
-        }
-      } catch (err) {
-        console.error("[api/admin/orders] gagal kirim WhatsApp:", err);
-      }
-    });
+    // Email update status + notifikasi WhatsApp ke pembeli (via `after()`).
+    queueBuyerStatusNotifications(id, status as OrderStatus);
 
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -333,7 +395,7 @@ export async function POST(req: Request) {
     action?: string;
     ids?: string[];
     status?: string;
-    op?: "status" | "delete";
+    op?: "status" | "delete" | "resend";
   };
   try {
     body = await req.json();
@@ -353,7 +415,7 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    if (body.op !== "status" && body.op !== "delete") {
+    if (body.op !== "status" && body.op !== "delete" && body.op !== "resend") {
       return NextResponse.json({ error: "op tidak valid." }, { status: 400 });
     }
 
@@ -380,19 +442,71 @@ export async function POST(req: Request) {
           skipped.push({ id: order.id, reason: "unchanged" });
           continue;
         }
-        if (shouldRestoreCoupon(previousStatus ?? "", target)) {
-          const fresh = await getOrderById(order.id);
-          if (fresh?.coupon?.couponId) {
-            await restoreCouponUsage(fresh.coupon.couponId, fresh.uid);
-          }
-        }
         await recordAdminAudit({
           action: "order.status",
           actor: check.email,
           target: order.id,
           meta: { from: previousStatus, to: target, bulk: true },
         });
+        // F-G3: samakan efek samping dgn aksi tunggal (timeline + restore kupon
+        // + email status + WA per-order). Kegagalan efek samping tidak
+        // menggagalkan perubahan status (sudah tersimpan).
+        await applyStatusChangeEffects({
+          id: order.id,
+          previousStatus,
+          next: target as OrderStatus,
+          actor: check.email,
+        });
+        queueBuyerStatusNotifications(order.id, target as OrderStatus);
         applied.push(order.id);
+      }
+    } else if (body.op === "resend") {
+      // Kirim ulang email ke pembeli untuk tiap order terpilih (F-G8) —
+      // diproses di server (bukan loop klien) agar atomik-per-order, teraudit,
+      // dan kegagalan dilaporkan lewat `skipped`.
+      for (const order of orders) {
+        try {
+          const kind: "confirmation" | "status" =
+            order.status === "baru" ? "confirmation" : "status";
+          const attempt = await countResendAttempts(order.id);
+          const result =
+            kind === "confirmation"
+              ? await sendOrderConfirmationToBuyer(order)
+              : await sendOrderStatusToBuyer(order, order.status);
+          if (kind === "confirmation") {
+            await recordOrderEmailStatus(order.id, "confirmation", result);
+          } else {
+            await recordStatusEmail(order.id, order.status, result);
+          }
+          await logOrderEmail(order.id, {
+            kind: "resend",
+            to: order.buyerEmail,
+            result,
+            attempt,
+          });
+          if (!result.ok) {
+            skipped.push({
+              id: order.id,
+              reason: result.skipped ? "email_not_configured" : "email_failed",
+            });
+            continue;
+          }
+          await recordAdminAudit({
+            action: "order.resend_email",
+            actor: check.email,
+            target: order.id,
+            meta: { kind, attempt, bulk: true },
+          });
+          await addOrderActivity(order.id, {
+            type: "email",
+            note: `Email ${kind === "confirmation" ? "konfirmasi" : "update status"} dikirim ulang.`,
+            actor: check.email,
+          });
+          applied.push(order.id);
+        } catch (err) {
+          console.error("[api/admin/orders] bulk resend gagal:", order.id, err);
+          skipped.push({ id: order.id, reason: "email_error" });
+        }
       }
     } else {
       for (const order of orders) {
@@ -400,13 +514,9 @@ export async function POST(req: Request) {
           skipped.push({ id: order.id, reason: "delete_blocked" });
           continue;
         }
-        if (order.coupon?.couponId) {
-          const restored = await restoreCouponUsage(order.coupon.couponId, order.uid);
-          if (!restored) {
-            skipped.push({ id: order.id, reason: "coupon_restore_failed" });
-            continue;
-          }
-        }
+        // F-G9: HAPUS dulu, baru kembalikan kuota. Dengan urutan ini, bila
+        // `deleteOrder` gagal, kuota kupon BELUM tersentuh (tak bocor). Kebalikan
+        // dari urutan lama yang bisa mengembalikan kuota untuk order yang tetap ada.
         await deleteOrder(order.id);
         await recordAdminAudit({
           action: "order.delete",
@@ -414,6 +524,17 @@ export async function POST(req: Request) {
           target: order.id,
           meta: { status: order.status, bulk: true },
         });
+        if (order.coupon?.couponId) {
+          const restored = await restoreCouponUsage(order.coupon.couponId, order.uid);
+          if (!restored) {
+            // Order sudah terhapus; catat agar admin bisa perbaiki manual.
+            console.warn(
+              `[api/admin/orders] bulk delete: kuota kupon gagal dikembalikan untuk order ${order.id}`,
+            );
+            skipped.push({ id: order.id, reason: "coupon_restore_failed" });
+            continue;
+          }
+        }
         applied.push(order.id);
       }
     }
@@ -541,9 +662,7 @@ export async function POST(req: Request) {
           ? "confirmation"
           : "status";
 
-    const previous = await listOrderEmails(id, 200);
-    const attempt =
-      previous.filter((e) => e.kind === kind).length;
+    const attempt = await countResendAttempts(id);
 
     const result =
       kind === "confirmation"
@@ -578,6 +697,11 @@ export async function POST(req: Request) {
       actor: check.email,
       target: id,
       meta: { kind, attempt },
+    });
+    await addOrderActivity(id, {
+      type: "email",
+      note: `Email ${kind === "confirmation" ? "konfirmasi" : "update status"} dikirim ulang.`,
+      actor: check.email,
     });
     return NextResponse.json({ ok: true, result });
   } catch (err) {

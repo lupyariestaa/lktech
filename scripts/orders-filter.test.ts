@@ -83,7 +83,7 @@ test("parseOrdersFilter: baca nilai & tolak nilai tak dikenal", () => {
       datePreset: "ngawur",
       fulfillment: "jasa",
       minTotal: "50000",
-      attention: "1",
+      attentionFilter: "1",
       q: "  budi  ",
     }),
   );
@@ -95,6 +95,19 @@ test("parseOrdersFilter: baca nilai & tolak nilai tak dikenal", () => {
   assert.equal(f.q, "budi");
 });
 
+test("F-G1: param `attention` (mode ringkasan) TIDAK dianggap filter daftar", () => {
+  // `attention` di-reservasi untuk mode ringkasan API — tidak boleh jadi filter.
+  const f = parseOrdersFilter(new URLSearchParams({ attention: "1" }));
+  assert.equal(f.attention, false);
+  assert.equal(hasActiveFilter(f), false);
+});
+
+test("F-G1: `attentionFilter` → param `attentionFilter=1` (bukan `attention=1`)", () => {
+  const p = ordersFilterToParams({ ...defaultFilter(), attention: true });
+  assert.equal(p.get("attentionFilter"), "1");
+  assert.equal(p.get("attention"), null);
+});
+
 test("ordersFilterToParams :: parseOrdersFilter round-trip", () => {
   const f = {
     ...defaultFilter(),
@@ -103,6 +116,7 @@ test("ordersFilterToParams :: parseOrdersFilter round-trip", () => {
     coupon: "ada" as const,
     minTotal: 10_000,
     maxTotal: 90_000,
+    attention: true,
     q: "andi",
   };
   const p = ordersFilterToParams(f);

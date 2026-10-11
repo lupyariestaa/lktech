@@ -20,10 +20,13 @@ export function OrderCard({
   order,
   selected,
   onToggle,
+  onOpen,
 }: {
   order: Order;
   selected: boolean;
   onToggle: (id: string) => void;
+  /** Buka dialog tinjauan cepat (selaras dengan baris tabel). */
+  onOpen?: (order: Order) => void;
 }) {
   const itemCount = order.items.reduce((s, it) => s + it.qty, 0);
   const reasons = attentionReasons(order);
@@ -89,13 +92,14 @@ export function OrderCard({
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
-        <Link
-          href={`/admin/orders/${order.id}`}
+        <button
+          type="button"
+          onClick={() => onOpen?.(order)}
           className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-100"
         >
           <Package className="h-3.5 w-3.5" />
-          Detail
-        </Link>
+          Detail cepat
+        </button>
         <a
           href={waLink(order.message, order.whatsapp)}
           target="_blank"
@@ -109,7 +113,7 @@ export function OrderCard({
           href={`/admin/orders/${order.id}`}
           className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-muted transition-colors hover:text-primary"
         >
-          Buka
+          Buka halaman
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>

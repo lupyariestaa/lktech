@@ -9,12 +9,48 @@
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
 > 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
+> 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
 > 📄 **Audit sistem pesanan (pradasar):** **[`docs/2026-10-11-audit-sistem-pesanan.md`](docs/2026-10-11-audit-sistem-pesanan.md)** — ✅ Batch 1–4 selesai.
 > ✅ **Upgrade Beranda (H0–H8):** `docs/2026-10-06-task-upgrade-beranda.md` + `docs/2026-10-06-upgrade-beranda.md`. **SELESAI.**
 
 ---
 
-## ✅ SESI INI — Upgrade Dashboard "Kelola Pesanan" (O0–O8, SELESAI)
+## ✅ SESI INI — Perbaikan Menu "Kelola Pesanan" (G1–G23, SELESAI)
+
+**Status: ✅ SELESAI (kode).** Dokumen: [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
+
+Audit menyeluruh atas `/admin/orders` menemukan 23 gap; semuanya diperbaiki.
+
+- **G1 (Kritis) — filter "butuh perhatian" tak pernah berfungsi:** klien menulis
+  `attention=1` → server menganggapnya mode ringkasan & `return` objek (bukan daftar).
+  Kini filter memakai `attentionFilter=1` (baru); `?attention=1` tetap mode ringkasan.
+- **G2 (Kritis) — aksi Hapus tunggal hilang:** tombol **Hapus** ditambahkan di
+  `OrderActionsBar` (dialog & halaman detail) + `ConfirmDialog`.
+- **G3** — bulk ubah status kini kirim email + catat timeline (samakan dgn tunggal).
+- **G4** — tombol Ekspor (tanpa seleksi) mengekspor **seluruh hasil filter** (endpoint `?export=1`), bukan hanya halaman.
+- **G5/G6** — dialog detail & timeline menyegarkan diri setelah aksi.
+- **G7** — `listOrderEmails` pakai `orderBy("atISO","desc")`.
+- **G8** — bulk resend via server (`op:"resend"`, atomik + audit + `skipped`).
+- **G9** — bulk delete hapus dulu → restore kuota (cegah kebocoran kuota).
+- **G10** — pencarian di-debounce 300ms.
+- **G11** — chip panel attention memfilter alasan spesifik.
+- **G12** — dropdown status bulk hanya transisi valid.
+- **G13** — transisi ke status final minta konfirmasi.
+- **G14** — "Reset filter" mengosongkan pencarian.
+- **G15** — bedakan "gagal memuat" vs "kosong" (email & timeline).
+- **G16** — hitungan `attempt` resend diperbaiki.
+- **G17/G18** — label status seragam; warna `diproses`/`selesai` dibedakan.
+- **G19** — focus-trap dialog + baris tabel keyboard + aria dropdown bulk.
+- **G20–G23** — chip attention ringkas, `FulfillmentChip` nama variabel benar,
+  `OrderStatusBadge` fallback, kartu tanpa tombol duplikat.
+- **Berkas baru (test):** test `test:orders` naik 22 → **24** (regresi F-G1).
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ · `build` ✅ (72 halaman).
+
+**Sisa manual:** uji browser desktop/mobile (filter attention, hapus single, bulk, ekspor, refresh dialog, konfirmasi status final).
+
+---
+
+## ✅ SESI SEBELUMNYA — Upgrade Dashboard "Kelola Pesanan" (O0–O8, SELESAI)
 
 **Status: ✅ SELESAI (kode).** Task: [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8.
 

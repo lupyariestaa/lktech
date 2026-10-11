@@ -151,13 +151,33 @@ export async function listOrderEmails(
   const db = getAdminDb();
   if (!db) return [];
   try {
-    const snap = await db
-      .collection("orders")
-      .doc(orderId)
-      .collection(EMAILS_COLLECTION)
-      .limit(limit)
-      .get();
-    return snap.docs
+    // F-G7: `orderBy("atISO","desc")` agar `limit` benar-benar mengambil entri
+    // TERBARU (bukan dokumen arbitrer yang lalu diurutkan di memori). Bila index
+    // field tunggal belum siap, fallback ke pengambilan tanpa orderBy.
+    let docs: Array<{ id: string; data: () => Record<string, unknown> }>;
+    try {
+      const snap = await db
+        .collection("orders")
+        .doc(orderId)
+        .collection(EMAILS_COLLECTION)
+        .orderBy("atISO", "desc")
+        .limit(limit)
+        .get();
+      docs = snap.docs;
+    } catch (err) {
+      console.warn(
+        "[email-status] orderBy atISO gagal, fallback tanpa urutan server:",
+        err,
+      );
+      const snap = await db
+        .collection("orders")
+        .doc(orderId)
+        .collection(EMAILS_COLLECTION)
+        .limit(limit)
+        .get();
+      docs = snap.docs;
+    }
+    return docs
       .map((doc) => {
         const d = doc.data() as Record<string, unknown>;
         return {

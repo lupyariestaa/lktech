@@ -60,6 +60,8 @@ export type OrdersFilter = {
   minTotal: number | null;
   maxTotal: number | null;
   attention: boolean;
+  /** Batasi "butuh perhatian" ke alasan tertentu (F-G11). Kosong = semua alasan. */
+  attentionReason: string;
   q: string;
 };
 
@@ -91,6 +93,7 @@ export function defaultFilter(): OrdersFilter {
     minTotal: null,
     maxTotal: null,
     attention: false,
+    attentionReason: "",
     q: "",
   };
 }
@@ -131,7 +134,11 @@ export function parseOrdersFilter(
     coupon: oneOf(get("coupon"), ["semua", "ada", "tanpa"] as const, "semua"),
     minTotal: toInt(get("minTotal")),
     maxTotal: toInt(get("maxTotal")),
-    attention: get("attention") === "1",
+    // Pakai param `attentionFilter` (BUKAN `attention`) agar tidak bertabrakan
+    // dengan mode ringkasan `GET /api/admin/orders?attention=1` (F-G1). `attention`
+    // di-reservasi untuk mode ringkasan; TIDAK diterima sebagai filter.
+    attention: get("attentionFilter") === "1",
+    attentionReason: get("attentionReason")?.trim() ?? "",
     q: get("q")?.trim() ?? "",
   };
 }
@@ -152,7 +159,9 @@ export function ordersFilterToParams(f: OrdersFilter): URLSearchParams {
   if (f.coupon !== "semua") p.set("coupon", f.coupon);
   if (f.minTotal !== null) p.set("minTotal", String(f.minTotal));
   if (f.maxTotal !== null) p.set("maxTotal", String(f.maxTotal));
-  if (f.attention) p.set("attention", "1");
+  // `attentionFilter` (bukan `attention`) — lihat catatan di `parseOrdersFilter`.
+  if (f.attention) p.set("attentionFilter", "1");
+  if (f.attention && f.attentionReason) p.set("attentionReason", f.attentionReason);
   if (f.q) p.set("q", f.q);
   return p;
 }
@@ -299,7 +308,12 @@ export function matchesFilter(
   if (f.minTotal !== null && order.total < f.minTotal) return false;
   if (f.maxTotal !== null && order.total > f.maxTotal) return false;
 
-  if (f.attention && attentionReasons(order, now).length === 0) return false;
+  if (f.attention) {
+    const reasons = attentionReasons(order, now);
+    if (reasons.length === 0) return false;
+    // Bila dibatasi alasan tertentu (F-G11), order harus punya alasan itu.
+    if (f.attentionReason && !reasons.includes(f.attentionReason)) return false;
+  }
 
   if (f.datePreset !== "semua" && order.createdAt) {
     const { from, to } = dateRangeForPreset(f.datePreset, now, {

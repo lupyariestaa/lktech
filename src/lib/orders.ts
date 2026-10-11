@@ -247,6 +247,11 @@ export type OrdersPageQuery = {
   sort?: OrdersSort;
   /** Halaman 1-based (mode filter). */
   page?: number;
+  /**
+   * Kembalikan SELURUH hasil filter (tanpa potong halaman) — untuk ekspor CSV
+   * (F-G4). `total` tetap jumlah hasil terfilter; `truncated` bila batas pindai.
+   */
+  all?: boolean;
 };
 
 /** Hasil daftar pesanan; field `total`/`page*` hanya ada di mode filter. */
@@ -344,14 +349,15 @@ export async function getOrdersPage(
     const filtered = applyFilterAndSort(all, filter, sort, now);
     const total = filtered.length;
     const start = (page - 1) * pageSize;
-    const orders = filtered.slice(start, start + pageSize);
+    // Mode ekspor (F-G4): kembalikan seluruh hasil filter (satu "halaman").
+    const orders = query.all ? filtered : filtered.slice(start, start + pageSize);
     return {
       orders,
       nextCursor: null,
       total,
       page,
-      pageSize,
-      hasMore: start + pageSize < total,
+      pageSize: query.all ? total : pageSize,
+      hasMore: query.all ? false : start + pageSize < total,
       truncated,
     };
   }

@@ -100,11 +100,11 @@ export async function addOrderNote(
   );
 }
 
-/** Aksi massal (FASE O4): ubah status / hapus banyak order. */
+/** Aksi massal (FASE O4): ubah status / hapus banyak order / kirim ulang email. */
 export async function bulkOrders(input: {
   ids: string[];
   status?: OrderStatus;
-  op: "status" | "delete";
+  op: "status" | "delete" | "resend";
 }) {
   return adminFetch<{
     ok: boolean;
@@ -114,6 +114,23 @@ export async function bulkOrders(input: {
     method: "POST",
     body: JSON.stringify({ action: "bulk", ...input }),
   });
+}
+
+/**
+ * Ambil SELURUH hasil filter (tanpa paginasi) untuk ekspor CSV (F-G4).
+ * Server mengembalikan hingga batas pemindaian-nya.
+ */
+export async function fetchAllOrdersForExport(
+  filter: OrdersFilter,
+  sort: OrdersSort,
+): Promise<{ orders: Order[]; total: number; truncated: boolean }> {
+  const params = ordersFilterToParams(filter);
+  params.set("sort", sort);
+  params.set("export", "1");
+  const qs = params.toString();
+  return adminFetch<{ orders: Order[]; total: number; truncated: boolean }>(
+    `/api/admin/orders?${qs}`,
+  );
 }
 
 /** Perbarui status pesanan. */

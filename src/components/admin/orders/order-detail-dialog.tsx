@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Check,
@@ -12,10 +12,13 @@ import {
   Mail,
   MessageCircle,
   Send,
+  Trash2,
   X,
 } from "lucide-react";
 import {
   createOrderInvoiceManual,
+  deleteOrderAdmin,
+  fetchOrderDetail,
   fetchOrderEmails,
   fulfillOrderDownload,
   resendOrderEmail,
@@ -30,13 +33,15 @@ import { PAYMENT_STATUS_LABEL, PAYMENT_STATUS_STYLE } from "@/lib/payment-types"
 import { formatRupiah, formatDateTime, shortOrderCode } from "@/lib/format";
 import { waLink } from "@/lib/whatsapp";
 import { useToast } from "@/components/admin/toast";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import { OrderTimeline } from "@/components/admin/order-timeline";
 import { BuyerAvatar } from "@/components/admin/orders/buyer-avatar";
 import { cn } from "@/lib/utils";
 
 /** Dialog tinjauan cepat (FASE O6) — detail lengkap ada di halaman `/admin/orders/[id]`. */
 export function OrderDetailDialog({
-  order,
+  order: initial,
   onClose,
   onChanged,
 }: {
@@ -44,13 +49,29 @@ export function OrderDetailDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const panelRef = useRef<HTMLDivElement>(null);
+  // Focus-trap + kembalikan fokus ke pemicu saat ditutup (F-G19).
+  const { ref: panelRef } = useDrawerFocus<HTMLDivElement>(true);
+  // Salinan lokal agar dialog menampilkan data terbaru setelah aksi (F-G5).
+  // Di-`key` per order oleh pemanggil sehingga `initial` hanya menginisialisasi.
+  const [order, setOrder] = useState<Order>(initial);
+
+  const refreshLocal = useCallback(async () => {
+    try {
+      const { order: fresh } = await fetchOrderDetail(initial.id);
+      setOrder(fresh);
+    } catch {
+      /* biarkan data lama; list tetap di-refresh oleh pemanggil */
+    }
+  }, [initial.id]);
+
+  const handleChanged = useCallback(() => {
+    onChanged();
+    void refreshLocal();
+  }, [onChanged, refreshLocal]);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const prevFocus = document.activeElement as HTMLElement | null;
-    panelRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -58,7 +79,6 @@ export function OrderDetailDialog({
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
-      prevFocus?.focus?.();
     };
   }, [onClose]);
 
@@ -112,7 +132,7 @@ export function OrderDetailDialog({
         </div>
 
         <div className="border-t border-slate-100 p-5">
-          <OrderActionsBar order={order} onChanged={onChanged} />
+          <OrderActionsBar order={order} onChanged={handleChanged} onDeleted={onClose} />
         </div>
       </div>
     </div>
@@ -130,18 +150,33 @@ export function OrderDetailBody({
   order: Order;
   showTimeline?: boolean;
 }) {
-  const [emails, setEmails] = useState<OrderEmailLog[] | null>(null);
+  // Simpan kunci + data agar perubahan kunci otomatis menampilkan "memuat"
+  // tanpa `setState` sinkron di efek.
+  const emailKey = `${order.id}|${order.confirmationEmailAt ?? ""}|${order.lastStatusEmailAt ?? ""}|${order.lastStatusEmailStatus ?? ""}|${order.confirmationEmailStatus ?? ""}`;
+  const [emailState, setEmailState] = useState<{
+    key: string;
+    list: OrderEmailLog[];
+    error: boolean;
+  }>({ key: emailKey, list: [], error: false });
+
+  const emails = emailState.key === emailKey ? emailState.list : null;
+  const emailsError = emailState.key === emailKey ? emailState.error : false;
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const list = await fetchOrderEmails(order.id).catch(() => []);
-      if (active) setEmails(list);
+      try {
+        const list = await fetchOrderEmails(order.id);
+        if (active) setEmailState({ key: emailKey, list, error: false });
+      } catch {
+        // Bedakan "gagal memuat" dari "kosong" (F-G15).
+        if (active) setEmailState({ key: emailKey, list: [], error: true });
+      }
     })();
     return () => {
       active = false;
     };
-  }, [order.id]);
+  }, [order.id, emailKey]);
 
   return (
     <div>
@@ -298,7 +333,7 @@ export function OrderDetailBody({
       <p className="mt-5 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
         Riwayat Email
       </p>
-      <EmailHistory emails={emails} />
+      <EmailHistory emails={emails} error={emailsError} />
 
       {/* Pesan WA */}
       <p className="mt-5 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
@@ -321,15 +356,22 @@ export function OrderDetailBody({
 export function OrderActionsBar({
   order,
   onChanged,
+  onDeleted,
 }: {
   order: Order;
   onChanged: () => void;
+  /** Dipanggil setelah pesanan berhasil dihapus (mis. tutup dialog / navigasi). */
+  onDeleted?: () => void;
 }) {
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [manualPayUrl, setManualPayUrl] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pendingFinal, setPendingFinal] = useState<OrderStatus | null>(null);
+
+  const FINAL_STATUSES: readonly OrderStatus[] = ["dibatalkan", "kedaluwarsa", "selesai"];
 
   const canReleaseDownload =
     effectiveFulfillment(order.fulfillment) === "instan" &&
@@ -345,6 +387,15 @@ export function OrderActionsBar({
     order.status !== "selesai" &&
     order.total > 0;
 
+  // Hapus hanya untuk status yang belum diproses (sama dengan aturan server).
+  const deletableStatuses: readonly OrderStatus[] = [
+    "baru",
+    "menunggu_bayar",
+    "menunggu_konfirmasi",
+    "kedaluwarsa",
+  ];
+  const canDelete = deletableStatuses.includes(order.status);
+
   const selectableStatuses = [
     order.status,
     ...(["baru", "menunggu_bayar", "dibayar", "menunggu_konfirmasi", "diproses", "selesai", "dibatalkan", "kedaluwarsa"] as OrderStatus[]).filter(
@@ -354,6 +405,16 @@ export function OrderActionsBar({
 
   const onStatus = async (status: OrderStatus) => {
     if (status === order.status || busy) return;
+    // Transisi ke status final (dibatalkan/kedaluwarsa/selesai) mengembalikan
+    // kuota kupon & mengirim email — MINTА konfirmasi dulu (F-G13).
+    if (FINAL_STATUSES.includes(status)) {
+      setPendingFinal(status);
+      return;
+    }
+    await applyStatus(status);
+  };
+
+  const applyStatus = async (status: OrderStatus) => {
     setBusy("status");
     try {
       await updateOrderStatusAdmin(order.id, status);
@@ -363,6 +424,7 @@ export function OrderActionsBar({
       toast.error(err instanceof Error ? err.message : "Gagal memperbarui status.");
     } finally {
       setBusy(null);
+      setPendingFinal(null);
     }
   };
 
@@ -419,6 +481,21 @@ export function OrderActionsBar({
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
       toast.error("Gagal menyalin pesan.");
+    }
+  };
+
+  const onDelete = async () => {
+    setBusy("delete");
+    try {
+      await deleteOrderAdmin(order.id);
+      toast.success("Pesanan dihapus.");
+      setConfirmDelete(false);
+      onChanged();
+      onDeleted?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus pesanan.");
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -518,7 +595,51 @@ export function OrderActionsBar({
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           Salin pesan
         </button>
+
+        {canDelete && (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            disabled={busy !== null}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-60"
+          >
+            {busy === "delete" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            Hapus
+          </button>
+        )}
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Hapus pesanan ini?"
+        description="Pesanan yang belum diproses dapat dihapus permanen. Bila memakai kupon, kuota akan dikembalikan. Tindakan ini tidak dapat dibatalkan."
+        confirmLabel="Hapus"
+        busy={busy === "delete"}
+        onConfirm={onDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
+
+      <ConfirmDialog
+        open={pendingFinal !== null}
+        title={
+          pendingFinal
+            ? `Ubah status ke "${ORDER_STATUS_LABEL[pendingFinal]}"?`
+            : "Ubah status?"
+        }
+        description={
+          pendingFinal === "dibatalkan" || pendingFinal === "kedaluwarsa"
+            ? "Status final ini mengembalikan kuota kupon (bila ada) dan mengirim email ke pembeli. Perubahan tidak dapat dibatalkan."
+            : "Status final ini mengirim email ke pembeli. Perubahan tidak dapat dibatalkan."
+        }
+        confirmLabel="Ya, ubah status"
+        busy={busy === "status"}
+        onConfirm={() => pendingFinal && applyStatus(pendingFinal)}
+        onCancel={() => setPendingFinal(null)}
+      />
     </div>
   );
 }
@@ -632,12 +753,25 @@ function EmailStatusBlock({ order }: { order: Order }) {
   );
 }
 
-function EmailHistory({ emails }: { emails: OrderEmailLog[] | null }) {
+function EmailHistory({
+  emails,
+  error,
+}: {
+  emails: OrderEmailLog[] | null;
+  error?: boolean;
+}) {
   if (emails === null) {
     return (
       <p className="mt-2 flex items-center gap-2 text-xs text-muted">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         Memuat riwayat email...
+      </p>
+    );
+  }
+  if (error) {
+    return (
+      <p className="mt-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600">
+        Gagal memuat riwayat email.
       </p>
     );
   }

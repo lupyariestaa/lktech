@@ -16,16 +16,27 @@ import type { FulfillmentType } from "@/lib/payment-types";
 import { ATTENTION_LABEL } from "@/lib/orders-filter-pure";
 import { cn } from "@/lib/utils";
 
+/** Label pendek untuk chip attention agar tidak melar di tabel (F-G20). */
+const ATTENTION_SHORT: Record<string, string> = {
+  jasa_menunggu: "Jasa >24 jam",
+  bayar_segera: "Bayar <6 jam",
+  kurang_bayar: "Kurang bayar",
+  belum_dipenuhi: "Belum dipenuhi",
+  email_gagal: "Email gagal",
+};
+
 /** Badge status pesanan. */
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {
+  const label = ORDER_STATUS_LABEL[status] ?? status;
+  const style = ORDER_STATUS_STYLE[status] ?? "bg-slate-100 text-slate-500 border-slate-200";
   return (
     <span
       className={cn(
         "inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap",
-        ORDER_STATUS_STYLE[status],
+        style,
       )}
     >
-      {ORDER_STATUS_LABEL[status]}
+      {label}
     </span>
   );
 }
@@ -58,7 +69,8 @@ export function FulfillmentChip({
   fulfillment: FulfillmentType | undefined;
 }) {
   const eff = effectiveFulfillment(fulfillment);
-  const Instan = eff === "jasa" ? Truck : Zap;
+  // F-G21: nama variabel = komponen ikon (bukan "Instan" yang menyesatkan).
+  const Icon = eff === "jasa" ? Truck : Zap;
   return (
     <span
       className={cn(
@@ -68,7 +80,7 @@ export function FulfillmentChip({
           : "bg-sky-50 text-sky-600",
       )}
     >
-      <Instan className="h-3 w-3" />
+      <Icon className="h-3 w-3" />
       {eff === "jasa" ? "Jasa" : "Instan"}
     </span>
   );
@@ -86,7 +98,7 @@ export function AttentionChips({ reasons }: { reasons: string[] }) {
           className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"
         >
           <AlertTriangle className="h-3 w-3" />
-          {ATTENTION_LABEL[r] ?? r}
+          {ATTENTION_SHORT[r] ?? ATTENTION_LABEL[r] ?? r}
         </span>
       ))}
     </span>

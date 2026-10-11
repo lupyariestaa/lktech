@@ -90,11 +90,20 @@ export function OrdersTable({
             return (
               <tr
                 key={order.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`Buka detail pesanan ${shortOrderCode(order.id)}`}
                 className={cn(
-                  "cursor-pointer transition-colors hover:bg-surface",
+                  "cursor-pointer transition-colors hover:bg-surface focus:bg-surface focus:ring-2 focus:ring-primary/30 focus:outline-none",
                   isSelected && "bg-primary-50/40",
                 )}
                 onClick={() => onOpen(order)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onOpen(order);
+                  }
+                }}
               >
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <input

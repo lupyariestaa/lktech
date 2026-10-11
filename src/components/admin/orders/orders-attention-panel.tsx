@@ -20,9 +20,13 @@ const KEYS: Array<keyof Omit<AttentionSummary, "total" | "truncated">> = [
 export function OrdersAttentionPanel({
   attention,
   onFocus,
+  onFocusReason,
 }: {
   attention: AttentionSummary | null;
+  /** Buka daftar ber-filter "butuh perhatian" (semua alasan). */
   onFocus: () => void;
+  /** Buka daftar ber-filter satu alasan tertentu (F-G11). */
+  onFocusReason?: (reason: string) => void;
 }) {
   if (!attention || attention.total === 0) return null;
   return (
@@ -49,7 +53,8 @@ export function OrdersAttentionPanel({
             <button
               key={k}
               type="button"
-              onClick={onFocus}
+              onClick={() => (onFocusReason ? onFocusReason(k) : onFocus())}
+              title={`Tampilkan hanya: ${ATTENTION_LABEL[k]}`}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-amber-700",
                 "border border-amber-200 transition-colors hover:border-amber-300 hover:bg-amber-100",
