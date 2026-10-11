@@ -32,6 +32,39 @@ export async function fetchCouponStats(): Promise<Record<string, CouponStat>> {
   return data.stats;
 }
 
+/** Satu entri pemakaian kupon (dari redemptions). */
+export type CouponRedemption = {
+  uid: string;
+  count: number;
+  lastRedeemedAtISO?: string;
+  email?: string;
+};
+
+/** Entri timeline kupon (dari audit). */
+export type CouponTimelineEntry = {
+  id: string;
+  action: string;
+  actor: string;
+  target: string;
+  meta?: Record<string, unknown>;
+  atISO: string;
+};
+
+export type CouponDetailResult = {
+  coupon: Coupon;
+  stat: CouponStat | null;
+  redemptions: CouponRedemption[];
+  dayUsage: number;
+  timeline: CouponTimelineEntry[];
+};
+
+/** Detail satu kupon + statistik + pemakai + timeline (FASE C5). */
+export async function fetchCouponDetail(id: string): Promise<CouponDetailResult> {
+  return adminFetch<CouponDetailResult>(
+    `/api/admin/coupons/${encodeURIComponent(id)}`,
+  );
+}
+
 /** Payload form kupon (create/update). */
 export type CouponFormInput = {
   code: string;

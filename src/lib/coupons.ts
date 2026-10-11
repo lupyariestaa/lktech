@@ -232,6 +232,57 @@ export async function getCouponByCode(code: string): Promise<Coupon | null> {
   return coupon.archived ? null : coupon;
 }
 
+/** Ambil kupon berdasarkan ID dokumen (termasuk yang diarsipkan). */
+export async function getCouponById(id: string): Promise<Coupon | null> {
+  const db = getAdminDb();
+  if (!db) return null;
+  const doc = await db.collection(COLLECTION).doc(id).get();
+  if (!doc.exists) return null;
+  return normalizeCoupon(doc.id, doc.data() as Record<string, unknown>);
+}
+
+/** Satu entri pemakaian kupon oleh pengguna (dari subkoleksi `redemptions`). */
+export type CouponRedemption = {
+  uid: string;
+  count: number;
+  lastRedeemedAtISO?: string;
+  email?: string;
+};
+
+/**
+ * Daftar pemakaian kupon per-pengguna (C5/K9) — dari subkoleksi
+ * `coupons/{id}/redemptions`. Diurutkan dari yang terbaru. Best-effort.
+ */
+export async function listCouponRedemptions(id: string): Promise<CouponRedemption[]> {
+  const db = getAdminDb();
+  if (!db) return [];
+  try {
+    const snap = await db
+      .collection(COLLECTION)
+      .doc(id)
+      .collection(REDEMPTIONS)
+      .limit(500)
+      .get();
+    return snap.docs
+      .map((doc) => {
+        const d = doc.data() as Record<string, unknown>;
+        return {
+          uid: doc.id,
+          count: typeof d.count === "number" ? d.count : 0,
+          lastRedeemedAtISO:
+            typeof d.lastRedeemedAtISO === "string" ? d.lastRedeemedAtISO : undefined,
+          email: typeof d.email === "string" ? d.email : undefined,
+        } satisfies CouponRedemption;
+      })
+      .sort((a, b) =>
+        (b.lastRedeemedAtISO ?? "").localeCompare(a.lastRedeemedAtISO ?? ""),
+      );
+  } catch (err) {
+    console.error("[coupons] gagal memuat daftar pemakai:", err);
+    return [];
+  }
+}
+
 /** Apakah kode sudah dipakai kupon lain (selain `exceptId`). */
 export async function isCouponCodeTaken(
   code: string,
@@ -399,6 +450,7 @@ export type RedeemResult =
 export async function redeemCoupon(
   id: string,
   uid: string,
+  email?: string,
 ): Promise<RedeemResult> {
   const db = getAdminDb();
   if (!db) return { ok: false, reason: "Admin SDK tidak tersedia." };
@@ -455,7 +507,9 @@ export async function redeemCoupon(
         redemptionRef,
         {
           uid,
+          ...(email ? { email } : {}),
           count: FieldValue.increment(1),
+          atISO: new Date().toISOString(),
           lastRedeemedAtISO: new Date().toISOString(),
         },
         { merge: true },

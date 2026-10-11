@@ -1,6 +1,6 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅, C3 ✅ selesai; C4–C9 pending).**
+> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅, C3 ✅, C5 ✅ selesai; C4, C6–C9 pending).**
 > Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
 > target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
 > rencana uji.
@@ -295,12 +295,17 @@ logika murni teruji ✓.
 - [ ] `coupon-batch-dialog.tsx` + tombol "Buat massal"/"Duplikat".
 - **DoD:** generate massal aman (tanpa tabrakan kode), teraudit.
 
-### Fase C5 — Halaman detail + timeline + riwayat pemakaian (K9, O13, O14)
-- [ ] `GET /api/admin/coupons/[id]` (detail + statistik + daftar pemakai + timeline).
-- [ ] `coupons/{id}/redemptions` diperkaya `atISO` & `orderId` (denormalisasi) untuk timeline.
-- [ ] Halaman `/admin/coupons/[id]` + `coupon-detail-client.tsx` + `coupon-timeline.tsx`.
-- [ ] Aksi di detail (edit/aktif/arsip/restore/duplikat).
-- **DoD:** kupon bisa ditelusuri end-to-end; halaman bisa di-bookmark.
+### Fase C5 — Halaman detail + timeline + riwayat pemakaian (K9, O13, O14) — ✅ SELESAI
+- [x] `GET /api/admin/coupons/[id]` — detail + statistik (`stat`) + daftar pemakai
+      (`redemptions`) + `dayUsage` + timeline (audit yang menyasar kode/id).
+- [x] Data layer: `getCouponById`, `listCouponRedemptions`; `redeemCoupon` kini
+      mencatat `atISO` + `email` pada redemption (untuk timeline/pemakai).
+- [x] Halaman `/admin/coupons/[id]` + `coupons/coupon-detail-client.tsx` (dua kolom:
+      rincian + dampak · aksi + pemakai + timeline); **ekspor CSV pemakai**.
+- [x] Kartu di `/admin/coupons` — kode kini tautan ke halaman detail; label nilai
+      memperbaiki tipe `tiered`.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **438** ✅ · `build` ✅
+      (route baru `/admin/coupons/[id]` & `/api/admin/coupons/[id]`).
 
 ### Fase C6 — Analitik kupon (K10, O12, O17, O23)
 - [ ] `coupon-analytics-pure.ts` (`computeCouponAnalytics`): konversi, AOV dgn/tanpa,
@@ -541,4 +546,5 @@ export type Coupon = {
 - **C1 ✅ SELESAI** (fondasi murni & tipe; logika lanjutan teruji).
 - **C2 ✅ SELESAI** (aturan server ditegakkan: single-use/assigned/audience/periode).
 - **C3 ✅ SELESAI** (kupon otomatis/best coupon opt-in + event analitik + souvenir kode).
-- Berikutnya: **C5** (halaman detail kupon + timeline + riwayat pemakai) → C6 → C4 → C7 → C8 → C9.
+- **C5 ✅ SELESAI** (halaman detail + timeline + riwayat pemakai + ekspor CSV).
+- Berikutnya: **C6** (analitik kupon: konversi/AOV/ROI/tren) → C4 → C7 → C8 → C9.

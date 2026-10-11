@@ -8,7 +8,7 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0 ✅, C1 ✅, C2 ✅, C3 ✅ SELESAI**. Berikutnya **C5** (halaman detail kupon + timeline + riwayat pemakai) → C6 → C4 → C7 → C8 → C9. Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+> 🎯 **TASK AKTIF (berikutnya):** 🔄 **Upgrade Sistem Kupon (optimalisasi)** — **C0 ✅, C1 ✅, C2 ✅, C3 ✅, C5 ✅ SELESAI**. Berikutnya **C6** (analitik kupon: konversi/AOV/ROI/tren) → C4 → C7 → C8 → C9. Lihat [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
@@ -19,23 +19,27 @@
 
 ---
 
-## 🔄 SESI INI — Upgrade Sistem Kupon: C3 (Kupon Otomatis)
+## 🔄 SESI INI — Upgrade Sistem Kupon: C5 (Halaman Detail)
 
-**Status: 🔄 DIKERJAKAN — C0 ✅, C1 ✅, C2 ✅, C3 ✅ selesai; C4–C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
+**Status: 🔄 DIKERJAKAN — C0 ✅, C1 ✅, C2 ✅, C3 ✅, C5 ✅ selesai; C4, C6–C9 pending.** Dokumen: [`docs/2026-10-11-upgrade-sistem-kupon.md`](docs/2026-10-11-upgrade-sistem-kupon.md).
 
-**C3 = kupon otomatis (best coupon) & UX keranjang.**
+**C5 = halaman detail kupon + timeline + riwayat pemakai.**
 
-- **`POST /api/coupons/best`** (baru): saran kode terbaik, server-authoritative,
-  opt-in, rate-limit; memakai `listCandidateCoupons` + `pickBestCoupon`.
-- **`coupon-api.ts`**: `suggestBestCouponRequest`.
-- **`cart-coupon.tsx`**: tombol **"Pakai kode terbaik: KODEx (hemat Rp…)"** (1 klik)
-  + event `coupon_view`/`coupon_apply_success`/`coupon_apply_fail`/`coupon_autopick`.
-- **`cart-view.tsx`**: fetch saran saat keranjang berubah (login & belum ada kupon);
-  **souvenir kode** di `localStorage`; event `coupon_removed` saat clear.
-- **`analytics.ts`**: 5 event kupon baru (tanpa PII).
-- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**438** test) · `build` ✅.
+- **`GET /api/admin/coupons/[id]`** (baru): detail + statistik + daftar pemakai +
+  `dayUsage` + timeline (audit yang menyasar kode/id).
+- **Data layer:** `getCouponById`, `listCouponRedemptions`; `redeemCoupon` mencatat
+  `atISO` + `email` di redemption.
+- **Halaman** `/admin/coupons/[id]` + `coupons/coupon-detail-client.tsx` (dua kolom:
+  rincian + dampak · aksi + pemakai + timeline); **ekspor CSV pemakai**.
+- **Kartu daftar:** kode kini tautan ke detail; label nilai memperbaiki tipe `tiered`.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**438** test) · `build` ✅
+  (route baru `/admin/coupons/[id]` & `/api/admin/coupons/[id]`).
 
-**Berikutnya:** **C5** (halaman detail kupon `/admin/coupons/[id]` + timeline + riwayat pemakai).
+**Berikutnya:** **C6** (analitik kupon: konversi, AOV dgn/tanpa, ROI, tren).
+
+---
+
+## 🔄 SESI SEBELUMNYA — Upgrade Sistem Kupon: C3 (Kupon Otomatis)
 
 ---
 

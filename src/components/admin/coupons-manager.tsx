@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   BadgePercent,
@@ -288,9 +289,12 @@ export function CouponsManager() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-lg bg-secondary px-2.5 py-1 font-mono text-sm font-bold tracking-wide text-white">
+                    <Link
+                      href={`/admin/coupons/${c.id}`}
+                      className="rounded-lg bg-secondary px-2.5 py-1 font-mono text-sm font-bold tracking-wide text-white transition-opacity hover:opacity-90"
+                    >
                       {c.code}
-                    </span>
+                    </Link>
                     {c.archived ? (
                       <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                         Diarsipkan
@@ -314,7 +318,11 @@ export function CouponsManager() {
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-lg font-bold text-primary">
-                    {c.type === "percent" ? `${c.value}%` : formatRupiah(c.value)}
+                    {c.type === "tiered"
+                      ? `${c.tiers?.length ?? 0} tingkat`
+                      : c.type === "percent"
+                        ? `${c.value}%`
+                        : formatRupiah(c.value)}
                   </p>
                   <p className="text-[10px] text-muted">
                     {COUPON_TYPE_LABEL[c.type]}

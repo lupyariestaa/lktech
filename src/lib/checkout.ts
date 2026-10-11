@@ -211,7 +211,7 @@ export async function performCheckout(
   // `KP-C1`/C2: reservasi kuota kupon ATOMIK sebelum membuat order
   // (single-use, kuota total, per-user, & kuota harian dicek di dalam transaksi).
   if (couponId) {
-    const reserved = await redeemCoupon(couponId, actor.uid);
+    const reserved = await redeemCoupon(couponId, actor.uid, actor.email);
     if (!reserved.ok) {
       return fail(409, {
         error: couponRedeemMessage(reserved.reason),
