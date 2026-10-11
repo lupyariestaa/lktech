@@ -21,7 +21,7 @@ import { CartCoupon, type AppliedCoupon } from "@/components/cart-coupon";
 import { CartCrossSell } from "@/components/cart-cross-sell";
 import { TrustBadges } from "@/components/trust-badges";
 import { createOrderRequest } from "@/lib/order-api";
-import { validateCouponRequest } from "@/lib/coupon-api";
+import { validateCouponRequest, CouponSessionError } from "@/lib/coupon-api";
 import { getIdToken } from "@/lib/auth";
 import { cartItemKey } from "@/lib/cart";
 import { formatPrice } from "@/lib/product-format";
@@ -38,6 +38,9 @@ export function CartView({ promoCode }: { promoCode?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  // Pesan KHUSUS kupon (dicabut otomatis / tak bisa diverifikasi) — ditampilkan
+  // di widget kupon, TERPISAH dari `error` checkout global (F-K2).
+  const [couponNotice, setCouponNotice] = useState<string | null>(null);
 
   // Diskon bila kupon diterapkan (server memverifikasi ulang saat checkout).
   const discount = appliedCoupon?.discount ?? 0;
@@ -89,22 +92,38 @@ export function CartView({ promoCode }: { promoCode?: string }) {
           setAppliedCoupon((prev) =>
             prev ? { ...prev, discount: res.discount } : prev,
           );
+          setCouponNotice(null);
         } else {
-          // Tak lagi memenuhi syarat → cabut & beri tahu alasan.
+          // Tak lagi memenuhi syarat → cabut & beri tahu alasan (di widget kupon).
           setAppliedCoupon(null);
-          setError(res.reason);
+          setCouponNotice(`Kode ${appliedCoupon.code} dicabut: ${res.reason}`);
         }
-      } catch {
-        // Best-effort: biarkan; checkout server tetap memvalidasi ulang.
+      } catch (err) {
+        if (!active) return;
+        if (err instanceof CouponSessionError) {
+          // Sesi hilang/kedaluwarsa → diskon tak bisa diverifikasi; cabut agar
+          // total tampilan tidak menyesatkan (F-K1).
+          setAppliedCoupon(null);
+          setCouponNotice(
+            `Kode ${appliedCoupon.code} dilepas karena sesi berakhir. Masuk kembali untuk memakainya.`,
+          );
+        } else {
+          // Gangguan jaringan → PERTAHANKAN kupon, beri tahu tak dapat diverifikasi
+          // (checkout server tetap safety net).
+          setCouponNotice(
+            "Tidak dapat memverifikasi kode promo saat ini. Diskon akan dicek ulang saat checkout.",
+          );
+        }
       }
     })();
     return () => {
       active = false;
     };
-    // Sengaja bergantung pada `cartSignature` (bukan `appliedCoupon`) agar tidak
-    // memicu loop ketika diskon di-set ulang.
+    // Sengaja bergantung pada `cartSignature` & identitas user (bukan
+    // `appliedCoupon`) agar tidak memicu loop saat diskon di-set ulang. Perubahan
+    // user (mis. logout) memicu re-validasi → sesi hilang → kupon dicabut (F-K1).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartSignature]);
+  }, [cartSignature, user?.uid]);
 
   const onCheckout = async () => {
     setError(null);
@@ -166,6 +185,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
 
       clear();
       setAppliedCoupon(null);
+      setCouponNotice(null);
 
       // INSTAN + invoice tersedia → arahkan ke halaman pembayaran online.
       if (order.payUrl) {
@@ -394,12 +414,19 @@ export function CartView({ promoCode }: { promoCode?: string }) {
               <CartCoupon
                 subtotal={subtotal}
                 applied={appliedCoupon}
-                onApplied={setAppliedCoupon}
-                onCleared={() => setAppliedCoupon(null)}
+                onApplied={(c) => {
+                  setAppliedCoupon(c);
+                  setCouponNotice(null);
+                }}
+                onCleared={() => {
+                  setAppliedCoupon(null);
+                  setCouponNotice(null);
+                }}
                 disabled={Boolean(user) && blocked}
                 promoCode={promoCode}
                 slugs={Array.from(new Set(items.map((it) => it.slug)))}
                 itemCount={items.reduce((n, it) => n + it.qty, 0)}
+                notice={couponNotice}
               />
             </div>
 

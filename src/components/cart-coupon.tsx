@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BadgePercent, Check, Loader2, Tag, X } from "lucide-react";
-import { validateCouponRequest } from "@/lib/coupon-api";
+import { validateCouponRequest, CouponSessionError } from "@/lib/coupon-api";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,9 @@ export type AppliedCoupon = {
  *
  * Kontrol state ada di induk (`cart-view`): `applied` (kupon aktif) + callback
  * `onApplied`/`onCleared`. Diskon final tetap dihitung server saat checkout.
+ *
+ * `notice` = pesan dari induk (mis. kupon dicabut karena syarat berubah) yang
+ * ditampilkan DI WIDGET kupon ini — bukan di area error checkout (F-K2).
  */
 export function CartCoupon({
   subtotal,
@@ -27,6 +30,7 @@ export function CartCoupon({
   promoCode,
   slugs,
   itemCount,
+  notice,
 }: {
   subtotal: number;
   applied: AppliedCoupon | null;
@@ -39,6 +43,8 @@ export function CartCoupon({
   slugs?: string[];
   /** Total jumlah item (qty) di keranjang (validasi `minItems`). */
   itemCount?: number;
+  /** Pesan info/peringatan dari induk (mis. kupon dicabut otomatis). */
+  notice?: string | null;
 }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -74,7 +80,11 @@ export function CartCoupon({
       });
       setCode("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memvalidasi kode.");
+      if (err instanceof CouponSessionError) {
+        setError("Masuk dengan Google untuk memakai kode promo.");
+      } else {
+        setError(err instanceof Error ? err.message : "Gagal memvalidasi kode.");
+      }
     } finally {
       setBusy(false);
     }
@@ -107,20 +117,32 @@ export function CartCoupon({
             <X className="h-4 w-4" />
           </button>
         </div>
+        {notice && (
+          <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-amber-700">
+            <span aria-hidden="true">⚠</span>
+            {notice}
+          </p>
+        )}
       </div>
     );
   }
 
   return (
     <div>
+      <label htmlFor="cart-coupon-code" className="sr-only">
+        Kode promo
+      </label>
       <form onSubmit={onApply} className="flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
           <BadgePercent className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
+            id="cart-coupon-code"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Kode promo"
             disabled={disabled}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "cart-coupon-error" : undefined}
             className={cn(
               "w-full rounded-full border bg-white py-2.5 pr-4 pl-10 font-mono text-sm tracking-wide text-secondary placeholder:font-sans placeholder:tracking-normal placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60",
               error ? "border-rose-300" : "border-slate-200",
@@ -135,7 +157,16 @@ export function CartCoupon({
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Terapkan"}
         </button>
       </form>
-      {error && <p className="mt-2 text-xs text-rose-500">{error}</p>}
+      {error && (
+        <p id="cart-coupon-error" role="alert" className="mt-2 text-xs text-rose-500">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" aria-live="polite" className="mt-2 text-xs text-amber-700">
+          {notice}
+        </p>
+      )}
     </div>
   );
 }

@@ -18,9 +18,9 @@
 
 ---
 
-## 📝 SESI INI — Audit Sistem Kupon + K1 (Logika Murni & Test)
+## 📝 SESI INI — Audit Sistem Kupon + K1 & K2
 
-**Status: 🔄 DIKERJAKAN — K1 ✅ selesai; K2–K6 pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
+**Status: 🔄 DIKERJAKAN — K1 ✅, K2 ✅ selesai; K3–K6 pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 
 Audit mandiri sistem kupon menemukan **14 gap** (1 kritis, 4 tinggi, 4 sedang,
 4 rendah). **Keputusan pemilik** untuk 3 pertanyaan terbuka:
@@ -29,14 +29,21 @@ Audit mandiri sistem kupon menemukan **14 gap** (1 kritis, 4 tinggi, 4 sedang,
 3. Normalisasi kode → **transform di schema** (nanti di K5).
 
 ### ✅ K1 selesai — Logika murni + test (K5)
-- Modul baru `src/lib/coupon-pure.ts` (mandiri, bebas `server-only`): `computeDiscount`,
-  `validateCoupon`, `checkBundleRules` — sumber kebenaran tunggal.
-- `coupon-rules.ts` **dihapus** (logika bundel pindah ke `coupon-pure.ts`); test bundle diarahkan ke sana.
-- `coupons.ts` re-ekspor dari `coupon-pure` (pemanggil lama tetap bekerja).
-- Test baru `scripts/coupon-pure.test.ts` (**24 test**) + script `test:coupon`.
-- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**389** test) · `build` ✅.
+- Modul baru `src/lib/coupon-pure.ts` (mandiri): `computeDiscount`, `validateCoupon`,
+  `checkBundleRules`. `coupon-rules.ts` dihapus. `coupons.ts` re-ekspor.
+- Test `scripts/coupon-pure.test.ts` (**24 test**) + script `test:coupon`.
 
-**Berikutnya:** K2 (UX kupon keranjang — K1/K2/K7) → K3 (form admin + a11y) → K4 (preview + statistik) → K5 (kebersihan) → K6 (QA & rilis).
+### ✅ K2 selesai — UX kupon di keranjang (K1/K2/K7)
+- State `couponNotice` khusus kupon (terpisah dari error checkout) → ditampilkan di widget kupon.
+- `coupon-api`: `CouponSessionError` (sesi hilang) vs error jaringan.
+- Re-validasi cerdas: tak-valid → cabut+alasan; **sesi hilang → cabut+"masuk kembali"**;
+  **jaringan → pertahankan + "tak bisa diverifikasi"**; valid → perbarui diskon.
+- **Logout** memicu re-validasi → kupon basi dicabut (F-K1 kritis).
+- a11y: `<label>` sr-only, `aria-invalid`/`aria-describedby`, `role="alert"` & `role="status" aria-live`.
+
+**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**389** test) · `build` ✅.
+
+**Berikutnya:** K3 (form admin + a11y) → K4 (preview + statistik) → K5 (kebersihan) → K6 (QA & rilis).
 
 ---
 

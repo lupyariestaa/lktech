@@ -1,6 +1,6 @@
 # Task Eksekusi — Perbaikan & Upgrade Sistem Kupon
 
-> **Status: 🔄 DIKERJAKAN (K1 ✅ selesai).** Hasil audit mandiri sistem kupon
+> **Status: 🔄 DIKERJAKAN (K1 ✅, K2 ✅ selesai).** Hasil audit mandiri sistem kupon
 > (data layer, API, UI admin, keranjang, halaman promo publik).
 > Disusun: 2026-10-11.
 
@@ -102,14 +102,18 @@ statistik per-kupon, ekspor CSV, halaman `/promo`). Gap terbesar ada pada
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · `test:coupon` 24 ✅ · `test:bundle` 9 ✅ ·
       `build` ✅. Semua `test:*` = **389** lolos.
 
-### Fase K2 — UX kupon di keranjang (K1, K2, K7)
-- [ ] State error khusus kupon di `cart-view` (mis. `couponNotice`) — bukan `error`
-      checkout global; tampilkan di widget kupon.
-- [ ] Re-validasi: bedakan gagal-jaringan (pertahankan + beri tahu "tidak bisa
-      memverifikasi") vs tidak-valid (cabut + alasan). Tangani sesi hilang.
-- [ ] `cart-coupon.tsx`: tambah `<label>` (sr-only) + `role="alert"` pada error.
-- [ ] `aria-live` untuk pesan kupon dicabut.
-- **DoD:** feedback kupon jelas & andal; a11y dasar.
+### Fase K2 — UX kupon di keranjang (K1, K2, K7) — ✅ SELESAI
+- [x] State `couponNotice` khusus kupon di `cart-view` (terpisah dari `error`
+      checkout global); ditampilkan di widget kupon.
+- [x] `coupon-api`: `CouponSessionError` (sesi hilang) dibedakan dari error
+      jaringan/server.
+- [x] Re-validasi: (a) tak-valid → cabut + alasan; (b) sesi hilang → cabut +
+      "masuk kembali"; (c) gangguan jaringan → **pertahankan** + "tak bisa
+      diverifikasi"; (d) valid → perbarui diskon + bersihkan notice.
+- [x] Logout memicu re-validasi (`user?.uid` di deps) → kupon basi dicabut (F-K1).
+- [x] `cart-coupon.tsx`: `<label>` sr-only, `aria-invalid`/`aria-describedby`,
+      `role="alert"` pada error, `role="status" aria-live` pada notice.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **389** ✅ · `build` ✅.
 
 ### Fase K3 — Validasi & form admin (K4, K6, K8, K12)
 - [ ] Validasi klien form kupon: persen 1–100, nominal > 0, `startsAt < endsAt`,
