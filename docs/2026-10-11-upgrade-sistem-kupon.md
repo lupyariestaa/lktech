@@ -1,6 +1,6 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 🔄 DIKERJAKAN (C0 ✅, C1 ✅, C2 ✅, C3 ✅, C4 ✅, C5 ✅, C6 ✅ selesai; C7–C9 pending).**
+> **Status: 🔄 DIKERJAKAN (C0–C7 ✅ selesai; C8, C9 pending).**
 > Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
 > target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
 > rencana uji.
@@ -322,12 +322,16 @@ logika murni teruji ✓.
 - [x] `scripts/coupon-analytics.test.ts` — **10 test**; script `test:coupon-analytics`.
 - **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **448** ✅ · `build` ✅.
 
-### Fase C7 — Halaman `/promo` & discovery (K11, O8, O10)
-- [ ] `promos.ts`: `PublicPromo` + `status`/`remaining`/`savingsHint`.
-- [ ] `promo-list.tsx`: filter status, urut (relevansi/rp/berakhir), hitung mundur,
-      badge "Sisa N".
-- [ ] Tautan pintar dari kartu produk (opsional "bisa hemat hingga X").
-- **DoD:** halaman promo informatif & meyakinkan; hanya menampilkan kode aktif.
+### Fase C7 — Halaman `/promo` & discovery (K11, O8, O10) — ✅ SELESAI
+- [x] `promo-pure.ts` (murni, teruji): `computePromoStatus`, `countdownLabel`,
+      `promoRequirement`, `tierSummary` (+11 test → script `test:promo`).
+- [x] `promos.ts`: `PublicPromo` diperkaya (`status`, `tierSummary`, `requirement`);
+      menyertakan kupon aktif/akan datang/berakhir segera (≤30 hari).
+- [x] `promo-list.tsx`: **filter status** (Semua/Aktif/Berakhir segera/Akan datang)
+      dengan jumlah, **urut** (relevan/hemat terbesar/segera berakhir), **hitung
+      mundur**, **badge "Sisa N pemakaian"**, ringkasan tier & syarat.
+- [x] Halaman `/promo`: teks disesuaikan (jumlah promo tersedia).
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **464** ✅ · `build` ✅.
 
 ### Fase C8 — Kampanye & skala (K5, O16, O19, O22)
 - [ ] Field `campaign` + filter di admin; agregasi per kampanye di analitik.
@@ -556,4 +560,5 @@ export type Coupon = {
 - **C5 ✅ SELESAI** (halaman detail + timeline + riwayat pemakai + ekspor CSV).
 - **C6 ✅ SELESAI** (analitik kupon: konversi/AOV/ROI/tren/kampanye).
 - **C4 ✅ SELESAI** (generate massal kode unik + duplikat kupon).
-- Berikutnya: **C7** (`/promo` dinamis) → C8 → C9.
+- **C7 ✅ SELESAI** (`/promo` dinamis: filter status, urut, hitung mundur, badge sisa, tier).
+- Berikutnya: **C8** (kampanye & skala) → C9 (refactor UI + QA akhir).

@@ -104,15 +104,15 @@ export default async function PromoPage() {
             <>
               <div className="text-center">
                 <span className="text-xs font-semibold tracking-widest text-primary uppercase">
-                  Kode Aktif
+                  Kode Promo
                 </span>
                 <h2 className="mt-2 text-2xl font-bold text-secondary sm:text-3xl">
-                  {promos.length} promo sedang{" "}
-                  <span className="text-gradient">berlaku</span>
+                  {promos.length} promo{" "}
+                  <span className="text-gradient">tersedia</span>
                 </h2>
                 <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-                  Klik “Pakai Kode Ini” untuk langsung membawanya ke keranjang,
-                  atau salin kodenya untuk dipakai nanti.
+                  Filter &amp; urutkan sesuai kebutuhan, lalu klik “Pakai Kode Ini”
+                  untuk langsung membawanya ke keranjang.
                 </p>
               </div>
               <PromoList promos={promos} />
