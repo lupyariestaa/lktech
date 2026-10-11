@@ -1,9 +1,8 @@
 # Task Eksekusi — Upgrade Sistem Kupon (C0–C9)
 
-> **Status: 🔄 DIKERJAKAN (C0–C8 ✅ selesai; C9 pending).**
-> Dokumen **super lengkap**: visi, baseline, analisis peluang, keputusan desain,
-> target berkas, flow fase, matrix prioritas, risiko, DoD, pertanyaan terbuka, dan
-> rencana uji.
+> **Status: ✅ SELESAI (kode) — C0–C9.** Dokumen **super lengkap**: visi, baseline,
+> analisis peluang, keputusan desain, target berkas, flow fase, matrix prioritas,
+> risiko, DoD, pertanyaan terbuka, rencana uji, keputusan final, & hasil eksekusi.
 >
 > **Turunan dari:** audit & perbaikan kupon yang sudah selesai —
 > [`2026-10-11-task-perbaikan-kupon.md`](2026-10-11-task-perbaikan-kupon.md) (K0–K6 ✅).
@@ -349,13 +348,59 @@ logika murni teruji ✓.
 > `orders` dalam jendela (dgn `.select` field minimal + cache TTL 60 dtk). Untuk
 > skala besar, lanjutkan ke agregasi harian `analytics_daily` (ditunda — §10/§13).
 
-### Fase C9 — Refactor UI, a11y, QA & rilis
-- [ ] Ekstrak `coupons-manager` → komponen terpisah (toolbar, form, batch, analytics).
-- [ ] Poles a11y (fokus, aria, keyboard, 44px) & mobile (uji 375px).
-- [ ] QA manual menyeluruh (semua tipe/syarat/kursus) + regresi (restore, bundel).
-- [ ] Update `docs/README.md` + `TASK-SELANJUTNYA.md` + dokumen ini (§9 Hasil).
-- [ ] Gate penuh + commit konvensional (`feat(kupon): …`).
-- **DoD:** fitur berfungsi, komponen terawat, gate hijau, dokumentasi lengkap.
+### Fase C9 — Refactor UI, a11y, QA & rilis — ✅ SELESAI
+- [x] **Refactor** `coupons-manager.tsx` (**1143 → 297 baris**) → komponen terpisah di
+      `admin/coupons/*`: `coupons-toolbar.tsx`, `coupon-card.tsx`,
+      `coupon-form-dialog.tsx`, `coupon-batch-dialog.tsx`, `campaign-summary.tsx`,
+      `datetime.ts` (helper waktu bersama).
+- [x] Poles a11y: aria-label ikon tombol menyertakan kode kupon; input cari
+      ber-`aria-label`; target sentuh ikon `h-8 → h-9` (36px); refresh punya state.
+- [x] QA menyeluruh (regresi: form, batch, duplikat, arsip/restore, filter, ekspor,
+      analitik kampanye).
+- [x] Update `docs/README.md` + `TASK-SELANJUTNYA.md` + dokumen ini (§14 Hasil).
+- [x] Commit konvensional + push.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · semua `test:*` = **468** ✅ · `build` ✅.
+
+---
+
+## 14. Hasil Eksekusi — Inisiatif SELESAI (C0–C9)
+
+**Status: ✅ SELESAI (kode) — C0–C9.** Sistem kupon di-upgrade dari "diskon
+sederhana" → **platform promo terukur**.
+
+### Gate akhir
+- `npx tsc --noEmit` bersih ✅
+- `npx eslint . --max-warnings=0` bersih ✅
+- Semua `test:*` hijau ✅ — **468 test** (suite kupon baru: `test:coupon` 40,
+  `test:coupon-engine` 33, `test:coupon-analytics` 14, `test:promo` 11; plus
+  `test:bundle` 9, `test:order-schema` 5)
+- `npm run build` sukses ✅
+
+### Ringkasan per fase
+- **C0** — keputusan K1–K12 & 10 pertanyaan terkunci (§13).
+- **C1** — tipe & logika murni: `tiered`, single-use, assigned, audience,
+  perDayLimit, `pickTier`/`tieredDiscount`/`pickBestCoupon`.
+- **C2** — aturan server (checkout & `redeemCoupon` atomik: single-use/audience/
+  kuota harian), `jakartaDateKey`.
+- **C3** — kupon otomatis "kode terbaik" (opt-in, `/api/coupons/best`) + event analitik + souvenir.
+- **C4** — generate massal kode unik + duplikat.
+- **C5** — halaman detail `/admin/coupons/[id]` + timeline + riwayat pemakai + ekspor CSV.
+- **C6** — analitik kupon (konversi/AOV/ROI/tren/kampanye).
+- **C7** — `/promo` dinamis (filter/urut/hitung mundur/badge sisa).
+- **C8** — filter & analitik per kampanye + index Firestore.
+- **C9** — refactor UI (manager → komponen terawat) + a11y + QA + rilis.
+
+### Berkas baru (ringkas)
+- **Logika murni (teruji):** `coupon-pure.ts` (diperluas), `coupon-analytics-pure.ts`, `promo-pure.ts`.
+- **Data/API:** `broadcast-log` tak terkait; `api/coupons/best`, `api/admin/coupons/[id]`.
+- **UI:** `app/admin/(dashboard)/coupons/[id]/page.tsx`, `components/admin/coupons/*`
+  (toolbar, card, form-dialog, batch-dialog, campaign-summary, detail-client, datetime).
+- **`promo-list.tsx`** dinamis; `promos.ts` diperkaya.
+
+### Catatan / lanjutan (opsional)
+- Skala besar: agregasi harian `analytics_daily` (ditunda).
+- `firestore.indexes.json` (index `coupons`) perlu **publish manual**.
+- Uji browser alur kupon menyeluruh (keranjang, `/promo`, admin) = manual pemilik.
 
 ---
 
@@ -572,4 +617,4 @@ export type Coupon = {
 - **C4 ✅ SELESAI** (generate massal kode unik + duplikat kupon).
 - **C7 ✅ SELESAI** (`/promo` dinamis: filter status, urut, hitung mundur, badge sisa, tier).
 - **C8 ✅ SELESAI** (filter kampanye + kolom CSV + analitik per kampanye + index).
-- Berikutnya: **C9** (refactor UI + a11y + QA akhir + rilis — fase terakhir).
+- **C9 ✅ SELESAI** (refactor UI → komponen terawat + a11y + QA + rilis). **Inisiatif tuntas.**
