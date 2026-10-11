@@ -8,7 +8,11 @@ import {
   type CouponType,
   type CouponsSummary,
 } from "@/lib/coupon-types";
-import { checkBundleRules } from "@/lib/coupon-rules";
+// Logika murni kupon (diskon & validasi) dipindah ke `@/lib/coupon-pure`
+// (bebas `server-only` + diuji Node — audit K5). Re-ekspor agar pemanggil lama
+// (`@/lib/coupons`) tetap bekerja.
+export { computeDiscount, validateCoupon } from "@/lib/coupon-pure";
+export type { CouponValidation } from "@/lib/coupon-pure";
 
 const COLLECTION = "coupons";
 /** Subkoleksi pencatatan pemakaian per user (sumber kebenaran `limitPerUser`). */
@@ -95,118 +99,6 @@ export function normalizeCoupon(
     updatedAtISO: str(data.updatedAtISO) || undefined,
     createdBy: str(data.createdBy) || undefined,
   };
-}
-
-/* -------------------------------------------------------------------------- */
-/* Logika inti (murni — tanpa I/O)                                             */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Hitung jumlah diskon (Rupiah) untuk sebuah kupon & subtotal.
- * Selalu dibatasi ≤ subtotal (diskon tak boleh melebihi belanja).
- */
-export function computeDiscount(coupon: Coupon, subtotal: number): number {
-  if (subtotal <= 0) return 0;
-
-  let discount = 0;
-  if (coupon.type === "percent") {
-    discount = (subtotal * coupon.value) / 100;
-    if (typeof coupon.maxDiscount === "number" && coupon.maxDiscount > 0) {
-      discount = Math.min(discount, coupon.maxDiscount);
-    }
-  } else {
-    discount = coupon.value;
-  }
-
-  discount = Math.floor(Math.max(0, discount));
-  return Math.min(discount, subtotal);
-}
-
-export type CouponValidation =
-  | { ok: true; coupon: Coupon; discount: number }
-  | { ok: false; reason: string };
-
-/**
- * Validasi kupon terhadap subtotal & konteks user. Mengembalikan alasan bila
- * gagal. Semua aturan dijalankan di SERVER (klien hanya mengirim kode).
- *
- * `userUsageCount` (opsional) = jumlah pemakaian user ini dari subkoleksi
- * `redemptions` (sumber kebenaran `limitPerUser`; lebih akurat dari `usedBy`
- * yang dibatasi `MAX_COUPON_USED_BY`). Bila tak diberikan, fallback ke `usedBy`.
- *
- * `slugs` & `itemCount` (opsional) dipakai untuk aturan KUPON BUNDEL (FASE P3):
- * - `appliesToSlugs`: keranjang wajib memuat ≥1 produk dari daftar.
- * - `minItems`: total jumlah item (qty) minimal.
- */
-export function validateCoupon(
-  coupon: Coupon | null,
-  opts: {
-    subtotal: number;
-    uid?: string;
-    now?: Date;
-    userUsageCount?: number;
-    slugs?: readonly string[];
-    itemCount?: number;
-  },
-): CouponValidation {
-  const now = opts.now ?? new Date();
-
-  if (!coupon) return { ok: false, reason: "Kode promo tidak ditemukan." };
-  if (!coupon.active) return { ok: false, reason: "Kode promo sudah tidak aktif." };
-
-  if (coupon.startsAt) {
-    const start = new Date(coupon.startsAt).getTime();
-    if (!Number.isNaN(start) && now.getTime() < start) {
-      return { ok: false, reason: "Kode promo belum berlaku." };
-    }
-  }
-  if (coupon.endsAt) {
-    const end = new Date(coupon.endsAt).getTime();
-    if (!Number.isNaN(end) && now.getTime() > end) {
-      return { ok: false, reason: "Kode promo sudah kedaluwarsa." };
-    }
-  }
-
-  if (coupon.minSpend > 0 && opts.subtotal < coupon.minSpend) {
-    return {
-      ok: false,
-      reason: `Minimal belanja Rp${coupon.minSpend.toLocaleString("id-ID")} untuk memakai kode ini.`,
-    };
-  }
-
-  // ===== Aturan KUPON BUNDEL (FASE P3) — logika murni di coupon-rules.ts =====
-  const bundle = checkBundleRules(coupon, {
-    slugs: opts.slugs,
-    itemCount: opts.itemCount,
-  });
-  if (!bundle.ok) return { ok: false, reason: bundle.reason };
-
-  if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
-    return { ok: false, reason: "Kuota kode promo sudah habis." };
-  }
-
-  if (opts.uid && coupon.limitPerUser > 0) {
-    const usedCount =
-      typeof opts.userUsageCount === "number"
-        ? opts.userUsageCount
-        : coupon.usedBy.filter((u) => u === opts.uid).length;
-    if (usedCount >= coupon.limitPerUser) {
-      return {
-        ok: false,
-        reason:
-          coupon.limitPerUser === 1
-            ? "Anda sudah pernah memakai kode promo ini."
-            : `Kode promo ini maksimal ${coupon.limitPerUser}× per pengguna.`,
-      };
-    }
-  }
-
-  const discount = computeDiscount(coupon, opts.subtotal);
-  if (discount <= 0) {
-    return { ok: false, reason: "Kode promo tidak memberi diskon untuk pesanan ini." };
-  }
-
-  return { ok: true, coupon, discount };
 }
 
 /* -------------------------------------------------------------------------- */

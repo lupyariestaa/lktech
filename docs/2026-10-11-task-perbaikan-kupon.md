@@ -1,8 +1,8 @@
 # Task Eksekusi — Perbaikan & Upgrade Sistem Kupon
 
-> **Status: 📝 RENCANA (belum dieksekusi).** Hasil audit mandiri sistem kupon
+> **Status: 🔄 DIKERJAKAN (K1 ✅ selesai).** Hasil audit mandiri sistem kupon
 > (data layer, API, UI admin, keranjang, halaman promo publik).
-> Disusun: 2026-10-11. **Target: sesi berikutnya.**
+> Disusun: 2026-10-11.
 
 ---
 
@@ -90,13 +90,17 @@ statistik per-kupon, ekspor CSV, halaman `/promo`). Gap terbesar ada pada
 - [x] Tulis dokumen ini.
 - **DoD:** daftar gap terkunci.
 
-### Fase K1 — Ekstrak logika murni + test (K5)
-- [ ] Pindahkan `computeDiscount` & `validateCoupon` ke `src/lib/coupon-pure.ts`
-      (murni, bebas impor alias), re-ekspor dari `coupons.ts` agar pemanggil tetap.
-- [ ] `scripts/coupon-pure.test.ts` — diskon persen/nominal, `maxDiscount`, batas
-      ≤ subtotal, min belanja, tanggal, kuota, per-user, bundel, edge (subtotal 0).
-- [ ] Script `test:coupon` + daftar di `tsconfig.json` exclude.
-- **DoD:** logika inti teruji; gate hijau.
+### Fase K1 — Ekstrak logika murni + test (K5) — ✅ SELESAI
+- [x] Pindahkan `computeDiscount` & `validateCoupon` ke `src/lib/coupon-pure.ts`
+      (murni, mandiri/tanpa impor alias), re-ekspor dari `coupons.ts`.
+- [x] `checkBundleRules` dipindah ke `coupon-pure.ts` (hapus `coupon-rules.ts`,
+      satu sumber kebenaran); test bundle diarahkan ke sana.
+- [x] `scripts/coupon-pure.test.ts` — 24 test (diskon persen/nominal/`maxDiscount`/
+      floor/batas ≤ subtotal/subtotal 0; tanggal; min belanja; kuota; per-user
+      termasuk `limitPerUser=0`; bundel; diskon 0).
+- [x] Script `test:coupon` + `tsconfig.json` exclude.
+- **Hasil:** `tsc` ✅ · `eslint` ✅ · `test:coupon` 24 ✅ · `test:bundle` 9 ✅ ·
+      `build` ✅. Semua `test:*` = **389** lolos.
 
 ### Fase K2 — UX kupon di keranjang (K1, K2, K7)
 - [ ] State error khusus kupon di `cart-view` (mis. `couponNotice`) — bukan `error`

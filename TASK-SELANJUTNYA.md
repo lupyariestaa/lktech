@@ -18,7 +18,29 @@
 
 ---
 
-## 📝 SESI INI — Audit Sistem Kupon → Flow Task (RENCANA)
+## 📝 SESI INI — Audit Sistem Kupon + K1 (Logika Murni & Test)
+
+**Status: 🔄 DIKERJAKAN — K1 ✅ selesai; K2–K6 pending.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
+
+Audit mandiri sistem kupon menemukan **14 gap** (1 kritis, 4 tinggi, 4 sedang,
+4 rendah). **Keputusan pemilik** untuk 3 pertanyaan terbuka:
+1. Statistik per-kupon → tampilkan **`activeOrders`** (non-batal) sebagai metrik utama (nanti di K4).
+2. `limitPerUser` → **izinkan 0** (= tanpa batas) + label (nanti di K3).
+3. Normalisasi kode → **transform di schema** (nanti di K5).
+
+### ✅ K1 selesai — Logika murni + test (K5)
+- Modul baru `src/lib/coupon-pure.ts` (mandiri, bebas `server-only`): `computeDiscount`,
+  `validateCoupon`, `checkBundleRules` — sumber kebenaran tunggal.
+- `coupon-rules.ts` **dihapus** (logika bundel pindah ke `coupon-pure.ts`); test bundle diarahkan ke sana.
+- `coupons.ts` re-ekspor dari `coupon-pure` (pemanggil lama tetap bekerja).
+- Test baru `scripts/coupon-pure.test.ts` (**24 test**) + script `test:coupon`.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**389** test) · `build` ✅.
+
+**Berikutnya:** K2 (UX kupon keranjang — K1/K2/K7) → K3 (form admin + a11y) → K4 (preview + statistik) → K5 (kebersihan) → K6 (QA & rilis).
+
+---
+
+## 📝 SESI SEBELUMNYA — Audit Sistem Kupon → Flow Task
 
 **Status: 📝 RENCANA.** Dokumen: [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 

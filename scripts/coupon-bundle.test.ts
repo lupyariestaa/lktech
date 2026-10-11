@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkBundleRules } from "../src/lib/coupon-rules.ts";
+import { checkBundleRules } from "../src/lib/coupon-pure.ts";
 
 /**
- * Uji aturan KUPON BUNDEL (FASE P3):
+ * Uji aturan KUPON BUNDEL (FASE P3) — kini bagian dari `coupon-pure.ts`:
  * - `appliesToSlugs`: keranjang wajib memuat ≥1 produk dari daftar.
  * - `minItems`: minimal jumlah item (qty).
  * Jalankan: `npm run test:bundle`
