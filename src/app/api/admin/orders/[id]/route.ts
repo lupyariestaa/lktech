@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
-import { getOrderById } from "@/lib/orders";
+import { getOrderById, attachBuyerPhotos } from "@/lib/orders";
 import { listOrderEmails } from "@/lib/email-status";
 
 export const runtime = "nodejs";
@@ -27,9 +27,10 @@ export async function GET(
     if (!order) {
       return NextResponse.json({ error: "Pesanan tidak ditemukan." }, { status: 404 });
     }
+    const [withPhoto] = await attachBuyerPhotos([order]);
     const emails = await listOrderEmails(id).catch(() => []);
     return NextResponse.json(
-      { order, emails },
+      { order: withPhoto, emails },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (err) {

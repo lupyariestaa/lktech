@@ -12,6 +12,7 @@ import {
   FulfillmentChip,
   AttentionChips,
 } from "@/components/admin/orders/order-status-badge";
+import { BuyerAvatar } from "@/components/admin/orders/buyer-avatar";
 import { cn } from "@/lib/utils";
 
 /** Kartu pesanan (FASE O1) — tampilan seluler / preferensi. */
@@ -42,9 +43,12 @@ export function OrderCard({
             aria-label={`Pilih pesanan ${shortOrderCode(order.id)}`}
             className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/30"
           />
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-light text-sm font-bold text-white">
-            {(order.buyerName || order.buyerEmail || "?").charAt(0).toUpperCase()}
-          </span>
+          <BuyerAvatar
+            name={order.buyerName}
+            email={order.buyerEmail}
+            photoUrl={order.buyerPhotoUrl}
+            size={44}
+          />
           <div>
             <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-secondary">
               {order.buyerName || "Tanpa nama"}

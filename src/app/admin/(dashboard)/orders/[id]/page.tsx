@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getOrderById } from "@/lib/orders";
+import { getOrderById, attachBuyerPhotos } from "@/lib/orders";
 import { shortOrderCode } from "@/lib/format";
 import { OrderPageClient } from "@/components/admin/orders/order-page-client";
 
@@ -23,8 +23,9 @@ export default async function AdminOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = await getOrderById(id);
-  if (!order) notFound();
+  const found = await getOrderById(id);
+  if (!found) notFound();
+  const [order] = await attachBuyerPhotos([found]);
 
   return (
     <div>

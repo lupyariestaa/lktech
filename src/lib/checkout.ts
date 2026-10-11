@@ -200,6 +200,10 @@ export async function performCheckout(
     { subtotal, discount, couponCode: orderCoupon?.code },
   );
 
+  // Ambil profil sekali — untuk foto pembeli (avatar dashboard) & nomor WA.
+  const buyerProfile = await getUserProfile(actor.uid).catch(() => null);
+  const buyerPhotoUrl = (buyerProfile?.photoURL ?? "").trim();
+
   const fulfillment: FulfillmentType = fulfillmentTypeForCategories(categories);
   const initialStatus =
     fulfillment === "jasa" ? "menunggu_konfirmasi" : "menunggu_bayar";
@@ -210,6 +214,7 @@ export async function performCheckout(
       uid: actor.uid,
       buyerName,
       buyerEmail: actor.email,
+      buyerPhotoUrl: buyerPhotoUrl || undefined,
       items,
       subtotal,
       coupon: orderCoupon,
@@ -231,9 +236,8 @@ export async function performCheckout(
     const payment: OrderPayment = { provider: "mayar", status: "belum_bayar" };
     if (isMayarConfigured() && total > 0) {
       try {
-        const profile = await getUserProfile(actor.uid).catch(() => null);
         const mobile =
-          (profile?.whatsapp ?? "").trim() || settings.whatsapp || "";
+          (buyerProfile?.whatsapp ?? "").trim() || settings.whatsapp || "";
 
         const invoice = await createInvoice({
           name: buyerName || "Pembeli LKTech",

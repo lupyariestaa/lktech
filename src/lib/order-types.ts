@@ -88,9 +88,14 @@ export type OrderCoupon = {
 /** Pesanan tersimpan di Firestore (`orders/{id}`). */
 export type Order = {
   id: string;
-  uid: string;
+uid: string;
   buyerName: string;
   buyerEmail: string;
+  /**
+   * URL foto profil pembeli (snapshot dari `users/{uid}.photoURL` saat checkout).
+   * Kosong untuk order lama / guest — tampilan memakai fallback inisial.
+   */
+  buyerPhotoUrl?: string;
   items: OrderItem[];
   /** Subtotal sebelum diskon (Rp). Untuk order lama: = `total`. */
   subtotal: number;
@@ -220,8 +225,9 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
   return {
     id: str(data.id),
     uid: str(data.uid),
-    buyerName: str(data.buyerName),
+buyerName: str(data.buyerName),
     buyerEmail: str(data.buyerEmail),
+    buyerPhotoUrl: str(data.buyerPhotoUrl) || undefined,
     items,
     subtotal,
     coupon,

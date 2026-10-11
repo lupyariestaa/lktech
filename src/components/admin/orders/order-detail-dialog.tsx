@@ -31,6 +31,7 @@ import { formatRupiah, formatDateTime, shortOrderCode } from "@/lib/format";
 import { waLink } from "@/lib/whatsapp";
 import { useToast } from "@/components/admin/toast";
 import { OrderTimeline } from "@/components/admin/order-timeline";
+import { BuyerAvatar } from "@/components/admin/orders/buyer-avatar";
 import { cn } from "@/lib/utils";
 
 /** Dialog tinjauan cepat (FASE O6) — detail lengkap ada di halaman `/admin/orders/[id]`. */
@@ -166,20 +167,28 @@ export function OrderDetailBody({
       </div>
 
       {/* Pembeli */}
-      <div className="mt-4 rounded-2xl bg-surface p-4">
-        <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
-          Pembeli
-        </p>
-        <p className="mt-1 text-sm font-semibold text-secondary">
-          {order.buyerName || "Tanpa nama"}
-        </p>
-        <a
-          href={`mailto:${order.buyerEmail}`}
-          className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-primary"
-        >
-          <Mail className="h-3.5 w-3.5" />
-          {order.buyerEmail}
-        </a>
+      <div className="mt-4 flex items-center gap-3 rounded-2xl bg-surface p-4">
+        <BuyerAvatar
+          name={order.buyerName}
+          email={order.buyerEmail}
+          photoUrl={order.buyerPhotoUrl}
+          size={44}
+        />
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+            Pembeli
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-secondary">
+            {order.buyerName || "Tanpa nama"}
+          </p>
+          <a
+            href={`mailto:${order.buyerEmail}`}
+            className="inline-flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-primary"
+          >
+            <Mail className="h-3.5 w-3.5" />
+            {order.buyerEmail}
+          </a>
+        </div>
       </div>
 
       {/* Pembayaran */}

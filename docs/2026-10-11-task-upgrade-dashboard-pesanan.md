@@ -241,6 +241,18 @@ dengan timeline, dan panel "butuh perhatian".
 - **Jumlah per halaman** 25/50/100 (URL `?pageSize=`, default 25).
 - **Cetak rincian pesanan** via tombol "Cetak" (`window.print()`) — `@media print` menyembunyikan sidebar/header/aksi/timeline; hanya rincian order yang tercetak.
 
+### Revisi lanjutan — Foto profil pembeli (avatar nyata)
+- Sebelumnya avatar pembeli hanya inisial huruf. Kini menampilkan **foto profil asli** (Google) pembeli.
+- **Snapshot saat checkout:** `Order.buyerPhotoUrl` diisi dari `users/{uid}.photoURL` (checkout.ts mengambil profil sekali, dipakai juga untuk nomor WA invoice).
+- **Order lama:** `attachBuyerPhotos()` (`orders.ts`) melengkapi `buyerPhotoUrl` dari `users/{uid}` (satu batch `getAll` per halaman) — best-effort. Dipakai di `GET /api/admin/orders`, `GET /api/admin/orders/[id]`, dan halaman detail.
+- **Komponen** `BuyerAvatar` (`admin/orders/buyer-avatar.tsx`): render `<img>` + `onError`→inisial; dipakai di tabel, kartu, dan detail.
+- `lh3.googleusercontent.com` sudah diizinkan di `next.config.ts` (images). Pakai `<img>` agar host foto apa pun tetap tampil (referrer no-referrer).
+
+### Berkas revisi foto pembeli
+- Baru: `src/components/admin/orders/buyer-avatar.tsx`.
+- Diubah: `order-types.ts` (`buyerPhotoUrl`), `orders.ts` (`createOrder` + `attachBuyerPhotos`), `checkout.ts` (ambil profil sekali), `api/admin/orders/route.ts`, `api/admin/orders/[id]/route.ts`, `admin/(dashboard)/orders/[id]/page.tsx`, `orders-table.tsx`, `order-card.tsx`, `order-detail-dialog.tsx`.
+- **Catatan:** order tanpa login-Google (foto kosong) → fallback inisial. Denormalisasi ini juga membuat snapshot stabil meski user ganti foto (per order), sementara order lama ikut terisi saat dibuka.
+
 ### Keputusan §7 (default diambil)
 1. **O1+O2 dulu** (tabel+filter) → lanjut O3–O8 sekaligus.
 2. Halaman detail **dipakai** + dialog tinjauan cepat tetap ada.

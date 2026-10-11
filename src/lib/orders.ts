@@ -50,6 +50,7 @@ export async function createOrder(
     message: data.message,
     createdAtISO: nowISO,
   };
+  if (data.buyerPhotoUrl) payload.buyerPhotoUrl = data.buyerPhotoUrl;
   if (data.coupon) payload.coupon = data.coupon;
   if (data.payment) payload.payment = data.payment;
   if (data.fulfillment) payload.fulfillment = data.fulfillment;
@@ -420,6 +421,42 @@ export async function getOrdersByIds(ids: string[]): Promise<Order[]> {
   return snaps
     .filter((s) => s.exists)
     .map((s) => normalizeOrder({ id: s.id, ...(s.data() as Record<string, unknown>) }));
+}
+
+/**
+ * Lengkapi `buyerPhotoUrl` untuk order yang belum menyimpannya (order lama /
+ * dibuat sebelum fitur foto). Diambil dari dokumen `users/{uid}` (satu kali per
+ * uid unik). Best-effort: bila Admin SDK/uid kosong, order dikembalikan apa adanya.
+ */
+export async function attachBuyerPhotos(orders: Order[]): Promise<Order[]> {
+  const missing = orders.filter((o) => !o.buyerPhotoUrl && o.uid);
+  if (missing.length === 0) return orders;
+  const db = getAdminDb();
+  if (!db) return orders;
+
+  const uids = [...new Set(missing.map((o) => o.uid))].slice(0, 50);
+  let photoByUid = new Map<string, string>();
+  try {
+    const snaps = await db.getAll(...uids.map((uid) => db.collection("users").doc(uid)));
+    photoByUid = new Map(
+      snaps
+        .map((s) => {
+          const v = s.exists ? s.get("photoURL") : undefined;
+          return [s.id, typeof v === "string" ? v.trim() : ""] as const;
+        })
+        .filter(([, v]) => Boolean(v)),
+    );
+  } catch (err) {
+    console.error("[orders] gagal memuat foto pembeli:", err);
+    return orders;
+  }
+
+  if (photoByUid.size === 0) return orders;
+  return orders.map((o) =>
+    o.buyerPhotoUrl || !o.uid
+      ? o
+      : { ...o, buyerPhotoUrl: photoByUid.get(o.uid) || undefined },
+  );
 }
 
 /**

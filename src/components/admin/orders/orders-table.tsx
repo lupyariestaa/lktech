@@ -12,6 +12,7 @@ import {
   FulfillmentChip,
   AttentionChips,
 } from "@/components/admin/orders/order-status-badge";
+import { BuyerAvatar } from "@/components/admin/orders/buyer-avatar";
 import { cn } from "@/lib/utils";
 
 /**
@@ -113,10 +114,20 @@ export function OrdersTable({
                   {formatDateTime(order.createdAt)}
                 </td>
                 <td className="max-w-[200px] px-3 py-3">
-                  <p className="truncate font-medium text-secondary">
-                    {order.buyerName || "Tanpa nama"}
-                  </p>
-                  <p className="truncate text-xs text-muted">{order.buyerEmail}</p>
+                  <div className="flex items-center gap-2.5">
+                    <BuyerAvatar
+                      name={order.buyerName}
+                      email={order.buyerEmail}
+                      photoUrl={order.buyerPhotoUrl}
+                      size={32}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-secondary">
+                        {order.buyerName || "Tanpa nama"}
+                      </p>
+                      <p className="truncate text-xs text-muted">{order.buyerEmail}</p>
+                    </div>
+                  </div>
                 </td>
                 <td className="max-w-[220px] px-3 py-3">
                   <p className="truncate text-xs text-slate-600" title={itemSummary(order)}>

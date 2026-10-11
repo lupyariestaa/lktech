@@ -10,6 +10,7 @@ import {
   getOrdersSummary,
   getOrdersAttentionSummary,
   getOrdersByIds,
+  attachBuyerPhotos,
   updateOrderStatus,
 } from "@/lib/orders";
 import { ORDER_STATUSES, ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/order-types";
@@ -159,13 +160,14 @@ export async function GET(req: Request) {
   try {
     if (useFilterMode) {
       const result = await getOrdersPage({ filter, sort, page, limit });
+      result.orders = await attachBuyerPhotos(result.orders);
       return NextResponse.json(result, {
         headers: { "Cache-Control": "no-store" },
       });
     }
     const { orders, nextCursor } = await getOrdersPage({ status, cursor, limit });
     return NextResponse.json(
-      { orders, nextCursor },
+      { orders: await attachBuyerPhotos(orders), nextCursor },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (err) {
