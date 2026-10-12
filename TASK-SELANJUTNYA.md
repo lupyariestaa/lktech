@@ -1,14 +1,18 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Tema 2 — Retensi & Engagement (R1–R5 selesai)**.
+> Terakhir diperbarui: sesi **Polish Sistem Pengaturan — FASE P0–P3 SELESAI**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 📝 **Polish Sistem Pengaturan** — audit menemukan ~30 gap (7 kritis: **SEO tak berpengaruh**, **restore backup bisa nonaktifkan admin**, verifikasi email admin, maintenance basi, dll). Rencana fase P0–P4: [`docs/2026-10-11-polish-pengaturan-gap.md`](docs/2026-10-11-polish-pengaturan-gap.md). **Belum dieksekusi.**
+> 🎯 **TASK AKTIF (berikutnya):** 🧩 **Polish Sistem Pengaturan — FASE P4 (QA & rilis)** (P0–P3 ✅ selesai). Sisa: gate penuh (tsc/eslint/semua test/build) ✅ sudah hijau · **uji browser manual** semua alur pengaturan (form, backup, integrasi, maintenance, SEO, cookie admin) · update dokumentasi · commit. Lihat [`docs/2026-10-11-polish-pengaturan-gap.md`](docs/2026-10-11-polish-pengaturan-gap.md) §4 (P4). **Kode selesai; tinggal QA manual & rilis.**
+> ✅ **Polish Sistem Pengaturan — FASE P3 SELESAI (2026-10-11):** G20 satu sumber sub-menu (`SETTINGS_NAV` → `admin-nav` children); G21 deskripsi nav diluruskan; G22 label kartu = judul halaman; G23 komponen form bersama (`settings-form-ui.tsx`); G24 error/retry overview nyata; G26 slug tak dikenal → `notFound`; G27 a11y (sr-only, aria-label, aria-live, focus-trap `ConfirmDialog`); G28 UX integrasi (uji disabled bila belum terkonfigurasi, cron/download/webhook sbg baris status); G29 UX backup dua tahap; G30 metadata maintenance dinamis + dimensi img + label WIB. Lihat [`docs/2026-10-11-polish-pengaturan-gap.md`](docs/2026-10-11-polish-pengaturan-gap.md) §9.
+> ✅ **Polish Sistem Pengaturan — FASE P2 SELESAI (2026-10-11):** G8 banner error + disable Simpan saat gagal load; G9 disable Simpan saat tak dirty; G10 konversi `datetime-local` benar (zona lokal); G11 validasi klien per-field + pesan server jelas; G12 label sosial editable; G13 satu sumber status email; G14 target sentuh ≥44px; bonus G25 info sistem nyata. Lihat §8.
+> ✅ **Polish Sistem Pengaturan — FASE P1 SELESAI (2026-10-11):** G6 gate admin server-side; G15 sumber tunggal "dibayar"; G16 `clampDays`; G17 `isDbAdmin` default-closed; G18 rate-limit ekspor backup; G19 validasi domain URL (trusted-url.ts). Lihat §7.
+> ✅ **Polish Sistem Pengaturan — FASE P0 SELESAI (2026-10-11):** G1 SEO berdampak (+ google-site-verification); G2/G3 impor backup aman; G4 batas + truncated + snapshot + dry-run; G5 tolak admin email belum terverifikasi; G7 maintenance tak lagi basi. Lihat §6.
 > **Sistem Pengaturan Super Proper & Terintegrasi ✅ SELESAI (S0–S9, 2026-10-11)** — lihat [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
@@ -20,28 +24,43 @@
 
 ---
 
-## 📝 SESI INI — Audit Polish Sistem Pengaturan (Catatan Gap)
+## ✅ SESI INI — Polish Sistem Pengaturan FASE P0–P3 (SELESAI)
 
-**Status: 📝 CATATAN GAP (belum diperbaiki).** Dokumen: [`docs/2026-10-11-polish-pengaturan-gap.md`](docs/2026-10-11-polish-pengaturan-gap.md).
+**Status: ✅ SELESAI (kode, P0/P1/P2/P3).** Dokumen: [`docs/2026-10-11-polish-pengaturan-gap.md`](docs/2026-10-11-polish-pengaturan-gap.md) §6–§9.
+
+**Fase P3** (konsistensi, a11y, dedup) — sesi ini:
+- **G20** — satu sumber sub-menu `SETTINGS_NAV`; `admin-nav.ts` membangun `children` darinya.
+- **G21** — deskripsi nav "Keamanan" diluruskan.
+- **G22** — label kartu ringkasan = judul halaman.
+- **G23** — komponen form bersama **`settings-form-ui.tsx`** (`FormErrorBanner`, `SaveRow`, `fieldClass`, `Field`, `FormSection`).
+- **G24** — overview: error state + tombol "Coba lagi" (bukan "memuat…" palsu).
+- **G26** — slug tak dikenal → `notFound()`.
+- **G27** — a11y: `sr-only`, `aria-label` per layanan, `aria-live`, **focus-trap `ConfirmDialog`**.
+- **G28** — tombol uji disabled bila belum terkonfigurasi; cron/download/webhook sbg baris status.
+- **G29** — backup dua tahap (pratinjau → dialog konfirmasi; tak bersamaan).
+- **G30** — `/maintenance`: metadata dinamis, dimensi `<img>`, label "WIB".
+
+**Fase P2**: G8 banner error + disable Simpan saat gagal load · G9 disable Simpan saat tak dirty · G10 `datetime-local` benar · G11 validasi klien per-field · G12 label sosial · G13 satu sumber status email · G14 target sentuh ≥44px · G25 info sistem nyata.
+**Fase P1**: G6 gate admin server-side · G15 sumber tunggal "dibayar" · G16 `clampDays` · G17 `isDbAdmin` default-closed · G18 rate-limit ekspor · G19 validasi domain URL.
+**Fase P0**: G1 SEO berdampak · G2/G3 backup aman · G4 batas+snapshot+dry-run · G5 email terverifikasi · G7 maintenance tak basi.
+
+**Test baru/diperluas:** `test:backup` 8→**16**, `test:payment` 5→**8**, `test:seo` **4**, `test:trusted-url` **6**, `test:settings-form` **10**.
+**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ · `build` ✅ (81 halaman).
+
+**Sisa:** fase **P4** (QA & rilis) — uji browser manual, dokumentasi, commit.
+**Sisa manual:** uji browser (form validasi, ETA tak bergeser, banner gagal-load, cookie ngawur, metrik bayar, rate-limit ekspor, dialog backup, Tab terperangkap, maintenance dinamis).
+
+---
+
+## 📝 SESI SEBELUMNYA — Audit Polish Sistem Pengaturan (Catatan Gap)
+
+**Status: 📝 CATATAN GAP.** Dokumen: [`docs/2026-10-11-polish-pengaturan-gap.md`](docs/2026-10-11-polish-pengaturan-gap.md).
 
 Audit menyeluruh (UI + backend) atas sistem Pengaturan menemukan **~30 gap**
 (7 kritis, 12 sedang, 11 rendah). **Temuan terverifikasi** (baca kode + grep).
-
-**Kritis (P0):**
-- **G1** — Pengaturan **SEO disimpan tapi TIDAK berpengaruh** ke metadata situs
-  (field `settings.seo.*` tanpa konsumen; klaim `google-site-verification` palsu).
-- **G2/G3** — **Restore backup `admins`** bisa menonaktifkan admin & **`settings`
-  pakai `_id` bebas** → jalur berbahaya.
-- **G4** — Restore tanpa snapshot/undo/batas (overwrite destruktif, cap 5000 diam-diam).
-- **G5** — Verifikasi **`email_verified`** admin tidak dicek.
-- **G6** — Gate admin di proxy hanya cek keberadaan cookie.
-- **G7** — Maintenance bisa **basi ~30–90s** (endpoint status tak direvalidasi).
-
-Sedang lainnya: 4 halaman telan error load (bisa timpa data default), `datetime-local`
-salah zona, validasi klien minim, label sosial tersembunyi, target sentuh <44px,
-metrik pembayaran tak konsisten, dll. Rencana fase **P0–P4** ada di dokumen.
-
-**Tidak ada perubahan kode** — sesi ini hanya audit & catatan.
+7 kritis: G1 SEO tak berpengaruh · G2/G3 restore backup admin berbahaya · G4 restore
+destruktif tanpa batas · G5 `email_verified` tak dicek · G6 gate proxy lemah · G7
+maintenance basi. Rencana fase **P0–P4** ada di dokumen. (P0 kini selesai ✅.)
 
 ---
 

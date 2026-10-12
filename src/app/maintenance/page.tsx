@@ -3,10 +3,18 @@ import { getSiteSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Sedang Pemeliharaan",
-  robots: { index: false, follow: false },
-};
+/**
+ * G30: metadata DINAMIS — judul mengikuti `maintenance.title` yang diatur admin
+ * (sebelumnya statis "Sedang Pemeliharaan").
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  const m = settings.maintenance ?? {};
+  return {
+    title: m.title?.trim() || "Sedang Pemeliharaan",
+    robots: { index: false, follow: false },
+  };
+}
 
 /**
  * Halaman publik mode pemeliharaan — menampilkan gambar + pesan yang diatur dari
@@ -25,6 +33,9 @@ export default async function MaintenancePage() {
           <img
             src={m.imageUrl}
             alt={m.imageAlt || "Pemeliharaan"}
+            // G30: dimensi eksplisit mencegah CLS (h-56 = 224px).
+            width={512}
+            height={224}
             className="h-56 w-full object-cover"
           />
         ) : (
@@ -47,7 +58,8 @@ export default async function MaintenancePage() {
                 dateStyle: "long",
                 timeStyle: "short",
                 timeZone: "Asia/Jakarta",
-              })}
+              })}{" "}
+              WIB
             </p>
           )}
           {m.contactEmail && (

@@ -20,6 +20,38 @@ export async function createAdminSessionCookie(
   return auth.createSessionCookie(idToken, { expiresIn: SESSION_MAX_AGE_MS });
 }
 
+export type AdminSessionInfo = { uid: string; email: string; emailVerified: boolean };
+
+/**
+ * Memverifikasi SESSION COOKIE admin (defense-in-depth, gap G6).
+ *
+ * Sebelumnya gate `/admin` hanya mengecek KEBERADAAN cookie; siapa pun yang
+ * menyetel cookie bernama `__session` bisa membuka shell dashboard. Fungsi ini
+ * memverifikasi cookie secara kriptografis (`verifySessionCookie`) & mengembalikan
+ * identitas, sehingga layout server `/admin` dapat menolak non-admin.
+ *
+ * Mengembalikan `null` bila cookie kosong, tidak valid, kedaluwarsa, atau Admin
+ * SDK tidak tersedia.
+ */
+export async function verifyAdminSessionCookie(
+  cookieValue: string | undefined | null,
+): Promise<AdminSessionInfo | null> {
+  const token = cookieValue?.trim();
+  if (!token) return null;
+  const auth = getAdminAuth();
+  if (!auth) return null;
+  try {
+    const decoded = await auth.verifySessionCookie(token, true);
+    return {
+      uid: decoded.uid,
+      email: (decoded.email ?? "").toLowerCase(),
+      emailVerified: decoded.email_verified === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Menyimpan session cookie (HttpOnly) pada respons. */
 export function setSessionCookie(
   res: NextResponse,

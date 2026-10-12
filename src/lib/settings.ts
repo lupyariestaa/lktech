@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
   DEFAULT_SETTINGS,
   type SiteSettings,
@@ -55,8 +56,11 @@ export function mergeSettings(data: Partial<SiteSettings> | undefined): SiteSett
 /**
  * Mengambil pengaturan situs dari Firestore (server-side).
  * Fallback ke nilai default bila belum ada / Admin SDK tidak tersedia.
+ *
+ * Dibungkus `cache()` agar dalam satu request hanya di-query sekali
+ * (dipanggil di `generateMetadata` DAN `RootLayout` — lihat gap G1).
  */
-export async function getSiteSettings(): Promise<SiteSettings> {
+export const getSiteSettings = cache(async (): Promise<SiteSettings> => {
   try {
     const { getAdminDb } = await import("@/lib/firebase-admin");
     const db = getAdminDb();
@@ -73,4 +77,4 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     console.error("[settings] gagal memuat:", err);
     return DEFAULT_SETTINGS;
   }
-}
+});

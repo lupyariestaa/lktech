@@ -1,6 +1,7 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
 import {
+  clampDays,
   computePaymentMetrics,
   type PaymentMetricRow,
   type PaymentMetrics,
@@ -8,7 +9,7 @@ import {
 
 /**
  * Metrik pembayaran (Mayar) dari koleksi `orders` (fase S5). Best-effort.
- * Membaca jendela `days` hari terakhir (default 30), field minimal.
+ * Membaca jendela `days` hari terakhir (di-clamp aman, gap G16).
  */
 export async function getPaymentMetrics(days = 30): Promise<PaymentMetrics> {
   const empty: PaymentMetrics = {
@@ -23,7 +24,7 @@ export async function getPaymentMetrics(days = 30): Promise<PaymentMetrics> {
   const db = getAdminDb();
   if (!db) return empty;
   try {
-    const safeDays = Math.min(Math.max(Math.floor(days), 1), 365);
+    const safeDays = clampDays(days);
     const cutoff = new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000).toISOString();
     const snap = await db
       .collection("orders")

@@ -1,22 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  CheckCircle2,
-  Database,
-  Eraser,
-  Loader2,
-  Save,
-  Wrench,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Database, Eraser, Loader2, Wrench } from "lucide-react";
 import { fetchSettingsWithHealth, saveSettings } from "@/lib/admin-api";
 import { clearCache } from "@/lib/admin-settings-api";
 import { useToast } from "@/components/admin/toast";
 import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/settings-types";
-
-const field =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
+import {
+  isoToLocalInput,
+  localInputToIso,
+  validateUrl,
+  validateEmail,
+} from "@/lib/settings-form-pure";
+import {
+  fieldClass as field,
+  fieldErrorClass as fieldError,
+  FormErrorBanner,
+  SaveRow,
+} from "@/components/admin/settings/settings-form-ui";
 
 /** Halaman Lanjutan & Sistem (fase S6): maintenance + cache + info. */
 export function SettingsLanjutan() {
@@ -27,6 +29,8 @@ export function SettingsLanjutan() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   useRegisterDirty(dirty);
 
   useEffect(() => {
@@ -35,8 +39,11 @@ export function SettingsLanjutan() {
       try {
         const data = await fetchSettingsWithHealth();
         if (active) setSettings(data.settings);
-      } catch {
-        /* abaikan */
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Gagal memuat.");
+          setLoadFailed(true);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -53,8 +60,19 @@ export function SettingsLanjutan() {
     setDirty(true);
   };
 
+  // Validasi klien (gap G11).
+  const imgError = useMemo(() => validateUrl(m.imageUrl ?? "", "URL gambar"), [m.imageUrl]);
+  const emailError = useMemo(() => validateEmail(m.contactEmail ?? ""), [m.contactEmail]);
+  const valid = !imgError && !emailError;
+
   const onSave = async () => {
+    if (!valid) {
+      setError("Periksa kembali kolom yang ditandai merah.");
+      return;
+    }
     setSaving(true);
+    setError(null);
+    setSaved(false);
     try {
       const res = await saveSettings(settings);
       setSettings(res.settings);
@@ -62,7 +80,9 @@ export function SettingsLanjutan() {
       setDirty(false);
       toast.success("Pengaturan sistem tersimpan.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal menyimpan.");
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -91,6 +111,8 @@ export function SettingsLanjutan() {
 
   return (
     <div className="flex flex-col gap-5">
+      <FormErrorBanner message={error} loadFailed={loadFailed} />
+
       <section className="rounded-3xl border border-slate-200 bg-white p-6">
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-secondary">
           <Wrench className="h-4 w-4" /> Mode Pemeliharaan
@@ -128,12 +150,11 @@ export function SettingsLanjutan() {
             <span className="text-sm font-medium text-secondary">Perkiraan selesai (opsional)</span>
             <input
               type="datetime-local"
-              value={m.etaISO ? m.etaISO.slice(0, 16) : ""}
-              onChange={(e) =>
-                updateM({ etaISO: e.target.value ? new Date(e.target.value).toISOString() : "" })
-              }
+              value={isoToLocalInput(m.etaISO)}
+              onChange={(e) => updateM({ etaISO: localInputToIso(e.target.value) })}
               className={field}
             />
+            <span className="text-xs text-muted">Waktu lokal (zona perangkat Anda).</span>
           </label>
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-medium text-secondary">Pesan</span>
@@ -150,9 +171,16 @@ export function SettingsLanjutan() {
             <input
               value={m.imageUrl ?? ""}
               onChange={(e) => updateM({ imageUrl: e.target.value })}
-              className={field}
+              className={`${field} ${imgError ? fieldError : ""}`}
               placeholder="https://…/gambar.png"
+              aria-invalid={Boolean(imgError)}
+              aria-describedby={imgError ? "maintenance-img-error" : undefined}
             />
+            {imgError && (
+              <span id="maintenance-img-error" role="alert" className="text-xs text-rose-600">
+                {imgError}
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-secondary">Alt gambar</span>
@@ -169,9 +197,16 @@ export function SettingsLanjutan() {
               type="email"
               value={m.contactEmail ?? ""}
               onChange={(e) => updateM({ contactEmail: e.target.value })}
-              className={field}
+              className={`${field} ${emailError ? fieldError : ""}`}
               placeholder="nama@email.com"
+              aria-invalid={Boolean(emailError)}
+              aria-describedby={emailError ? "maintenance-email-error" : undefined}
             />
+            {emailError && (
+              <span id="maintenance-email-error" role="alert" className="text-xs text-rose-600">
+                {emailError}
+              </span>
+            )}
           </label>
         </div>
 
@@ -217,28 +252,35 @@ export function SettingsLanjutan() {
           <Database className="h-4 w-4" /> Informasi Sistem
         </h2>
         <ul className="mt-3 flex flex-col gap-1.5 text-xs text-muted">
-          <li>Brand: <strong className="text-secondary">{settings.brandName || "—"}</strong></li>
-          <li>Lokasi: <strong className="text-secondary">{settings.location || "—"}</strong></li>
-          <li>Kontak email: <strong className="text-secondary">{settings.email || "—"}</strong></li>
+          <li>
+            Mode pemeliharaan:{" "}
+            <strong className={m.enabled ? "text-amber-600" : "text-emerald-600"}>
+              {m.enabled ? "Aktif" : "Nonaktif"}
+            </strong>
+          </li>
+          <li>
+            Perkiraan selesai:{" "}
+            <strong className="text-secondary">
+              {m.etaISO
+                ? new Date(m.etaISO).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
+                : "—"}
+            </strong>
+          </li>
+          <li>
+            Lingkungan: <strong className="text-secondary">{process.env.NODE_ENV ?? "production"}</strong>
+          </li>
+          <li>
+            Brand situs: <strong className="text-secondary">{settings.brandName || "—"}</strong>
+          </li>
         </ul>
       </section>
 
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-70"
-        >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Simpan
-        </button>
-        {saved && (
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600">
-            <CheckCircle2 className="h-4 w-4" /> Tersimpan
-          </span>
-        )}
-      </div>
+      <SaveRow
+        onSave={onSave}
+        saving={saving}
+        saved={saved}
+        disabled={loadFailed || !dirty || !valid}
+      />
     </div>
   );
 }

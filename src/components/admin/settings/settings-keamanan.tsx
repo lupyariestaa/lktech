@@ -146,9 +146,9 @@ export function SettingsKeamanan() {
                     type="button"
                     onClick={() => setToRemove(a)}
                     aria-label={`Hapus admin ${a.email}`}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-rose-200 hover:text-rose-500"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-rose-200 hover:text-rose-500"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 )}
               </li>

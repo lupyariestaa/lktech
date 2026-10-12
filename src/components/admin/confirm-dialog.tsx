@@ -8,8 +8,9 @@ import { cn } from "@/lib/utils";
  * Dialog konfirmasi bersama (pengganti `window.confirm`) untuk aksi destruktif
  * maupun konfirmasi generik (mis. "tinggalkan perubahan belum disimpan").
  *
- * Aksesibel: `role="dialog"` + `aria-modal`, fokus dipindah ke tombol utama,
- * Escape menutup, fokus dikembalikan ke elemen pemicu saat ditutup.
+ * Aksesibel (gap G27): `role="dialog"` + `aria-modal`, fokus dipindah ke tombol
+ * utama, **fokus terperangkap di dalam dialog** (Tab/Shift+Tab siklus), Escape
+ * menutup, fokus dikembalikan ke elemen pemicu saat ditutup.
  */
 export function ConfirmDialog({
   open,
@@ -32,6 +33,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
 
@@ -41,8 +43,33 @@ export function ConfirmDialog({
     // Pindahkan fokus ke tombol konfirmasi.
     const t = setTimeout(() => confirmRef.current?.focus(), 0);
 
+    const focusables = () =>
+      Array.from(
+        panelRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape") {
+        onCancel();
+        return;
+      }
+      // Focus-trap: jaga Tab tetap di dalam dialog.
+      if (e.key === "Tab") {
+        const items = focusables();
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && active === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => {
@@ -66,7 +93,10 @@ export function ConfirmDialog({
         onClick={onCancel}
         aria-hidden="true"
       />
-      <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/10">
+      <div
+        ref={panelRef}
+        className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/10"
+      >
         <div className="flex items-start gap-3">
           <span
             className={cn(

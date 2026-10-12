@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SITE } from "@/lib/site";
 import { getSiteSettings } from "@/lib/settings";
+import { resolveSeo } from "@/lib/seo-pure";
 import { getSiteContent } from "@/lib/site-content";
 import { SkipLink } from "@/components/skip-link";
 import { StructuredData } from "@/components/structured-data";
@@ -29,62 +30,83 @@ const spaceGrotesk = Space_Grotesk({
   preload: true,
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE.url),
-  title: {
-    default: SITE.title,
-    template: "%s | LKTech",
-  },
-  description: SITE.description,
-  keywords: [
-    "LKTech",
-    "jasa pembuatan website",
-    "aplikasi mobile",
-    "konsultasi teknologi",
-    "jasa IT Tasikmalaya",
-    "landing page",
-    "web development",
-  ],
-  applicationName: SITE.name,
-  authors: [{ name: SITE.name }],
-  creator: SITE.name,
-  publisher: SITE.name,
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    type: "website",
-    locale: SITE.locale,
-    url: SITE.url,
-    siteName: SITE.name,
-    title: SITE.title,
-    description: SITE.description,
-    images: [
-      {
-        url: SITE.ogImage,
-        width: 1200,
-        height: 630,
-        alt: SITE.title,
-      },
+/**
+ * Metadata default dari konstanta `SITE`, dengan override dari pengaturan SEO
+ * dashboard (`settings.seo`) — lihat gap G1. `generateMetadata` (async) membaca
+ * `getSiteSettings()` sehingga Meta Title/Description/OG/verification yang diisi
+ * admin BENAR-BENAR berpengaruh ke seluruh situs. Halaman yang menetapkan
+ * metadata sendiri tetap menang (override per-halaman).
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  const seo = resolveSeo(settings.seo);
+
+  const title = seo.title ?? SITE.title;
+  const description = seo.description ?? SITE.description;
+  const ogImage = seo.ogImage ?? SITE.ogImage;
+
+  return {
+    metadataBase: new URL(SITE.url),
+    title: {
+      default: title,
+      template: "%s | LKTech",
+    },
+    description,
+    keywords: [
+      "LKTech",
+      "jasa pembuatan website",
+      "aplikasi mobile",
+      "konsultasi teknologi",
+      "jasa IT Tasikmalaya",
+      "landing page",
+      "web development",
     ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: SITE.title,
-    description: SITE.description,
-    images: [SITE.ogImage],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+    applicationName: SITE.name,
+    authors: [{ name: SITE.name }],
+    creator: SITE.name,
+    publisher: SITE.name,
+    alternates: {
+      canonical: "/",
+    },
+    // Verification Google Search Console — hanya disertakan bila diisi admin
+    // (sebelumnya form "menjanjikan" tag ini tetapi tak pernah di-render → G1).
+    ...(seo.searchConsoleId
+      ? { verification: { google: seo.searchConsoleId } }
+      : {}),
+    openGraph: {
+      type: "website",
+      locale: SITE.locale,
+      url: SITE.url,
+      siteName: SITE.name,
+      title,
+      description,
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
+    robots: {
       index: true,
       follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
     },
-  },
-};
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#004EDF",

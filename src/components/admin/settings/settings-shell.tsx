@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft, Settings } from "lucide-react";
-import { SETTINGS_NAV } from "@/lib/settings-nav";
+import { findSettingsNav } from "@/lib/settings-nav";
 
 /**
  * Kerangka halaman Pengaturan: judul + deskripsi + konten.
@@ -19,8 +20,12 @@ export function SettingsShell({
   current: string;
   children: React.ReactNode;
 }) {
-  const active = SETTINGS_NAV.find((n) => n.slug === current) ?? SETTINGS_NAV[0];
-  const isRoot = current === "";
+  // Gap G26: slug tak dikenal → 404 (sebelumnya menampilkan "Ringkasan" yang
+  // menyesatkan karena fallback diam-diam).
+  const active = findSettingsNav(current);
+  if (!active) notFound();
+
+  const isRoot = active.slug === "";
 
   return (
     <div>

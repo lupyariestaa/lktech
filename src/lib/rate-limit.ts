@@ -12,9 +12,27 @@
  * yang tidak ingin menambah latency jaringan, mis. webhook).
  */
 
+import { checkTrustedUrl } from "@/lib/trusted-url";
+
 type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
+
+/**
+ * Ambil URL Upstash HANYA bila host tepercaya (gap G19). Mengembalikan
+ * `{ url, token }` atau `null` bila tidak dikonfigurasi / host tak aman.
+ */
+function safeUpstashConfig(): { url: string; token: string } | null {
+  const rawUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const token = (process.env.UPSTASH_REDIS_REST_TOKEN ?? "").trim();
+  if (!rawUrl || !token) return null;
+  const check = checkTrustedUrl(rawUrl, "upstash");
+  if (!check.ok) {
+    console.error(`[rate-limit] URL Upstash tidak tepercaya: ${check.reason}`);
+    return null;
+  }
+  return { url: check.url, token };
+}
 
 /** Bersihkan entri kedaluwarsa agar Map tidak tumbuh tanpa batas. */
 function sweep(now: number) {
@@ -31,25 +49,28 @@ export type RateLimitResult = {
   retryAfter: number;
 };
 
-/** Apakah rate-limit terdistribusi (Upstash) dikonfigurasi. */
+/** Apakah rate-limit terdistribusi (Upstash) dikonfigurasi & host tepercaya. */
 export function isDistributedRateLimitConfigured(): boolean {
-  return Boolean(
-    (process.env.UPSTASH_REDIS_REST_URL ?? "").trim() &&
-      (process.env.UPSTASH_REDIS_REST_TOKEN ?? "").trim(),
-  );
+  return safeUpstashConfig() !== null;
 }
 
 /**
  * Uji koneksi (PING) ke Upstash Redis REST (fase S5). Tidak pernah melempar.
- * Menggunakan perintah `PING` via pipeline REST.
+ * Menggunakan perintah `PING` via pipeline REST. Host divalidasi (gap G19).
  */
 export async function pingUpstash(): Promise<{ ok: boolean; detail: string }> {
-  const url = (process.env.UPSTASH_REDIS_REST_URL ?? "").trim().replace(/\/+$/, "");
-  const token = (process.env.UPSTASH_REDIS_REST_TOKEN ?? "").trim();
-  if (!url || !token) return { ok: false, detail: "Upstash belum dikonfigurasi." };
+  const cfg = safeUpstashConfig();
+  if (!cfg) {
+    // Bedakan belum dikonfigurasi vs host tak aman.
+    const rawUrl = (process.env.UPSTASH_REDIS_REST_URL ?? "").trim();
+    const token = (process.env.UPSTASH_REDIS_REST_TOKEN ?? "").trim();
+    if (!rawUrl || !token) return { ok: false, detail: "Upstash belum dikonfigurasi." };
+    const check = checkTrustedUrl(rawUrl, "upstash");
+    return { ok: false, detail: check.ok ? "Upstash belum dikonfigurasi." : check.reason };
+  }
   try {
-    const res = await fetch(`${url}/ping`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${cfg.url}/ping`, {
+      headers: { Authorization: `Bearer ${cfg.token}` },
       cache: "no-store",
     });
     if (!res.ok) return { ok: false, detail: `Upstash merespons HTTP ${res.status}.` };
@@ -105,19 +126,18 @@ async function rateLimitUpstash(
   limit: number,
   windowMs: number,
 ): Promise<RateLimitResult | null> {
-  const url = (process.env.UPSTASH_REDIS_REST_URL ?? "").trim().replace(/\/+$/, "");
-  const token = (process.env.UPSTASH_REDIS_REST_TOKEN ?? "").trim();
-  if (!url || !token) return null;
+  const cfg = safeUpstashConfig();
+  if (!cfg) return null;
 
   const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
   const redisKey = `rl:${key}`;
 
   try {
     // Pipeline: INCR, lalu EXPIRE hanya jika 1 (pertama kali) — 2 perintah.
-    const res = await fetch(`${url}/pipeline`, {
+    const res = await fetch(`${cfg.url}/pipeline`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${cfg.token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify([

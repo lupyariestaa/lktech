@@ -12,13 +12,18 @@ import {
 } from "lucide-react";
 
 /**
- * Navigasi halaman Pengaturan (satu sumber) — selaras dengan `admin-nav.ts`
- * (children item "Pengaturan"). Dipakai tab `SettingsShell` & ringkasan.
+ * Navigasi halaman Pengaturan — **SATU SUMBER KEBENARAN** (gap G20).
+ *
+ * Dipakai oleh: sidebar admin (`admin-nav.ts` membangun `children` dari sini),
+ * `SettingsShell` (judul header), ringkasan (`settings-overview.tsx`), dan
+ * metadata halaman. Jangan lagi menulis daftar sub-menu terpisah.
  */
 export type SettingsNavEntry = {
   slug: string; // "" untuk induk/ringkasan
   href: string;
+  /** Label pendek untuk sidebar/kartu ringkasan. */
   label: string;
+  /** Judul lengkap untuk header shell & metadata. */
   title: string;
   desc: string;
   icon: LucideIcon;
@@ -78,7 +83,9 @@ export const SETTINGS_NAV: SettingsNavEntry[] = [
     href: "/admin/settings/keamanan",
     label: "Keamanan & Akses",
     title: "Keamanan & Akses",
-    desc: "Kelola admin, sesi, rate-limit, dan mode pemeliharaan.",
+    // Gap G21: deskripsi sebelumnya menyebut "sesi, rate-limit, maintenance"
+    // yang tak dikelola di halaman ini.
+    desc: "Kelola daftar admin yang boleh mengakses dashboard.",
     icon: ShieldCheck,
   },
   {
@@ -94,7 +101,12 @@ export const SETTINGS_NAV: SettingsNavEntry[] = [
     href: "/admin/settings/lanjutan",
     label: "Lanjutan",
     title: "Lanjutan & Sistem",
-    desc: "Mode pemeliharaan (termasuk konten halaman), cache, info sistem, ekspor audit.",
+    desc: "Mode pemeliharaan (termasuk konten halaman), cache, info sistem.",
     icon: CalendarClock,
   },
 ];
+
+/** Cari entri nav berdasarkan slug route aktif ("" = induk). */
+export function findSettingsNav(slug: string): SettingsNavEntry | undefined {
+  return SETTINGS_NAV.find((n) => n.slug === slug);
+}

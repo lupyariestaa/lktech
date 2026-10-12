@@ -9,13 +9,6 @@ export type AdminCheck =
 /** Sama bentuknya dengan `AdminCheck`, dipakai untuk user biasa (bukan admin). */
 export type UserCheck = AdminCheck;
 
-function getAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 /** Mengekstrak token `Bearer` dari header Authorization. */
 export function bearerToken(req: Request): string | null {
   const authHeader = req.headers.get("authorization") ?? "";
@@ -24,11 +17,13 @@ export function bearerToken(req: Request): string | null {
 
 /**
  * Satu langkah verifikasi ID token Firebase (dipakai `requireAdmin` &
- * `requireUser`). Mengembalikan `{ uid, email }` bila valid, atau `null`.
+ * `requireUser`). Mengembalikan `{ uid, email, emailVerified }` bila valid,
+ * atau `null`. `emailVerified` diambil dari klaim `email_verified` token.
  */
 async function verifyToken(req: Request): Promise<{
   uid: string;
   email: string;
+  emailVerified: boolean;
 } | null> {
   const token = bearerToken(req);
   if (!token) return null;
@@ -36,7 +31,11 @@ async function verifyToken(req: Request): Promise<{
   if (!adminAuth) return null;
   try {
     const decoded = await adminAuth.verifyIdToken(token, true);
-    return { uid: decoded.uid, email: (decoded.email ?? "").toLowerCase() };
+    return {
+      uid: decoded.uid,
+      email: (decoded.email ?? "").toLowerCase(),
+      emailVerified: decoded.email_verified === true,
+    };
   } catch {
     return null;
   }
@@ -127,15 +126,24 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
     };
   }
 
-  const email = verified.email;
-  const allowed = getAdminEmails();
-
-  // OWNER/whitelist env ATAU admin terdaftar di DB (`admins/{email}`).
-  let isAdmin = Boolean(email) && allowed.includes(email);
-  if (!isAdmin && email) {
-    const { isDbAdmin } = await import("@/lib/admins");
-    isAdmin = await isDbAdmin(email);
+  // G5 — tolak admin bila email belum diverifikasi (klaim `email_verified`).
+  // Mencegah email yang belum terbukti dimiliki lolos sebagai admin.
+  if (!verified.emailVerified) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Email akun belum diverifikasi." },
+        { status: 403 },
+      ),
+    };
   }
+
+  const email = verified.email;
+
+  // OWNER/whitelist env (`ADMIN_EMAILS`) ATAU admin terdaftar di DB
+  // (`admins/{email}` aktif) — sumber tunggal `isAdminEmail` (gap G6/G17).
+  const { isAdminEmail } = await import("@/lib/admins");
+  const isAdmin = await isAdminEmail(email);
 
   if (!isAdmin) {
     return {

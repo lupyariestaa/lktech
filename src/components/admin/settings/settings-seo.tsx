@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle2, Loader2, Save, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, Search } from "lucide-react";
 import { fetchSettingsWithHealth, saveSettings } from "@/lib/admin-api";
 import { useToast } from "@/components/admin/toast";
 import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/settings-types";
-
-const field =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
+import { validateUrl } from "@/lib/settings-form-pure";
+import {
+  fieldClass as field,
+  fieldErrorClass as fieldError,
+  FormErrorBanner,
+  SaveRow,
+} from "@/components/admin/settings/settings-form-ui";
 
 /** Halaman SEO & Situs (fase S6). */
 export function SettingsSeo() {
@@ -18,6 +22,8 @@ export function SettingsSeo() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   useRegisterDirty(dirty);
 
   useEffect(() => {
@@ -26,8 +32,11 @@ export function SettingsSeo() {
       try {
         const data = await fetchSettingsWithHealth();
         if (active) setSettings(data.settings);
-      } catch {
-        /* abaikan */
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Gagal memuat.");
+          setLoadFailed(true);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -44,8 +53,16 @@ export function SettingsSeo() {
     setDirty(true);
   };
 
+  const ogError = useMemo(() => validateUrl(seo.ogImage ?? "", "URL gambar OG"), [seo.ogImage]);
+
   const onSave = async () => {
+    if (ogError) {
+      setError(ogError);
+      return;
+    }
     setSaving(true);
+    setError(null);
+    setSaved(false);
     try {
       const res = await saveSettings(settings);
       setSettings(res.settings);
@@ -53,7 +70,9 @@ export function SettingsSeo() {
       setDirty(false);
       toast.success("Pengaturan SEO tersimpan.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal menyimpan.");
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -70,6 +89,8 @@ export function SettingsSeo() {
 
   return (
     <div className="flex flex-col gap-5">
+      <FormErrorBanner message={error} loadFailed={loadFailed} />
+
       <section className="rounded-3xl border border-slate-200 bg-white p-6">
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-secondary">
           <Search className="h-4 w-4" /> Meta Default & Open Graph
@@ -106,9 +127,16 @@ export function SettingsSeo() {
             <input
               value={seo.ogImage ?? ""}
               onChange={(e) => updateSeo({ ogImage: e.target.value })}
-              className={field}
+              className={`${field} ${ogError ? fieldError : ""}`}
               placeholder="https://…/og-image.png"
+              aria-invalid={Boolean(ogError)}
+              aria-describedby={ogError ? "og-error" : undefined}
             />
+            {ogError && (
+              <span id="og-error" role="alert" className="text-xs text-rose-600">
+                {ogError}
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-secondary">Google Search Console — verification</span>
@@ -125,22 +153,12 @@ export function SettingsSeo() {
         </div>
       </section>
 
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-70"
-        >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Simpan
-        </button>
-        {saved && (
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600">
-            <CheckCircle2 className="h-4 w-4" /> Tersimpan
-          </span>
-        )}
-      </div>
+      <SaveRow
+        onSave={onSave}
+        saving={saving}
+        saved={saved}
+        disabled={loadFailed || !dirty || Boolean(ogError)}
+      />
     </div>
   );
 }

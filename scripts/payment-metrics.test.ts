@@ -1,9 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computePaymentMetrics } from "../src/lib/payment-metrics-pure.ts";
+import {
+  computePaymentMetrics,
+  clampDays,
+  DEFAULT_METRIC_DAYS,
+  MIN_METRIC_DAYS,
+  MAX_METRIC_DAYS,
+} from "../src/lib/payment-metrics-pure.ts";
 
 /**
- * Uji metrik pembayaran murni (fase S5).
+ * Uji metrik pembayaran murni (fase S5 + gap G15/G16).
  * Jalankan: `npm run test:payment`
  */
 
@@ -15,9 +21,40 @@ test("computePaymentMetrics: hitung dibayar/menunggu/kedaluwarsa", () => {
   ]);
   assert.equal(m.gatewayOrders, 3);
   assert.equal(m.paid, 1);
-  assert.equal(m.pending, 2); // baris menunggu + kedaluwarsa sama-sama payment.status "menunggu"
+  // G15: sumber tunggal = status ORDER. menunggu_bayar = pending; kedaluwarsa = expired.
+  assert.equal(m.pending, 1);
   assert.equal(m.expired, 1);
   assert.equal(m.paidAmount, 100_000);
+});
+
+test("G15: order dibatalkan setelah bayar TIDAK dihitung paid (pakai status order)", () => {
+  const m = computePaymentMetrics([
+    // payment.status "dibayar" tapi order sudah dibatalkan → tidak boleh counted.
+    { status: "dibatalkan", total: 200_000, payment: { provider: "mayar", status: "dibayar" } },
+    { status: "selesai", total: 100_000, payment: { provider: "mayar", status: "dibayar" } },
+  ]);
+  assert.equal(m.paid, 1);
+  assert.equal(m.paidAmount, 100_000);
+});
+
+test("G15: omzet & konversi memakai definisi 'dibayar' yang sama", () => {
+  const m = computePaymentMetrics([
+    { status: "diproses", total: 100, payment: { status: "dibayar" } },
+    { status: "menunggu_bayar", total: 100, payment: { status: "menunggu" } },
+  ]);
+  assert.equal(m.paid, 1);
+  assert.equal(m.paidAmount, 100);
+  // konversi = paid / (paid + expired) = 1 / (1 + 0) = 1
+  assert.equal(m.conversionRate, 1);
+});
+
+test("clampDays: default & clamp rentang (G16)", () => {
+  assert.equal(clampDays(undefined), DEFAULT_METRIC_DAYS);
+  assert.equal(clampDays("abc"), DEFAULT_METRIC_DAYS);
+  assert.equal(clampDays(-5), MIN_METRIC_DAYS);
+  assert.equal(clampDays(99999), MAX_METRIC_DAYS);
+  assert.equal(clampDays(7), 7);
+  assert.equal(clampDays("30"), 30);
 });
 
 test("computePaymentMetrics: konversi = paid / (paid + expired)", () => {

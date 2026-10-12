@@ -1,5 +1,6 @@
 import "server-only";
 import type { CreatedInvoice, InvoiceDetail } from "@/lib/payment-types";
+import { checkTrustedUrl } from "@/lib/trusted-url";
 
 /**
  * Klien Mayar.id (Headless API V2) — SERVER-ONLY.
@@ -32,10 +33,22 @@ export function getMayarMode(): "sandbox" | "production" {
     : "sandbox";
 }
 
-/** Base URL efektif (override > preset mode). */
+/**
+ * Base URL efektif (override > preset mode).
+ *
+ * Keamanan (gap G19): override `MAYAR_BASE_URL` DITOLAK bila host-nya bukan
+ * domain resmi Mayar (`*.mayar.id`/`*.mayar.io`) — agar API key tidak terkirim ke
+ * host asing. Bila override tak aman, fallback ke preset mode resmi.
+ */
 function getBaseUrl(): string {
   const override = process.env.MAYAR_BASE_URL?.trim();
-  if (override) return override.replace(/\/+$/, "");
+  if (override) {
+    const check = checkTrustedUrl(override, "mayar");
+    if (check.ok) return check.url;
+    console.error(
+      `[mayar] MAYAR_BASE_URL tidak tepercaya (${check.reason}) — memakai preset mode.`,
+    );
+  }
   return DEFAULT_BASE_URLS[getMayarMode()];
 }
 

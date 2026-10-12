@@ -64,8 +64,18 @@ export async function PUT(req: Request) {
 
   const parsed = settingsSchema.safeParse(body);
   if (!parsed.success) {
+    // Pesan jelas per-field (gap G11) — bukan generik "tidak valid".
+    const first = parsed.error.issues[0];
+    const path = first?.path?.length ? first.path.join(".") : "";
+    const detail = first?.message ?? "Data tidak sesuai.";
     return NextResponse.json(
-      { error: "Data pengaturan tidak valid." },
+      {
+        error: path ? `Field "${path}": ${detail}` : detail,
+        issues: parsed.error.issues.map((iss) => ({
+          path: iss.path.join("."),
+          message: iss.message,
+        })),
+      },
       { status: 400 },
     );
   }
@@ -90,6 +100,8 @@ export async function PUT(req: Request) {
     revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/kontak");
+    // Mode pemeliharaan (G7): agar halaman /maintenance ikut segar saat toggle.
+    revalidatePath("/maintenance");
 
     await recordAdminAudit({
       action: "settings.update",

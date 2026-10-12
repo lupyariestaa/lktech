@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
-import { exportBackup, importBackup } from "@/lib/backup";
+import { dryRunImport, exportBackup, importBackup } from "@/lib/backup";
 import { validateBackupBundle, BACKUP_SOURCES, type BackupSource } from "@/lib/backup-pure";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -10,11 +10,20 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/backup?sources=settings,products,… — ekspor backup (JSON).
- * Tanpa `sources` → semua sumber.
+ * Tanpa `sources` → semua sumber. Dibatasi rate-limit (gap G18): ekspor
+ * memicu I/O besar & dicatat di audit, jadi cegah penyalahgunaan/flood.
  */
 export async function GET(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  const rl = await checkRateLimit(`backup-export:${check.uid}`, 10, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Terlalu banyak permintaan ekspor. Coba lagi nanti." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
 
   const url = new URL(req.url);
   const raw = url.searchParams.get("sources")?.trim();
@@ -73,13 +82,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
+  // Dry-run (G4): hitung dampak tanpa menulis — untuk pratinjau admin.
+  const url = new URL(req.url);
+  if (url.searchParams.get("dryRun") === "1") {
+    return NextResponse.json({ ok: true, dryRun: true, ...dryRunImport(validation.bundle) });
+  }
+
   try {
     const result = await importBackup(validation.bundle);
     await recordAdminAudit({
       action: "settings.restore",
       actor: check.email,
       target: "backup",
-      meta: { written: result.written, failed: result.failed },
+      meta: {
+        written: result.written,
+        failed: result.failed,
+        skipped: result.skipped,
+        truncated: result.truncated,
+      },
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {

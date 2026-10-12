@@ -1,8 +1,10 @@
 # Catatan Gap — Polish Sistem Pengaturan (Audit)
 
-> **Status: 📝 CATATAN GAP (belum diperbaiki).** Hasil audit menyeluruh (UI + backend)
-> atas sistem Pengaturan yang baru dibangun (S0–S9). Temuan **terverifikasi** dengan
-> pembacaan kode & grep. Disusun: 2026-10-11. **Target perbaikan: sesi berikutnya.**
+> **Status: 🚧 HAMPIR SELESAI — FASE P0 ✅, P1 ✅, P2 ✅ & P3 ✅ SELESAI (2026-10-11).**
+> Hasil audit menyeluruh (UI + backend) atas sistem Pengaturan yang baru dibangun
+> (S0–S9). Temuan **terverifikasi** dengan pembacaan kode & grep. Disusun: 2026-10-11.
+> **Fase P0 (G1–G5, G7), P1 (G6, G15–G19), P2 (G8–G14) & P3 (G20–G24, G26–G30)
+> sudah dieksekusi — lihat §6, §7, §8 & §9.** Fase P4 (QA & rilis) belum.
 
 ---
 
@@ -116,37 +118,37 @@ berlapis; konsistensi; a11y.
 
 ## 4. Usulan Fase Perbaikan (P0–P4)
 
-### Fase P0 — Fungsional & keamanan kritis (wajib duluan)
-- [ ] **G1** — Sambungkan `settings.seo` ke metadata (root layout/`generateMetadata`):
+### Fase P0 — Fungsional & keamanan kritis (wajib duluan) ✅ SELESAI
+- [x] **G1** — Sambungkan `settings.seo` ke metadata (root layout/`generateMetadata`):
   title/description/OG default + render `google-site-verification`; hapus klaim palsu
   bila tak disambungkan.
-- [ ] **G2/G3** — Perbaiki impor backup: lewati OWNER, paksa `active:true` utk admin,
+- [x] **G2/G3** — Perbaiki impor backup: lewati OWNER, paksa `active:true` utk admin,
   paksa `settings` → `SETTINGS_DOC_ID`; validasi bentuk per-dokumen.
-- [ ] **G4** — Batas baris/byte + penanda `truncated` + snapshot pra-restore + dry-run.
-- [ ] **G5** — Tolak admin bila `email_verified !== true`.
-- [ ] **G7** — Revalidate `/api/maintenance-status` saat simpan/toggle maintenance
+- [x] **G4** — Batas baris/byte + penanda `truncated` + snapshot pra-restore + dry-run.
+- [x] **G5** — Tolak admin bila `email_verified !== true`.
+- [x] **G7** — Revalidate `/api/maintenance-status` saat simpan/toggle maintenance
   (atau turunkan cache/hapus cache).
 
-### Fase P1 — Keamanan sekunder & data
-- [ ] **G6** — Verifikasi session/token di layout `/admin` (bukan hanya proxy).
-- [ ] **G15/G16** — Satukan definisi "dibayar" (pakai `orders.status`), clamp & kembalikan `days` aman.
-- [ ] **G17** — `isDbAdmin` default-closed.
-- [ ] **G18/G19** — Rate-limit ekspor; validasi domain URL Upstash/Mayar.
+### Fase P1 — Keamanan sekunder & data ✅ SELESAI
+- [x] **G6** — Verifikasi session/token di layout `/admin` (bukan hanya proxy).
+- [x] **G15/G16** — Satukan definisi "dibayar" (pakai `orders.status`), clamp & kembalikan `days` aman.
+- [x] **G17** — `isDbAdmin` default-closed.
+- [x] **G18/G19** — Rate-limit ekspor; validasi domain URL Upstash/Mayar.
 
-### Fase P2 — UX form & konsistensi
-- [ ] **G8** — Banner error + disable Simpan di semua form (pola Kontak).
-- [ ] **G9** — Disable Simpan saat `!dirty`.
-- [ ] **G10** — Perbaiki konversi `datetime-local` (ISO↔lokal konsisten) + label zona.
-- [ ] **G11/G12** — Validasi klien (email/WA/URL/datetime) + pesan error per-field; perbaiki `label` sosial.
-- [ ] **G13** — Satu sumber status email.
-- [ ] **G14** — Naikkan target sentuh ke ≥44px.
+### Fase P2 — UX form & konsistensi ✅ SELESAI
+- [x] **G8** — Banner error + disable Simpan di semua form (pola Kontak).
+- [x] **G9** — Disable Simpan saat `!dirty`.
+- [x] **G10** — Perbaiki konversi `datetime-local` (ISO↔lokal konsisten) + label zona.
+- [x] **G11/G12** — Validasi klien (email/WA/URL/datetime) + pesan error per-field; perbaiki `label` sosial.
+- [x] **G13** — Satu sumber status email.
+- [x] **G14** — Naikkan target sentuh ke ≥44px.
 
-### Fase P3 — Konsistensi, a11y, dedup
-- [ ] **G20/G21/G22** — Satukan daftar sub-menu (satu sumber) & label.
-- [ ] **G23** — Ekstrak `field`, hook form, `SaveButton`/`SavedBadge`, `Metric`, banner.
-- [ ] **G24/G25/G30** — Error/skeleton & info sistem nyata; metadata maintenance dinamis.
-- [ ] **G26** — Fallback slug tak dikenal → notFound.
-- [ ] **G27/G28/G29** — Poles a11y (sr-only, aria-label service, aria-live, focus-trap
+### Fase P3 — Konsistensi, a11y, dedup ✅ SELESAI
+- [x] **G20/G21/G22** — Satukan daftar sub-menu (satu sumber) & label.
+- [x] **G23** — Ekstrak `field`, hook form, `SaveButton`/`SavedBadge`, `Metric`, banner.
+- [x] **G24/G25/G30** — Error/skeleton & info sistem nyata; metadata maintenance dinamis.
+- [x] **G26** — Fallback slug tak dikenal → notFound.
+- [x] **G27/G28/G29** — Poles a11y (sr-only, aria-label service, aria-live, focus-trap
   ConfirmDialog) & UX integrasi/backup.
 
 ### Fase P4 — QA & rilis
@@ -160,3 +162,127 @@ berlapis; konsistensi; a11y.
 - Fokus **P0** karena menyangkut **kepercayaan** (SEO palsu) & **keamanan** (backup admin).
 - Semua temuan menyertakan lokasi berkas untuk tindak lanjut.
 - Belum ada kode yang diubah pada sesi audit ini.
+
+---
+
+## 6. ✅ Hasil Eksekusi FASE P0 (2026-10-11)
+
+**Status: ✅ SELESAI (kode).** Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (termasuk
+`test:backup` 8→16 & `test:seo` baru 4) · `build` ✅ (81 halaman).
+
+| Gap | Solusi |
+| --- | --- |
+| **G1** | Root layout kini `generateMetadata()` (async) — baca `getSiteSettings()` & terapkan `settings.seo` (title/description/ogImage) via helper murni baru **`src/lib/seo-pure.ts`** (`resolveSeo`/`hasSeo`). `searchConsoleId` → `metadata.verification.google` → `<meta name="google-site-verification">` benar-benar ter-render. `StructuredData` (JSON-LD) memakai deskripsi SEO juga. `getSiteSettings` dibungkus React `cache()` agar di-query sekali per request (dipanggil 2×: metadata + layout). |
+| **G2/G3** | Impor backup kini lewat rencana murni **`planImport`** + **`sanitizeBackupRow`** (`backup-pure.ts`): sumber `admins` → id wajib email (lowercase), **OWNER (env `ADMIN_EMAILS`) DILINDUNGI** (baris dilewati), admin lain **dipaksa `active:true`**; sumber `settings` → id **dipaksa `SETTINGS_DOC_ID`** (`site`) — tak bisa menyuntik dokumen lain. |
+| **G4** | Ekspor: `truncated` + `truncatedSources` di `meta` (deteksi via `limit(EXPORT_CAP+1)`). Impor: batas total **`IMPORT_CAP=5000`** dengan penanda `truncated` & hitungan `skipped`. **Snapshot pra-restore** otomatis ke koleksi `_backup_snapshots/{stamp}` (best-effort). Endpoint `POST /api/admin/backup?dryRun=1` menghitung dampak **tanpa menulis**. UI `settings-backup` memanggil dry-run & menampilkan akan-menulis/dilewati/truncated sebelum konfirmasi. |
+| **G5** | `verifyToken` mengekstrak klaim `email_verified`; `requireAdmin` **menolak (403)** bila email belum terverifikasi. |
+| **G7** | `/api/maintenance-status` tak lagi di-cache CDN (`Cache-Control: no-store`) — toggle maintenance langsung berlaku di proxy (hilangkan basi ~30–90s). PUT settings juga `revalidatePath("/maintenance")`. |
+
+**Berkas baru:** `src/lib/seo-pure.ts`, `scripts/seo-pure.test.ts` (+ `test:seo`).
+**Berkas diubah:** `src/app/layout.tsx`, `src/components/structured-data.tsx`,
+`src/lib/settings.ts` (cache), `src/lib/backup.ts`, `src/lib/backup-pure.ts`,
+`src/lib/admin-guard.ts`, `src/app/api/admin/backup/route.ts`,
+`src/app/api/maintenance-status/route.ts`, `src/app/api/admin/settings/route.ts`,
+`src/components/admin/settings/settings-backup.tsx`, `scripts/backup-pure.test.ts`,
+`tsconfig.json`, `package.json`.
+
+**Sisa (belum):** Fase **P1–P4** (G6, G8–G30). Langkah manual: uji browser (ubah SEO →
+cek `<meta>`; restore backup yg menonaktifkan admin → harus tetap aktif; toggle
+maintenance → langsung berlaku).
+
+**Catatan:** `SETTINGS_DOC_ID` didefinisikan ulang di `backup-pure.ts` (agar modul tetap
+murni/tanpa impor runtime); nilai harus sama dengan `src/lib/settings.ts` (`"site"`).
+
+---
+
+## 7. ✅ Hasil Eksekusi FASE P1 (2026-10-11)
+
+**Status: ✅ SELESAI (kode).** Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (termasuk
+`test:payment` 5→8 & `test:trusted-url` baru 6) · `build` ✅ (81 halaman).
+
+| Gap | Solusi |
+| --- | --- |
+| **G6** | Gerbang admin **server-side** baru **`src/components/admin/admin-server-guard.tsx`** dipasang di `app/admin/(dashboard)/layout.tsx`: verifikasi **kriptografis** session cookie (`verifyAdminSessionCookie` → `auth.verifySessionCookie`) + cek keanggotaan (`isAdminEmail`) SEBELUM render. Cookie palsu tak lagi membuka shell dashboard. (Route `/admin*` kini `ƒ` dynamic karena membaca cookie.) |
+| **G15** | **Sumber tunggal "dibayar"** = `orders.status` (`dibayar`/`diproses`/`selesai`). Sebelumnya `paid`/`paidAmount` dari `payment.status` sedangkan konversi dari `orders.status` → dua definisi + overcount order dibatalkan-setelah-bayar. Kini `paid`, `paidAmount`, `pending`, `expired`, `conversionRate` semuanya dari `orders.status`. |
+| **G16** | Helper murni **`clampDays`** (`MIN/MAX/DEFAULT_METRIC_DAYS`) dipakai di route & `getPaymentMetrics`; respons `/api/admin/payments/metrics` mengembalikan `days` yang **sudah di-clamp** (bukan mentah). |
+| **G17** | `isDbAdmin` **default-closed**: `active === true` (sebelumnya `!== false` → dokumen tanpa field dianggap aktif). |
+| **G18** | Ekspor backup `GET /api/admin/backup` kini **rate-limited** (10 / 10 menit per admin) — cegah flood I/O + audit. |
+| **G19** | Helper murni baru **`src/lib/trusted-url.ts`** (`checkTrustedUrl`): sebelum kirim `Authorization`, host URL harus domain resmi (allowlist) & HTTPS & tanpa userinfo. Dipakai **Upstash** (`*.upstash.io`) & **Mayar** (`*.mayar.id/.io`; override tak aman → fallback preset mode). |
+
+**Berkas baru:** `src/components/admin/admin-server-guard.tsx`, `src/lib/trusted-url.ts`,
+`scripts/trusted-url.test.ts` (+ `test:trusted-url`).
+**Berkas diubah:** `src/lib/session.ts` (`verifyAdminSessionCookie`), `src/lib/admins.ts`
+(`isAdminEmail`, `isDbAdmin` default-closed), `src/lib/admin-guard.ts` (pakai
+`isAdminEmail`), `app/admin/(dashboard)/layout.tsx`, `src/lib/payment-metrics-pure.ts`,
+`src/lib/payment-analytics.ts`, `app/api/admin/payments/metrics/route.ts`,
+`app/api/admin/backup/route.ts` (rate-limit GET), `src/lib/rate-limit.ts`,
+`src/lib/mayar.ts`, `scripts/payment-metrics.test.ts`, `tsconfig.json`, `package.json`.
+
+**Sisa (belum):** Fase **P2–P4** (G8–G14, G20–G30).
+**Langkah manual:** uji browser — (1) set cookie `__session` ngawur → `/admin` harus
+redirect login; (2) metrik pembayaran cocok dgn daftar order "dibayar"; (3) ekspor
+backup berulang cepat → 429.
+
+---
+
+## 8. ✅ Hasil Eksekusi FASE P2 (2026-10-11)
+
+**Status: ✅ SELESAI (kode).** Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (termasuk
+`test:settings-form` baru 10) · `build` ✅ (81 halaman).
+
+Helper murni baru **`src/lib/settings-form-pure.ts`** (`isoToLocalInput`,
+`localInputToIso`, `validate*`, `validateSettingsForm`).
+
+| Gap | Solusi |
+| --- | --- |
+| **G8** | `settings-notifikasi` & `settings-seo` & `settings-lanjutan` kini menangkap error load → **banner merah** + `loadFailed` (pola Kontak). Simpan **didisable** saat load gagal (cegah menimpa data dgn `DEFAULT_SETTINGS`). |
+| **G9** | Tombol **Simpan** di Kontak/SEO/Notifikasi/Lanjutan kini `disabled` bila `!dirty` (+ `!valid`) — tak lagi memicu PUT/revalidate/audit tanpa perubahan. |
+| **G10** | Konversi `datetime-local` diperbaiki via `isoToLocalInput`/`localInputToIso` (waktu LOKAL dua arah, round-trip tak bergeser 5 jam) + label "Waktu lokal (zona perangkat Anda)". |
+| **G11** | **Validasi klien per-field** (email, WhatsApp lokal/internasional, URL, datetime) dengan `aria-invalid`/`aria-describedby`/`role="alert"` di Kontak/SEO/Lanjutan. Pesan error server kini **menyebut field** (`Field "x": …` + `issues`). |
+| **G12** | Media sosial: input **Label** eksplisit (bukan tersembunyi), error per-baris, `aria-label` → bisa diperbaiki dari UI. |
+| **G13** | Ringkasan memakai status email dari **sumber yang sama** dengan halaman Notifikasi (`emailHealth`), bukan `integrations.email` → tak kontradiktif. |
+| **G14** | Target sentuh naik ke **≥44px**: hapus admin (`h-9→h-11`), refresh Pembayaran & Integrasi (`h-9→h-11`). |
+| **G25** (bonus) | "Informasi Sistem" (Lanjutan) kini berisi info NYATA: status maintenance, ETA (lokal), lingkungan, brand — bukan data kontak. |
+
+**Berkas baru:** `src/lib/settings-form-pure.ts`, `scripts/settings-form-pure.test.ts`
+(+ `test:settings-form`).
+**Berkas diubah:** 8 komponen `src/components/admin/settings/*` (kontak, seo,
+notifikasi, lanjutan, overview, keamanan, pembayaran, integrasi),
+`src/app/api/admin/settings/route.ts`, `tsconfig.json`, `package.json`.
+
+**Sisa (belum):** Fase **P3–P4** (G20–G24, G26–G30).
+**Langkah manual:** uji browser — (1) isi email/URL salah → tanda merah + Simpan mati;
+(2) set ETA maintenance lalu muat ulang → jam tak bergeser; (3) buka halaman dgn
+network dimatikan → banner error + Simpan mati.
+
+---
+
+## 9. ✅ Hasil Eksekusi FASE P3 (2026-10-11)
+
+**Status: ✅ SELESAI (kode).** Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ · `build` ✅ (81 halaman).
+
+| Gap | Solusi |
+| --- | --- |
+| **G20** | **Satu sumber sub-menu**: `SETTINGS_NAV` (`settings-nav.ts`) kini sumber tunggal. `admin-nav.ts` **membangun `children`** Pengaturan darinya (hapus duplikat 9 entri). `settings-overview` juga menurunkan kartu dari `SETTINGS_NAV`. |
+| **G21** | Deskripsi nav "Keamanan & Akses" diluruskan → hanya "Kelola daftar admin…" (hapus klaim sesi/rate-limit/maintenance yang tak ada di halaman itu). |
+| **G22** | Label kartu Ringkasan = **judul halaman** (`entry.title`): "Pembayaran & Mayar", "Lanjutan & Sistem" (bukan lagi "Pembayaran (Mayar)"/"Sistem"). |
+| **G23** | Komponen UI bersama baru **`settings-form-ui.tsx`**: `fieldClass`/`fieldErrorClass`, `FormErrorBanner`, `SaveRow` (Simpan + badge "Tersimpan" `aria-live`), `FormSection`, `Field`. Dipakai di kontak/seo/notifikasi/lanjutan (hapus duplikasi banner + tombol + kelas field). |
+| **G24** | Overview: state **error nyata** + tombol **"Coba lagi"** (bukan `ok:true` hardcoded / "memuat…" palsu). |
+| **G26** | `SettingsShell` slug tak dikenal → **`notFound()`** (bukan fallback diam-diam ke "Ringkasan"). |
+| **G27** | a11y: ikon status overview ber-`sr-only` ("Siap"/"Perlu perhatian"); tombol uji ber-`aria-label` per layanan; badge "Tersimpan" `aria-live`; **`ConfirmDialog` focus-trap** (Tab/Shift+Tab siklus, sebelumnya bocor). |
+| **G28** | Integrasi: tombol "Uji koneksi" **disabled bila layanan belum terkonfigurasi** (dengan tooltip) & hanya tombol yang diuji menampilkan spinner (`testing !== null` → `busy`); **cron/download/webhook** jadi **baris status visual** (bukan hanya teks catatan). |
+| **G29** | Backup: alur **dua tahap** — panel pratinjau (non-modal) → tombol "Pulihkan sekarang" → **dialog konfirmasi**. Dialog & pratinjau tak lagi tampil bersamaan; `pending`/`dryRun`/`confirmOpen` dibersihkan bersama (`closePending`). |
+| **G30** | `/maintenance`: `generateMetadata()` **dinamis** (judul ikut `maintenance.title`); `<img>` ber-**dimensi eksplisit** (anti-CLS); ETA diberi label **"WIB"**. |
+
+**Berkas baru:** `src/components/admin/settings/settings-form-ui.tsx`.
+**Berkas diubah:** `src/lib/settings-nav.ts` (sumber tunggal + `findSettingsNav`),
+`src/lib/admin-nav.ts` (children dari SETTINGS_NAV), `settings-shell.tsx` (`notFound`),
+`settings-overview.tsx` (kartu dari SETTINGS_NAV + error state), `settings-form-ui.tsx`
+(dipakai), `settings-kontak.tsx`, `settings-seo.tsx`, `settings-notifikasi.tsx`,
+`settings-lanjutan.tsx`, `settings-integrasi.tsx`, `settings-backup.tsx`,
+`confirm-dialog.tsx`, `src/app/maintenance/page.tsx`.
+
+**Sisa:** Fase **P4** (QA & rilis): gate penuh + uji browser + dokumentasi + commit.
+**Langkah manual:** uji browser — sub-menu sidebar konsisten, kartu ringkasan label
+benar, dialog backup tak dobel, uji koneksi tereksekusi/disabled sesuai status, Tab
+terperangkap di dialog, halaman maintenance judul dinamis + ETA "WIB".

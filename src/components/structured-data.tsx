@@ -1,5 +1,6 @@
 import { COMPANY } from "@/lib/content";
 import { SITE } from "@/lib/site";
+import { resolveSeo } from "@/lib/seo-pure";
 import type { SiteSettings } from "@/lib/settings-types";
 
 /**
@@ -12,6 +13,10 @@ import type { SiteSettings } from "@/lib/settings-types";
  *   menautkan brand ↔ situs (mis. knowledge panel / sitelinks).
  */
 export function StructuredData({ settings }: { settings: SiteSettings }) {
+  // Override SEO dari dashboard (gap G1) — jaga konsistensi deskripsi JSON-LD
+  // dengan metadata root layout.
+  const seo = resolveSeo(settings.seo);
+
   // Alamat diturunkan dari pengaturan (dikelola dashboard). Format lokasi
   // bebas, jadi kita kirim sebagai `addressLocality` bila tidak terurai.
   const locationParts = settings.location
@@ -24,7 +29,7 @@ export function StructuredData({ settings }: { settings: SiteSettings }) {
     "@type": "ProfessionalService",
     "@id": `${SITE.url}/#organization`,
     name: COMPANY.name,
-    description: SITE.description,
+    description: seo.description ?? SITE.description,
     url: SITE.url,
     logo: `${SITE.url}/logo/lktech-logo.svg`,
     image: `${SITE.url}${SITE.ogImage}`,
@@ -59,7 +64,7 @@ export function StructuredData({ settings }: { settings: SiteSettings }) {
     name: COMPANY.name,
     alternateName: SITE.title,
     url: SITE.url,
-    description: SITE.description,
+    description: seo.description ?? SITE.description,
     inLanguage: "id-ID",
     publisher: { "@id": `${SITE.url}/#organization` },
   };

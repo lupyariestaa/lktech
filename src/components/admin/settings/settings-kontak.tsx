@@ -1,14 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  Plus,
-  Save,
-  Trash2,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { fetchSettingsWithHealth, saveSettings } from "@/lib/admin-api";
 import { useToast } from "@/components/admin/toast";
 import { useRegisterDirty } from "@/components/admin/unsaved-changes";
@@ -17,9 +10,13 @@ import {
   type SiteSettings,
   type SocialLink,
 } from "@/lib/settings-types";
-
-const field =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
+import { validateSettingsForm, isFormValid } from "@/lib/settings-form-pure";
+import {
+  fieldClass as field,
+  fieldErrorClass as fieldError,
+  FormErrorBanner,
+  SaveRow,
+} from "@/components/admin/settings/settings-form-ui";
 
 /** Halaman Kontak & Identitas (fase S3). */
 export function SettingsKontak() {
@@ -79,7 +76,18 @@ export function SettingsKontak() {
     setDirty(true);
   };
 
+  // Validasi klien per-field (gap G11).
+  const fieldErrors = useMemo(
+    () => validateSettingsForm({ email: settings.email, whatsapp: settings.whatsapp, socials: settings.socials }),
+    [settings.email, settings.whatsapp, settings.socials],
+  );
+  const valid = isFormValid(fieldErrors);
+
   const onSave = async () => {
+    if (!valid) {
+      setError("Periksa kembali kolom yang ditandai merah.");
+      return;
+    }
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -109,19 +117,7 @@ export function SettingsKontak() {
 
   return (
     <div className="flex flex-col gap-5">
-      {error && (
-        <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            {error}
-            {loadFailed && (
-              <span className="mt-1 block text-xs text-rose-500">
-                Muat ulang halaman sebelum menyimpan.
-              </span>
-            )}
-          </span>
-        </div>
-      )}
+      <FormErrorBanner message={error} loadFailed={loadFailed} />
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6">
         <h2 className="text-sm font-bold text-secondary">Identitas Brand</h2>
@@ -144,12 +140,38 @@ export function SettingsKontak() {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-secondary">Email</span>
-            <input type="email" value={settings.email} onChange={(e) => update("email", e.target.value)} className={field} placeholder="nama@email.com" />
+            <input
+              type="email"
+              value={settings.email}
+              onChange={(e) => update("email", e.target.value)}
+              className={`${field} ${fieldErrors.email ? fieldError : ""}`}
+              placeholder="nama@email.com"
+              aria-invalid={Boolean(fieldErrors.email)}
+              aria-describedby={fieldErrors.email ? "email-error" : undefined}
+            />
+            {fieldErrors.email && (
+              <span id="email-error" role="alert" className="text-xs text-rose-600">
+                {fieldErrors.email}
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-secondary">Nomor WhatsApp</span>
-            <input value={settings.whatsapp} onChange={(e) => update("whatsapp", e.target.value)} className={field} placeholder="6283xxxxxxx" />
-            <span className="text-xs text-muted">Format internasional tanpa + (mis. 6283159688549).</span>
+            <input
+              value={settings.whatsapp}
+              onChange={(e) => update("whatsapp", e.target.value)}
+              className={`${field} ${fieldErrors.whatsapp ? fieldError : ""}`}
+              placeholder="6283xxxxxxx"
+              aria-invalid={Boolean(fieldErrors.whatsapp)}
+              aria-describedby={fieldErrors.whatsapp ? "wa-error" : undefined}
+            />
+            {fieldErrors.whatsapp ? (
+              <span id="wa-error" role="alert" className="text-xs text-rose-600">
+                {fieldErrors.whatsapp}
+              </span>
+            ) : (
+              <span className="text-xs text-muted">Format internasional tanpa + (mis. 6283159688549).</span>
+            )}
           </label>
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-medium text-secondary">Lokasi</span>
@@ -173,34 +195,64 @@ export function SettingsKontak() {
         ) : (
           <div className="mt-4 flex flex-col gap-3">
             {settings.socials.map((s, i) => (
-              <div key={i} className="grid gap-3 sm:grid-cols-[140px_1fr_auto]">
-                <select value={s.icon} onChange={(e) => updateSocial(i, { icon: e.target.value })} className={field}>
+              <div key={i} className="grid gap-3 sm:grid-cols-[130px_1fr_1fr_auto]">
+                <select
+                  value={s.icon}
+                  onChange={(e) => {
+                    const icon = e.target.value;
+                    // Isi label default bila masih kosong / mengikuti label lama.
+                    updateSocial(i, { icon, label: s.label || labelFromIcon(icon) });
+                  }}
+                  className={field}
+                  aria-label={`Ikon media sosial ${i + 1}`}
+                >
                   <option value="instagram">Instagram</option>
                   <option value="linkedin">LinkedIn</option>
                   <option value="github">GitHub</option>
                   <option value="globe">Website</option>
                 </select>
-                <input type="url" value={s.href} onChange={(e) => updateSocial(i, { href: e.target.value, label: s.label || labelFromIcon(s.icon) })} placeholder="https://..." className={field} />
-                <button type="button" onClick={() => removeSocial(i)} aria-label="Hapus" className="grid h-11 w-11 shrink-0 place-items-center self-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500">
+                <input
+                  value={s.label}
+                  onChange={(e) => updateSocial(i, { label: e.target.value })}
+                  placeholder="Label (mis. Instagram)"
+                  className={`${field} ${fieldErrors[`socials.${i}.label`] ? fieldError : ""}`}
+                  aria-label={`Label media sosial ${i + 1}`}
+                  aria-invalid={Boolean(fieldErrors[`socials.${i}.label`])}
+                />
+                <input
+                  type="url"
+                  value={s.href}
+                  onChange={(e) => updateSocial(i, { href: e.target.value, label: s.label || labelFromIcon(s.icon) })}
+                  placeholder="https://..."
+                  className={`${field} ${fieldErrors[`socials.${i}.href`] ? fieldError : ""}`}
+                  aria-label={`URL media sosial ${i + 1}`}
+                  aria-invalid={Boolean(fieldErrors[`socials.${i}.href`])}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeSocial(i)}
+                  aria-label={`Hapus media sosial ${i + 1}`}
+                  className="grid h-11 w-11 shrink-0 place-items-center self-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:text-rose-500"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
+                {(fieldErrors[`socials.${i}.label`] || fieldErrors[`socials.${i}.href`]) && (
+                  <p role="alert" className="text-xs text-rose-600 sm:col-span-4">
+                    {fieldErrors[`socials.${i}.label`] ?? fieldErrors[`socials.${i}.href`]}
+                  </p>
+                )}
               </div>
             ))}
           </div>
         )}
       </section>
 
-      <div className="flex items-center gap-4">
-        <button type="button" onClick={onSave} disabled={saving || loadFailed} className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-70">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Simpan
-        </button>
-        {saved && (
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600">
-            <CheckCircle2 className="h-4 w-4" /> Tersimpan
-          </span>
-        )}
-      </div>
+      <SaveRow
+        onSave={onSave}
+        saving={saving}
+        saved={saved}
+        disabled={loadFailed || !dirty || !valid}
+      />
     </div>
   );
 }

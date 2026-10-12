@@ -74,10 +74,23 @@ export async function isDbAdmin(email: string): Promise<boolean> {
   if (!db) return false;
   try {
     const doc = await db.collection(COLLECTION).doc(email.trim().toLowerCase()).get();
-    return doc.exists && doc.get("active") !== false;
+    // Default-closed (gap G17): dokumen HARUS eksplisit `active === true`.
+    // Sebelumnya `!== false` membuat dokumen tanpa field `active` dianggap aktif.
+    return doc.exists && doc.get("active") === true;
   } catch {
     return false;
   }
+}
+
+/**
+ * `true` bila email adalah admin (OWNER/env ATAU admin DB aktif).
+ * Sumber tunggal yang dipakai guard API & layout server `/admin` (gap G6).
+ */
+export async function isAdminEmail(email: string): Promise<boolean> {
+  const clean = email.trim().toLowerCase();
+  if (!clean) return false;
+  if (isOwnerEmail(clean)) return true;
+  return isDbAdmin(clean);
 }
 
 /** Tambahkan admin baru (idempoten). Menolak bila email = owner (sudah admin). */

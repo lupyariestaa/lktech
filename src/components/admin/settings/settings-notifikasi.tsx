@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Loader2,
-  Save,
   Send,
 } from "lucide-react";
 import { fetchSettingsWithHealth, saveSettings, type EmailHealth } from "@/lib/admin-api";
@@ -14,6 +13,7 @@ import { testIntegration } from "@/lib/admin-settings-api";
 import { useToast } from "@/components/admin/toast";
 import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/settings-types";
+import { FormErrorBanner, SaveRow } from "@/components/admin/settings/settings-form-ui";
 
 /** Halaman Notifikasi (fase S3). */
 export function SettingsNotifikasi() {
@@ -25,6 +25,8 @@ export function SettingsNotifikasi() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -35,8 +37,11 @@ export function SettingsNotifikasi() {
           setSettings(data.settings);
           setHealth(data.emailHealth);
         }
-      } catch {
-        /* abaikan */
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Gagal memuat.");
+          setLoadFailed(true);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -55,6 +60,8 @@ export function SettingsNotifikasi() {
 
   const onSave = async () => {
     setSaving(true);
+    setError(null);
+    setSaved(false);
     try {
       const res = await saveSettings(settings);
       setSettings(res.settings);
@@ -62,7 +69,9 @@ export function SettingsNotifikasi() {
       setDirty(false);
       toast.success("Pengaturan notifikasi tersimpan.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal menyimpan.");
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -110,6 +119,8 @@ export function SettingsNotifikasi() {
 
   return (
     <div className="flex flex-col gap-5">
+      <FormErrorBanner message={error} loadFailed={loadFailed} />
+
       {/* Status kesehatan email */}
       {health && (
         <div
@@ -179,20 +190,12 @@ export function SettingsNotifikasi() {
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Kirim email uji ke saya
           </button>
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark disabled:opacity-70"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Simpan
-          </button>
-          {saved && (
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600">
-              <CheckCircle2 className="h-4 w-4" /> Tersimpan
-            </span>
-          )}
+          <SaveRow
+            onSave={onSave}
+            saving={saving}
+            saved={saved}
+            disabled={loadFailed || !dirty}
+          />
         </div>
       </section>
     </div>

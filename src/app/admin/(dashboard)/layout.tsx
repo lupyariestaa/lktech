@@ -1,3 +1,4 @@
+import { AdminServerGuard } from "@/components/admin/admin-server-guard";
 import { AuthGuard } from "@/components/admin/auth-guard";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { ToastProvider } from "@/components/admin/toast";
@@ -7,12 +8,14 @@ export default function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <AuthGuard>
-      <ToastProvider>
-        <UnsavedChangesProvider>
-          <AdminShell>{children}</AdminShell>
-        </UnsavedChangesProvider>
-      </ToastProvider>
-    </AuthGuard>
+    <AdminServerGuard>
+      <AuthGuard>
+        <ToastProvider>
+          <UnsavedChangesProvider>
+            <AdminShell>{children}</AdminShell>
+          </UnsavedChangesProvider>
+        </ToastProvider>
+      </AuthGuard>
+    </AdminServerGuard>
   );
 }
