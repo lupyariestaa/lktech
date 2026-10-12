@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { SITE } from "@/lib/site";
+import { SITE, SEO_CONTENT_UPDATED } from "@/lib/site";
 import { getProjects } from "@/lib/projects";
 import { getArticleCategoryList, getArticleTags, getArticles } from "@/lib/articles";
 import { taxonomySlug } from "@/lib/article-types";
@@ -8,15 +8,18 @@ import { SERVICES } from "@/lib/services";
 
 export const revalidate = 3600;
 
-/** Ubah tanggal (string) jadi Date; fallback ke `now` bila tidak valid. */
-function toDate(value: string | undefined, now: Date): Date {
-  if (!value) return now;
+/** Ubah tanggal (string) jadi Date; fallback ke `fallback` bila tidak valid. */
+function toDate(value: string | undefined, fallback: Date): Date {
+  if (!value) return fallback;
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? now : d;
+  return Number.isNaN(d.getTime()) ? fallback : d;
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
+  // S1/R10: rute tanpa tanggal konten asli memakai tanggal STABIL
+  // (`SEO_CONTENT_UPDATED`) — bukan `now` yang berubah tiap build (sinyal
+  // freshness palsu yang memicu crawl berulang tanpa perubahan).
+  const stable = SEO_CONTENT_UPDATED;
 
   const [projects, articles, products, categories, tags] = await Promise.all([
     getProjects(),
@@ -28,33 +31,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Tanggal "konten terakhir diubah" — dipakai untuk rute statis.
   const latestContentDate = articles.reduce<Date>((acc, a) => {
-    const d = toDate(a.updatedAt ?? a.publishedAt, now);
+    const d = toDate(a.updatedAt ?? a.publishedAt, stable);
     return d > acc ? d : acc;
-  }, now);
+  }, stable);
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE.url}/`, lastModified: latestContentDate, changeFrequency: "weekly", priority: 1 },
-    { url: `${SITE.url}/layanan`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
-    { url: `${SITE.url}/produk`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
-    { url: `${SITE.url}/harga`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${SITE.url}/promo`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${SITE.url}/portofolio`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${SITE.url}/layanan`, lastModified: stable, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE.url}/produk`, lastModified: stable, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${SITE.url}/harga`, lastModified: stable, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${SITE.url}/promo`, lastModified: stable, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${SITE.url}/portofolio`, lastModified: stable, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE.url}/blog`, lastModified: latestContentDate, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE.url}/kontak`, lastModified: now, changeFrequency: "yearly", priority: 0.7 },
+    { url: `${SITE.url}/kontak`, lastModified: stable, changeFrequency: "yearly", priority: 0.7 },
   ];
 
   // Slug layanan dibaca dari modul layanan (hardcoded).
   const serviceRoutes: MetadataRoute.Sitemap = SERVICES.map((s) => ({
     url: `${SITE.url}/layanan/${s.slug}`,
-    lastModified: now,
+    lastModified: stable,
     changeFrequency: "monthly",
     priority: 0.8,
   }));
 
   const projectRoutes: MetadataRoute.Sitemap = projects.map((p) => ({
     url: `${SITE.url}/portofolio/${p.slug}`,
-    // Tanggal update nyata bila ada; fallback ke waktu build.
-    lastModified: toDate(p.updatedAt, now),
+    // Tanggal update nyata bila ada; fallback ke tanggal stabil.
+    lastModified: toDate(p.updatedAt, stable),
     changeFrequency: "yearly",
     priority: 0.6,
   }));
@@ -62,14 +65,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const articleRoutes: MetadataRoute.Sitemap = articles.map((a) => ({
     url: `${SITE.url}/blog/${a.slug}`,
     // Tanggal asli artikel (bukan waktu build).
-    lastModified: toDate(a.updatedAt ?? a.publishedAt, now),
+    lastModified: toDate(a.updatedAt ?? a.publishedAt, stable),
     changeFrequency: "monthly",
     priority: 0.7,
   }));
 
   const productRoutes: MetadataRoute.Sitemap = products.map((p) => ({
     url: `${SITE.url}/produk/${p.slug}`,
-    lastModified: now,
+    lastModified: stable,
     changeFrequency: "weekly",
     priority: 0.7,
   }));

@@ -40,7 +40,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const service = getService(slug);
-  if (!service) return { title: "Layanan tidak ditemukan" };
+  // S1/R3: jalur "not found" wajib `noindex` agar halaman error tidak ter-index.
+  if (!service) {
+    return { title: "Layanan tidak ditemukan", robots: { index: false, follow: false } };
+  }
 
   return {
     title: service.title,

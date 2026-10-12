@@ -27,7 +27,8 @@ export async function generateMetadata({
   const { category } = await params;
   const categories = await getArticleCategoryList();
   const label = resolveLabelFromSlug(category, categories);
-  if (!label) return { title: "Kategori tidak ditemukan" };
+  // S1/R3: jalur "not found" wajib `noindex`.
+  if (!label) return { title: "Kategori tidak ditemukan", robots: { index: false, follow: false } };
 
   return {
     title: `Kategori: ${label}`,

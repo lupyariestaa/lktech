@@ -45,7 +45,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const project = await getProjectBySlug(slug);
-  if (!project) return { title: "Proyek tidak ditemukan" };
+  // S1/R3: jalur "not found" wajib `noindex`.
+  if (!project) {
+    return { title: "Proyek tidak ditemukan", robots: { index: false, follow: false } };
+  }
 
   const mediaMap = await getPortfolioMediaMap();
   const cover = mediaMap[slug]?.cover?.secureUrl;

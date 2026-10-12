@@ -10,7 +10,9 @@ import { listPublicPromos } from "@/lib/promos";
 import { SITE } from "@/lib/site";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 
-export const dynamic = "force-dynamic";
+// S1/R4: sebelumnya `force-dynamic` (tak di-cache → TTFB/CWV buruk). Konten
+// promo berubah jarang; ISR 120 dtk menjaga kesegaran tanpa membebani server.
+export const revalidate = 120;
 
 export const metadata: Metadata = {
   title: "Promo & Kode Diskon",

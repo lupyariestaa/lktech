@@ -30,7 +30,8 @@ export async function generateMetadata({
     tag,
     tags.map((t) => t.tag),
   );
-  if (!label) return { title: "Tag tidak ditemukan" };
+  // S1/R3: jalur "not found" wajib `noindex`.
+  if (!label) return { title: "Tag tidak ditemukan", robots: { index: false, follow: false } };
 
   return {
     title: `Tag: ${label}`,

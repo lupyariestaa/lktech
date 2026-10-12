@@ -1,13 +1,10 @@
-import type { Metadata } from "next";
 import { Navbar } from "@/components/sections/navbar";
 import { Footer } from "@/components/sections/footer";
 
-export const metadata: Metadata = {
-  title: "Produk",
-  description:
-    "Produk digital LKTech: template, software, aplikasi, dan e-book siap pakai dengan harga transparan.",
-};
-
+// S1/R8: metadata TIDAK lagi ditetapkan di layout (sebelumnya hardcoded
+// `title: "Produk"` yang duplikat & bersaing dengan `produk/page.tsx` dan
+// `produk/[slug]/page.tsx`). Biarkan masing-masing halaman menetapkan metadata
+// (termasuk canonical) sendiri.
 export default function ProdukLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

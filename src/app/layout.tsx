@@ -65,8 +65,14 @@ export async function generateMetadata(): Promise<Metadata> {
     authors: [{ name: SITE.name }],
     creator: SITE.name,
     publisher: SITE.name,
+    // Catatan (S1/R1): canonical TIDAK lagi ditetapkan global di root. Setiap
+    // halaman WAJIB menetapkan canonical sendiri (lihat `alternates.canonical`
+    // di tiap page.tsx) agar tidak bocor ke "/" (duplikasi/kanibalisasi).
+    // Halaman privat cukup `noindex` (lihat halaman terkait).
     alternates: {
-      canonical: "/",
+      types: {
+        "application/rss+xml": [{ url: "/blog/rss.xml", title: "LKTech Blog RSS" }],
+      },
     },
     // Verification Google Search Console — hanya disertakan bila diisi admin
     // (sebelumnya form "menjanjikan" tag ini tetapi tak pernah di-render → G1).

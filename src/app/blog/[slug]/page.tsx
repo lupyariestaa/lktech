@@ -48,7 +48,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const resolved = await resolveArticleSlug(slug);
-  if (!resolved) return { title: "Artikel tidak ditemukan" };
+  // S1/R3: jalur "not found" wajib `noindex`.
+  if (!resolved) {
+    return { title: "Artikel tidak ditemukan", robots: { index: false, follow: false } };
+  }
   const article = resolved.article;
   const title = seoTitle(article);
   const description = seoDescription(article);

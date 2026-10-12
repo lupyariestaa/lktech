@@ -55,3 +55,12 @@ export const SITE = {
   ogImage: "/opengraph-image",
   locale: "id_ID",
 };
+
+/**
+ * Tanggal "konten terakhir diperbarui" yang STABIL antar-build (fase S1).
+ * Dipakai untuk `lastModified` sitemap pada rute statis yang tidak menyimpan
+ * tanggal asli — menggantikan `now` yang berubah setiap build (gap R10).
+ * Perbarui manual saat konten halaman statis berubah signifikan.
+ */
+export const SEO_CONTENT_UPDATED = new Date("2026-10-12T00:00:00.000Z");
+
