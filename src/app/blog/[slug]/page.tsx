@@ -108,9 +108,14 @@ export default async function ArticleDetailPage({
     description: article.excerpt,
     datePublished: article.publishedAt,
     dateModified: article.updatedAt ?? article.publishedAt,
-    author: { "@type": "Organization", name: article.author },
-    publisher: { "@type": "Organization", name: SITE.name },
-    mainEntityOfPage: url,
+    // S3: penulis sebagai `Person` (nama penulis artikel); publisher tetap org.
+    author: { "@type": "Person", name: article.author || SITE.name },
+    publisher: {
+      "@type": "Organization",
+      name: SITE.name,
+      logo: { "@type": "ImageObject", url: `${SITE.url}/logo/lktech-logo.svg` },
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
     image: [ogImageFor(article, `${SITE.url}/opengraph-image`)],
     articleSection: article.category,
     keywords: article.tags.join(", "),

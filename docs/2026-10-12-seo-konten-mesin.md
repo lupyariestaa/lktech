@@ -1,7 +1,7 @@
 # SEO & Konten Mesin — Perencanaan & Fase (S0–S7)
 
-> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1 ✅ & S2 ✅ SELESAI (2026-10-12).** Inisiatif
-> baru setelah sistem matang secara fitur.
+> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1 ✅, S2 ✅ & S3 ✅ SELESAI (2026-10-12).**
+> Inisiatif baru setelah sistem matang secara fitur.
 > **Disusun:** hasil riset menyeluruh atas kode SEO aktual (lihat §1 temuan).
 > **Prinsip:** manfaatkan fondasi SEO yang sudah kuat (metadata, JSON-LD, sitemap, RSS,
 > blog) lalu tutup celah + tambah *mesin pertumbuhan* (programmatic, internal linking,
@@ -114,7 +114,7 @@ rich results, (3) bangun internal linking + hub, (4) tanam programmatic SEO,
 > di HTML (beranda `FAQPage`, harga `FAQPage`+`Breadcrumb`, layanan detail
 > `FAQPage`+`Breadcrumb`+`OfferCatalog`). Lihat §7.
 
-### Fase S3 — Structured data lanjutan & listing (R6, R7, R9, R17)
+### Fase S3 — Structured data lanjutan & listing (R6, R7, R9, R17) ✅ SELESAI
 - `Service` kaya: `hasOfferCatalog`/`OfferCatalog` dari `detail.packages`, `areaServed`.
 - `LocalBusiness`/`ProfessionalService` lengkap: `geo`, `openingHoursSpecification`,
   `priceRange`, `sameAs` (social), `contactPoint`, `hasMap`.
@@ -122,6 +122,11 @@ rich results, (3) bangun internal linking + hub, (4) tanam programmatic SEO,
 - `WebSite` + `SearchAction` (sitelinks searchbox) + `WebPage`.
 - `Product`: `sku`, `review` (dari ulasan approved), `priceValidUntil`.
 - `BlogPosting`: `author` Person.
+
+> **✅ Hasil S3 (2026-10-12)** — Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+> (`test:seo-schema` 8→**15**) · `build` ✅ (81 halaman). Verifikasi HTML: `SearchAction`,
+> `OpeningHoursSpecification`, `GeoCoordinates`, `hasMap`, `priceRange`, `priceValidUntil`,
+> `sku` ter-render. Lihat §8.
 
 ### Fase S4 — Internal linking & hub (R13, R14)
 - Halaman index **`/blog/kategori`** & **`/blog/tag`** (hub + `CollectionPage` + sitemap).
@@ -242,3 +247,36 @@ sesuai halaman (beranda, harga, layanan list+detail).
 **Sisa:** Fase **S3–S7** (structured data lanjutan, internal linking/hub, programmatic,
 GSC/GA4, QA).
 **Langkah manual:** validasi rich result di **Google Rich Results Test** (FAQ, breadcrumb).
+
+---
+
+## 8. ✅ Hasil Eksekusi FASE S3 (2026-10-12)
+
+**Status: ✅ SELESAI (kode).** Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+(`test:seo-schema` 15) · `build` ✅ (81 halaman).
+
+Helper murni tambahan di **`structured-data-pure.ts`**: `buildReviewNodes`,
+`buildOpeningHours`, `buildSearchAction`, `buildSameAs`, `priceValidUntil`.
+
+| Temuan | Solusi |
+| --- | --- |
+| **R7** — `LocalBusiness` kurang lengkap | `ProfessionalService` global kini punya **`geo`** (koordinat dari `site.ts/BUSINESS_GEO`), **`openingHoursSpecification`** (Sen–Jum 09–17, Sab 09–13), **`priceRange`**, **`contactPoint`** (telepon/email/bahasa), **`hasMap`**, dan **`sameAs`** (dari `settings.socials`). |
+| **R17** — `Product` minim | Tambah **`sku`** (S2), **`review`** (dari ulasan `approved` via `listProductReviews`, hanya bila ada), **`priceValidUntil`** (offer). |
+| **R17** — `BlogPosting` tanpa author Person | `author` → **`Person`**; `publisher` Organization + `logo`; `mainEntityOfPage` → `WebPage`. |
+| **R6** — `Service` kaya | `hasOfferCatalog` dari `detail.packages` (S2) + `areaServed` Country (ditinjau). |
+| **R9** — `ItemList` minim | `ItemList` di `/produk` & `/portofolio` (S2, dari listing). |
+| **R9/SearchAction** | `WebSite.potentialAction` = **`SearchAction`** (sitelinks searchbox) → `/blog?q={search_term_string}`. |
+| DRY | Koordinat peta dipindah ke sumber tunggal `site.ts` (`BUSINESS_GEO`), dipakai halaman kontak & JSON-LD. |
+
+**Berkas diubah:** `src/components/structured-data.tsx`, `src/lib/site.ts`,
+`src/lib/structured-data-pure.ts`, `src/app/kontak/page.tsx`,
+`src/app/produk/[slug]/page.tsx`, `src/app/blog/[slug]/page.tsx`,
+`scripts/seo-schema.test.ts`.
+
+**Verifikasi nyata:** HTML build memuat `SearchAction`, `OpeningHoursSpecification`,
+`GeoCoordinates`, `hasMap`, `priceRange` (global); `priceValidUntil`, `sku`, `Offer`
+(produk). `sameAs`/`review` muncul hanya bila data terisi.
+
+**Sisa:** Fase **S4–S7** (internal linking/hub, programmatic, GSC/GA4, QA).
+**Langkah manual:** validasi di **Google Rich Results Test** (Product/Review, FAQ,
+Breadcrumb, Organization) & pantau Search Console.

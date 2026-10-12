@@ -57,6 +57,31 @@ export const SITE = {
 };
 
 /**
+ * Koordinat lokasi kantor (fase S3). Dipakai bersama oleh halaman kontak (peta)
+ * & JSON-LD `LocalBusiness` (`geo` + `hasMap`).
+ */
+export const BUSINESS_GEO = {
+  lat: "-7.304071167612529",
+  lng: "108.12106012781747",
+};
+
+/** URL Google Maps lokasi bisnis (query koordinat). */
+export const BUSINESS_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${BUSINESS_GEO.lat},${BUSINESS_GEO.lng}`;
+
+/**
+ * Jam operasional bisnis (fase S3) untuk JSON-LD `openingHoursSpecification`.
+ * Senin–Jumat 09:00–17:00 (WIB), Sabtu 09:00–13:00. Minggu tutup.
+ */
+export const BUSINESS_HOURS = [
+  { days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], opens: "09:00", closes: "17:00" },
+  { days: ["Saturday"], opens: "09:00", closes: "13:00" },
+];
+
+/** Rentang harga indikatif (schema.org `priceRange`). */
+export const BUSINESS_PRICE_RANGE = "Rp";
+
+
+/**
  * Tanggal "konten terakhir diperbarui" yang STABIL antar-build (fase S1).
  * Dipakai untuk `lastModified` sitemap pada rute statis yang tidak menyimpan
  * tanggal asli — menggantikan `now` yang berubah setiap build (gap R10).

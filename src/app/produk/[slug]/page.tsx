@@ -25,6 +25,7 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { Reveal } from "@/components/motion";
 import { getCoPurchaseMap } from "@/lib/co-purchase-server";
 import { rankCoPurchases } from "@/lib/co-purchase";
+import { listProductReviews } from "@/lib/reviews";
 import {
   getProductBySlug,
   getProducts,
@@ -41,7 +42,7 @@ import { PRODUCT_CATEGORY_LABEL } from "@/lib/product-types";
 import { TrustBadges } from "@/components/trust-badges";
 import { SocialProof } from "@/components/social-proof";
 import { SITE } from "@/lib/site";
-import { buildBreadcrumb } from "@/lib/structured-data-pure";
+import { buildBreadcrumb, buildReviewNodes, priceValidUntil } from "@/lib/structured-data-pure";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { cn } from "@/lib/utils";
 
@@ -125,6 +126,19 @@ export default async function ProdukDetailPage({
   // Ulasan disembunyikan bila admin mematikannya (mis. ulasan masih kosong).
   const showReviews = product.reviewsEnabled !== false;
   const showRating = showReviews && rating && rating.count > 0;
+  // S3: ambil ulasan disetujui (server) untuk node `review` (rich result bintang).
+  const approvedReviews = showReviews ? await listProductReviews(product.slug, 10) : [];
+  const reviewNodes = buildReviewNodes(
+    approvedReviews.map((r) => ({
+      buyerName: r.buyerName,
+      rating: r.rating,
+      title: r.title,
+      body: r.body,
+      createdAtISO: r.createdAtISO,
+    })),
+  );
+  // `priceValidUntil` = 1 tahun ke depan (indikasi harga masih berlaku).
+  const priceValidUntilValue = priceValidUntil(new Date());
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -146,12 +160,14 @@ export default async function ProdukDetailPage({
           },
         }
       : {}),
+    ...(reviewNodes.length > 0 ? { review: reviewNodes } : {}),
     offers: multi
       ? product.variants.map((v) => ({
           "@type": "Offer",
           name: v.name,
           price: v.price > 0 ? String(v.price) : undefined,
           priceCurrency: "IDR",
+          priceValidUntil: priceValidUntilValue,
           availability:
             v.soldOut || product.soldOut
               ? "https://schema.org/OutOfStock"
@@ -164,6 +180,7 @@ export default async function ProdukDetailPage({
           "@type": "Offer",
           price: product.price > 0 ? String(product.price) : undefined,
           priceCurrency: "IDR",
+          priceValidUntil: priceValidUntilValue,
           availability: product.soldOut
             ? "https://schema.org/OutOfStock"
             : product.price > 0

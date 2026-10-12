@@ -119,3 +119,93 @@ export function buildItemList(
 export function jsonLdString(node: JsonLd): string {
   return JSON.stringify(node);
 }
+
+/* ============================================================
+ * Fase S3 — pembangun tambahan (murni & teruji)
+ * ============================================================ */
+
+/** Satu ulasan minimal untuk node `Review`. */
+export type ReviewInput = {
+  buyerName?: string;
+  rating: number;
+  title?: string;
+  body?: string;
+  createdAtISO: string;
+};
+
+/**
+ * Bangun array node `Review` untuk schema `Product.review` (fase S3).
+ * Hanya menyertakan ulasan dengan rating valid (1..5). Mengembalikan `[]` bila
+ * tidak ada yang valid (pemanggil tak menyertakan field `review`).
+ */
+export function buildReviewNodes(reviews: readonly ReviewInput[]): JsonLd[] {
+  return (reviews ?? [])
+    .filter((r) => Number.isFinite(r?.rating) && r.rating >= 1 && r.rating <= 5)
+    .map((r) => ({
+      "@type": "Review",
+      author: { "@type": "Person", name: r.buyerName?.trim() || "Pembeli LKTech" },
+      datePublished: r.createdAtISO,
+      ...(r.title ? { name: plainText(r.title) } : {}),
+      reviewBody: plainText(r.body || r.title || "Ulasan pembeli terverifikasi."),
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: r.rating,
+        bestRating: 5,
+        worstRating: 1,
+      },
+    }));
+}
+
+/** Spesifikasi jam operasional (input). */
+export type OpeningHoursInput = {
+  days: readonly string[];
+  opens: string;
+  closes: string;
+};
+
+/** Bangun array `OpeningHoursSpecification` (fase S3). */
+export function buildOpeningHours(hours: readonly OpeningHoursInput[]): JsonLd[] {
+  return (hours ?? [])
+    .filter((h) => h && h.days?.length > 0 && h.opens && h.closes)
+    .map((h) => ({
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: [...h.days],
+      opens: h.opens,
+      closes: h.closes,
+    }));
+}
+
+/**
+ * Bangun node `SearchAction` (sitelinks searchbox) untuk `WebSite.potentialAction`
+ * (fase S3). `urlTemplate` harus memuat placeholder `{search_term_string}`.
+ */
+export function buildSearchAction(
+  urlTemplate: string,
+  queryInputName = "search_term_string",
+): JsonLd {
+  return {
+    "@type": "SearchAction",
+    target: { "@type": "EntryPoint", urlTemplate },
+    "query-input": `required name=${queryInputName}`,
+  };
+}
+
+/** Normalisasi daftar URL sosial menjadi `sameAs` (hanya http/https, unik). */
+export function buildSameAs(urls: readonly (string | undefined)[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of urls ?? []) {
+    const u = (raw ?? "").trim();
+    if (!u || !/^https?:\/\//i.test(u) || seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+  }
+  return out;
+}
+
+/** Tanggal `priceValidUntil` (yyyy-mm-dd) — N hari dari `from` (default 365). */
+export function priceValidUntil(from: Date, days = 365): string {
+  return new Date(from.getTime() + days * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+}

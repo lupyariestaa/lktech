@@ -5,13 +5,13 @@ import { ContactForm } from "@/components/contact-form";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
-import { SITE } from "@/lib/site";
+import { SITE, BUSINESS_GEO } from "@/lib/site";
 import { buildBreadcrumb } from "@/lib/structured-data-pure";
 import { JsonLdScript } from "@/components/json-ld-script";
 
-// Koordinat lokasi kantor (untuk peta Google Maps).
-const MAP_LAT = "-7.304071167612529";
-const MAP_LNG = "108.12106012781747";
+// Koordinat lokasi kantor — sumber tunggal di `site.ts` (dipakai juga JSON-LD).
+const MAP_LAT = BUSINESS_GEO.lat;
+const MAP_LNG = BUSINESS_GEO.lng;
 
 export const metadata: Metadata = {
     title: "Kontak",
