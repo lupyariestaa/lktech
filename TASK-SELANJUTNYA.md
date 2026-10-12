@@ -5,18 +5,19 @@
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
-> 🔎 **Inisiatif aktif baru — SEO & Konten Mesin:** **[`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md)** (fase S0–S7). Fokus: rapikan sinyal teknis, structured data, internal linking, programmatic SEO, data GSC. **S1–S6 ✅ selesai.**
+> 🔎 **Inisiatif SEO & Konten Mesin ✅ SELESAI (S0–S7, 2026-10-12):** **[`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md)** — sinyal teknis, structured data (FAQ/Breadcrumb/ItemList/LocalBusiness/SearchAction/Review), hub kategori/tag, programmatic SEO (40 halaman kota), panel Search Console. **Kode tuntas; sisa langkah manual pemilik (submit sitemap, pantau GSC).**
 >
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 🔎 **SEO & Konten Mesin — FASE S7 (QA & rilis)** (S1–S6 ✅ selesai). Sisa: gate penuh (✅ sudah hijau) · uji browser (programmatic `/layanan/[slug]/[kota]`, hub kategori/tag, panel `/admin/seo`) · validasi rich result di Google Rich Results Test · submit sitemap di Search Console · dokumentasi & commit. Rencana: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §2.
-> ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional (fail-safe via `NEXT_PUBLIC_GA_ID`); integrasi **Search Console API** (service account, JWT manual tanpa dep baru) → endpoint `/api/admin/seo` + panel **`/admin/seo`** (query/halaman teratas, rentang 7/28/90 hari); menu "SEO" di admin; `.env.example`. Fail-safe: tanpa env → panduan setup (bukan error). Test `test:search-console` (9). Lihat §11.
-> ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 8 kota × 5 layanan = 40 halaman konten unik (anti-doorway). `build` 81→124. Test `test:locations` (6). Lihat §10.
-> ✅ **SEO & Konten Mesin — FASE S4 SELESAI (2026-10-12):** hub `/blog/kategori` & `/blog/tag`; internal linking dua arah; fix bug slug. Test `test:blog` 174→175. Lihat §9.
-> ✅ **SEO & Konten Mesin — FASE S3 SELESAI (2026-10-12):** `LocalBusiness` lengkap; `SearchAction`; Product review/priceValidUntil/sku; BlogPosting author Person. Test `test:seo-schema` 8→15. Lihat §8.
-> ✅ **SEO & Konten Mesin — FASE S2 SELESAI (2026-10-12):** `structured-data-pure.ts` + `JsonLdScript`; FAQPage; BreadcrumbList; ItemList. Test `test:seo-schema` (8). Lihat §7.
-> ✅ **SEO & Konten Mesin — FASE S1 SELESAI (2026-10-12):** R1 canonical root; R3 noindex; R4 `/promo` ISR; R8/R10/R11. Lihat §6.
+> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** Inisiatif **SEO & Konten Mesin (S0–S7) ✅ SELESAI (kode)**. Kandidat lanjutan (dari `docs/2026-10-06-roadmap-pengembangan.md`): **Multi-bahasa (ID/EN)** · **PWA + Web Push** · **Webhook Resend** (deliverability) · **Agregasi harian analitik** · **E2E test (Playwright)**. Atau selesaikan **langkah manual SEO** (submit sitemap, pantau GSC). Lihat §"STATUS & PETA SEKARANG".
+> ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
+> ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
+> ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
+> ✅ **SEO & Konten Mesin — FASE S4 SELESAI (2026-10-12):** hub `/blog/kategori` & `/blog/tag`; internal linking dua arah. Lihat §9.
+> ✅ **SEO & Konten Mesin — FASE S3 SELESAI (2026-10-12):** `LocalBusiness` lengkap; `SearchAction`; Product review/priceValidUntil/sku; BlogPosting author Person. Lihat §8.
+> ✅ **SEO & Konten Mesin — FASE S2 SELESAI (2026-10-12):** `structured-data-pure.ts` + `JsonLdScript`; FAQPage; BreadcrumbList; ItemList. Lihat §7.
+> ✅ **SEO & Konten Mesin — FASE S1 SELESAI (2026-10-12):** canonical/noindex/ISR/sitemap/RSS. Lihat §6.
 > **Sistem Pengaturan Super Proper & Terintegrasi ✅ SELESAI (S0–S9) + Polish P0–P3 ✅** — lihat [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
@@ -28,7 +29,27 @@
 
 ---
 
-## ✅ SESI INI — SEO & Konten Mesin FASE S6 (SELESAI)
+## ✅ SESI INI — SEO & Konten Mesin FASE S7 (QA & RILIS) — MENUTUP INISIATIF
+
+**Status: ✅ SELESAI (kode) — INISIATIF SEO & KONTEN MESIN (S0–S7) TUNTAS.** Dokumen: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §13.
+
+- **Gate penuh:** `tsc` ✅ · `eslint` global ✅ · **32 suite / 561 test** ✅ · `build` ✅ **125 halaman**.
+- **Audit QA** pada output build: robots, sitemap, canonical, JSON-LD, noindex, internal
+  linking — semua bersih; tak ada halaman yatim.
+- **Temuan QA diperbaiki:** halaman kota (5 layanan × 1 kota) semula berbagi
+  `localContext` → risiko near-duplicate. Kini **paragraf pembuka unik per
+  layanan×kota** via `serviceCityIntro()` + `SERVICE_ANGLES` (teruji).
+- **Rilis:** commit + push (Vercel auto-deploy).
+
+**Sisa (LANGKAH MANUAL pemilik):** submit sitemap di GSC, (opsional) env GA4/GSC,
+pantau 2–4 minggu, validasi Rich Results Test.
+
+**Inisiatif berikutnya (kandidat):** Multi-bahasa, PWA+Web Push, Webhook Resend,
+agregasi harian, E2E test.
+
+---
+
+## ✅ SESI SEBELUMNYA — SEO & Konten Mesin FASE S6 (SELESAI)
 
 **Status: ✅ SELESAI (kode, S6).** Dokumen: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §11.
 

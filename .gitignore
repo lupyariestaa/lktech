@@ -39,3 +39,6 @@ referensi-design-*.png
 # Screenshot lokal
 Screenshot *.png
 Screenshot*.png
+
+# Log build lokal
+build*.log

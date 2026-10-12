@@ -205,3 +205,31 @@ export function getLocationSlugs(): string[] {
 export function isKnownLocation(slug: string): boolean {
   return slug in LOCATIONS_MAP;
 }
+
+/**
+ * Sudut pandang UNIK per layanan (fase S5 — diferensiasi anti near-duplicate).
+ * Menggabungkan konteks kota dengan relevansi layanan agar tiap kombinasi
+ * layanan × kota punya pembuka yang berbeda (bukan hanya tukar nama kota).
+ */
+export const SERVICE_ANGLES: Record<string, string> = {
+  "pembuatan-website":
+    "Website adalah etalase pertama bisnis Anda di mata calon pelanggan. Kami membangun situs yang cepat, ramah SEO, dan meyakinkan — agar pengunjung dari mesin pencari berubah menjadi pembeli.",
+  "aplikasi-mobile":
+    "Saat pelanggan makin hidup di ponsel, aplikasi memberi pengalaman yang lebih cepat & personal dibanding web. Kami merancang aplikasi mobile yang sesuai alur bisnis Anda.",
+  "konsultasi-teknologi":
+    "Sebelum berinvestasi teknologi, Anda perlu arah yang tepat. Kami membantu memetakan kebutuhan, memilih solusi, dan menghindari pemborosan anggaran digital.",
+  "desain-branding":
+    "Identitas visual yang kuat membuat bisnis diingat. Kami merancang logo, palet, dan elemen brand yang konsisten di semua kanal — dari kemasan hingga website.",
+  "digital-marketing":
+    "Kehadiran digital tanpa strategi mudah tenggelam. Kami menyusun pendekatan pemasaran yang terukur agar upaya Anda menghasilkan prospek nyata, bukan sekadar tayangan.",
+};
+
+/**
+ * Susun paragraf pembuka yang UNIK untuk pasangan layanan × kota.
+ * Menggabungkan `localContext` kota dengan sudut pandang layanan, sehingga
+ * 5 layanan di kota yang sama menghasilkan pembuka berbeda (anti near-duplicate).
+ */
+export function serviceCityIntro(serviceSlug: string, loc: Location): string {
+  const angle = SERVICE_ANGLES[serviceSlug];
+  return angle ? `${angle}\n\n${loc.localContext}` : loc.localContext;
+}

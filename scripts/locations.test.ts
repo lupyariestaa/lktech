@@ -5,6 +5,8 @@ import {
   getLocation,
   getLocationSlugs,
   isKnownLocation,
+  serviceCityIntro,
+  SERVICE_ANGLES,
 } from "../src/lib/locations.ts";
 
 /**
@@ -56,4 +58,23 @@ test("nearby hanya merujuk slug yang dikenal", () => {
       assert.notEqual(n, l.slug, `nearby ${l.slug} merujuk dirinya sendiri`);
     }
   }
+});
+
+test("ANTI near-duplicate: tiap layanan punya sudut unik", () => {
+  const angles = Object.values(SERVICE_ANGLES);
+  assert.equal(new Set(angles).size, angles.length, "sudut layanan duplikat");
+});
+
+test("serviceCityIntro: unik per layanan untuk kota yang sama", () => {
+  const loc = getLocation("bandung");
+  assert.ok(loc);
+  const intros = Object.keys(SERVICE_ANGLES).map((slug) => serviceCityIntro(slug, loc!));
+  assert.equal(new Set(intros).size, intros.length, "intro duplikat antar layanan");
+  // Mengandung konteks kota.
+  for (const s of intros) assert.ok(s.includes(loc!.localContext));
+});
+
+test("serviceCityIntro: layanan tak dikenal ? fallback konteks kota", () => {
+  const loc = getLocation("jakarta");
+  assert.equal(serviceCityIntro("tidak-ada", loc!), loc!.localContext);
 });

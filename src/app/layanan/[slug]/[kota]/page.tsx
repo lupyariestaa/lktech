@@ -8,7 +8,7 @@ import { CtaContact } from "@/components/sections/cta-contact";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { SERVICES, getService } from "@/lib/services";
-import { getLocation, getLocationSlugs, isKnownLocation } from "@/lib/locations";
+import { getLocation, getLocationSlugs, isKnownLocation, serviceCityIntro } from "@/lib/locations";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
@@ -79,6 +79,8 @@ export default async function LayananKotaPage({
   if (!service || !loc) notFound();
 
   const settings = await getSiteSettings();
+  // Pembuka unik per (layanan × kota) — paragraf 1 (relevansi layanan), 2 (konteks kota).
+  const introParagraphs = serviceCityIntro(service.slug, loc).split("\n\n");
   const waHref = waLink(
     `${service.waMessage}\n\n(Kami di ${loc.name} — ${service.title})`,
     settings.whatsapp,
@@ -170,9 +172,11 @@ export default async function LayananKotaPage({
               <MapPin className="h-5 w-5 text-primary" aria-hidden="true" />
               {service.title} untuk bisnis di {loc.name}
             </h2>
-            <p className="mt-4 text-sm leading-relaxed text-slate-700">
-              {loc.localContext}
-            </p>
+            {introParagraphs.map((p, i) => (
+              <p key={i} className="mt-4 text-sm leading-relaxed text-slate-700">
+                {p}
+              </p>
+            ))}
           </section>
 
           {/* Industri relevan */}
