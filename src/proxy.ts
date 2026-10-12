@@ -2,40 +2,69 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ADMIN_SESSION_COOKIE } from "@/lib/session-constants";
 
 /**
- * Proxy gate untuk area `/admin` (konvensi Next.js 16; sebelumnya `middleware`).
+ * Proxy (konvensi Next.js 16; sebelumnya `middleware`).
  *
- * Defense-in-depth: memblokir pengiriman shell dashboard ke pengunjung yang
- * TIDAK punya session cookie admin sama sekali (redirect ke `/admin/login`).
- * Verifikasi kriptografis sesi + whitelist admin tetap dilakukan di API
- * (`requireAdmin`) — cookie ini hanya lapisan tambahan, bukan satu-satunya.
+ * Dua tugas:
+ * 1. **Gate area `/admin`** — blokir shell dashboard tanpa session cookie admin
+ *    (redirect ke `/admin/login`). Verifikasi kriptografis tetap di API.
+ * 2. **Mode pemeliharaan** — bila maintenance AKTIF, arahkan pengunjung umum ke
+ *    `/maintenance` (via rewrite). Rute `/admin`, `/api`, `/maintenance`, `/masuk`,
+ *    `/unduhan`, `/akun` dikecualikan agar admin & sistem tetap berjalan.
  *
- * Catatan: file ini TIDAK boleh mengimpor modul server-only (firebase-admin)
- * karena berjalan di runtime edge.
+ * Catatan: TIDAK boleh mengimpor modul server-only (firebase-admin) — berjalan
+ * di runtime edge. Status maintenance diambil via fetch ke endpoint internal.
  */
-export function proxy(req: NextRequest) {
+
+/** Prefix rute yang dikecualikan dari pengalihan maintenance. */
+const MAINTENANCE_EXEMPT = ["/admin", "/api", "/maintenance", "/masuk", "/unduhan", "/akun"];
+
+export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  // Halaman login admin tidak butuh sesi.
-  if (pathname === "/admin/login") {
+  // ===== 1. Gate admin =====
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    if (pathname === "/admin/login") return NextResponse.next();
+    const hasSession = Boolean(req.cookies.get(ADMIN_SESSION_COOKIE)?.value);
+    if (!hasSession) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/admin/login";
+      url.search = "";
+      if (pathname !== "/admin") {
+        url.searchParams.set("next", `${pathname}${search}`);
+      }
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next();
   }
 
-  const hasSession = Boolean(req.cookies.get(ADMIN_SESSION_COOKIE)?.value);
-  if (!hasSession) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/admin/login";
-    url.search = "";
-    // Simpan tujuan agar bisa kembali setelah login (path relatif internal).
-    if (pathname !== "/admin") {
-      url.searchParams.set("next", `${pathname}${search}`);
+  // ===== 2. Mode pemeliharaan (rute publik) =====
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    MAINTENANCE_EXEMPT.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+  ) {
+    return NextResponse.next();
+  }
+
+  try {
+    const res = await fetch(new URL("/api/maintenance-status", req.url), { cache: "no-store" });
+    if (res.ok) {
+      const data = (await res.json()) as { enabled?: boolean };
+      if (data.enabled === true) {
+        const url = req.nextUrl.clone();
+        url.pathname = "/maintenance";
+        url.search = "";
+        return NextResponse.rewrite(url);
+      }
     }
-    return NextResponse.redirect(url);
+  } catch {
+    /* fail-safe: lanjutkan normal */
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  // Lindungi semua halaman admin, kecuali aset statis & API admin.
-  matcher: ["/admin/:path*"],
+  // Jalankan untuk semua rute halaman (kecuali aset statis Next).
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };

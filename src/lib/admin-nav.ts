@@ -1,8 +1,19 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  isNavActive,
+  matchNavItem,
+  titleForNavPath,
+} from "@/lib/admin-nav-pure";
+import {
   BarChart3,
+  Bell,
+  CalendarClock,
+  Contact,
+  CreditCard,
+  DatabaseBackup,
   Files,
   FolderKanban,
+  Gauge,
   HelpCircle,
   Image as ImageIcon,
   Inbox,
@@ -12,9 +23,12 @@ import {
   Package,
   PanelsTopLeft,
   Percent,
+  Plug,
   ReceiptText,
   ScrollText,
+  Search,
   Settings,
+  ShieldCheck,
   Star,
   Tags,
   Users,
@@ -31,6 +45,15 @@ import {
 /** Jenis badge dinamis yang bisa dirender pada item menu. */
 export type NavBadgeKind = "newLeads" | "newOrders";
 
+export type AdminNavChild = {
+  /** Label pendek untuk daftar anak. */
+  label: string;
+  /** Judul lengkap untuk header shell & metadata. */
+  title: string;
+  href: string;
+  icon?: LucideIcon;
+};
+
 export type AdminNavItem = {
   /** Label pendek untuk sidebar & tooltip rail. */
   label: string;
@@ -40,6 +63,11 @@ export type AdminNavItem = {
   icon: LucideIcon;
   /** Badge dinamis yang dirender di item ini. */
   badge?: NavBadgeKind;
+  /**
+   * Anak menu (accordion). Bila ada, item dirender sebagai accordion; `href`
+   * tetap halaman induk/ringkasan. Generik — dapat dipakai menu apa pun.
+   */
+  children?: AdminNavChild[];
 };
 
 export type AdminNavGroup = {
@@ -180,6 +208,17 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         title: "Pengaturan",
         href: "/admin/settings",
         icon: Settings,
+        children: [
+          { label: "Ringkasan", title: "Ringkasan Pengaturan", href: "/admin/settings", icon: Gauge },
+          { label: "Kontak & Identitas", title: "Kontak & Identitas", href: "/admin/settings/kontak", icon: Contact },
+          { label: "Notifikasi", title: "Notifikasi", href: "/admin/settings/notifikasi", icon: Bell },
+          { label: "Pembayaran", title: "Pembayaran & Mayar", href: "/admin/settings/pembayaran", icon: CreditCard },
+          { label: "Integrasi", title: "Integrasi & API", href: "/admin/settings/integrasi", icon: Plug },
+          { label: "SEO & Situs", title: "SEO & Situs", href: "/admin/settings/seo", icon: Search },
+          { label: "Keamanan & Akses", title: "Keamanan & Akses", href: "/admin/settings/keamanan", icon: ShieldCheck },
+          { label: "Backup & Restore", title: "Backup & Restore", href: "/admin/settings/backup", icon: DatabaseBackup },
+          { label: "Lanjutan", title: "Lanjutan & Sistem", href: "/admin/settings/lanjutan", icon: CalendarClock },
+        ],
       },
       {
         label: "Audit Log",
@@ -191,23 +230,49 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
 ];
 
-/** Seluruh item nav dalam satu daftar flat. */
-export const ADMIN_NAV_ITEMS: AdminNavItem[] = ADMIN_NAV.flatMap(
-  (g) => g.items,
+/** Seluruh item nav dalam satu daftar flat (termasuk turunan ke `children`). */
+export const ADMIN_NAV_ITEMS: AdminNavItem[] = ADMIN_NAV.flatMap((g) => g.items);
+
+/** Anak menu (flat) dari seluruh item — untuk pencocokan title & palette. */
+export const ADMIN_NAV_CHILDREN: AdminNavChild[] = ADMIN_NAV_ITEMS.flatMap(
+  (i) => i.children ?? [],
 );
+
+/** Seluruh tujuan navigasi (induk + anak) dalam satu daftar flat. */
+export const ADMIN_NAV_ALL_TARGETS: Array<{
+  label: string;
+  title: string;
+  href: string;
+  icon: LucideIcon;
+}> = [
+  ...ADMIN_NAV_ITEMS.map((i) => ({
+    label: i.label,
+    title: i.title,
+    href: i.href,
+    icon: i.icon,
+  })),
+  ...ADMIN_NAV_CHILDREN.map((c) => ({
+    label: c.label,
+    title: c.title,
+    href: c.href,
+    icon: c.icon ?? Settings,
+  })),
+];
 
 /** Item aktif bila pathname sama persis ATAU prefix path anaknya. */
 export function isAdminItemActive(href: string, pathname: string): boolean {
-  return href === "/admin"
-    ? pathname === "/admin"
-    : pathname === href || pathname.startsWith(`${href}/`);
+  return isNavActive(href, pathname);
 }
 
-/** Item yang cocok dengan pathname (prefix terpanjang menang). */
+/**
+ * Item induk yang cocok dengan pathname (prefix terpanjang menang). Bila pathname
+ * menunjuk ke sebuah ANAK, induk pemilik anak itulah yang dikembalikan.
+ */
 export function matchAdminItem(pathname: string): AdminNavItem | null {
-  return (
-    [...ADMIN_NAV_ITEMS]
-      .sort((a, b) => b.href.length - a.href.length)
-      .find((n) => isAdminItemActive(n.href, pathname)) ?? null
-  );
+  return matchNavItem(ADMIN_NAV_ITEMS, pathname);
+}
+
+/** Judul lengkap (title) untuk pathname — pakai child bila ada (mis. "Kontak & Identitas"). */
+export function titleForPathname(pathname: string): string | null {
+  return titleForNavPath(ADMIN_NAV_ITEMS, pathname);
 }

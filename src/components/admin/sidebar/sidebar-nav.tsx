@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { ADMIN_NAV } from "@/lib/admin-nav";
+import { ADMIN_NAV, isAdminItemActive } from "@/lib/admin-nav";
 import { SidebarItem, type SidebarBadges, type SidebarVariant } from "./sidebar-item";
+import { SidebarAccordionItem } from "./sidebar-accordion-item";
+import { useNavAccordion } from "./use-nav-accordion";
 
 /**
  * Daftar menu sidebar — dikelompokkan per AdminNavGroup.
  *
  * - Grup utama tanpa label, sisanya diberi section label kecil.
+ * - Item ber-`children` dirender sebagai **accordion** (generik, dapat dipakai
+ *   menu apa pun) dengan auto-buka saat salah satu anak aktif.
  * - Saat nav dapat discroll, tepi atas/bawah diberi fade sebagai affordance
  *   (diukur ulang lewat ResizeObserver — callback async, aman dari aturan
  *   `set-state-in-effect`).
@@ -27,6 +31,19 @@ export function SidebarNav({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [edge, setEdge] = useState({ top: false, bottom: false });
+  const { open, toggle, openItem } = useNavAccordion();
+
+  // Auto-buka accordion yang memiliki anak aktif (dipaksa tampil, tanpa tulis storage).
+  useEffect(() => {
+    for (const group of ADMIN_NAV) {
+      for (const item of group.items) {
+        if (!item.children) continue;
+        if (item.children.some((c) => isAdminItemActive(c.href, pathname))) {
+          openItem(item.href);
+        }
+      }
+    }
+  }, [pathname, openItem]);
 
   const updateEdge = useCallback(() => {
     const el = scrollRef.current;
@@ -81,16 +98,29 @@ export function SidebarNav({
                 </p>
               )
             ) : null}
-            {group.items.map((item) => (
-              <SidebarItem
-                key={item.href}
-                item={item}
-                pathname={pathname}
-                variant={variant}
-                badges={badges}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {group.items.map((item) =>
+              item.children && item.children.length > 0 ? (
+                <SidebarAccordionItem
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  variant={variant}
+                  badges={badges}
+                  isOpen={open.has(item.href)}
+                  onToggle={() => toggle(item.href)}
+                  onNavigate={onNavigate}
+                />
+              ) : (
+                <SidebarItem
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  variant={variant}
+                  badges={badges}
+                  onNavigate={onNavigate}
+                />
+              ),
+            )}
           </div>
         ))}
       </div>

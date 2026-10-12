@@ -28,6 +28,12 @@ export const ADMIN_AUDIT_ACTIONS = [
   "article.duplicate",
   "article.bulk",
   "broadcast.send",
+  "admin.add",
+  "admin.remove",
+  "settings.restore",
+  "settings.backup_export",
+  "settings.cache_clear",
+  "settings.maintenance",
 ] as const;
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];
@@ -58,6 +64,12 @@ export const ADMIN_AUDIT_ACTION_LABEL: Record<AdminAuditAction, string> = {
   "article.duplicate": "Duplikat artikel",
   "article.bulk": "Aksi massal artikel",
   "broadcast.send": "Kirim broadcast newsletter",
+  "admin.add": "Tambah admin",
+  "admin.remove": "Hapus admin",
+  "settings.restore": "Pulihkan dari backup",
+  "settings.backup_export": "Ekspor backup",
+  "settings.cache_clear": "Bersihkan cache",
+  "settings.maintenance": "Ubah mode pemeliharaan",
 };
 
 /** Entri audit tersimpan. */

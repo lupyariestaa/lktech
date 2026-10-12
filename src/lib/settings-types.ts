@@ -4,6 +4,25 @@ export type SocialLink = {
   icon: string;
 };
 
+/** Pengaturan SEO global (opsional). */
+export type SeoSettings = {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  searchConsoleId?: string;
+};
+
+/** Pengaturan mode pemeliharaan (opsional). */
+export type MaintenanceSettings = {
+  enabled?: boolean;
+  title?: string;
+  message?: string;
+  imageUrl?: string;
+  imageAlt?: string;
+  etaISO?: string;
+  contactEmail?: string;
+};
+
 /** Pengaturan situs yang dapat diubah dari dashboard. */
 export type SiteSettings = {
   email: string;
@@ -16,6 +35,14 @@ export type SiteSettings = {
   notifyBuyerOnStatus: boolean;
   /** Kirim email pengingat keranjang terbengkalai (FASE P5, default: aktif). */
   notifyCartReminders: boolean;
+  /** Nama brand (opsional) — dipakai di metadata/identitas. */
+  brandName?: string;
+  /** Tagline singkat brand (opsional). */
+  tagline?: string;
+  /** Pengaturan SEO global. */
+  seo?: SeoSettings;
+  /** Mode pemeliharaan situs. */
+  maintenance?: MaintenanceSettings;
 };
 
 /** Nilai default (dipakai bila Firestore kosong / belum dikonfigurasi). */
@@ -27,4 +54,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   notifyBuyerOnOrder: true,
   notifyBuyerOnStatus: true,
   notifyCartReminders: true,
+  brandName: "LKTech",
+  tagline: "Jasa Pembuatan Website, Aplikasi Mobile & Produk Digital",
+  seo: {},
+  maintenance: { enabled: false, title: "Sedang Pemeliharaan" },
 };

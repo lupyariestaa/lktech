@@ -39,6 +39,31 @@ export const settingsSchema = z.object({
   socials: z.array(socialLinkSchema).max(12),
   notifyBuyerOnOrder: z.boolean().optional(),
   notifyBuyerOnStatus: z.boolean().optional(),
+  notifyCartReminders: z.boolean().optional(),
+  // Identitas brand
+  brandName: z.string().trim().max(80).optional(),
+  tagline: z.string().trim().max(160).optional(),
+  // SEO & situs
+  seo: z
+    .object({
+      title: z.string().trim().max(160).optional(),
+      description: z.string().trim().max(320).optional(),
+      ogImage: z.string().trim().max(500).optional(),
+      searchConsoleId: z.string().trim().max(120).optional(),
+    })
+    .optional(),
+  // Mode pemeliharaan
+  maintenance: z
+    .object({
+      enabled: z.boolean().optional(),
+      title: z.string().trim().max(120).optional(),
+      message: z.string().trim().max(600).optional(),
+      imageUrl: z.string().trim().max(500).optional(),
+      imageAlt: z.string().trim().max(160).optional(),
+      etaISO: z.string().trim().max(40).optional(),
+      contactEmail: z.string().trim().max(200).optional(),
+    })
+    .optional(),
 });
 
 // ===== Media =====

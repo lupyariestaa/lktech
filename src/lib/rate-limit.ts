@@ -40,6 +40,30 @@ export function isDistributedRateLimitConfigured(): boolean {
 }
 
 /**
+ * Uji koneksi (PING) ke Upstash Redis REST (fase S5). Tidak pernah melempar.
+ * Menggunakan perintah `PING` via pipeline REST.
+ */
+export async function pingUpstash(): Promise<{ ok: boolean; detail: string }> {
+  const url = (process.env.UPSTASH_REDIS_REST_URL ?? "").trim().replace(/\/+$/, "");
+  const token = (process.env.UPSTASH_REDIS_REST_TOKEN ?? "").trim();
+  if (!url || !token) return { ok: false, detail: "Upstash belum dikonfigurasi." };
+  try {
+    const res = await fetch(`${url}/ping`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return { ok: false, detail: `Upstash merespons HTTP ${res.status}.` };
+    const data = (await res.json().catch(() => ({}))) as { result?: unknown };
+    return { ok: true, detail: `Ping OK (${String(data.result ?? "PONG")}).` };
+  } catch (err) {
+    return {
+      ok: false,
+      detail: `Gagal menghubungi Upstash: ${err instanceof Error ? err.message : "unknown"}`,
+    };
+  }
+}
+
+/**
  * Cek & tambah hitungan untuk `key` (IN-MEMORY, sinkron).
  *
  * @param key       Pengenal unik (mis. `lead:<ip>`).

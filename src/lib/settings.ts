@@ -34,6 +34,21 @@ export function mergeSettings(data: Partial<SiteSettings> | undefined): SiteSett
       typeof data?.notifyCartReminders === "boolean"
         ? data.notifyCartReminders
         : DEFAULT_SETTINGS.notifyCartReminders,
+    brandName: data?.brandName?.trim() || DEFAULT_SETTINGS.brandName,
+    tagline: data?.tagline?.trim() || DEFAULT_SETTINGS.tagline,
+    seo: data?.seo && typeof data.seo === "object" ? data.seo : DEFAULT_SETTINGS.seo,
+    maintenance:
+      data?.maintenance && typeof data.maintenance === "object"
+        ? {
+            enabled: data.maintenance.enabled === true,
+            title: data.maintenance.title?.trim() || DEFAULT_SETTINGS.maintenance?.title,
+            message: data.maintenance.message?.trim() || "",
+            imageUrl: data.maintenance.imageUrl?.trim() || "",
+            imageAlt: data.maintenance.imageAlt?.trim() || "",
+            etaISO: data.maintenance.etaISO?.trim() || "",
+            contactEmail: data.maintenance.contactEmail?.trim() || "",
+          }
+        : DEFAULT_SETTINGS.maintenance,
   };
 }
 

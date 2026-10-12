@@ -8,7 +8,7 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** ✅ **Sistem Pengaturan Super Proper & Terintegrasi — RENCANA SIAP EKSEKUSI** (fase S0–S9; **belum ada kode**). Submenu generik (accordion) di sidebar, 8 halaman anak, **kelola admin** (multi-admin; owner `lupyariestaa@gmail.com` abadi), **integrasi + PING**, **backup pilih-data**, **maintenance + halaman publik ber-konten**, SEO, keamanan, sistem. Lihat [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md) (keputusan terkunci §3 & §3.4).
+> 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Sistem Pengaturan Super Proper & Terintegrasi ✅ SELESAI (S0–S9, 2026-10-11)** — menu Pengaturan jadi ber-submenu (accordion generik), 8 halaman anak + induk ringkasan, **kelola admin** (multi-admin; owner `lupyariestaa@gmail.com` abadi), **integrasi + PING**, **pembayaran/Mayar**, **SEO**, **backup pilih-data**, **maintenance + halaman publik**, sistem. Lihat [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
@@ -19,37 +19,37 @@
 
 ---
 
-## 📝 SESI INI — Perencanaan Sistem Pengaturan Super Proper (Siap Eksekusi)
+## ✅ SESI INI — Sistem Pengaturan Super Proper & Terintegrasi (S0–S9, SELESAI)
 
-**Status: ✅ SIAP EKSEKUSI (belum ada kode).** Dokumen: [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
+**Status: ✅ SELESAI (kode).** Dokumen: [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
 
-Pemilik ingin **menu Pengaturan** menjadi **pusat pengaturan ber-submenu** (accordion
-di sidebar, generik agar dipakai menu lain), lengkap, dan **benar-benar terintegrasi**
-(bukan UI kosong).
+Menu **Pengaturan** di-upgrade dari **satu halaman** → **pusat pengaturan ber-submenu**
+(accordion generik di sidebar), 9 halaman (induk ringkasan + 8 anak), semuanya berfungsi
+nyata & terintegrasi.
 
-**Keputusan pemilik (TERKUNCI — §3 & §3.4 dokumen):**
-- Navigasi: **accordion**, **mekanisme generik**, URL `/admin/settings/<slug>`.
-- Cakupan: **Kontak & Identitas · Notifikasi · Pembayaran (Mayar) · Integrasi & API ·
-  SEO & Situs · Keamanan & Akses (kelola admin) · Backup & Restore · Lanjutan/Sistem**
-  + halaman induk ringkasan.
-- **Tanpa** Toko/pajak/ongkir/rekening, **tanpa** Kupon, **tanpa** Tema/Tampilan,
-  **tanpa** multi-bahasa, **tanpa** Pengiriman/Produk.
-- **Uji integrasi: boleh PING** (Mayar/Cloudinary/Upstash; Resend uji email; Cron status).
-- **Kelola admin:** **hanya satu role** (`admin`), **multi-admin saja**; **OWNER =
-  `lupyariestaa@gmail.com`** — **tak bisa dihapus siapa pun**.
-- **Maintenance:** ya, dgn **halaman publik `/maintenance`** ber-konten **gambar + teks**
-  yang diatur dari Pengaturan.
-- **Backup/restore:** bisa **pilih/unselect** sumber data (settings, produk, kupon,
-  pesanan, portofolio, blog, dst).
-- **Audit + ekspor CSV**: ya.
-- Rahasia (API key) tetap di env; dashboard hanya **status + uji**.
-- Nama menu tetap **"Pengaturan"**.
+- **S1 — Submenu generik:** `AdminNavItem.children` + logika murni `admin-nav-pure`
+  + hook `use-nav-accordion` + `sidebar-accordion-item` (accordion expanded, popover rail,
+  auto-buka, a11y); command palette & judul header ikut mencakup anak.
+- **S2 — Kerangka:** `SettingsShell` + `settings-nav` + 9 route (`/admin/settings/*`).
+- **S3 — Kontak & Identitas + Notifikasi:** migrasi + brand/tagline + uji kirim email.
+- **S4 — Keamanan & Akses + Kelola Admin:** koleksi `admins`, `requireAdmin` (env OR DB),
+  `requireOwner`, API `/api/admin/admins` + audit; **OWNER `lupyariestaa@gmail.com` abadi**.
+- **S5 — Integrasi + Pembayaran:** `/api/admin/integrations` (+ `…/test` **PING** Mayar/
+  Cloudinary/Upstash; Resend uji email); metrik Mayar (`/api/admin/payments/metrics`).
+- **S6 — SEO + Maintenance + Lanjutan:** meta default & Search Console; **mode pemeliharaan
+  + halaman publik `/maintenance`** (via `proxy.ts`); bersihkan cache; info sistem.
+- **S7 — Backup & Restore (pilih data):** ekspor/impor per-sumber, validasi murni, audit.
+- **S8 — Ringkasan induk** + audit.
+- **S9 — QA & rilis.**
+- **Test baru:** `test:nav` (8), `test:backup` (8), `test:payment` (5).
+- **Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ (**496** test) · `build` ✅.
 
-**Flow:** fase **S0 (audit) → S1 (submenu generik) → S2 (kerangka halaman) → S3 (kontak/
-notifikasi) → S4 (keamanan+kelola admin) → S5 (integrasi+mayar) → S6 (SEO+maintenance+
-sistem) → S7 (backup) → S8 (induk+audit) → S9 (QA/rilis)**.
+**Sisa manual:** publish ulang Firestore Rules (koleksi `admins`); uji browser (submenu,
+kelola admin, PING integrasi, backup, maintenance).
 
-**Tidak ada perubahan kode** — sesi ini hanya perencanaan dokumen (keputusan terkunci).
+---
+
+## 📝 SESI SEBELUMNYA — Perencanaan Sistem Pengaturan Super Proper
 
 ---
 

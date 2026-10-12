@@ -1,26 +1,16 @@
-﻿import { SettingsManager } from "@/components/admin/settings-manager";
-import { EmailNotifier } from "@/components/admin/email-notifier";
+﻿import type { Metadata } from "next";
+import { SettingsShell } from "@/components/admin/settings/settings-shell";
+import { SettingsOverview } from "@/components/admin/settings/settings-overview";
 
-import type { Metadata } from "next";
-
-/** Judul tab browser & riwayat navigasi. */
 export const metadata: Metadata = {
   title: "Pengaturan",
+  robots: { index: false, follow: false },
 };
 
-export default function AdminSettingsPage() {
+export default function SettingsPage() {
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-secondary">Pengaturan</h1>
-        <p className="mt-1 text-sm text-muted">
-          Kelola informasi kontak &amp; media sosial yang tampil di website.
-        </p>
-      </div>
-      <div className="flex flex-col gap-6">
-        <SettingsManager />
-        <EmailNotifier />
-      </div>
-    </div>
+    <SettingsShell current="">
+      <SettingsOverview />
+    </SettingsShell>
   );
 }

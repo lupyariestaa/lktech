@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useUnsavedNavigation } from "@/components/admin/unsaved-changes";
 import { signOutUser } from "@/lib/auth";
 import { clearAdminSession } from "@/lib/admin-fetch";
-import { matchAdminItem } from "@/lib/admin-nav";
+import { matchAdminItem, titleForPathname } from "@/lib/admin-nav";
 import { cn } from "@/lib/utils";
 import { MobileDrawer } from "@/components/admin/sidebar/mobile-drawer";
 import { SidebarContent } from "@/components/admin/sidebar/sidebar-content";
@@ -103,7 +103,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     [navigate, pathname],
   );
 
-  const title = matchAdminItem(pathname)?.title ?? "Dashboard";
+  const title = titleForPathname(pathname) ?? "Dashboard";
 
   const closeDrawer = useCallback(() => setOpen(false), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);

@@ -195,3 +195,34 @@ export async function getInvoice(invoiceId: string): Promise<InvoiceDetail> {
     expiredAt: data.expiredAt,
   };
 }
+
+/**
+ * Uji koneksi (PING) ke Mayar — **read-only, tanpa transaksi berbiaya**.
+ * Mengambil 1 daftar invoice; 200 → OK, 401/403 → kredensial salah, error lain →
+ * detail. Tidak pernah melempar (mengembalikan `{ ok, detail }`).
+ */
+export async function pingMayar(): Promise<{ ok: boolean; detail: string }> {
+  if (!isMayarConfigured()) {
+    return { ok: false, detail: "MAYAR_API_KEY belum diisi." };
+  }
+  try {
+    const res = await fetch(`${getBaseUrl()}/invoices?limit=1`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${process.env.MAYAR_API_KEY?.trim()}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+    if (res.ok) return { ok: true, detail: `Ping OK (${getMayarMode()}).` };
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, detail: "Kredensial Mayar ditolak (401/403)." };
+    }
+    return { ok: false, detail: `Mayar merespons HTTP ${res.status}.` };
+  } catch (err) {
+    return {
+      ok: false,
+      detail: `Gagal menghubungi Mayar: ${err instanceof Error ? err.message : "unknown"}`,
+    };
+  }
+}

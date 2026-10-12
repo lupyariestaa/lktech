@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, CornerDownLeft, ExternalLink, LogOut, Search } from "lucide-react";
-import { ADMIN_NAV_ITEMS } from "@/lib/admin-nav";
+import { ADMIN_NAV_ALL_TARGETS } from "@/lib/admin-nav";
 import { cn } from "@/lib/utils";
 
 type PaletteAction = {
@@ -44,7 +44,7 @@ export function CommandPalette({
 
   const actions = useMemo<PaletteAction[]>(
     () => [
-      ...ADMIN_NAV_ITEMS.map((item) => ({
+      ...ADMIN_NAV_ALL_TARGETS.map((item) => ({
         id: `nav:${item.href}`,
         label: item.title,
         hint: `Buka ${item.label}`,

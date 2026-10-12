@@ -130,7 +130,14 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
   const email = verified.email;
   const allowed = getAdminEmails();
 
-  if (!email || !allowed.includes(email)) {
+  // OWNER/whitelist env ATAU admin terdaftar di DB (`admins/{email}`).
+  let isAdmin = Boolean(email) && allowed.includes(email);
+  if (!isAdmin && email) {
+    const { isDbAdmin } = await import("@/lib/admins");
+    isAdmin = await isDbAdmin(email);
+  }
+
+  if (!isAdmin) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -141,6 +148,26 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
   }
 
   return { ok: true, uid: verified.uid, email };
+}
+
+/**
+ * Seperti `requireAdmin`, tetapi HANYA menerima OWNER (env `ADMIN_EMAILS`).
+ * Dipakai untuk aksi sensitif (kelola admin).
+ */
+export async function requireOwner(req: Request): Promise<AdminCheck> {
+  const check = await requireAdmin(req);
+  if (!check.ok) return check;
+  const { isOwnerEmail } = await import("@/lib/admins");
+  if (!isOwnerEmail(check.email)) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Hanya OWNER yang dapat melakukan aksi ini." },
+        { status: 403 },
+      ),
+    };
+  }
+  return check;
 }
 
 /**
