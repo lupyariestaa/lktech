@@ -5,14 +5,15 @@
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
-> 🔎 **Inisiatif aktif baru — SEO & Konten Mesin:** **[`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md)** (fase S0–S7). Fokus: rapikan sinyal teknis, structured data, internal linking, programmatic SEO, data GSC. **S1 ✅, S2 ✅ & S3 ✅ selesai.**
+> 🔎 **Inisiatif aktif baru — SEO & Konten Mesin:** **[`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md)** (fase S0–S7). Fokus: rapikan sinyal teknis, structured data, internal linking, programmatic SEO, data GSC. **S1 ✅, S2 ✅, S3 ✅ & S4 ✅ selesai.**
 >
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 🔎 **SEO & Konten Mesin — FASE S4** (S1 ✅, S2 ✅ & S3 ✅ selesai). Sisa **S4–S7**: **S4** internal linking + hub `/blog/kategori` & `/blog/tag` (index) · **S5** programmatic SEO (`/layanan/[slug]/[kota]`) · **S6** GSC API + GA4 · **S7** QA & rilis. Rencana: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §2. **Belum dieksekusi.**
-> ✅ **SEO & Konten Mesin — FASE S3 SELESAI (2026-10-12):** `LocalBusiness` lengkap (geo/jam/priceRange/sameAs/contactPoint/hasMap); `WebSite` + `SearchAction` (sitelinks searchbox); `Product` + `review` (ulasan approved) + `priceValidUntil` + `sku`; `BlogPosting` author Person; koordinat DRY di `site.ts`. Test `test:seo-schema` 8→15. Lihat §8.
-> ✅ **SEO & Konten Mesin — FASE S2 SELESAI (2026-10-12):** modul murni `structured-data-pure.ts` + komponen `JsonLdScript`; **FAQPage** di beranda/harga/layanan(list)/layanan-detail; **BreadcrumbList** konsisten; **ItemList** di produk/portofolio; `Product.sku`; `Service.hasOfferCatalog`. Test `test:seo-schema` (8). Lihat §7.
+> 🎯 **TASK AKTIF (berikutnya):** 🔎 **SEO & Konten Mesin — FASE S5** (S1 ✅, S2 ✅, S3 ✅ & S4 ✅ selesai). Sisa **S5–S7**: **S5** programmatic SEO (`/layanan/[slug]/[kota]`, konten berkualitas) · **S6** GSC API + GA4 · **S7** QA & rilis. Rencana: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §2. **Belum dieksekusi.**
+> ✅ **SEO & Konten Mesin — FASE S4 SELESAI (2026-10-12):** hub `/blog/kategori` & `/blog/tag` (CollectionPage+ItemList+Breadcrumb+sitemap, Static); internal linking dua arah (layanan → "Artikel terkait", blog → hub); fix bug slug `CATEGORY_SERVICE` ("Teknologi" → `aplikasi-mobile`) + helper `categoriesForService`. Test `test:blog` 174→175. Lihat §9.
+> ✅ **SEO & Konten Mesin — FASE S3 SELESAI (2026-10-12):** `LocalBusiness` lengkap (geo/jam/priceRange/sameAs/contactPoint/hasMap); `WebSite` + `SearchAction`; `Product` + `review`/`priceValidUntil`/`sku`; `BlogPosting` author Person; koordinat DRY di `site.ts`. Test `test:seo-schema` 8→15. Lihat §8.
+> ✅ **SEO & Konten Mesin — FASE S2 SELESAI (2026-10-12):** modul murni `structured-data-pure.ts` + `JsonLdScript`; FAQPage; BreadcrumbList konsisten; ItemList; `Product.sku`; `Service.hasOfferCatalog`. Test `test:seo-schema` (8). Lihat §7.
 > ✅ **SEO & Konten Mesin — FASE S1 SELESAI (2026-10-12):** R1 canonical root bocor dihapus; R3 `noindex` jalur not-found; R4 `/promo` ISR; R8 metadata duplikat dihapus; R10 sitemap `lastModified` stabil; R11 RSS alternate global. Lihat §6.
 > **Sistem Pengaturan Super Proper & Terintegrasi ✅ SELESAI (S0–S9) + Polish P0–P3 ✅** — lihat [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
@@ -25,7 +26,31 @@
 
 ---
 
-## ✅ SESI INI — SEO & Konten Mesin FASE S3 (SELESAI)
+## ✅ SESI INI — SEO & Konten Mesin FASE S4 (SELESAI)
+
+**Status: ✅ SELESAI (kode, S4).** Dokumen: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §9.
+
+Internal linking & hub.
+
+- **Hub baru `/blog/kategori`** (indeks semua kategori + jumlah artikel) & **`/blog/tag`**
+  (indeks semua tag + jumlah) — `CollectionPage` + `ItemList` + `BreadcrumbList`, masuk
+  sitemap, **Static**.
+- **Internal linking dua arah**: `/layanan/[slug]` dapat section **"Artikel terkait"**
+  (dari kategori terpetakan); `/blog` menaut ke hub kategori/tag.
+- **Fix bug** `CATEGORY_SERVICE["Teknologi"]` (`pengembangan-aplikasi` → `aplikasi-mobile`)
+  + helper baru `categoriesForService()`.
+- **Test** `test:blog` 174→**175**.
+
+**Verifikasi nyata:** HTML build memuat `CollectionPage`/`ItemList`/`Breadcrumb` (hub) &
+"Artikel terkait" (layanan).
+
+**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ · `build` ✅ (81 halaman).
+
+**Sisa:** fase **S5–S7**.
+
+---
+
+## ✅ SESI SEBELUMNYA — SEO & Konten Mesin FASE S3 (SELESAI)
 
 **Status: ✅ SELESAI (kode, S3).** Dokumen: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §8.
 

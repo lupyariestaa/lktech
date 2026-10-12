@@ -25,13 +25,25 @@ export function buildToc(headings: TocHeading[]): TocHeading[] {
 export const CATEGORY_SERVICE: Record<string, string> = {
   "Tips & Trik": "pembuatan-website",
   "Bisnis Digital": "pembuatan-website",
-  Teknologi: "pengembangan-aplikasi",
+  // Fix (S4): slug layanan benar adalah "aplikasi-mobile" (dulu "pengembangan-aplikasi"
+  // → CTA sidebar tak me-resolve).
+  Teknologi: "aplikasi-mobile",
   Panduan: "pembuatan-website",
 };
 
 /** Slug layanan untuk CTA sidebar. Kategori tak dikenal → layanan umum. */
 export function serviceSlugForCategory(category: string): string {
   return CATEGORY_SERVICE[category] ?? "pembuatan-website";
+}
+
+/**
+ * Kategori blog yang dipetakan ke sebuah layanan (kebalikan `CATEGORY_SERVICE`;
+ * bisa >1). Dipakai untuk internal linking layanan → artikel (fase S4).
+ */
+export function categoriesForService(serviceSlug: string): string[] {
+  return Object.entries(CATEGORY_SERVICE)
+    .filter(([, slug]) => slug === serviceSlug)
+    .map(([category]) => category);
 }
 
 /** URL share WhatsApp dengan teks + tautan (B6.4). */

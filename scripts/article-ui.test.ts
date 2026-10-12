@@ -9,6 +9,7 @@ import {
   parseListQuery,
   readingLabel,
   serviceSlugForCategory,
+  categoriesForService,
   whatsappShareUrl,
 } from "../src/lib/article-ui.ts";
 
@@ -31,9 +32,19 @@ test("B6.3 buildToc: id kosong & duplikat dilewati", () => {
 });
 
 test("B6.2 serviceSlugForCategory: kategori dipetakan, tak dikenal → umum", () => {
-  assert.equal(serviceSlugForCategory("Teknologi"), "pengembangan-aplikasi");
+  // S4: slug benar untuk Teknologi = "aplikasi-mobile".
+  assert.equal(serviceSlugForCategory("Teknologi"), "aplikasi-mobile");
   assert.equal(serviceSlugForCategory("Bisnis Digital"), "pembuatan-website");
   assert.equal(serviceSlugForCategory("Lainnya"), "pembuatan-website");
+});
+
+test("S4 categoriesForService: kebalikan CATEGORY_SERVICE", () => {
+  assert.deepEqual(categoriesForService("aplikasi-mobile"), ["Teknologi"]);
+  // Beberapa kategori memetakan ke layanan yang sama.
+  const web = categoriesForService("pembuatan-website");
+  assert.ok(web.includes("Tips & Trik"));
+  assert.ok(web.includes("Bisnis Digital"));
+  assert.deepEqual(categoriesForService("tidak-ada"), []);
 });
 
 test("B6.4 whatsappShareUrl: teks & URL ter-encode", () => {

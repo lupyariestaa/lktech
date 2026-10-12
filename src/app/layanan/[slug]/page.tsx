@@ -23,6 +23,8 @@ import { SERVICES, getService, getServiceSlugs } from "@/lib/services";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
+import { getArticles } from "@/lib/articles";
+import { categoriesForService } from "@/lib/article-ui";
 import { buildBreadcrumb, buildFaqPage } from "@/lib/structured-data-pure";
 import { JsonLdScript } from "@/components/json-ld-script";
 
@@ -78,6 +80,16 @@ export default async function LayananDetailPage({
   };
 
   const waHref = waLink(service.waMessage, settings.whatsapp);
+
+  // Artikel terkait (fase S4) — ambil artikel dari kategori yang dipetakan ke
+  // layanan ini (internal linking dua arah layanan ↔ blog).
+  const relatedCategories = categoriesForService(service.slug);
+  const allArticles = await getArticles();
+  const relatedArticles = (
+    relatedCategories.length > 0
+      ? allArticles.filter((a) => relatedCategories.includes(a.category))
+      : []
+  ).slice(0, 3);
 
   // JSON-LD (fase S2/S3): Service kaya (OfferCatalog dari paket), BreadcrumbList,
   // dan FAQPage. Semuanya node murni dari `structured-data-pure`.
@@ -473,6 +485,42 @@ export default async function LayananDetailPage({
           </div>
         </div>
       </section>
+
+      {/* Artikel terkait (fase S4) — internal linking layanan → blog. */}
+      {relatedArticles.length > 0 && (
+        <section className="relative bg-white py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <h2 className="text-2xl font-bold text-secondary sm:text-3xl">
+                Artikel <span className="text-gradient">terkait</span>
+              </h2>
+              <Link
+                href="/blog"
+                className="group inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+              >
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                Semua artikel
+              </Link>
+            </div>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedArticles.map((a) => (
+                <Link
+                  key={a.slug}
+                  href={`/blog/${a.slug}`}
+                  className="group flex flex-col rounded-2xl border border-slate-100 bg-white p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10"
+                >
+                  <span className="text-xs font-semibold text-primary">{a.category}</span>
+                  <span className="mt-1.5 line-clamp-2 text-sm font-bold text-secondary group-hover:text-primary">
+                    {a.title}
+                  </span>
+                  <span className="mt-1.5 line-clamp-2 text-xs text-muted">{a.excerpt}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <CtaContact />
     </>

@@ -1,6 +1,6 @@
 # SEO & Konten Mesin — Perencanaan & Fase (S0–S7)
 
-> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1 ✅, S2 ✅ & S3 ✅ SELESAI (2026-10-12).**
+> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1 ✅, S2 ✅, S3 ✅ & S4 ✅ SELESAI (2026-10-12).**
 > Inisiatif baru setelah sistem matang secara fitur.
 > **Disusun:** hasil riset menyeluruh atas kode SEO aktual (lihat §1 temuan).
 > **Prinsip:** manfaatkan fondasi SEO yang sudah kuat (metadata, JSON-LD, sitemap, RSS,
@@ -128,10 +128,15 @@ rich results, (3) bangun internal linking + hub, (4) tanam programmatic SEO,
 > `OpeningHoursSpecification`, `GeoCoordinates`, `hasMap`, `priceRange`, `priceValidUntil`,
 > `sku` ter-render. Lihat §8.
 
-### Fase S4 — Internal linking & hub (R13, R14)
+### Fase S4 — Internal linking & hub (R13, R14) ✅ SELESAI
 - Halaman index **`/blog/kategori`** & **`/blog/tag`** (hub + `CollectionPage` + sitemap).
 - Internal linking dua arah: layanan ↔ blog (artikel relevan), portofolio → layanan.
 - "Tag populer" & "artikel terkait" berbasis kategori (sudah ada sebagian).
+
+> **✅ Hasil S4 (2026-10-12)** — Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+> (`test:blog` 174→175) · `build` ✅ (81 halaman; `/blog/kategori` & `/blog/tag`
+> **Static**). Verifikasi HTML: hub `CollectionPage`+`ItemList`+`Breadcrumb`; layanan
+> detail "Artikel terkait". Lihat §9.
 
 ### Fase S5 — Programmatic SEO (R12) — konten berkualitas
 - Mulai **satu** pola berdampak: **`/layanan/[slug]/[kota]`** (mis. jasa website
@@ -280,3 +285,27 @@ Helper murni tambahan di **`structured-data-pure.ts`**: `buildReviewNodes`,
 **Sisa:** Fase **S4–S7** (internal linking/hub, programmatic, GSC/GA4, QA).
 **Langkah manual:** validasi di **Google Rich Results Test** (Product/Review, FAQ,
 Breadcrumb, Organization) & pantau Search Console.
+
+---
+
+## 9. ✅ Hasil Eksekusi FASE S4 (2026-10-12)
+
+**Status: ✅ SELESAI (kode).** Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+(`test:blog` 175) · `build` ✅ (81 halaman).
+
+| Temuan | Solusi |
+| --- | --- |
+| **R14** — Hub tak ada | Halaman baru **`/blog/kategori`** (indeks semua kategori + jumlah artikel) dan **`/blog/tag`** (indeks semua tag + jumlah). Keduanya `CollectionPage` + `ItemList` + `BreadcrumbList`; masuk **sitemap** (hanya bila ada isi). |
+| **R13** — Internal linking minim | **Layanan → blog**: section **"Artikel terkait"** di `/layanan/[slug]` (artikel dari kategori yang dipetakan ke layanan itu). **Blog → hub**: tautan "Semua kategori"/"Semua tag" di `/blog`. (Blog → layanan sudah ada via sidebar artikel.) |
+| **Bug ditemukan** | `CATEGORY_SERVICE["Teknologi"]` = `"pengembangan-aplikasi"` — slug ini **tidak ada** di `SERVICES` (yang benar `"aplikasi-mobile"`) → CTA sidebar artikel tak me-resolve. **Diperbaiki** + helper baru `categoriesForService()` (kebalikan peta) untuk linking layanan→blog. |
+| DRY | Hub memakai `buildItemList`/`buildBreadcrumb` (S2) & `taxonomySlug` yang sudah ada. |
+
+**Berkas baru:** `src/app/blog/kategori/page.tsx`, `src/app/blog/tag/page.tsx`.
+**Berkas diubah:** `src/app/blog/page.tsx`, `src/app/sitemap.ts`,
+`src/app/layanan/[slug]/page.tsx`, `src/lib/article-ui.ts`, `scripts/article-ui.test.ts`.
+
+**Verifikasi nyata:** HTML build memuat `CollectionPage`/`ItemList`/`BreadcrumbList`
+(hub) & "Artikel terkait" (layanan detail); `/blog/kategori` & `/blog/tag` **Static**.
+
+**Sisa:** Fase **S5–S7** (programmatic SEO, GSC/GA4, QA).
+**Langkah manual:** submit sitemap ulang di Search Console (hub kategori/tag baru).

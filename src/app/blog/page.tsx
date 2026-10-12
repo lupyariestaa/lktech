@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { FolderTree, Tag as TagIcon } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { BlogIndex } from "@/components/blog/blog-index";
 import {
@@ -90,6 +92,31 @@ export default async function BlogPage({
             tags={tags}
             query={query}
           />
+
+          {/* Hub kategori & tag (fase S4) — internal linking ke indeks. */}
+          {(categories.length > 0 || tags.length > 0) && (
+            <div className="mt-12 flex flex-wrap items-center gap-4 border-t border-slate-200 pt-8 text-sm">
+              <span className="font-semibold text-secondary">Jelajahi:</span>
+              {categories.length > 0 && (
+                <Link
+                  href="/blog/kategori"
+                  className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline"
+                >
+                  <FolderTree className="h-4 w-4" aria-hidden="true" />
+                  Semua kategori
+                </Link>
+              )}
+              {tags.length > 0 && (
+                <Link
+                  href="/blog/tag"
+                  className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline"
+                >
+                  <TagIcon className="h-4 w-4" aria-hidden="true" />
+                  Semua tag
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </>

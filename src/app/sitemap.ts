@@ -92,6 +92,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
+  // Hub indeks kategori & tag (fase S4) — hanya bila ada isinya.
+  const hubRoutes: MetadataRoute.Sitemap = [];
+  if (categories.length > 0) {
+    hubRoutes.push({
+      url: `${SITE.url}/blog/kategori`,
+      lastModified: latestContentDate,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    });
+  }
+  if (tags.length > 0) {
+    hubRoutes.push({
+      url: `${SITE.url}/blog/tag`,
+      lastModified: latestContentDate,
+      changeFrequency: "weekly",
+      priority: 0.4,
+    });
+  }
+
   return [
     ...staticRoutes,
     ...serviceRoutes,
@@ -100,5 +119,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...productRoutes,
     ...categoryRoutes,
     ...tagRoutes,
+    ...hubRoutes,
   ];
 }
