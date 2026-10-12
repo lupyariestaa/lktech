@@ -1,6 +1,6 @@
 # SEO & Konten Mesin — Perencanaan & Fase (S0–S7)
 
-> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1 ✅, S2 ✅, S3 ✅ & S4 ✅ SELESAI (2026-10-12).**
+> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1–S5 ✅ SELESAI (2026-10-12).**
 > Inisiatif baru setelah sistem matang secara fitur.
 > **Disusun:** hasil riset menyeluruh atas kode SEO aktual (lihat §1 temuan).
 > **Prinsip:** manfaatkan fondasi SEO yang sudah kuat (metadata, JSON-LD, sitemap, RSS,
@@ -138,13 +138,17 @@ rich results, (3) bangun internal linking + hub, (4) tanam programmatic SEO,
 > **Static**). Verifikasi HTML: hub `CollectionPage`+`ItemList`+`Breadcrumb`; layanan
 > detail "Artikel terkait". Lihat §9.
 
-### Fase S5 — Programmatic SEO (R12) — konten berkualitas
+### Fase S5 — Programmatic SEO (R12) — konten berkualitas ✅ SELESAI
 - Mulai **satu** pola berdampak: **`/layanan/[slug]/[kota]`** (mis. jasa website
   Tasikmalaya/Bandung/Jakarta) dengan konten unik per kota (bukan doorway): paket lokal,
   testimoni/portofolio relevan kota, FAQ kota, CTA WhatsApp.
 - Data kota terkurasi (`src/lib/locations.ts`), bukan generate ngawur.
 - Sitemap + `BreadcrumbList` + `Service`/`FAQPage` per halaman.
 - **Guard kualitas**: minimal konten unik, `noindex` bila tipis (opsional).
+
+> **✅ Hasil S5 (2026-10-12)** — Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+> (`test:locations` **6**) · `build` ✅ **124 halaman** (40 = 5 layanan × 8 kota).
+> Setiap halaman kota: konten unik + `Service`/`Breadcrumb`/`FAQPage`. Lihat §10.
 
 ### Fase S6 — Observability & data (R15)
 - GA4/GTM (opsional) di samping Vercel Analytics; event SEO (`article_view` sudah ada).
@@ -309,3 +313,46 @@ Breadcrumb, Organization) & pantau Search Console.
 
 **Sisa:** Fase **S5–S7** (programmatic SEO, GSC/GA4, QA).
 **Langkah manual:** submit sitemap ulang di Search Console (hub kategori/tag baru).
+
+---
+
+## 10. ✅ Hasil Eksekusi FASE S5 (2026-10-12)
+
+**Status: ✅ SELESAI (kode).** Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+(`test:locations` 6) · `build` ✅ (**124 halaman**, dari 81).
+
+### Pola & cakupan
+- Route baru **`/layanan/[slug]/[kota]`** — programmatic layanan × kota.
+- **8 kota terkurasi** (`src/lib/locations.ts`): Tasikmalaya, Bandung, Jakarta, Garut,
+  Cirebon, Bogor, Bekasi, Cimahi → **5 layanan × 8 kota = 40 halaman**.
+
+### Anti-doorway (PRINSIP UTAMA)
+- Setiap kota punya **konten UNIK & NYATA** (bukan template ganti nama): `localContext`
+  (≥120 char, konteks ekonomi/kultur kota), `industries` (sektor dominan), `whyLocal`
+  (alasan spesifik), `localFaqs` (FAQ lokal).
+- **Guard diuji** (`test:locations`): konten wajib terisi, `localContext` **tidak
+  duplikat** antar kota, slug unik & URL-aman, `nearby` hanya merujuk kota dikenal.
+- **`dynamicParams = false`** → kombinasi layanan/kota tak dikenal = **404** (tak
+  menghasilkan halaman tipis ter-index). Metadata not-found → `noindex`.
+
+### SEO per halaman
+- `generateMetadata` unik (title/description/canonical).
+- JSON-LD: **`Service`** (areaServed City), **`BreadcrumbList`** (4 level), **`FAQPage`**
+  (FAQ lokal).
+- **Internal linking**: halaman kota → paket layanan, kota sekitar, layanan lain di kota
+  sama; `/layanan/[slug]` → daftar kota ("Jasa X di kota Anda"); semua masuk **sitemap**
+  (prioritas 0.6).
+
+**Berkas baru:** `src/lib/locations.ts`, `src/app/layanan/[slug]/[kota]/page.tsx`,
+`scripts/locations.test.ts` (+ `test:locations`).
+**Berkas diubah:** `src/app/sitemap.ts`, `src/app/layanan/[slug]/page.tsx`,
+`tsconfig.json`, `package.json`.
+
+**Verifikasi nyata:** build menghasilkan 40 halaman kota (`.next/server/app/layanan/*/
+{kota}.html`), masing-masing memuat `Service`/`BreadcrumbList`/`FAQPage` & konten unik.
+
+**Sisa:** Fase **S6** (GSC API + GA4) & **S7** (QA & rilis).
+**Langkah manual:** (1) submit sitemap di Search Console; (2) **pantau** performa halaman
+kota di GSC 2–4 minggu — bila ada yang tipis/tak ter-index, kurangi atau perkaya.
+**Cara menambah kota:** cukup tambah entri di `LOCATIONS` dengan konten unik (guard test
+akan menolak konten duplikat/terlalu pendek).

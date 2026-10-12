@@ -5,6 +5,7 @@ import { getArticleCategoryList, getArticleTags, getArticles } from "@/lib/artic
 import { taxonomySlug } from "@/lib/article-types";
 import { getProducts } from "@/lib/products";
 import { SERVICES } from "@/lib/services";
+import { getLocationSlugs } from "@/lib/locations";
 
 export const revalidate = 3600;
 
@@ -92,6 +93,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
+  // Programmatic SEO (fase S5): layanan × kota terkurasi. Prioritas lebih rendah
+  // dari halaman layanan utama; hanya kombinasi terkurasi (konten unik).
+  const locationSlugs = getLocationSlugs();
+  const serviceCityRoutes: MetadataRoute.Sitemap = SERVICES.flatMap((s) =>
+    locationSlugs.map((kota) => ({
+      url: `${SITE.url}/layanan/${s.slug}/${kota}`,
+      lastModified: stable,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
+  );
+
   // Hub indeks kategori & tag (fase S4) — hanya bila ada isinya.
   const hubRoutes: MetadataRoute.Sitemap = [];
   if (categories.length > 0) {
@@ -114,6 +127,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticRoutes,
     ...serviceRoutes,
+    ...serviceCityRoutes,
     ...projectRoutes,
     ...articleRoutes,
     ...productRoutes,

@@ -25,6 +25,7 @@ import { waLink } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
 import { getArticles } from "@/lib/articles";
 import { categoriesForService } from "@/lib/article-ui";
+import { LOCATIONS } from "@/lib/locations";
 import { buildBreadcrumb, buildFaqPage } from "@/lib/structured-data-pure";
 import { JsonLdScript } from "@/components/json-ld-script";
 
@@ -73,6 +74,8 @@ export default async function LayananDetailPage({
   const settings = await getSiteSettings();
   const { detail } = service;
   const others = SERVICES.filter((s) => s.slug !== slug).slice(0, 4);
+  // Kota terkurasi (fase S5) untuk internal linking layanan → halaman kota.
+  const locations = LOCATIONS;
   const sections = {
     kinds: detail.kinds ?? [],
     useCases: detail.useCases ?? [],
@@ -515,6 +518,32 @@ export default async function LayananDetailPage({
                     {a.title}
                   </span>
                   <span className="mt-1.5 line-clamp-2 text-xs text-muted">{a.excerpt}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Kota yang kami layani (fase S5) — internal linking ke halaman kota. */}
+      {locations.length > 0 && (
+        <section className="relative bg-surface py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <h2 className="text-2xl font-bold text-secondary sm:text-3xl">
+              Jasa {service.title} di{" "}
+              <span className="text-gradient">kota Anda</span>
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              Kami melayani klien di berbagai kota (remote maupun tatap muka).
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {locations.map((l) => (
+                <Link
+                  key={l.slug}
+                  href={`/layanan/${service.slug}/${l.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition-colors hover:border-primary/30 hover:text-primary"
+                >
+                  {service.title} di {l.name}
                 </Link>
               ))}
             </div>
