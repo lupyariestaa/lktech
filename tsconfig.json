@@ -52,6 +52,7 @@
     "scripts/seo-pure.test.ts",
     "scripts/trusted-url.test.ts",
     "scripts/settings-form-pure.test.ts",
+    "scripts/seo-schema.test.ts",
     "scripts/payment-metrics.test.ts",
     "scripts/order-schema.test.ts",
     "scripts/product-stock.test.ts",

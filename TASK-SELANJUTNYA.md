@@ -1,18 +1,19 @@
 # Task Selanjutnya — LKTech Website
 
-> Dokumen ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **SEO & Konten Mesin — FASE S1 SELESAI**.
+> Dokumentasi ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
+> Terakhir diperbarui: sesi **SEO & Konten Mesin — FASE S2 SELESAI**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
-> 🔎 **Inisiatif aktif baru — SEO & Konten Mesin:** **[`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md)** (fase S0–S7). Fokus: rapikan sinyal teknis, structured data, internal linking, programmatic SEO, data GSC.
+> 🔎 **Inisiatif aktif baru — SEO & Konten Mesin:** **[`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md)** (fase S0–S7). Fokus: rapikan sinyal teknis, structured data, internal linking, programmatic SEO, data GSC. **S1 ✅ & S2 ✅ selesai.**
 >
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** 🔎 **SEO & Konten Mesin — FASE S2** (S1 ✅ selesai). Sisa **S2–S7**: **S2** `FAQPage` + `BreadcrumbList` schema (modul murni + test) · **S3** structured data lanjutan (`Service` kaya, `LocalBusiness` geo/jam, `ItemList`, `SearchAction`, `Product` sku/review) · **S4** internal linking + hub `/blog/kategori` & `/blog/tag` · **S5** programmatic SEO (`/layanan/[slug]/[kota]`, konten berkualitas) · **S6** GSC API + GA4 · **S7** QA & rilis. Rencana: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §2. **Belum dieksekusi.**
-> ✅ **SEO & Konten Mesin — FASE S1 SELESAI (2026-10-12):** R1 canonical root bocor dihapus (setiap halaman set canonical sendiri); R3 `noindex` jalur not-found (layanan/produk/blog/portofolio/kategori/tag); R4 `/promo` `force-dynamic` → ISR (kini Static 2m); R8 metadata duplikat `produk/layout` dihapus; R10 sitemap `lastModified` stabil (`SEO_CONTENT_UPDATED`); R11 RSS alternate global. Lihat [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §6.
-> **Sistem Pengaturan Super Proper & Terintegrasi ✅ SELESAI (S0–S9) + Polish P0–P3 ✅** — lihat [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md) & [`docs/2026-10-11-polish-pengaturan-gap.md`](docs/2026-10-11-polish-pengaturan-gap.md).
+> 🎯 **TASK AKTIF (berikutnya):** 🔎 **SEO & Konten Mesin — FASE S3** (S1 ✅ & S2 ✅ selesai). Sisa **S3–S7**: **S3** structured data lanjutan (`Service` kaya sudah mulai, `LocalBusiness` geo/jam/`sameAs`, `ItemList` listing sudah mulai, `SearchAction`, `Product` review/`priceValidUntil`, `BlogPosting` author Person) · **S4** internal linking + hub `/blog/kategori` & `/blog/tag` · **S5** programmatic SEO (`/layanan/[slug]/[kota]`) · **S6** GSC API + GA4 · **S7** QA & rilis. Rencana: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §2. **Belum dieksekusi.**
+> ✅ **SEO & Konten Mesin — FASE S2 SELESAI (2026-10-12):** modul murni `structured-data-pure.ts` + komponen `JsonLdScript`; **FAQPage** di beranda/harga/layanan(list)/layanan-detail; **BreadcrumbList** konsisten di layanan/produk/portofolio/kontak/blog; **ItemList** di produk/portofolio; `Product.sku`. Verifikasi HTML: FAQPage/Breadcrumb/OfferCatalog ter-render. Test `test:seo-schema` (8). Lihat §7.
+> ✅ **SEO & Konten Mesin — FASE S1 SELESAI (2026-10-12):** R1 canonical root bocor dihapus; R3 `noindex` jalur not-found; R4 `/promo` ISR; R8 metadata duplikat dihapus; R10 sitemap `lastModified` stabil; R11 RSS alternate global. Lihat §6.
+> **Sistem Pengaturan Super Proper & Terintegrasi ✅ SELESAI (S0–S9) + Polish P0–P3 ✅** — lihat [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
@@ -23,7 +24,33 @@
 
 ---
 
-## ✅ SESI INI — SEO & Konten Mesin FASE S1 (SELESAI)
+## ✅ SESI INI — SEO & Konten Mesin FASE S2 (SELESAI)
+
+**Status: ✅ SELESAI (kode, S2).** Dokumen: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §7.
+
+Structured data: FAQ & Breadcrumb.
+
+- **Modul murni `structured-data-pure.ts`** — `buildFaqPage` / `buildBreadcrumb` /
+  `buildItemList` (strip HTML, skip entri kosong, `null` bila tak cukup).
+- **Komponen `JsonLdScript`** — render satu/array node JSON-LD.
+- **R2 — `FAQPage`** di beranda (`FAQS`), `/harga` (`PRICING_FAQS`), `/layanan` (list),
+  `/layanan/[slug]` (`detail.faqs`).
+- **R5 — `BreadcrumbList`** di `/layanan`, `/layanan/[slug]`, `/produk`,
+  `/produk/[slug]`, `/portofolio`, `/kontak`, `/blog` (sisanya sudah ada).
+- **Bonus** — `ItemList` di `/produk` & `/portofolio`; `Product.sku`; `Service`
+  `hasOfferCatalog` (dari paket layanan).
+- **Test** `test:seo-schema` (**8**).
+
+**Verifikasi nyata:** HTML build memuat `FAQPage` (beranda/harga/layanan) &
+`BreadcrumbList`/`OfferCatalog` sesuai halaman.
+
+**Gate:** `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ · `build` ✅ (81 halaman).
+
+**Sisa:** fase **S3–S7**.
+
+---
+
+## ✅ SESI SEBELUMNYA — SEO & Konten Mesin FASE S1 (SELESAI)
 
 **Status: ✅ SELESAI (kode, S1).** Dokumen: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §6.
 

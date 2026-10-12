@@ -15,6 +15,9 @@ import { CtaContact } from "@/components/sections/cta-contact";
 import { Footer } from "@/components/sections/footer";
 import { SocialProof } from "@/components/social-proof";
 import { ScrollDepthTracker } from "@/components/scroll-depth-tracker";
+import { getSiteContent } from "@/lib/site-content";
+import { buildFaqPage } from "@/lib/structured-data-pure";
+import { JsonLdScript } from "@/components/json-ld-script";
 
 /**
  * Beranda memuat data dinamis (portofolio & bukti sosial nyata) — segarkan
@@ -42,9 +45,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Home() {
+export default async function Home() {
+  const content = await getSiteContent();
+  // FAQPage JSON-LD (fase S2) — FAQ tampil nyata di section #faq beranda.
+  const faqLd = buildFaqPage(content.faqs ?? []);
+
   return (
     <>
+      {faqLd && <JsonLdScript node={faqLd} />}
       <IntroLoader />
       <Navbar />
       <main id="konten">

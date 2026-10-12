@@ -5,6 +5,9 @@ import { ContactForm } from "@/components/contact-form";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+import { SITE } from "@/lib/site";
+import { buildBreadcrumb } from "@/lib/structured-data-pure";
+import { JsonLdScript } from "@/components/json-ld-script";
 
 // Koordinat lokasi kantor (untuk peta Google Maps).
 const MAP_LAT = "-7.304071167612529";
@@ -61,6 +64,13 @@ export default async function KontakPage() {
 
   return (
     <>
+      <JsonLdScript
+        node={buildBreadcrumb(
+          [{ label: "Beranda", href: "/" }, { label: "Kontak" }],
+          SITE.url,
+        )}
+      />
+
       <PageHero
         breadcrumbs={[{ label: "Beranda", href: "/" }, { label: "Kontak" }]}
         eyebrow="Kontak"

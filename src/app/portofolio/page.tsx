@@ -8,6 +8,9 @@ import { getPortfolioMediaMap } from "@/lib/portfolio-media";
 import { getProjectCategories, getProjects } from "@/lib/projects";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+import { SITE } from "@/lib/site";
+import { buildBreadcrumb, buildItemList } from "@/lib/structured-data-pure";
+import { JsonLdScript } from "@/components/json-ld-script";
 
 // Refresh berkala (ISR) agar gambar terbaru dari Cloudinary tampil
 // tanpa perlu rebuild penuh.
@@ -63,6 +66,19 @@ export default async function PortofolioPage({
 
   return (
     <>
+      <JsonLdScript
+        node={buildBreadcrumb(
+          [{ label: "Beranda", href: "/" }, { label: "Portofolio" }],
+          SITE.url,
+        )}
+      />
+      <JsonLdScript
+        node={buildItemList(
+          projects.map((p) => ({ name: p.title, url: `${SITE.url}/portofolio/${p.slug}` })),
+          "Portofolio LKTech",
+        )}
+      />
+
       <PageHero
         breadcrumbs={[{ label: "Beranda", href: "/" }, { label: "Portofolio" }]}
         eyebrow="Portofolio"

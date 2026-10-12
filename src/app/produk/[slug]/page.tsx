@@ -41,6 +41,8 @@ import { PRODUCT_CATEGORY_LABEL } from "@/lib/product-types";
 import { TrustBadges } from "@/components/trust-badges";
 import { SocialProof } from "@/components/social-proof";
 import { SITE } from "@/lib/site";
+import { buildBreadcrumb } from "@/lib/structured-data-pure";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { cn } from "@/lib/utils";
 
 type Params = { slug: string };
@@ -130,6 +132,8 @@ export default async function ProdukDetailPage({
     description: product.description,
     image: gallery.length ? gallery : undefined,
     category: PRODUCT_CATEGORY_LABEL[product.category],
+    // S3: sku (stabil dari slug) untuk identifikasi produk yang lebih baik.
+    sku: product.slug,
     brand: { "@type": "Brand", name: "LKTech" },
     ...(showRating
       ? {
@@ -169,12 +173,19 @@ export default async function ProdukDetailPage({
         },
   };
 
+  const breadcrumbLd = buildBreadcrumb(
+    [
+      { label: "Beranda", href: "/" },
+      { label: "Produk", href: "/produk" },
+      { label: product.name },
+    ],
+    SITE.url,
+  );
+
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLdScript node={jsonLd} />
+      <JsonLdScript node={breadcrumbLd} />
 
       <PageHero
         align="left"

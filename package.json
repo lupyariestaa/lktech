@@ -28,6 +28,7 @@
     "test:seo": "node --experimental-strip-types --test scripts/seo-pure.test.ts",
     "test:trusted-url": "node --experimental-strip-types --test scripts/trusted-url.test.ts",
     "test:settings-form": "node --experimental-strip-types --test scripts/settings-form-pure.test.ts",
+    "test:seo-schema": "node --experimental-strip-types --test scripts/seo-schema.test.ts",
     "test:payment": "node --experimental-strip-types --test scripts/payment-metrics.test.ts",
     "test:order-schema": "node --experimental-strip-types --test scripts/order-schema.test.ts",
     "test:stock": "node --experimental-strip-types --test scripts/product-stock.test.ts",

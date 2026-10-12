@@ -5,6 +5,9 @@ import { PageHero } from "@/components/page-hero";
 import { ProductGrid } from "@/components/product-grid";
 import { getProducts } from "@/lib/products";
 import { listPublicPromos } from "@/lib/promos";
+import { SITE } from "@/lib/site";
+import { buildBreadcrumb, buildItemList } from "@/lib/structured-data-pure";
+import { JsonLdScript } from "@/components/json-ld-script";
 
 export const revalidate = 120;
 
@@ -27,8 +30,20 @@ export default async function ProdukPage() {
     listPublicPromos(),
   ]);
 
+  const breadcrumbLd = buildBreadcrumb(
+    [{ label: "Beranda", href: "/" }, { label: "Produk" }],
+    SITE.url,
+  );
+  const itemListLd = buildItemList(
+    products.map((p) => ({ name: p.name, url: `${SITE.url}/produk/${p.slug}` })),
+    "Produk Digital LKTech",
+  );
+
   return (
     <>
+      <JsonLdScript node={breadcrumbLd} />
+      <JsonLdScript node={itemListLd} />
+
       <PageHero
         breadcrumbs={[{ label: "Beranda", href: "/" }, { label: "Produk" }]}
         eyebrow="Produk"

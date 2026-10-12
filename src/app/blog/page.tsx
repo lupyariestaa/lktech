@@ -8,6 +8,8 @@ import {
 } from "@/lib/articles";
 import { parseListQuery } from "@/lib/article-ui";
 import { SITE } from "@/lib/site";
+import { buildBreadcrumb } from "@/lib/structured-data-pure";
+import { JsonLdScript } from "@/components/json-ld-script";
 
 export const revalidate = 60;
 
@@ -60,9 +62,12 @@ export default async function BlogPage({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <JsonLdScript node={jsonLd} />
+      <JsonLdScript
+        node={buildBreadcrumb(
+          [{ label: "Beranda", href: "/" }, { label: "Blog" }],
+          SITE.url,
+        )}
       />
 
       <PageHero

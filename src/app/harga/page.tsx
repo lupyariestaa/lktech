@@ -12,6 +12,8 @@ import { getSiteSettings } from "@/lib/settings";
 import { PRICING_FAQS } from "@/lib/pricing";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
+import { buildFaqPage } from "@/lib/structured-data-pure";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { cn } from "@/lib/utils";
 
 export const revalidate = 300;
@@ -60,16 +62,14 @@ export default async function HargaPage() {
     })),
   };
 
+  // FAQPage JSON-LD (fase S2) — FAQ harga tampil nyata di halaman ini.
+  const faqLd = buildFaqPage(PRICING_FAQS);
+
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(offerCatalog) }}
-      />
+      <JsonLdScript node={jsonLd} />
+      <JsonLdScript node={offerCatalog} />
+      {faqLd && <JsonLdScript node={faqLd} />}
 
       <PageHero
         breadcrumbs={[{ label: "Beranda", href: "/" }, { label: "Harga" }]}

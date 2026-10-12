@@ -11,6 +11,9 @@ import { SERVICES } from "@/lib/services";
 import { getSiteContent } from "@/lib/site-content";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
+import { SITE } from "@/lib/site";
+import { buildBreadcrumb, buildFaqPage } from "@/lib/structured-data-pure";
+import { JsonLdScript } from "@/components/json-ld-script";
 
 export const revalidate = 300;
 
@@ -33,8 +36,17 @@ export default async function LayananPage() {
     getSiteSettings(),
   ]);
 
+  const breadcrumbLd = buildBreadcrumb(
+    [{ label: "Beranda", href: "/" }, { label: "Layanan" }],
+    SITE.url,
+  );
+  const faqLd = buildFaqPage(faqs ?? []);
+
   return (
     <>
+      <JsonLdScript node={breadcrumbLd} />
+      {faqLd && <JsonLdScript node={faqLd} />}
+
       <PageHero
         breadcrumbs={[{ label: "Beranda", href: "/" }, { label: "Layanan" }]}
         eyebrow="Layanan Kami"

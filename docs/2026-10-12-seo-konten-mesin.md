@@ -1,7 +1,7 @@
 # SEO & Konten Mesin — Perencanaan & Fase (S0–S7)
 
-> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1 ✅ SELESAI (2026-10-12).** Inisiatif baru
-> setelah sistem matang secara fitur.
+> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1 ✅ & S2 ✅ SELESAI (2026-10-12).** Inisiatif
+> baru setelah sistem matang secara fitur.
 > **Disusun:** hasil riset menyeluruh atas kode SEO aktual (lihat §1 temuan).
 > **Prinsip:** manfaatkan fondasi SEO yang sudah kuat (metadata, JSON-LD, sitemap, RSS,
 > blog) lalu tutup celah + tambah *mesin pertumbuhan* (programmatic, internal linking,
@@ -102,12 +102,17 @@ rich results, (3) bangun internal linking + hub, (4) tanam programmatic SEO,
 > **✅ Hasil S1 (2026-10-12)** — Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅ ·
 > `build` ✅ (81 halaman; `/promo` kini **Static/ISR 2m**, bukan dynamic). Lihat §6.
 
-### Fase S2 — Structured data: FAQ & Breadcrumb (R2, R5)
+### Fase S2 — Structured data: FAQ & Breadcrumb (R2, R5) ✅ SELESAI
 - **Modul murni** `src/lib/structured-data-pure.ts`: `buildFaqPage(faqs)`,
   `buildBreadcrumb(items, baseUrl)`, `buildItemList(items)`.
 - **`FAQPage`** di `/` (FAQS), `/harga` (PRICING_FAQS), `/layanan/[slug]` (`detail.faqs`).
 - **`BreadcrumbList`** konsisten di semua halaman ber-`PageHero` yang belum punya.
 - Test murni (`test:seo-schema`).
+
+> **✅ Hasil S2 (2026-10-12)** — Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+> (`test:seo-schema` **8**) · `build` ✅ (81 halaman). JSON-LD terverifikasi ter-render
+> di HTML (beranda `FAQPage`, harga `FAQPage`+`Breadcrumb`, layanan detail
+> `FAQPage`+`Breadcrumb`+`OfferCatalog`). Lihat §7.
 
 ### Fase S3 — Structured data lanjutan & listing (R6, R7, R9, R17)
 - `Service` kaya: `hasOfferCatalog`/`OfferCatalog` dari `detail.packages`, `areaServed`.
@@ -202,3 +207,38 @@ rich results, (3) bangun internal linking + hub, (4) tanam programmatic SEO,
 linking/hub, programmatic, GSC/GA4, QA).
 **Langkah manual:** verifikasi di Search Console (canonical benar, halaman error tak
 ter-index), pantau CWV `/promo` membaik.
+
+---
+
+## 7. ✅ Hasil Eksekusi FASE S2 (2026-10-12)
+
+**Status: ✅ SELESAI (kode).** Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+(`test:seo-schema` 8) · `build` ✅ (81 halaman).
+
+Modul murni baru **`src/lib/structured-data-pure.ts`** + komponen server
+**`src/components/json-ld-script.tsx`** (merender satu/array node, `null` bila kosong).
+
+| Temuan | Solusi |
+| --- | --- |
+| **R2** — `FAQPage` absen | Tambah `FAQPage` JSON-LD di **beranda** (`FAQS`), **`/harga`** (`PRICING_FAQS`), **`/layanan`** (list, `faqs`), **`/layanan/[slug]`** (`detail.faqs`). Hanya dirender bila FAQ valid (≥1 tanya-jawab). |
+| **R5** — `BreadcrumbList` tak konsisten | Tambah `BreadcrumbList` di **`/layanan`**, **`/layanan/[slug]`** (sudah ada sebagian), **`/produk`**, **`/produk/[slug]`**, **`/portofolio`**, **`/kontak`**, **`/blog`**. (blog/[slug], kategori, tag, portofolio/[slug], harga, promo sudah punya.) |
+| **R9** (bonus) | Tambah **`ItemList`** di `/produk` & `/portofolio` (representasi katalog). |
+| **R17** (bonus, mulai) | `Product` kini menyertakan **`sku`** (dari slug). |
+
+**Pendekatan:** semua pembangunan node lewat modul murni `structured-data-pure`
+(`buildFaqPage`/`buildBreadcrumb`/`buildItemList`) → konsisten, mudah diuji, dan aman
+(strip HTML pada jawaban, skip entri kosong, `null` bila tak cukup item).
+
+**Berkas baru:** `src/lib/structured-data-pure.ts`, `src/components/json-ld-script.tsx`,
+`scripts/seo-schema.test.ts` (+ `test:seo-schema`).
+**Berkas diubah:** `src/app/page.tsx`, `src/app/harga/page.tsx`, `src/app/layanan/page.tsx`,
+`src/app/layanan/[slug]/page.tsx`, `src/app/produk/page.tsx`,
+`src/app/produk/[slug]/page.tsx`, `src/app/portofolio/page.tsx`, `src/app/kontak/page.tsx`,
+`src/app/blog/page.tsx`, `tsconfig.json`, `package.json`.
+
+**Verifikasi nyata:** HTML hasil build memuat `FAQPage`/`BreadcrumbList`/`OfferCatalog`
+sesuai halaman (beranda, harga, layanan list+detail).
+
+**Sisa:** Fase **S3–S7** (structured data lanjutan, internal linking/hub, programmatic,
+GSC/GA4, QA).
+**Langkah manual:** validasi rich result di **Google Rich Results Test** (FAQ, breadcrumb).

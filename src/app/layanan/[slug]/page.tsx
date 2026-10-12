@@ -23,6 +23,8 @@ import { SERVICES, getService, getServiceSlugs } from "@/lib/services";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
+import { buildBreadcrumb, buildFaqPage } from "@/lib/structured-data-pure";
+import { JsonLdScript } from "@/components/json-ld-script";
 
 type Params = { slug: string };
 
@@ -77,24 +79,48 @@ export default async function LayananDetailPage({
 
   const waHref = waLink(service.waMessage, settings.whatsapp);
 
+  // JSON-LD (fase S2/S3): Service kaya (OfferCatalog dari paket), BreadcrumbList,
+  // dan FAQPage. Semuanya node murni dari `structured-data-pure`.
+  const serviceUrl = `${SITE.url}/layanan/${service.slug}`;
+  const serviceLd = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: service.title,
+    description: service.description,
+    serviceType: service.title,
+    provider: { "@type": "Organization", name: "LKTech", url: SITE.url },
+    areaServed: { "@type": "Country", name: "Indonesia" },
+    url: serviceUrl,
+    ...(detail.packages.length > 0
+      ? {
+          hasOfferCatalog: {
+            "@type": "OfferCatalog",
+            name: `Paket ${service.title}`,
+            itemListElement: detail.packages.map((p) => ({
+              "@type": "Offer",
+              name: p.name,
+              description: p.suitedFor,
+              itemOffered: { "@type": "Service", name: p.name, description: p.suitedFor },
+            })),
+          },
+        }
+      : {}),
+  };
+  const breadcrumbLd = buildBreadcrumb(
+    [
+      { label: "Beranda", href: "/" },
+      { label: "Layanan", href: "/layanan" },
+      { label: service.title },
+    ],
+    SITE.url,
+  );
+  const faqLd = buildFaqPage(detail.faqs ?? []);
+
   return (
     <>
-      {/* JSON-LD Service */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Service",
-            name: service.title,
-            description: service.description,
-            serviceType: service.title,
-            provider: { "@type": "Organization", name: "LKTech" },
-            areaServed: "ID",
-            url: `${SITE.url}/layanan/${service.slug}`,
-          }),
-        }}
-      />
+      <JsonLdScript node={serviceLd} />
+      <JsonLdScript node={breadcrumbLd} />
+      {faqLd && <JsonLdScript node={faqLd} />}
 
       <PageHero
         align="left"
