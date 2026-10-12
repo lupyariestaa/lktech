@@ -110,8 +110,8 @@ export default async function HargaPage() {
       </PageHero>
 
       {/* Kartu paket */}
-      <section className="relative bg-white py-20">
-        <div className="mx-auto max-w-6xl px-6">
+      <section className="relative bg-white py-14 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="text-center">
             <span className="text-xs font-semibold tracking-widest text-primary uppercase">
               Paket Layanan
@@ -125,19 +125,19 @@ export default async function HargaPage() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          <div className="mt-10 grid gap-6 sm:mt-14 lg:grid-cols-3">
             {pricing.map((plan, i) => (
               <Reveal key={plan.name} delay={i * 0.08}>
                 <div
                   className={cn(
-                    "relative flex h-full flex-col rounded-3xl border p-7 transition-all duration-300",
+                    "relative flex h-full flex-col rounded-3xl border p-6 transition-all duration-300 sm:p-7",
                     plan.highlight
                       ? "border-primary/30 bg-white shadow-2xl shadow-primary/15 lg:-translate-y-3"
                       : "border-slate-200 bg-white hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5",
                   )}
                 >
                   {plan.highlight && (
-                    <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-primary px-3.5 py-1 text-xs font-semibold text-white shadow-lg shadow-primary/30">
+                    <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-primary px-3.5 py-1 text-xs font-semibold whitespace-nowrap text-white shadow-lg shadow-primary/30">
                       <Sparkles className="h-3 w-3" />
                       Paling Populer
                     </span>
@@ -146,12 +146,14 @@ export default async function HargaPage() {
                   <h3 className="text-xl font-bold text-secondary">{plan.name}</h3>
                   <p className="mt-2 text-sm text-muted">{plan.description}</p>
 
+                  {/* Tanpa angka harga — fokus konsultasi & transparansi cakupan. */}
                   <div className="mt-5 border-y border-dashed border-slate-200 py-5">
-                    <p className="text-sm font-semibold text-primary">
+                    <p className="flex items-center gap-2 text-sm font-semibold text-primary">
+                      <MessageCircle className="h-4 w-4" aria-hidden="true" />
                       Konsultasi Gratis
                     </p>
                     <p className="mt-1 text-xs text-muted">
-                      Harga menyesuaikan kebutuhan proyek Anda
+                      Penawaran disesuaikan dengan kebutuhan &amp; anggaran Anda
                     </p>
                   </div>
 
@@ -169,7 +171,7 @@ export default async function HargaPage() {
                               : "bg-primary-50 text-primary",
                           )}
                         >
-                          <Check className="h-3 w-3" />
+                          <Check className="h-3 w-3" aria-hidden="true" />
                         </span>
                         {f}
                       </li>
@@ -185,7 +187,7 @@ export default async function HargaPage() {
                     variant={plan.highlight ? "primary" : "outline"}
                     className="mt-7 w-full"
                   >
-                    <MessageCircle className="h-4 w-4" />
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
                     Pilih Paket {plan.name}
                   </TrackedWaButton>
                 </div>
@@ -196,8 +198,8 @@ export default async function HargaPage() {
       </section>
 
       {/* Tabel banding */}
-      <section className="relative bg-surface py-20">
-        <div className="mx-auto max-w-5xl px-6">
+      <section className="relative bg-surface py-14 sm:py-20">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="text-center">
             <span className="text-xs font-semibold tracking-widest text-primary uppercase">
               Bandingkan
@@ -211,15 +213,15 @@ export default async function HargaPage() {
             </p>
           </div>
 
-          <div className="mt-12">
+          <div className="mt-10 sm:mt-12">
             <PricingTable />
           </div>
         </div>
       </section>
 
       {/* FAQ harga */}
-      <section className="relative bg-white py-20">
-        <div className="mx-auto max-w-3xl px-6">
+      <section className="relative bg-white py-14 sm:py-20">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <div className="text-center">
             <span className="text-xs font-semibold tracking-widest text-primary uppercase">
               FAQ
