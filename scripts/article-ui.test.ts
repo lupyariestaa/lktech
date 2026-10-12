@@ -10,6 +10,8 @@ import {
   readingLabel,
   serviceSlugForCategory,
   categoriesForService,
+  topTags,
+  hasMoreTags,
   whatsappShareUrl,
 } from "../src/lib/article-ui.ts";
 
@@ -107,4 +109,32 @@ test("B8.2 CATEGORY_SERVICE: setiap kategori artikel punya layanan tujuan", () =
 
 test("B8.2 LIST_PAGE_SIZE: ukuran halaman wajar", () => {
   assert.ok(LIST_PAGE_SIZE >= 3 && LIST_PAGE_SIZE <= 24);
+});
+test("topTags: urut terbanyak lalu alfabetis, dan dibatasi", () => {
+  const tags = [
+    { tag: "umkm", count: 5 },
+    { tag: "ai", count: 5 },
+    { tag: "seo", count: 9 },
+    { tag: "nihil", count: 0 },
+    { tag: "web", count: 2 },
+  ];
+  const top = topTags(tags, 2);
+  assert.deepEqual(top.map((t) => t.tag), ["seo", "ai"]); // 9 dulu, lalu seri 5 -> alfabetis
+  assert.equal(top.length, 2);
+});
+
+test("topTags: default limit 12 & buang count 0", () => {
+  const many = Array.from({ length: 20 }, (_, i) => ({ tag: `t${i}`, count: i + 1 }));
+  const top = topTags(many);
+  assert.equal(top.length, 12);
+  // Terurut menurun.
+  for (let i = 1; i < top.length; i++) assert.ok(top[i - 1].count >= top[i].count);
+  assert.deepEqual(topTags([{ tag: "x", count: 0 }]), []);
+  assert.deepEqual(topTags([]), []);
+});
+
+test("hasMoreTags: true bila masih ada sisa", () => {
+  const all = [{ tag: "a", count: 3 }, { tag: "b", count: 2 }, { tag: "c", count: 1 }];
+  assert.equal(hasMoreTags(all, topTags(all, 2)), true);
+  assert.equal(hasMoreTags(all, topTags(all, 3)), false);
 });

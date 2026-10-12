@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { Tag as TagIcon } from "lucide-react";
 import { ArticleCard } from "@/components/article-card";
 import type { Article } from "@/lib/article-types";
-import { listHref, pageSlice, type ListQuery } from "@/lib/article-ui";
+import { listHref, pageSlice, topTags, hasMoreTags, type ListQuery } from "@/lib/article-ui";
 import { matchesSearch } from "@/lib/article-logic";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,12 @@ export function BlogIndex({
   });
   const page = pageSlice(filtered, query.page);
   const hasFilter = Boolean(query.q || query.category || query.tag);
+
+  // Tag: tampilkan hanya yang POPULER (ringkas) agar tidak membanjiri layar.
+  // Tag lain tetap bisa diakses lewat hub "/blog/tag".
+  const POPULAR_TAG_LIMIT = 10;
+  const popularTags = topTags(tags, POPULAR_TAG_LIMIT);
+  const adaTagLain = hasMoreTags(tags, popularTags);
 
   const linkFor = (patch: Partial<ListQuery>) =>
     listHref(basePath, { ...query, page: 1, ...patch });
@@ -88,27 +95,46 @@ export function BlogIndex({
       </nav>
       )}
 
-      {/* Tag */}
-      {!lockedBy && tags.length > 0 && (
-        <nav aria-label="Tag artikel" className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          {tags.map(({ tag, count }) => {
-            const active = query.tag === tag;
-            return (
+      {/* Tag populer + tautan ke hub semua tag */}
+      {!lockedBy && popularTags.length > 0 && (
+        <div className="mt-5 flex flex-col items-center gap-3">
+          <nav
+            aria-label="Tag populer"
+            className="flex flex-wrap items-center justify-center gap-2"
+          >
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted uppercase">
+              <TagIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              Populer
+            </span>
+            {popularTags.map(({ tag, count }) => {
+              const active = query.tag === tag;
+              return (
+                <Link
+                  key={tag}
+                  href={linkFor({ tag: active ? "" : tag, category: "" })}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "inline-flex min-h-9 items-center rounded-full px-3 text-xs font-medium transition-colors motion-reduce:transition-none",
+                    active
+                      ? "bg-secondary text-white"
+                      : "bg-surface text-slate-500 hover:bg-primary-50 hover:text-primary",
+                  )}
+                >
+                  #{tag}
+                  <span className="ml-1 text-[10px] opacity-70">{count}</span>
+                </Link>
+              );
+            })}
+            {adaTagLain && (
               <Link
-                key={tag}
-                href={linkFor({ tag: active ? "" : tag, category: "" })}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "inline-flex min-h-9 items-center rounded-full px-3 text-xs font-medium transition-colors motion-reduce:transition-none",
-                  active ? "bg-secondary text-white" : "bg-surface text-slate-500 hover:bg-primary-50 hover:text-primary",
-                )}
+                href="/blog/tag"
+                className="inline-flex min-h-9 items-center rounded-full border border-dashed border-slate-300 px-3 text-xs font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-primary-50"
               >
-                #{tag}
-                <span className="ml-1 text-[10px] opacity-70">{count}</span>
+                Semua tag →
               </Link>
-            );
-          })}
-        </nav>
+            )}
+          </nav>
+        </div>
       )}
 
       <p className="mt-8 text-center text-sm text-muted" aria-live="polite">

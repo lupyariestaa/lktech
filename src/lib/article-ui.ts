@@ -6,6 +6,31 @@
 export type TocHeading = { level: 2 | 3 | 4; id: string; text: string };
 
 /**
+ * Pilih tag "populer" untuk ditampilkan ringkas (mis. di halaman /blog) agar
+ * tidak membanjiri layar dengan puluhan chip.
+ *
+ * Urutan: jumlah artikel terbanyak dulu; bila seri, alfabetis (stabil).
+ * `limit` default 12. Tag dengan hitungan 0 tidak ditampilkan.
+ */
+export function topTags(
+  tags: { tag: string; count: number }[],
+  limit = 12,
+): { tag: string; count: number }[] {
+  return [...tags]
+    .filter((t) => t && t.tag && t.count > 0)
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+    .slice(0, Math.max(0, limit));
+}
+
+/** `true` bila masih ada tag di luar daftar yang ditampilkan (untuk "Semua tag"). */
+export function hasMoreTags(
+  tags: { tag: string; count: number }[],
+  shown: { tag: string; count: number }[],
+): boolean {
+  return tags.length > shown.length;
+}
+
+/**
  * TOC: hanya `h2` dan `h3` (B6.3). `h4` tidak masuk daftar isi agar ringkas.
  * Id kosong atau duplikat dilewati (duplikat dibuang, bukan diberi nomor, agar
  * tautan tidak menebak).
