@@ -69,6 +69,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-11 | [Upgrade Sistem Kupon — Rencana Optimalisasi (C0–C9)](2026-10-11-upgrade-sistem-kupon.md) | ✅ Selesai (kode) |
 | 2026-10-11 | [Upgrade UI/UX Dialog Kupon (Proper)](2026-10-11-upgrade-ui-dialog-kupon.md) | ✅ Selesai (kode) |
 | 2026-10-11 | [Sistem Pengaturan (Settings) Super Proper & Terintegrasi (S0–S9)](2026-10-11-perencanaan-pengaturan.md) | ✅ Selesai (kode) |
+| 2026-10-11 | [Catatan Gap — Polish Sistem Pengaturan (Audit)](2026-10-11-polish-pengaturan-gap.md) | 📝 Catatan gap (belum diperbaiki) |
 
 ### Dokumen pendukung (referensi & setup)
 

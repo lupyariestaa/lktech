@@ -8,7 +8,8 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
-> 🎯 **TASK AKTIF (berikutnya):** — belum ditentukan. **Sistem Pengaturan Super Proper & Terintegrasi ✅ SELESAI (S0–S9, 2026-10-11)** — menu Pengaturan jadi ber-submenu (accordion generik), 8 halaman anak + induk ringkasan, **kelola admin** (multi-admin; owner `lupyariestaa@gmail.com` abadi), **integrasi + PING**, **pembayaran/Mayar**, **SEO**, **backup pilih-data**, **maintenance + halaman publik**, sistem. Lihat [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
+> 🎯 **TASK AKTIF (berikutnya):** 📝 **Polish Sistem Pengaturan** — audit menemukan ~30 gap (7 kritis: **SEO tak berpengaruh**, **restore backup bisa nonaktifkan admin**, verifikasi email admin, maintenance basi, dll). Rencana fase P0–P4: [`docs/2026-10-11-polish-pengaturan-gap.md`](docs/2026-10-11-polish-pengaturan-gap.md). **Belum dieksekusi.**
+> **Sistem Pengaturan Super Proper & Terintegrasi ✅ SELESAI (S0–S9, 2026-10-11)** — lihat [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
 > **Perbaikan & Upgrade Sistem Kupon (K0–K6) ✅ SELESAI (2026-10-11)** — audit 14 gap + remediasi. Lihat [`docs/2026-10-11-task-perbaikan-kupon.md`](docs/2026-10-11-task-perbaikan-kupon.md).
 > **Upgrade Dashboard "Kelola Pesanan" (`/admin/orders`) ✅ SELESAI (fase O0–O8, 2026-10-11)** — lihat [`docs/2026-10-11-task-upgrade-dashboard-pesanan.md`](docs/2026-10-11-task-upgrade-dashboard-pesanan.md) §8 (hasil) & [`docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md`](docs/2026-10-11-rekomendasi-upgrade-dashboard-pesanan.md).
 > 🩹 **Perbaikan menu pesanan ✅ SELESAI (G1–G23, 2026-10-11):** audit menemukan bug kritis (filter "butuh perhatian" tak berfungsi; hapus tunggal hilang) + 21 gap lain → semuanya diperbaiki. Lihat [`docs/2026-10-11-perbaikan-menu-pesanan.md`](docs/2026-10-11-perbaikan-menu-pesanan.md).
@@ -19,7 +20,32 @@
 
 ---
 
-## ✅ SESI INI — Sistem Pengaturan Super Proper & Terintegrasi (S0–S9, SELESAI)
+## 📝 SESI INI — Audit Polish Sistem Pengaturan (Catatan Gap)
+
+**Status: 📝 CATATAN GAP (belum diperbaiki).** Dokumen: [`docs/2026-10-11-polish-pengaturan-gap.md`](docs/2026-10-11-polish-pengaturan-gap.md).
+
+Audit menyeluruh (UI + backend) atas sistem Pengaturan menemukan **~30 gap**
+(7 kritis, 12 sedang, 11 rendah). **Temuan terverifikasi** (baca kode + grep).
+
+**Kritis (P0):**
+- **G1** — Pengaturan **SEO disimpan tapi TIDAK berpengaruh** ke metadata situs
+  (field `settings.seo.*` tanpa konsumen; klaim `google-site-verification` palsu).
+- **G2/G3** — **Restore backup `admins`** bisa menonaktifkan admin & **`settings`
+  pakai `_id` bebas** → jalur berbahaya.
+- **G4** — Restore tanpa snapshot/undo/batas (overwrite destruktif, cap 5000 diam-diam).
+- **G5** — Verifikasi **`email_verified`** admin tidak dicek.
+- **G6** — Gate admin di proxy hanya cek keberadaan cookie.
+- **G7** — Maintenance bisa **basi ~30–90s** (endpoint status tak direvalidasi).
+
+Sedang lainnya: 4 halaman telan error load (bisa timpa data default), `datetime-local`
+salah zona, validasi klien minim, label sosial tersembunyi, target sentuh <44px,
+metrik pembayaran tak konsisten, dll. Rencana fase **P0–P4** ada di dokumen.
+
+**Tidak ada perubahan kode** — sesi ini hanya audit & catatan.
+
+---
+
+## ✅ SESI SEBELUMNYA — Sistem Pengaturan Super Proper & Terintegrasi (S0–S9, SELESAI)
 
 **Status: ✅ SELESAI (kode).** Dokumen: [`docs/2026-10-11-perencanaan-pengaturan.md`](docs/2026-10-11-perencanaan-pengaturan.md).
 
