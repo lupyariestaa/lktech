@@ -7,7 +7,7 @@
  * Mendukung operasi idempoten: menjalankan ulang MENIMPA dokumen artikel yang
  * sama (articles/<slug>). Aman diulang.
  *
- * Menulis 9 artikel (3 lama + 6 baru):
+ * Menulis 20 artikel (3 awal + 6 batch-2 + 11 batch-3):
  *   1. "Gemini AI & Bisnis: Cara Cerdas Memanfaatkan Kecerdasan Buatan"
  *   2. "AI untuk UMKM: 10 Pekerjaan yang Bisa Diotomatiskan Hari Ini"
  *   3. "Masa Depan Web: 5 Perubahan Besar & Kenapa Bisnis Anda Harus Bersiap"
@@ -747,6 +747,838 @@ Mau website bisnis Anda diluncurkan dengan standar profesional — cepat, aman, 
     status: "published",
     publishedAt: "2026-05-15T08:00:00.000Z",
   },
+
+  /* ==================== 11 ARTIKEL TAMBAHAN (2026) ==================== */
+
+  {
+    slug: "berapa-biaya-membuat-website",
+    title: "Berapa Biaya Membuat Website di 2026? Rincian Jujur Tanpa Kejutan",
+    excerpt:
+      "Harga jasa website bisa berbeda 10 kali lipat dari yang satu ke yang lain. Ini rincian jujur apa saja yang sebenarnya Anda bayar — dan cara membandingkan dengan cerdas.",
+    body: `"Berapa biaya membuat website?" adalah pertanyaan yang jawabannya paling sering menghindar: *"tergantung."* Itu benar, tapi tidak membantu. Mari kita bedah apa saja yang sebenarnya membentuk harga.
+
+## Komponen biaya website
+
+Harga sebuah website tersusun dari beberapa komponen. Memahami ini membuat Anda bisa membandingkan penawaran secara adil.
+
+### 1. Desain
+
+- **Template siap pakai** → paling murah, cocok untuk situs sederhana, tapi terlihat generik.
+- **Desain custom** → lebih mahal, tapi sesuai identitas brand dan lebih unik.
+
+### 2. Pengembangan (coding)
+
+Situs 5 halaman statis jauh lebih murah dibanding sistem dengan login, pembayaran, dan panel admin. Semakin kompleks fiturnya, semakin besar biayanya.
+
+### 3. Konten & aset
+
+- Foto produk yang perlu difoto ulang.
+- Penulisan teks (copywriting).
+- Logo dan elemen visual.
+
+Ini sering **tidak** termasuk dan jadi kejutan di akhir.
+
+### 4. Domain, hosting, & email
+
+- **Domain** (nama situs) → biasanya per tahun.
+- **Hosting** (tempat menyimpan situs) → per bulan atau tahun.
+- **SSL** (gembok hijau) → kini umumnya gratis.
+
+### 5. Pemeliharaan
+
+Website bukan sekali jadi. Pembaruan keamanan, pencadangan, dan perbaikan kecil butuh perhatian berkala — ini biaya yang **berkelanjutan**.
+
+## Kenapa harga bisa berbeda 10x?
+
+Karena penawaran Rp1 juta dan Rp10 juta bisa jadi **bukan produk yang sama**:
+
+- Yang murah mungkin memakai template, Anda mengisi sendiri kontennya, dan dukungannya minim.
+- Yang mahal mungkin desain custom, SEO lengkap, kecepatan tinggi, dan dukungan penuh.
+
+Yang penting bukan "mana yang termurah", tapi **apa yang Anda dapat** untuk setiap rupiah.
+
+## Cara membandingkan penawaran dengan cerdas
+
+Mintalah rincian yang mencakup:
+
+- Apa saja yang termasuk (desain, konten, SEO, hosting)?
+- Apa yang **tidak** termasuk?
+- Biaya berulang per tahun berapa?
+- Apakah kode & domain jadi milik Anda?
+
+## Tips menghemat tanpa mengorbankan kualitas
+
+1. **Mulai dari yang penting dulu.** Fokus pada fondasi (cepat, aman, ramah SEO), tunda fitur "nice-to-have".
+2. **Siapkan konten sendiri.** Anda paling tahu bisnis Anda; ini memangkas biaya copywriting.
+3. **Pilih yang fleksibel.** Sistem yang mudah dikembangkan menghindari pembangunan ulang yang mahal.
+
+## Penutup
+
+Berapa biaya website? Tidak ada satu angka, tapi sekarang Anda tahu **apa yang membentuk angka itu**. Dengan pemahaman ini, Anda bisa menghindari dua jebakan: membayar terlalu mahal untuk yang sebenarnya sederhana, dan membayar terlalu murah lalu menyesal.
+
+---
+
+Butuh estimasi yang jelas & tanpa biaya tersembunyi untuk website bisnis Anda? **Konsultasi gratis dengan LKTech** — kami rincikan transparan dari awal.`,
+    category: "Panduan",
+    tags: ["Biaya Website", "Harga Jasa Website", "Anggaran Digital", "Panduan"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-05-22T08:00:00.000Z",
+  },
+  {
+    slug: "tanda-bisnis-butuh-aplikasi-mobile",
+    title: "5 Tanda Bisnis Anda Sudah Butuh Aplikasi Mobile",
+    excerpt:
+      "Aplikasi mobile bukan untuk semua bisnis. Tapi kalau Anda mengalami 5 tanda ini, mungkin sudah waktunya — dan menundanya justru merugikan.",
+    body: `Aplikasi mobile terdengar seperti proyek besar. Itu sebabnya banyak pemilik bisnis menundanya — wajar. Tapi ada titik di mana **menunda** justru lebih mahal daripada membangunnya.
+
+Ini lima tanda bisnis Anda sudah waktunya punya aplikasi mobile.
+
+## 1. Pelanggan Anda sering kembali dan berulang
+
+Kalau pelanggan datang berkali-kali (misalnya restoran, layanan langganan, toko kelontong online), aplikasi memberi **kemudahan yang membuat mereka makin sering kembali**.
+
+Aplikasi yang terpasang di layar utama ponsel pelanggan jauh lebih "dekat" dibanding website yang harus dicari ulang.
+
+## 2. Anda butuh fitur yang tidak nyaman di browser
+
+Beberapa hal memang lebih baik di aplikasi:
+
+- **Notifikasi** — memberitahu pelanggan saat ada promo atau pesanan siap.
+- **Kamera & pemindaian** — memindai barcode, mengunggah bukti, dsb.
+- **Penggunaan offline** — akses data tanpa koneksi.
+
+Kalau pelanggan sering membutuhkan ini, aplikasi jadi jawabannya.
+
+## 3. Pelanggan sering mengeluh soal proses yang lambat
+
+Kalau ukuran keranjang, pelacakan pesanan, atau pengisian data masih menyakitkan di browser, aplikasi bisa menghilangkan banyak langkah.
+
+Pengalaman yang mulus → pelanggan lebih loyal.
+
+## 4. Anda ingin membangun loyalitas, bukan sekadar transaksi
+
+Aplikasi memungkinkan program loyalitas, riwayat pesanan, dan personalisasi yang membuat pelanggan merasa "dikenali".
+
+Ini menaikkan nilai seumur pelanggan — jauh lebih berharga daripada satu transaksi.
+
+## 5. Kompetitor Anda sudah punya
+
+Ini sinyal pasar: kalau pesaing utama sudah memberi pengalaman aplikasi, pelanggan mulai menganggap itu standar. Tidak punya artinya tertinggal di kenyamanan.
+
+## Tapi tunggu — jangan buru-buru
+
+Aplikasi punya **biaya pengembangan dan pemeliharaan** yang lebih tinggi dari website. Jangan membangunnya hanya karena "keren".
+
+Aturan praktisnya:
+
+> Bangun **website lebih dulu** untuk validasi, lalu **tambahkan aplikasi** saat permintaan & kebutuhan berulang sudah jelas.
+
+Banyak bisnis memulai dengan **PWA** (aplikasi berbasis web) sebagai jembatan — memberi pengalaman ala aplikasi tanpa biaya penuh aplikasi native.
+
+## Penutup
+
+Aplikasi mobile adalah investasi, bukan pajangan. Kalau 3 dari 5 tanda di atas terasa familiar, ini saat yang tepat untuk **menghitung untung-ruginya** — bukan sekadar menunda.
+
+---
+
+Ragu antara website, PWA, atau aplikasi native? **LKTech** membantu bisnis memilih jalur yang paling tepat dan efisien. Konsultasi gratis.`,
+    category: "Tips & Trik",
+    tags: ["Aplikasi Mobile", "PWA", "Loyalitas Pelanggan", "Strategi Digital"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-05-28T08:00:00.000Z",
+  },
+  {
+    slug: "wordpress-vs-website-custom",
+    title: "WordPress vs Website Custom: Mana yang Tepat untuk Bisnis Anda?",
+    excerpt:
+      "WordPress cepat dan murah; website custom lebih fleksibel dan cepat. Keduanya punya tempat — kuncinya tahu situasi Anda yang mana.",
+    body: `Ini perdebatan klasik dalam pembuatan website: pakai **WordPress** (CMS siap pakai) atau **website custom** (dibangun dari nol sesuai kebutuhan)?
+
+Masing-masing bukan "lebih baik" secara mutlak. Yang penting adalah **mana yang cocok dengan situasi Anda**.
+
+## Apa itu WordPress?
+
+WordPress adalah sistem manajemen konten (CMS) yang dipakai jutaan situs. Anda memasangnya, memilih tema, menambah plugin, dan mulai mengisi konten.
+
+**Kelebihan:**
+
+- Cepat dan murah untuk memulai.
+- Banyak tema & plugin siap pakai.
+- Ramah untuk yang non-teknis.
+
+**Kekurangan:**
+
+- Banyak plugin → situs jadi lambat & rentan.
+- Kustomisasi ekstrem butuh perjuangan.
+- Keamanan bergantung pembaruan rutin.
+
+## Apa itu website custom?
+
+Website custom dibangun khusus untuk kebutuhan Anda — biasanya dengan framework modern (seperti Next.js).
+
+**Kelebihan:**
+
+- Performa tinggi (ringan, cepat).
+- Keamanan lebih terkendali.
+- Fleksibel penuh: fitur apa pun bisa dibuat.
+- Lebih mudah dikembangkan jangka panjang.
+
+**Kekurangan:**
+
+- Biaya awal lebih tinggi.
+- Perlu pengembang untuk perubahan besar.
+
+## Kapan pilih WordPress?
+
+- Blog atau situs konten sederhana.
+- Anggaran ketat dan butuh cepat tayang.
+- Anda atau tim nyaman mengelola plugin sendiri.
+
+## Kapan pilih website custom?
+
+- Butuh **kecepatan & SEO** tingkat tinggi.
+- Ada fitur khusus (keranjang, sistem member, integrasi, API).
+- Ingin fondasi yang tahan lama & mudah diskalakan.
+- Keamanan dan data pelanggan jadi prioritas.
+
+## Perbandingan singkat
+
+- **Kecepatan:** custom umumnya lebih unggul; WordPress bisa cepat bila dioptimasi ketat.
+- **Biaya awal:** WordPress lebih murah; custom lebih tinggi.
+- **Biaya jangka panjang:** WordPress bisa membengkak karena plugin & perawatan; custom lebih stabil.
+- **Fleksibilitas:** custom menang telak.
+- **Kemudahan kelola:** WordPress menang untuk konten sederhana.
+
+## Jalan tengah yang sering dilupakan
+
+Anda tidak harus memilih ekstrem. Beberapa bisnis memakai **headless CMS** — konten dikelola seperti WordPress, tapi tampilannya dibangun custom (cepat & fleksibel).
+
+## Penutup
+
+Pilih berdasarkan **kebutuhan, anggaran, dan rencana jangka panjang** — bukan karena satu opsi sedang populer.
+
+Kalau yang Anda butuhkan hanya blog sederhana, WordPress masuk akal. Kalau website adalah **mesin bisnis** yang harus cepat, aman, dan tumbuh bersama Anda, custom layak dipertimbangkan.
+
+---
+
+Bingung menentukan yang tepat? **LKTech** membantu bisnis memilih fondasi yang sesuai — bukan yang sekadar trendi. Konsultasi gratis, tanpa komitmen.`,
+    category: "Panduan",
+    tags: ["WordPress", "Website Custom", "Perbandingan", "Web Development"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-06-02T08:00:00.000Z",
+  },
+  {
+    slug: "cara-meningkatkan-konversi-website",
+    title: "8 Perbaikan Cepat untuk Meningkatkan Konversi Website Anda",
+    excerpt:
+      "Website Anda dikunjungi tapi jarang menghasilkan kontak atau penjualan? Seringkali masalahnya bukan desain, tapi hal-hal kecil yang mudah diperbaiki.",
+    body: `Traffic banyak tapi konversi sedikit? Anda tidak sendirian. Kabar baiknya: **meningkatkan konversi** sering lebih murah daripada menambah traffic, karena Anda memperbaiki apa yang sudah ada.
+
+Ini delapan perbaikan cepat yang berdampak besar.
+
+## 1. Tegaskan nilai utama di 5 detik pertama
+
+Pengunjung memutuskan dalam hitungan detik: *"ini relevan atau bukan?"*
+
+Pastikan bagian paling atas (hero) menjawab: **Anda membantu siapa, dengan apa, dan kenapa Anda**.
+
+Kalau pengunjung harus menebak, mereka akan pergi.
+
+## 2. Satu ajakan per halaman
+
+Terlalu banyak tombol = tidak ada tombol yang jelas. Fokuskan setiap halaman pada **satu aksi utama** — hubungi kami, beli, atau daftar.
+
+Beri tombol sekunder, tapi pastikan yang utama paling menonjol.
+
+## 3. Percepat pemuatan halaman
+
+Setiap detik keterlambatan menurunkan konversi. Perbaikan cepat:
+
+- Kompres gambar.
+- Buang elemen yang berat & tak perlu.
+- Pastikan server/hosting memadai.
+
+## 4. Perjelas bukti kepercayaan
+
+Kepercayaan = konversi. Tampilkan:
+
+- Testimoni atau ulasan nyata.
+- Portofolio/contoh hasil.
+- Garansi atau jaminan.
+
+## 5. Sederhanakan formulir
+
+Setiap kolom tambahan menurunkan jumlah yang mengisi. Tanyakan hanya yang **benar-benar Anda butuhkan** sekarang. Sisanya bisa ditanyakan nanti.
+
+## 6. Tampilkan harga (atau kisaran) bila memungkinkan
+
+Penyembunyian harga sering membuat pengunjung pergi mencari ke tempat lain. Kalau harga memang fleksibel, beri **kisaran atau paket** sebagai panduan.
+
+## 7. Buat WhatsApp mudah diakses
+
+Di Indonesia, banyak pembeli lebih suka chat. Tombol WhatsApp yang **selalu terlihat** (terutama di ponsel) memangkas friksi drastis.
+
+## 8. Uji di ponsel sungguhan
+
+Bukan sekadar "tampilannya rapi di layar kecil", tapi: apakah tombol mudah ditekan? Apakah teks terbaca? Apakah isian mudah?
+
+Uji dengan jempol Anda sendiri, bukan hanya mata.
+
+## Cara mengukur dampaknya
+
+Tanpa data, Anda menebak. Pasang analitik dan pantau:
+
+- Berapa banyak yang mengunjungi halaman penting.
+- Di mana mereka berhenti.
+- Perbaikan mana yang benar-benar menaikkan konversi.
+
+## Penutup
+
+Konversi adalah hasil dari **banyak perbaikan kecil**, bukan satu trik ajaib. Mulai dari satu poin di atas minggu ini, ukur, lalu lanjut ke poin berikutnya.
+
+---
+
+Ingin tahu titik mana di website Anda yang menahan konversi? **Diskusikan dengan LKTech** — kami bantu audit & memperbaiki yang paling berdampak. Konsultasi gratis.`,
+    category: "Bisnis Digital",
+    tags: ["Konversi", "Optimasi Website", "UX", "Pemasaran Digital"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-06-08T08:00:00.000Z",
+  },
+  {
+    slug: "panduan-memulai-toko-online-dari-nol",
+    title: "Panduan Memulai Toko Online dari Nol (Langkah demi Langkah)",
+    excerpt:
+      "Punya produk tapi belum berani buka toko online? Ikuti langkah sederhana ini dari nol sampai siap menerima pesanan pertama.",
+    body: `Membuka toko online terlihat rumit bagi yang belum pernah. Padahal, kalau dipecah menjadi langkah kecil, semuanya masuk akal.
+
+Ini panduan dari nol untuk pemilik usaha yang ingin mulai jualan online.
+
+## Langkah 1: Tentukan produk unggulan
+
+Jangan jual semua sekaligus. Mulai dari **1–5 produk** yang paling laku atau paling siap dipromosikan. Fokus memudahkan pelanggan dan Anda.
+
+## Langkah 2: Siapkan foto & deskripsi yang layak
+
+Foto jelek = orang ragu membeli. Minimal:
+
+- Foto dari beberapa sudut dengan pencahayaan cukup.
+- Deskripsi yang menjelaskan **manfaat**, bukan hanya spesifikasi.
+- Ukuran, bahan, dan cara pengiriman yang jelas.
+
+## Langkah 3: Pilih wadah jualan
+
+- **Marketplace** (Tokopedia, Shopee) → cepat mulai, tapi bersaing ketat & data milik platform.
+- **Media sosial** → mudah, tapi tak terdokumentasi rapi.
+- **Toko online sendiri** → lebih profesional, data milik Anda, dan bisa dibangun sesuai brand.
+
+Banyak bisnis memakai kombinasi: jualan di marketplace **dan** punya toko sendiri.
+
+## Langkah 4: Tentukan harga dengan benar
+
+Hitung dengan cermat:
+
+- Harga modal produk.
+- Biaya kemasan & pengiriman.
+- Biaya transaksi (mis. biaya platform/pembayaran).
+- Margin keuntungan yang sehat.
+
+Jangan lupa sertakan biaya "tersembunyi" agar tidak rugi diam-diam.
+
+## Langkah 5: Siapkan cara pembayaran & pengiriman
+
+- **Pembayaran:** transfer bank, QRIS, atau pembayaran online otomatis.
+- **Pengiriman:** kerja sama dengan kurir, tentukan ongkos & estimasi.
+
+Semakin sedikit langkah pembayaran, semakin tinggi peluang pelanggan menyelesaikan pesanan.
+
+## Langkah 6: Atur alur pesanan
+
+Tentukan sejak awal:
+
+- Siapa memproses pesanan.
+- Bagaimana pelanggan diberi kabar (email otomatis, WhatsApp).
+- Bagaimana menangani komplain & retur.
+
+## Langkah 7: Promosikan
+
+Toko yang tidak dikunjungi tidak akan berjualan. Mulai dari:
+
+- Bagikan ke pelanggan lama & lingkaran terdekat.
+- Konten media sosial yang bermanfaat.
+- SEO dasar agar muncul di pencarian.
+
+## Langkah 8: Evaluasi & perbaiki
+
+Setelah beberapa pesanan, lihat data: produk mana yang laku, dari mana pelanggan datang, di mana mereka berhenti. Perbaiki terus.
+
+## Kesalahan yang harus dihindari
+
+- **Mencoba sempurna dulu, baru jualan.** Justru belajar lebih cepat dengan terjun langsung.
+- **Mengabaikan ponsel.** Mayoritas pembeli berbelanja dari ponsel.
+- **Tidak menyiapkan stok & proses.** Pesanan pertama yang kacau merusak reputasi.
+
+## Penutup
+
+Memulai toko online bukan soal sempurna sejak awal, tapi soal **melangkah dan memperbaiki** seiring jalan. Pesanan pertama biasanya membuka lebih banyak pelajaran daripada semua teori.
+
+---
+
+Ingin toko online yang rapi, cepat, dan siap menerima pesanan otomatis? **LKTech** membantu dari katalog sampai pembayaran. Konsultasi gratis.`,
+    category: "Panduan",
+    tags: ["Toko Online", "E-commerce", "Panduan", "UMKM"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-06-15T08:00:00.000Z",
+  },
+  {
+    slug: "kenapa-kecepatan-website-penting",
+    title: "Kenapa Kecepatan Website Sangat Penting untuk Penjualan Anda",
+    excerpt:
+      "Website yang lambat membunuh penjualan sebelum pelanggan melihat penawaran Anda. Ini alasan teknis dan bisnis kenapa kecepatan harus jadi prioritas.",
+    body: `Kalau ada satu hal teknis yang paling sering diabaikan, itu adalah **kecepatan website**. Padahal dampaknya langsung ke uang.
+
+Ini alasannya — dari sisi pelanggan maupun mesin pencari.
+
+## 1. Manusia tidak sabar
+
+Riset berulang menunjukkan hal yang sama: makin lama halaman dimuat, makin banyak pengunjung yang pergi. Pada koneksi ponsel yang pas-pasan, situs berat terasa sangat menyiksa.
+
+Pengunjung yang pergi sebelum situs muncul tidak akan pernah melihat penawaran Anda.
+
+## 2. Google mengutamakan situs cepat
+
+Mesin pencari menjadikan kecepatan sebagai salah satu faktor peringkat (Core Web Vitals). Situs cepat cenderung:
+
+- Muncul lebih tinggi di hasil pencarian.
+- Lebih sering diklik.
+
+Kalah cepat = kalah posisi = kalah traffic gratis.
+
+## 3. Kecepatan memengaruhi konversi
+
+Pengunjung yang harus menunggu kehilangan momentum & kepercayaan. Mereka berpikir: *"kalau situsnya saja lambat, bagaimana layanannya?"*
+
+Situs cepat terasa **profesional dan bisa diandalkan** — dua hal yang mendorong orang membeli.
+
+## 4. Kecepatan menghemat biaya
+
+Situs yang berat membebani server lebih banyak, artinya biaya hosting naik. Situs yang efisien lebih hemat di skala besar.
+
+## Apa yang biasanya membuat situs lambat?
+
+- **Gambar besar** yang tidak dikompres.
+- **Terlalu banyak plugin/skrip** yang tak perlu.
+- **Hosting murah** yang lambat merespons.
+- **Tidak ada caching** untuk konten yang berulang.
+
+## Cara mempercepat (dari yang paling mudah)
+
+1. **Kompres gambar** & ubah ke format modern (WebP/AVIF).
+2. **Buang yang tak terpakai** (plugin, skrip, font berlebih).
+3. **Aktifkan cache** & CDN.
+4. **Pilih hosting yang layak.**
+5. **Uji & pantau** secara berkala.
+
+## Cara mengukur kecepatan
+
+Gunakan alat gratis seperti PageSpeed Insights. Fokus pada:
+
+- **Waktu muat** halaman utama.
+- **Core Web Vitals** (LCP, CLS, INP).
+
+Ukur **sebelum dan sesudah** perbaikan agar tahu dampaknya.
+
+## Penutup
+
+Kecepatan bukan sekadar "nicety" teknis — ia memengaruhi pengunjung, peringkat, dan penjualan. Investasi kecil di kecepatan sering menghasilkan pengembalian yang besar.
+
+---
+
+Website Anda terasa lambat? **LKTech** membantu membangun & mengoptimalkan situs yang cepat dan siap konversi. Konsultasi gratis.`,
+    category: "Teknologi",
+    tags: ["Performa Web", "Core Web Vitals", "SEO", "Kecepatan Website"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-06-22T08:00:00.000Z",
+  },
+  {
+    slug: "whatsapp-business-untuk-jualan",
+    title: "WhatsApp Business untuk Jualan: Fitur yang Sering Dilupakan",
+    excerpt:
+      "Semua orang pakai WhatsApp, tapi sedikit yang memaksimalkan WhatsApp Business. Fitur-fitur ini bisa menghemat waktu dan menambah penjualan.",
+    body: `Bagi banyak bisnis di Indonesia, **WhatsApp adalah kanal penjualan utama**. Tapi sebagian besar masih memakai versi biasa, padahal **WhatsApp Business** menawarkan fitur yang bisa langsung menghemat waktu dan menambah omzet.
+
+Ini fitur yang paling sering dilupakan.
+
+## 1. Katalog produk
+
+WhatsApp Business memungkinkan Anda menampilkan **katalog produk** lengkap dengan harga dan deskripsi.
+
+Manfaatnya: pelanggan bisa melihat produk tanpa Anda harus mengirim gambar satu per satu. Anda hemat waktu, pelanggan dapat info langsung.
+
+## 2. Pesan otomatis
+
+Tiga jenis pesan otomatis yang wajib diaktifkan:
+
+- **Pesan salam** — menyambut pelanggan baru.
+- **Pesan di luar jam kerja** — memberi tahu kapan Anda akan membalas.
+- **Pesan tidak hadir (away)** — saat Anda sedang sibuk atau offline.
+
+Ini memastikan **tidak ada pelanggan yang diabaikan**, bahkan saat Anda tidur.
+
+## 3. Balasan cepat (quick replies)
+
+Simpan jawaban untuk pertanyaan yang paling sering muncul:
+
+- "Berapa harganya?"
+- "Bisa COD?"
+- "Berapa lama pengiriman?"
+
+Cukup ketik singkatan, jawaban lengkap langsung terkirim. Ini menghemat menit demi menit setiap hari.
+
+## 4. Label & daftar kontak
+
+Kelompokkan pelanggan dengan **label** (mis. "pelanggan baru", "sudah bayar", "follow up"). Anda bisa mengirim pesan ke segmen tertentu — misalnya broadcast promo ke pelanggan lama.
+
+## 5. Profil bisnis yang lengkap
+
+Isi profil dengan:
+
+- Alamat & jam operasional.
+- Tautan website.
+- Deskripsi singkat bisnis.
+
+Profil yang lengkap memperkuat **kepercayaan** sebelum percakapan dimulai.
+
+## 6. Keranjang & pesanan (opsional)
+
+Untuk bisnis dengan katalog besar, integrasi WhatsApp dengan toko online memungkinkan pesanan masuk rapi — bukan tercampur di obrolan.
+
+## Tips praktis
+
+- **Balas cepat.** Respons dalam menit pertama sangat menentukan.
+- **Gunakan pesan otomatis** agar tak ada yang menggantung.
+- **Jangan spam.** Broadcast berlebihan membuat nomor Anda diblokir.
+- **Catat pelanggan.** Nama & kebutuhan mereka membuat layanan lebih personal.
+
+## Bahasa & nada bicara
+
+WhatsApp bersifat personal. Gunakan bahasa yang ramah tetapi profesional. Sapa dengan nama, dengarkan, dan tanggapi kebutuhan — bukan sekadar mengirim daftar harga.
+
+## Penutup
+
+WhatsApp Business bukan sekadar "WhatsApp versi bisnis". Dengan memaksimalkan fiturnya, Anda melayani lebih cepat, lebih rapi, dan lebih meyakinkan — tanpa menambah beban kerja.
+
+---
+
+Ingin integrasi WhatsApp dengan toko online Anda agar pesanan tercatat otomatis? **LKTech** membantu merancang alur yang rapi. Konsultasi gratis.`,
+    category: "Bisnis Digital",
+    tags: ["WhatsApp Business", "Penjualan", "UMKM", "Layanan Pelanggan"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-06-28T08:00:00.000Z",
+  },
+  {
+    slug: "cara-menulis-deskripsi-produk-yang-menjual",
+    title: "Cara Menulis Deskripsi Produk yang Menjual (dan Ramah SEO)",
+    excerpt:
+      "Deskripsi produk yang baik menjawab keraguan pelanggan sekaligus membantu produk Anda ditemukan di pencarian. Ini caranya.",
+    body: `Deskripsi produk sering dianggap formalitas — asal ada. Padahal, deskripsi yang baik bisa **meyakinkan pembeli** dan **membantu produk ditemukan** di mesin pencari sekaligus.
+
+Ini cara menulisnya.
+
+## Mulai dari manfaat, bukan hanya spesifikasi
+
+Banyak deskripsi hanya menyebutkan fakta: "bahan katun, ukuran 30x40". Itu informasi, tapi belum menjual.
+
+Ubah menjadi manfaat:
+
+- Spesifikasi: "Bahan katun tebal."
+- Manfaat: "Katun tebal yang adem dan tidak mudah kusut — nyaman dipakai seharian."
+
+Pelanggan membeli **manfaat**, bukan sekadar fitur.
+
+## Jawab pertanyaan yang tersirat
+
+Pembeli punya keraguan. Deskripsi yang baik menjawabnya lebih dulu:
+
+- Apakah cocok untuk kebutuhan saya?
+- Berapa ukurannya? Apakah sesuai?
+- Bagaimana cara pemakaian/perawatannya?
+- Apa yang saya dapat dalam paket?
+
+Semakin banyak keraguan yang dijawab, semakin mudah keputusan membeli.
+
+## Struktur yang mudah dipindai
+
+Orang tidak membaca dari awal sampai akhir — mereka **memindai**. Bantu dengan:
+
+- **Poin-poin** untuk keunggulan utama.
+- **Subjudul** untuk bagian berbeda.
+- **Kalimat pendek.**
+
+Paragraf panjang tanpa jeda akan dilewati.
+
+## Sertakan kata kunci secara alami
+
+Kata kunci membantu produk ditemukan di pencarian. Tapi jangan mengulangnya berlebihan (itu dianggap spam).
+
+Alami saja: sebutkan jenis produk, kegunaan, dan kata yang mungkin dicari orang — dalam kalimat yang mengalir.
+
+## Gunakan gambar yang mendukung
+
+Teks dan gambar bekerja bersama:
+
+- Foto jernih dari beberapa sudut.
+- Tampilkan produk **sedang dipakai** (bila relevan).
+- Beri **teks alternatif** (alt) yang deskriptif untuk aksesibilitas & SEO.
+
+## Contoh kerangka deskripsi
+
+1. **Kalimat pembuka** — apa produk ini & untuk siapa.
+2. **3–5 keunggulan** dalam poin (manfaat, bukan hanya fitur).
+3. **Detail penting** — ukuran, bahan, isi paket.
+4. **Cara pakai/perawatan** (bila perlu).
+5. **Ajakan** — "Pesan sekarang" atau tanyakan via WhatsApp.
+
+## Yang harus dihindari
+
+- **Menyalin deskripsi produk lain** — membosankan & bisa dianggap duplikat.
+- **Klaim berlebihan** yang tak bisa dibuktikan — merusak kepercayaan.
+- **Salah ketik & format berantakan** — mengurangi kesan profesional.
+
+## Penutup
+
+Deskripsi produk yang baik bekerja dua arah: meyakinkan manusia dan membantu mesin pencari. Luangkan sedikit waktu untuk menulisnya dengan benar — hasilnya terasa langsung pada konversi.
+
+---
+
+Punya banyak produk dan ingin deskripsi yang menarik & konsisten? **LKTech** membantu menyiapkan katalog produk yang profesional. Konsultasi gratis.`,
+    category: "Tips & Trik",
+    tags: ["Deskripsi Produk", "Copywriting", "SEO", "E-commerce"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-07-05T08:00:00.000Z",
+  },
+  {
+    slug: "domain-hosting-ssl-penjelasan-sederhana",
+    title: "Domain, Hosting, dan SSL: Penjelasan Sederhana untuk Pemilik Bisnis",
+    excerpt:
+      "Istilah teknis ini sering bikin bingung pemilik bisnis. Padahal ketiganya penting untuk website Anda. Ini penjelasan sederhana tanpa jargon.",
+    body: `Saat membangun website, Anda akan mendengar istilah **domain**, **hosting**, dan **SSL**. Terdengar teknis, tapi sebenarnya sederhana. Anggap saja website seperti sebuah toko.
+
+## Domain — alamat toko Anda
+
+**Domain** adalah alamat website Anda, misalnya bisnisanda.com. Ini yang diketik orang untuk menemukan Anda.
+
+Hal yang perlu diketahui:
+
+- Domain disewa **per tahun** — bukan dibeli sekali selamanya.
+- Pilih yang **mudah diingat & relevan** dengan bisnis.
+- Sebaiknya **atas nama Anda sendiri**, bukan nama vendor.
+
+Domain yang baik bikin orang mudah kembali lagi.
+
+## Hosting — lahan tempat toko berdiri
+
+**Hosting** adalah tempat menyimpan seluruh file website Anda, seperti lahan tempat toko fisik berdiri. Hosting menentukan:
+
+- Seberapa cepat situs dimuat.
+- Seberapa andal situs tersedia (tidak sering down).
+
+Hosting murah bisa membuat situs lambat — dan situs lambat kehilangan pelanggan.
+
+## SSL — gembok keamanan
+
+**SSL** adalah sertifikat yang membuat alamat website berubah dari **http://** menjadi **https://** dengan ikon gembok.
+
+Fungsinya:
+
+- **Mengamankan data** yang diisi pengunjung (mis. data formulir).
+- **Meningkatkan kepercayaan** — browser modern menandai situs tanpa SSL sebagai "tidak aman".
+
+Kabar baiknya: SSL kini umumnya **gratis** dan otomatis.
+
+## Kenapa ketiganya penting untuk bisnis?
+
+- **Domain** → orang menemukan Anda.
+- **Hosting** → situs Anda cepat & selalu bisa diakses.
+- **SSL** → pengunjung merasa aman & Anda dipercaya (juga disukai mesin pencari).
+
+## Kesalahan umum
+
+- **Domain/hosting atas nama vendor.** Pastikan milik Anda, agar bisa pindah tanpa kehilangan aset.
+- **Mengorbankan kecepatan demi hosting murah.** Repotnya lebih mahal daripada hematnya.
+- **Tidak memperbarui SSL.** Situs bisa dianggap tidak aman.
+
+## Pertanyaan yang perlu Anda ajukan ke penyedia
+
+- Atas nama siapa domain & hosting didaftarkan?
+- Berapa biaya perpanjangan tahunan?
+- Bagaimana proses bila saya ingin pindah?
+
+## Penutup
+
+Domain, hosting, dan SSL adalah **fondasi** website Anda. Tiga hal ini bukan hal yang "nanti saja" — justru di sinilah situs cepat, aman, dan tepercaya dimulai.
+
+---
+
+Bingung mengurus domain, hosting, dan SSL? **LKTech** membantu bisnis menyiapkan fondasi yang benar sejak awal. Konsultasi gratis.`,
+    category: "Panduan",
+    tags: ["Domain", "Hosting", "SSL", "Panduan", "Website"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-07-12T08:00:00.000Z",
+  },
+  {
+    slug: "kesalahan-website-bisnis-menghilangkan-pelanggan",
+    title: "5 Kesalahan Website Bisnis yang Diam-Diam Menghilangkan Pelanggan",
+    excerpt:
+      "Banyak website bisnis terlihat baik-baik saja, tapi tanpa disadari menolak pelanggan. Periksa apakah situs Anda melakukan salah satu dari 5 kesalahan ini.",
+    body: `Website yang "jalan" belum tentu website yang **menghasilkan**. Beberapa kesalahan umum membuat pengunjung pergi diam-diam — tanpa Anda pernah tahu.
+
+Ini lima kesalahan yang paling sering kami temui, dan cara memperbaikinya.
+
+## 1. Tidak jelas menawarkan apa (dalam 5 detik)
+
+Pengunjung masuk, lalu berpikir: *"Ini bisnis apa, ya?"* Kalau jawabannya tidak langsung terlihat, mereka pergi.
+
+**Perbaikan:** bagian paling atas (hero) harus jelas menyebutkan **apa yang Anda tawarkan, untuk siapa, dan kenapa berbeda**. Buang kalimat puitis yang tidak informatif.
+
+## 2. Sulit dihubungi
+
+Kalau calon pelanggan harus mencari-cari cara menghubungi Anda, mereka akan menyerah.
+
+**Perbaikan:** tampilkan **tombol WhatsApp** dan kontak yang selalu terlihat — terutama di ponsel. Satu klik, bukan tiga langkah.
+
+## 3. Lambat dimuat (terutama di ponsel)
+
+Situs yang berat membuat pengunjung kabur sebelum melihat apa pun.
+
+**Perbaikan:** kompres gambar, buang elemen berat, dan uji kecepatan di koneksi ponsel sungguhan.
+
+## 4. Tidak ada bukti kepercayaan
+
+Pengunjung baru belum tahu Anda bisa dipercaya. Tanpa bukti, mereka ragu.
+
+**Perbaikan:** tampilkan testimoni, portofolio, contoh hasil, atau garansi. Bukti nyata mengalahkan klaim kosong.
+
+## 5. Tidak ada ajakan yang jelas
+
+Banyak situs menjelaskan bisnis dengan baik, tapi tidak pernah **meminta** tindakan. Pengunjung yang tertarik pun bingung harus ngapain.
+
+**Perbaikan:** setiap halaman butuh **satu ajakan utama yang jelas** — "Konsultasi gratis", "Pesan sekarang", "Lihat portofolio". Jangan biarkan mereka menebak.
+
+## Cara memeriksa website Anda sendiri
+
+Lakukan uji sederhana:
+
+1. Buka situs Anda **dari ponsel**.
+2. Bayangkan Anda pelanggan baru yang tidak tahu apa-apa.
+3. Jawab: dalam 5 detik, apakah tahu ini apa? Apakah mudah menghubungi? Apakah percaya?
+
+Kalau ada keraguan, di situlah kesempatan perbaikan.
+
+## Penutup
+
+Website yang baik bukan yang paling meriah, tapi yang **memudahkan pelanggan** mengambil langkah berikutnya. Perbaiki lima hal di atas, dan Anda akan melihat perbedaannya.
+
+---
+
+Ingin tahu titik mana di website Anda yang menghalangi pelanggan? **LKTech** membantu audit & merancang ulang yang benar-benar menghasilkan. Konsultasi gratis.`,
+    category: "Bisnis Digital",
+    tags: ["Optimasi Website", "Konversi", "UX", "Kesalahan Umum"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-07-20T08:00:00.000Z",
+  },
+  {
+    slug: "automasi-bisnis-kecil-mulai-dari-mana",
+    title: "Automasi Bisnis Kecil: Mulai dari Mana Tanpa Ribet",
+    excerpt:
+      "Automasi terdengar canggih, tapi sebenarnya bisa dimulai dari hal kecil yang melelahkan. Ini cara memulai tanpa teknologi rumit atau biaya besar.",
+    body: `Kata "automasi" sering bikin pemilik usaha kecil mundur — membayangkan sistem mahal dan rumit. Padahal, automasi bisa dimulai dari **pekerjaan kecil yang paling melelahkan**, dengan alat sederhana.
+
+Ini cara memulainya dengan waras.
+
+## Prinsip dasar: otomatiskan yang berulang, bukan semuanya
+
+Jangan tergoda mengotomatiskan seluruh bisnis sekaligus. Fokus pada pekerjaan yang:
+
+- **Berulang** (dilakukan terus-menerus).
+- **Menyita waktu** (menguras jam kerja).
+- **Bisa diprediksi** (polanya tetap).
+
+Itu tiga tanda pekerjaan yang paling layak diotomatiskan lebih dulu.
+
+## 5 automasi yang bisa dimulai hari ini
+
+### 1. Balasan otomatis pesan pelanggan
+
+Gunakan WhatsApp Business atau chatbot sederhana untuk pertanyaan yang paling sering muncul ("Berapa harga?", "Jam buka?").
+
+Manfaat: tak ada pelanggan yang menunggu, bahkan saat Anda sibuk.
+
+### 2. Email konfirmasi pesanan
+
+Kirim email otomatis saat pesanan dibuat atau status berubah. Pelanggan merasa diperhatikan tanpa Anda harus mengetik satu per satu.
+
+### 3. Katalog & pemesanan online
+
+Toko online membuat pelanggan memesan sendiri — tanpa chat bolak-balik. Pesanan tercatat rapi di satu tempat.
+
+### 4. Pengingat otomatis
+
+Pengingat untuk menindaklanjuti penawaran, mengingatkan pelanggan yang belum bayar, atau follow-up setelah pembelian.
+
+### 5. Laporan ringkas
+
+Daripada membuka spreadsheet tiap hari, minta sistem merangkum: penjualan minggu ini, produk terlaris, dan apa yang perlu diperhatikan.
+
+## Urutan memulai yang tepat
+
+1. **Catat** pekerjaan berulang Anda selama seminggu.
+2. **Pilih satu** yang paling menyita waktu.
+3. **Otomatiskan** hanya itu.
+4. **Ukur** hasilnya (jam yang dihemat).
+5. **Lanjut** ke pekerjaan berikutnya bila sudah lancar.
+
+Jangan loncat ke sepuluh automasi sekaligus — itu cara tercepat untuk menyerah.
+
+## Kesalahan yang sering terjadi
+
+- **Mengotomatiskan kekacauan.** Rapikan proses dulu, baru otomatiskan.
+- **Membeli alat mahal sebelum perlu.** Mulai dari gratis/sederhana.
+- **Lupa sentuhan manusia.** Automasi untuk yang berulang; percakapan personal tetap manual.
+
+## Penutup
+
+Automasi bukan soal teknologi canggih, tapi soal **menghemat waktu di pekerjaan yang tak perlu dikerjakan berulang**. Mulai kecil, ukur, lalu berkembang. Setiap jam yang dihemat adalah jam yang bisa dipakai untuk menumbuhkan bisnis.
+
+---
+
+Ingin mengotomatiskan alur bisnis Anda (pesanan, notifikasi, laporan) tanpa ribet? **LKTech** membantu merancangnya sesuai skala usaha Anda. Konsultasi gratis.`,
+    category: "Teknologi",
+    tags: ["Automasi", "Efisiensi", "UMKM", "Produktivitas"],
+    cover: "default",
+    author: "LKTech",
+    status: "published",
+    publishedAt: "2026-07-28T08:00:00.000Z",
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -801,7 +1633,7 @@ async function main() {
   console.log(`Selesai: ${created} dibuat, ${updated} diperbarui.`);
   console.log("");
   console.log("Verifikasi:");
-  console.log("  1. Buka /blog → 9 artikel tampil.");
+  console.log("  1. Buka /blog → 20 artikel tampil.");
   console.log("  2. Buka /blog/kategori/panduan → artikel kategori Panduan.");
   console.log("  3. Buka /blog/kategori/bisnis-digital → artikel kategori Bisnis Digital.");
   console.log("  4. Buka /blog/tag/ai → artikel bertag AI.");
