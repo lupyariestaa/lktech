@@ -20,6 +20,7 @@ import {
   Percent,
   ReceiptText,
   ScrollText,
+  Search,
   Settings,
   Star,
   Tags,
@@ -84,6 +85,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         title: "Analitik Penjualan",
         href: "/admin/analytics",
         icon: BarChart3,
+      },
+      {
+        label: "SEO",
+        title: "SEO & Search Console",
+        href: "/admin/seo",
+        icon: Search,
       },
       {
         label: "Lead",

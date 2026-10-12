@@ -1,6 +1,6 @@
 # SEO & Konten Mesin — Perencanaan & Fase (S0–S7)
 
-> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1–S5 ✅ SELESAI (2026-10-12).**
+> **Status: 🚧 SEDANG DIKERJAKAN — FASE S1–S6 ✅ SELESAI (2026-10-12).**
 > Inisiatif baru setelah sistem matang secara fitur.
 > **Disusun:** hasil riset menyeluruh atas kode SEO aktual (lihat §1 temuan).
 > **Prinsip:** manfaatkan fondasi SEO yang sudah kuat (metadata, JSON-LD, sitemap, RSS,
@@ -150,11 +150,15 @@ rich results, (3) bangun internal linking + hub, (4) tanam programmatic SEO,
 > (`test:locations` **6**) · `build` ✅ **124 halaman** (40 = 5 layanan × 8 kota).
 > Setiap halaman kota: konten unik + `Service`/`Breadcrumb`/`FAQPage`. Lihat §10.
 
-### Fase S6 — Observability & data (R15)
+### Fase S6 — Observability & data (R15) ✅ SELESAI
 - GA4/GTM (opsional) di samping Vercel Analytics; event SEO (`article_view` sudah ada).
 - Integrasi **Google Search Console API** ringan (endpoint admin: tarik query
   teratas/klik/impresi) → panel "SEO" di admin (opsional, butuh service account).
 - Sitemap ping (IndexNow/Bing) opsional.
+
+> **✅ Hasil S6 (2026-10-12)** — Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+> (`test:search-console` **9**) · `build` ✅ (124 halaman). GA4 & GSC **fail-safe**
+> (aktif hanya bila env diisi). Panel `/admin/seo`. Lihat §11.
 
 ### Fase S7 — QA, dokumentasi & rilis
 - Gate penuh (tsc/eslint/test/build), uji rich result (validator schema), dokumentasi,
@@ -356,3 +360,39 @@ Breadcrumb, Organization) & pantau Search Console.
 kota di GSC 2–4 minggu — bila ada yang tipis/tak ter-index, kurangi atau perkaya.
 **Cara menambah kota:** cukup tambah entri di `LOCATIONS` dengan konten unik (guard test
 akan menolak konten duplikat/terlalu pendek).
+
+---
+
+## 11. ✅ Hasil Eksekusi FASE S6 (2026-10-12)
+
+**Status: ✅ SELESAI (kode).** Gate: `tsc` ✅ · `eslint` ✅ · semua `test:*` ✅
+(`test:search-console` 9) · `build` ✅ (124 halaman).
+
+| Temuan | Solusi |
+| --- | --- |
+| **R15** — data GSC/GA4 tak dimanfaatkan | **GA4** opsional (komponen `GoogleAnalytics`, aktif hanya bila `NEXT_PUBLIC_GA_ID` diisi; `anonymize_ip`). **Search Console API** via service account (JWT RS256 manual, tanpa dependensi baru) → endpoint `/api/admin/seo` + panel `/admin/seo`. |
+| Fail-safe | Semua **aktif hanya bila env diisi**; bila kosong → GA4 tidak dimuat, panel SEO menampilkan **panduan setup** (bukan error). Access token/query gagal → `configured:false`. |
+| Panel SEO | `/admin/seo`: rentang 7/28/90 hari, ringkasan (klik/impresi/CTR), tabel **query teratas** & **halaman teratas**, konten `no-store`. Menu **"SEO"** di grup utama (dekat Analitik). |
+
+**Berkas baru:** `src/components/google-analytics.tsx`,
+`src/components/admin/seo-dashboard.tsx`, `src/lib/search-console.ts`,
+`src/lib/search-console-pure.ts`, `src/app/api/admin/seo/route.ts`,
+`src/app/admin/(dashboard)/seo/page.tsx`, `scripts/search-console.test.ts`
+(+ `test:search-console`).
+**Berkas diubah:** `src/app/layout.tsx`, `src/lib/admin-nav.ts`,
+`src/lib/admin-settings-api.ts`, `.env.example`, `tsconfig.json`, `package.json`.
+
+**Verifikasi nyata:** GA4 tidak render tanpa env (fail-safe); `/admin/seo` & `/api/admin/seo`
+terdaftar; build 124 halaman.
+
+**Sisa:** Fase **S7** (QA, dokumentasi & rilis).
+**Langkah manual (S6):** set env produksi — `NEXT_PUBLIC_GA_ID` (opsional), dan untuk
+panel SEO: `GSC_SERVICE_ACCOUNT` (JSON service account satu baris) + `GSC_SITE_URL`
+(properti GSC). Beri service account akses sebagai pengguna di properti Search Console.
+
+---
+
+## 12. Cara Memakai Dokumen Ini (dari roadmap) — ringkas
+1. Pilih fase/inisiatif yang disetujui.
+2. Buat dokumen fase bila perlu; catat progres di `TASK-SELANJUTNYA.md`.
+3. Tandai fase selesai di dokumen ini.

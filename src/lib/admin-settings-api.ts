@@ -91,3 +91,25 @@ export async function fetchPaymentMetrics(days = 30): Promise<PaymentMetricsResu
 export async function clearCache(): Promise<void> {
   await adminFetch<{ ok: boolean }>("/api/admin/settings/cache", { method: "POST" });
 }
+
+/* ---- SEO / Search Console (fase S6) ---- */
+
+export type GscRow = {
+  keys?: string[];
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+};
+
+export type SearchConsoleReport = {
+  configured: boolean;
+  range: { startDate: string; endDate: string };
+  topQueries: GscRow[];
+  topPages: GscRow[];
+};
+
+/** Laporan Search Console (query & halaman teratas). */
+export async function fetchSeoReport(days = 28): Promise<SearchConsoleReport> {
+  return adminFetch<SearchConsoleReport>(`/api/admin/seo?days=${days}`);
+}

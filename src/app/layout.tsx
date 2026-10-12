@@ -8,6 +8,7 @@ import { resolveSeo } from "@/lib/seo-pure";
 import { getSiteContent } from "@/lib/site-content";
 import { SkipLink } from "@/components/skip-link";
 import { StructuredData } from "@/components/structured-data";
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { SettingsProvider } from "@/components/settings-provider";
 import { ContentProvider } from "@/components/content-provider";
 import { AuthProvider } from "@/components/auth-provider";
@@ -151,6 +152,7 @@ export default async function RootLayout({
           </AccountStatusProvider>
         </AuthProvider>
         <Analytics />
+        <GoogleAnalytics />
       </body>
     </html>
   );
