@@ -63,7 +63,7 @@ export default async function ProdukPage() {
 
       {promos.length > 0 && (
         <div className="border-b border-emerald-100 bg-emerald-50">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 px-6 py-3 text-center text-sm text-emerald-700">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 px-4 py-3 text-center text-sm text-emerald-700 sm:px-6">
             <Ticket className="h-4 w-4" />
             <span className="font-semibold">
               Ada {promos.length} kode promo aktif!
@@ -79,8 +79,8 @@ export default async function ProdukPage() {
         </div>
       )}
 
-      <section className="relative bg-surface py-16">
-        <div className="mx-auto max-w-6xl px-6">
+      <section className="relative bg-surface py-12 sm:py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <ProductGrid products={products} />
         </div>
       </section>

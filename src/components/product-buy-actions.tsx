@@ -87,7 +87,7 @@ export function ProductBuyActions({
           rel="noopener noreferrer"
           className={cn(
             "inline-flex items-center justify-center gap-2 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark",
-            compact ? "w-full px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
+            compact ? "w-full px-3 py-2.5 text-xs sm:px-4 sm:text-sm" : "px-6 py-3 text-sm",
           )}
         >
           <MessageCircle className="h-4 w-4" />
@@ -140,14 +140,14 @@ export function ProductBuyActions({
   }
 
   return (
-    <div className={cn("flex gap-3", compact ? "flex-col" : "flex-wrap", className)}>
+    <div className={cn("flex gap-3", compact ? "flex-col gap-2" : "flex-wrap", className)}>
       <button
         onClick={onAdd}
         disabled={disabled}
         title={blocked ? "Akun Anda sedang diblokir." : undefined}
         className={cn(
           "inline-flex items-center justify-center gap-2 rounded-full border font-semibold transition-all",
-          compact ? "px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
+          compact ? "px-3 py-2.5 text-xs sm:px-4 sm:text-sm" : "px-6 py-3 text-sm",
           disabled
             ? "cursor-not-allowed border-slate-200 text-slate-400"
             : added
@@ -174,7 +174,7 @@ export function ProductBuyActions({
         title={blocked ? "Akun Anda sedang diblokir." : undefined}
         className={cn(
           "inline-flex items-center justify-center gap-2 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/30 transition-all",
-          compact ? "px-4 py-2.5 text-sm" : "px-6 py-3 text-sm",
+          compact ? "px-3 py-2.5 text-xs sm:px-4 sm:text-sm" : "px-6 py-3 text-sm",
           disabled
             ? "cursor-not-allowed opacity-60"
             : "hover:-translate-y-0.5 hover:bg-primary-dark",

@@ -33,65 +33,81 @@ export function ProductCard({ product }: { product: Product }) {
     : stockBadge(product);
 
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5">
-      {/* Cover */}
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5 sm:rounded-3xl">
+      {/* Cover — rasio 4:3 agar proporsional di kartu 2 kolom (HP). */}
       <Link
         href={`/produk/${product.slug}`}
-        className="relative block aspect-video overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10"
+        className="relative block aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10"
       >
         {product.cover && product.cover !== "default" ? (
           <Image
             src={product.cover}
             alt={product.coverAlt || product.name}
             fill
-            sizes="(max-width: 768px) 100vw, 360px"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-primary/40">
-            <Package className="h-12 w-12" />
+            <Package className="h-8 w-8 sm:h-12 sm:w-12" />
           </div>
         )}
 
-        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-          {product.badge && (
-            <span className="rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-white shadow">
+        {/* Badge: di HP hanya tampilkan 1 badge prioritas agar tidak sesak. */}
+        <div className="absolute top-2 left-2 flex flex-wrap gap-1 sm:top-3 sm:left-3 sm:gap-1.5">
+          {product.badge ? (
+            <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-white shadow sm:px-3 sm:py-1 sm:text-[11px]">
               {product.badge}
             </span>
-          )}
-          {multi && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-white shadow">
+          ) : stock ? (
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] font-semibold text-white shadow sm:px-3 sm:py-1 sm:text-[11px]",
+                stock.kind === "out" ? "bg-slate-800/80" : "bg-rose-500/90",
+              )}
+            >
+              {stock.label}
+            </span>
+          ) : multi ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-white shadow sm:px-3 sm:py-1 sm:text-[11px]">
               <Layers className="h-3 w-3" />
               {product.variants.length} paket
             </span>
-          )}
-          {stock && (
+          ) : null}
+          {/* Badge tambahan (stok/multi) hanya di layar ≥sm. */}
+          {product.badge && stock && (
             <span
               className={cn(
-                "rounded-full px-3 py-1 text-[11px] font-semibold text-white shadow",
+                "hidden rounded-full px-3 py-1 text-[11px] font-semibold text-white shadow sm:inline-block",
                 stock.kind === "out" ? "bg-slate-800/80" : "bg-rose-500/90",
               )}
             >
               {stock.label}
             </span>
           )}
+          {product.badge && !stock && multi && (
+            <span className="hidden items-center gap-1 rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-white shadow sm:inline-flex">
+              <Layers className="h-3 w-3" />
+              {product.variants.length} paket
+            </span>
+          )}
         </div>
       </Link>
 
       {/* Tombol favorit (di luar <Link> agar HTML valid) */}
-      <FavoriteButton slug={product.slug} className="absolute top-3 right-3 z-10" />
+      <FavoriteButton slug={product.slug} className="absolute top-2 right-2 z-10 sm:top-3 sm:right-3" />
 
       {/* Body */}
-      <div className="flex flex-1 flex-col p-5">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-semibold text-primary">
+      <div className="flex flex-1 flex-col p-3 sm:p-5">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-semibold text-primary sm:px-2.5 sm:py-1 sm:text-[11px]">
             <Tag className="h-3 w-3" />
             {PRODUCT_CATEGORY_LABEL[product.category]}
           </span>
           {product.reviewsEnabled !== false &&
             product.ratingSummary &&
             product.ratingSummary.count > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-secondary sm:text-[11px]">
                 <RatingStars value={product.ratingSummary.avg} size="sm" />
                 <span className="text-muted">
                   {product.ratingSummary.avg.toFixed(1)} ({product.ratingSummary.count})
@@ -100,25 +116,26 @@ export function ProductCard({ product }: { product: Product }) {
             )}
         </div>
 
-        <h3 className="mt-3 text-base font-bold text-secondary">
+        <h3 className="mt-2 line-clamp-2 text-sm font-bold text-secondary sm:mt-3 sm:text-base">
           <Link href={`/produk/${product.slug}`} className="hover:text-primary">
             {product.name}
           </Link>
         </h3>
-        <p className="mt-1.5 line-clamp-2 flex-1 text-sm leading-relaxed text-muted">
+        {/* Deskripsi hanya tampil di layar ≥sm (di HP cukup nama produk). */}
+        <p className="mt-1.5 line-clamp-2 hidden flex-1 text-sm leading-relaxed text-muted sm:block">
           {product.tagline || product.description}
         </p>
 
-        <div className="mt-4 flex items-end justify-between">
-          <div>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-x-2 sm:mt-4">
+          <div className="min-w-0">
             {hasDiscount && (
-              <span className="block text-xs text-muted line-through">
+              <span className="block text-[11px] text-muted line-through sm:text-xs">
                 {formatPrice(product.originalPrice!)}
               </span>
             )}
             <span
               className={cn(
-                "text-lg font-bold",
+                "block truncate text-sm font-bold sm:text-lg",
                 multi || product.price ? "text-secondary" : "text-primary",
               )}
             >
@@ -127,7 +144,7 @@ export function ProductCard({ product }: { product: Product }) {
           </div>
           <Link
             href={`/produk/${product.slug}`}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            className="hidden items-center gap-1 text-xs font-semibold text-primary hover:underline sm:inline-flex"
           >
             {multi ? "Pilih paket" : "Detail"}
             <ArrowUpRight className="h-3.5 w-3.5" />
@@ -137,13 +154,13 @@ export function ProductCard({ product }: { product: Product }) {
         {multi ? (
           <Link
             href={`/produk/${product.slug}`}
-            className="mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+            className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary sm:mt-4 sm:gap-2 sm:px-6 sm:py-3 sm:text-sm"
           >
             <Layers className="h-4 w-4" />
-            Lihat {product.variants.length} Paket
+            {product.variants.length} Paket
           </Link>
         ) : (
-          <ProductBuyActions product={product} className="mt-4" />
+          <ProductBuyActions product={product} compact className="mt-3 sm:mt-4" />
         )}
       </div>
     </div>
