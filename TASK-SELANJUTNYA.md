@@ -26,6 +26,8 @@
 >
 > 🔐 **Anti-enumeration kupon ✅ (KP-M4, 2026-10-13):** rate-limit per-IP + tolak cepat kode non-wajar + observability (kode disamarkan) di `/api/coupons/validate`.
 >
+> 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`docs/2026-10-14-tugas-manual-pemilik.md`](docs/2026-10-14-tugas-manual-pemilik.md)** — M1 GSC sitemap · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat · M6 Firestore rules. Centang saat beres.
+>
 > 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend, submit sitemap GSC). Lihat §"STATUS & PETA SEKARANG".
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
