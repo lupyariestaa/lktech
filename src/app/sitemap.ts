@@ -44,6 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE.url}/promo`, lastModified: stable, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE.url}/portofolio`, lastModified: stable, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE.url}/blog`, lastModified: latestContentDate, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE.url}/tentang`, lastModified: stable, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE.url}/kontak`, lastModified: stable, changeFrequency: "yearly", priority: 0.7 },
   ];
 

@@ -11,6 +11,7 @@ export const NAV_LINKS = [
   { label: "Layanan", href: "/layanan" },
   { label: "Produk", href: "/produk" },
   { label: "Portofolio", href: "/portofolio" },
+  { label: "Tentang", href: "/tentang" },
   { label: "Blog", href: "/blog" },
   { label: "Harga", href: "/harga" },
   { label: "Promo", href: "/promo" },
@@ -25,6 +26,7 @@ export const PAGE_NAV_LINKS = [
   { label: "Harga", href: "/harga" },
   { label: "Promo", href: "/promo" },
   { label: "Portofolio", href: "/portofolio" },
+  { label: "Tentang", href: "/tentang" },
   { label: "Blog", href: "/blog" },
   { label: "Kontak", href: "/kontak" },
 ];
@@ -250,6 +252,51 @@ export const PROJECTS: import("@/lib/project-types").Project[] = [
     techStack: ["Next.js", "TypeScript", "Firebase Auth", "Firestore"],
   },
 ];
+
+/**
+ * Konten halaman "Tentang Kami" (`/tentang`). Statis & jujur — tanpa klaim angka
+ * yang belum terverifikasi (lihat prinsip kejujuran `STATS`). Edit di sini bila
+ * cerita/misi/visi/nilai berubah.
+ */
+export const ABOUT = {
+  /** Paragraf cerita (ditampilkan berurutan). */
+  story: [
+    `${COMPANY.name} lahir dari kegelisahan sederhana: banyak bisnis lokal punya produk bagus, tetapi belum punya kehadiran digital yang layak. Kami hadir untuk menutup jarak itu.`,
+    `Berbasis di ${COMPANY.location}, kami mengerjakan website, aplikasi mobile, dan konsultasi teknologi dengan pendekatan personal. Kami percaya solusi terbaik lahir dari pemahaman mendalam atas kebutuhan — bukan sekadar mengejar tren.`,
+    `Nama kami menempel pada hasil, bukan pada janji. Setiap proyek dibangun rapi, aman, dan mudah dikembangkan, sehingga bisa tumbuh bersama bisnis Anda.`,
+  ],
+  mission:
+    "Membantu bisnis dan individu bertumbuh lewat solusi digital yang tepat guna, terjangkau, dan berkualitas.",
+  vision:
+    "Menjadi mitra teknologi yang paling dipercaya bagi bisnis lokal di Indonesia — tempat ide digital berubah menjadi hasil nyata.",
+  /** Nilai & prinsip kerja (tampil sebagai kartu di /tentang). */
+  values: [
+    {
+      title: "Jujur & Transparan",
+      description:
+        "Harga, progres, dan rekomendasi teknis disampaikan apa adanya — tanpa jargun yang membingungkan.",
+      icon: "shield",
+    },
+    {
+      title: "Kualitas Tanpa Kompromi",
+      description:
+        "Kami menulis kode yang rapi, aman, dan mudah dirawat, agar produk Anda tahan lama.",
+      icon: "code",
+    },
+    {
+      title: "Berpusat pada Manusia",
+      description:
+        "Teknologi hanya alat. Tujuan akhirnya selalu: memudahkan orang dan menumbuhkan bisnis Anda.",
+      icon: "heart",
+    },
+    {
+      title: "Tepat Waktu",
+      description:
+        "Proses yang terstruktur dan komunikasi yang jelas membuat pekerjaan selesai sesuai kesepakatan.",
+      icon: "zap",
+    },
+  ],
+} as const;
 
 export const WHY_US = [
   {

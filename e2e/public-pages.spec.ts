@@ -14,6 +14,7 @@ const PUBLIC_PAGES: Array<{ path: string; expectText: RegExp }> = [
   { path: "/layanan", expectText: /layanan/i },
   { path: "/portofolio", expectText: /portofolio|proyek/i },
   { path: "/blog", expectText: /blog|artikel/i },
+  { path: "/tentang", expectText: /tentang|LKTech/i },
   { path: "/kontak", expectText: /kontak|hubungi/i },
   { path: "/promo", expectText: /promo|kupon/i },
   { path: "/masuk", expectText: /masuk|login/i },
