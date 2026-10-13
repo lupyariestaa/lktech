@@ -221,13 +221,14 @@ Mengubah pembeli sekali menjadi pelanggan berulang, dan pengunjung menjadi audie
 - ✅ `rate-limit.ts` kini mendukung **Upstash Redis** (opsional, fail-safe → fallback in-memory).
 - ⏳ **Webhook Resend** (`delivered/bounced/complained`) — ditunda (butuh domain terverifikasi, backlog `EM-P2`).
 
-### 4.3 [P2] Agregasi Harian Analitik — ⏭️ DITUNDA
-- `analytics_daily/{date}` (backlog `AN-P3`) — optimasi skala; belum diperlukan kini.
+### 4.3 [P2] Agregasi Harian Analitik — ✅ SELESAI
+- `analytics_daily/{date}` (backlog `AN-P3`) — diimplementasikan sebagai materialisasi
+  harian + jalur baca cepat (fallback LIVE). Lihat `docs/2026-10-13-analytics-daily.md`.
 
-### 4.4 [P3] Uji Otomatis & CI — ✅ CI
-- Unit test rumus & util (10 suite, `npm run test:*`).
+### 4.4 [P3] Uji Otomatis & CI — ✅ SELESAI
+- Unit test rumus & util (banyak suite, `npm run test:*`).
 - ✅ **CI GitHub Actions** (`tsc` + `lint` + `test` + `build` per push/PR).
-- E2E Playwright — ditunda.
+- ✅ **E2E Playwright** (smoke halaman publik + aset) — lihat `docs/2026-10-13-e2e-playwright.md`.
 
 ### 4.5 [P3] Pengerasan & DX — ✅ (env fail-loud)
 - ✅ Validasi env "fail loud" saat startup (`env-check.ts` + `instrumentation.ts`).
@@ -256,7 +257,7 @@ Gelombang dibuat agar tiap rilis **mandiri & bernilai**, dengan ketergantungan d
 
 ### 🌊 Gelombang 4 — "Diferensiasi & Skala"
 10. **[P2] Notifikasi WhatsApp/Web Push**, **PWA**, **multi-bahasa**.
-11. **[P2] Agregasi harian analitik**, **CI + E2E**.
+11. ~~**[P2] Agregasi harian analitik**, **CI + E2E**~~ — ✅ selesai (2026-10-13).
 
 ---
 
@@ -305,13 +306,13 @@ NILAI RENDAH ──────────────────────�
 
 | Kode | Item | Alasan ditunda |
 | --- | --- | --- |
-| `AN-P3` | Agregasi harian `analytics_daily` | Perlu perubahan model tulis + migrasi |
+| `AN-P3` | Agregasi harian `analytics_daily` | ✅ SELESAI (2026-10-13) — materialisasi + fallback LIVE |
 | `KP-P2` | Kupon lanjutan (`appliesToSlugs`/`minItems`) | Menunggu bundling (Tema 1.2) |
 | `KP-P3`/`XL-3` | Rate-limit terdistribusi | Perlu akun Upstash |
 | `EM-P2` | Outbox + webhook Resend | Perlu domain terverifikasi +
  webhook |
 | `EM-P3` | Pratinjau template email | Nice-to-have |
-| `KP-M4` | Anti-enumeration kode kupon | Perlu rate-limit terdistribusi |
+| `KP-M4` | Anti-enumeration kode kupon | ✅ SELESAI (2026-10-13) — rate-limit IP + tolak cepat + observability |
 
 ---
 

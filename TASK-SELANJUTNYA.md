@@ -20,7 +20,13 @@
 > (`app/manifest.ts`), service worker vanilla (`public/sw.js`), halaman `/offline`,
 > ikon installable. **Web Push ditunda** (butuh kunci VAPID).
 >
-> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** Inisiatif **SEO & Konten Mesin (S0–S7) ✅ SELESAI (kode)**. Kandidat lanjutan (dari `docs/2026-10-06-roadmap-pengembangan.md`): **Multi-bahasa (ID/EN)** · **PWA + Web Push** · **Webhook Resend** (deliverability) · **Agregasi harian analitik** · **E2E test (Playwright)**. Atau selesaikan **langkah manual SEO** (submit sitemap, pantau GSC). Lihat §"STATUS & PETA SEKARANG".
+> 📊 **Agregasi Harian Analitik ✅ SELESAI (kode, 2026-10-13):** `docs/2026-10-13-analytics-daily.md` — koleksi `analytics_daily/{yyyy-mm-dd}` + cron `/api/cron/analytics-daily` (tiap jam) + jalur baca cepat (fallback otomatis ke LIVE). Kill-switch `ANALYTICS_DAILY=off`.
+>
+> 🧪 **E2E Playwright ✅ SELESAI (kode + CI, 2026-10-13):** `docs/2026-10-13-e2e-playwright.md` — 16 smoke test halaman publik + aset/endpoint kunci, jalan di CI setelah build.
+>
+> 🔐 **Anti-enumeration kupon ✅ (KP-M4, 2026-10-13):** rate-limit per-IP + tolak cepat kode non-wajar + observability (kode disamarkan) di `/api/coupons/validate`.
+>
+> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend, submit sitemap GSC). Lihat §"STATUS & PETA SEKARANG".
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -108,8 +114,8 @@
 **Sisa (LANGKAH MANUAL pemilik):** submit sitemap di GSC, (opsional) env GA4/GSC,
 pantau 2–4 minggu, validasi Rich Results Test.
 
-**Inisiatif berikutnya (kandidat):** Multi-bahasa, PWA+Web Push, Webhook Resend,
-agregasi harian, E2E test.
+**Inisiatif berikutnya (kandidat):** Multi-bahasa, Web Push (VAPID), Webhook Resend, langkah manual pemilik.
+**✅ Selesai sesi ini:** agregasi harian analitik (`analytics_daily`), E2E Playwright + CI, anti-enumeration kupon (KP-M4).
 
 ---
 
