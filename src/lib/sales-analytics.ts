@@ -15,6 +15,8 @@ import {
   type TopProduct,
 } from "@/lib/sales-analytics-types";
 import { ANALYTICS_TIMEZONE, computeCompletionRate, computePaymentConversion } from "@/lib/metrics-spec";
+import { loadExistingDocs, windowDayKeys, dayStartMsFromKey } from "@/lib/analytics-daily";
+import { mergeDailyAggregates } from "@/lib/analytics-daily-pure";
 
 export type {
   AnalyticsMode,
@@ -102,6 +104,106 @@ function startOfWindow(days: number, timeZone: string): number {
   return nowMidnight - (days - 1) * 86_400_000;
 }
 
+/**
+ * `AN-P3` — jalur CEPAT dari agregasi harian. Mengembalikan `SalesAnalytics`
+ * bila SEMUA hari (jendela kini + sebelumnya) tersedia di `analytics_daily`;
+ * jika ada hari hilang → `null` (pemanggil memakai perhitungan LIVE).
+ */
+async function getSalesAnalyticsFastPath(opts: {
+  days: number;
+  mode: AnalyticsMode;
+}): Promise<SalesAnalytics | null> {
+  // `AN-P3` — kill-switch darurat. Default AKTIF; set `ANALYTICS_DAILY=off`
+  // untuk memaksa jalur LIVE. Fallback tetap menjamin kebenaran: bila ada hari
+  // yang belum teragregasi, fungsi mengembalikan null → perhitungan live.
+  if (process.env.ANALYTICS_DAILY === "off") return null;
+
+  const { days, mode } = opts;
+  const nowStartKey = dayKeyInTz(new Date(), ANALYTICS_TIMEZONE);
+  const nowStartMs = dayStartMsFromKey(nowStartKey);
+  const startMs = nowStartMs - (days - 1) * 86_400_000;
+  const prevStartMs = startMs - days * 86_400_000;
+
+  const windowKeys = windowDayKeys(days);
+  const prevKeys = windowDayKeys(days, new Date(prevStartMs));
+  const allKeys = [...windowKeys, ...prevKeys];
+
+  const docs = await loadExistingDocs(allKeys);
+  const current = mergeDailyAggregates(windowKeys, docs, mode);
+  const previous = mergeDailyAggregates(prevKeys, docs, mode);
+  if (!current || !previous) return null;
+
+  const series: SalesPoint[] = current.points.map((p) => {
+    const d = new Date(dayStartMsFromKey(p.dateISO));
+    return {
+      dateISO: p.dateISO,
+      label: dayLabel(d, ANALYTICS_TIMEZONE),
+      full: dayFullLabel(d, ANALYTICS_TIMEZONE),
+      omzet: p.omzet,
+      orders: p.orders,
+    };
+  });
+
+  const statusBreakdown = emptyStatusBreakdown();
+  for (const s of ORDER_STATUSES) {
+    const n = current.statusBreakdown[s] ?? 0;
+    statusBreakdown[s] = n;
+  }
+
+  return buildAnalyticsResult({
+    days,
+    mode,
+    series,
+    statusBreakdown,
+    topProducts: current.topProducts,
+    omzetTotal: current.omzetTotal,
+    ordersCounted: current.ordersCounted,
+    prevOmzet: previous.omzetTotal,
+    prevOrders: previous.ordersCounted,
+  });
+}
+
+/** Susun keluaran akhir dari agregat (dipakai jalur cepat & jalur live). */
+function buildAnalyticsResult(input: {
+  days: number;
+  mode: AnalyticsMode;
+  series: SalesPoint[];
+  statusBreakdown: Record<OrderStatus, number>;
+  topProducts: TopProduct[];
+  omzetTotal: number;
+  ordersCounted: number;
+  prevOmzet: number;
+  prevOrders: number;
+}): SalesAnalytics {
+  const { statusBreakdown, omzetTotal, ordersCounted, prevOmzet, prevOrders } = input;
+  const aov = ordersCounted > 0 ? Math.round(omzetTotal / ordersCounted) : 0;
+  const prevAov = prevOrders > 0 ? Math.round(prevOmzet / prevOrders) : 0;
+  const pct = (curr: number, prev: number): number | null =>
+    prev > 0 ? (curr - prev) / prev : null;
+
+  return {
+    days: input.days,
+    mode: input.mode,
+    series: input.series,
+    totals: {
+      omzet: omzetTotal,
+      orders: ordersCounted,
+      aov,
+      completed: statusBreakdown.selesai,
+      cancelled: statusBreakdown.dibatalkan,
+      completionRate: computeCompletionRate(statusBreakdown),
+    },
+    deltas: {
+      omzet: pct(omzetTotal, prevOmzet),
+      orders: pct(ordersCounted, prevOrders),
+      aov: pct(aov, prevAov),
+    },
+    statusBreakdown,
+    payment: computePaymentConversion(statusBreakdown),
+    topProducts: input.topProducts,
+  };
+}
+
 /** Hitung analitik penjualan untuk `days` hari terakhir. */
 export async function getSalesAnalytics(opts?: {
   days?: number;
@@ -132,6 +234,14 @@ export async function getSalesAnalytics(opts?: {
   const startMs = startOfWindow(days, ANALYTICS_TIMEZONE);
   const prevStartMs = startMs - days * 86_400_000;
   const cutoffISO = new Date(prevStartMs - 86_400_000).toISOString();
+
+  // === `AN-P3` — jalur CEPAT via agregasi harian (fallback otomatis ke live) ===
+  // Bila cron sudah mengisi `analytics_daily` untuk SEMUA hari jendela (kini +
+  // sebelumnya), hasilkan analitik dari agregat — tanpa memindai ulang `orders`.
+  // Bila ada hari hilang, fungsi mengembalikan null → jalur LIVE di bawah dipakai
+  // sehingga angka SELALU benar (bahkan tanpa cron berjalan sama sekali).
+  const fast = await getSalesAnalyticsFastPath({ days, mode });
+  if (fast) return fast;
 
   const snap = await db
     .collection("orders")
@@ -207,41 +317,21 @@ export async function getSalesAnalytics(opts?: {
     });
   }
 
-  const completed = statusBreakdown.selesai;
-  const cancelled = statusBreakdown.dibatalkan;
-  // `AN-C1`: tingkat penyelesaian dihitung dari jendela (bukan seluruh riwayat).
-  const completionRate = computeCompletionRate(statusBreakdown);
-
   const topProducts = Array.from(productMap.values())
     .sort((a, b) => b.omzet - a.omzet || b.units - a.units)
     .slice(0, 10);
 
-  const aov = ordersCounted > 0 ? Math.round(omzetTotal / ordersCounted) : 0;
-  const prevAov = prevOrders > 0 ? Math.round(prevOmzet / prevOrders) : 0;
-  const pct = (curr: number, prev: number): number | null =>
-    prev > 0 ? (curr - prev) / prev : null;
-
-  return {
+  return buildAnalyticsResult({
     days,
     mode,
     series,
-    totals: {
-      omzet: omzetTotal,
-      orders: ordersCounted,
-      aov,
-      completed,
-      cancelled,
-      completionRate,
-    },
-    deltas: {
-      omzet: pct(omzetTotal, prevOmzet),
-      orders: pct(ordersCounted, prevOrders),
-      aov: pct(aov, prevAov),
-    },
     statusBreakdown,
-    payment: computePaymentConversion(statusBreakdown),
     topProducts,
-  };
+    omzetTotal,
+    ordersCounted,
+    prevOmzet,
+    prevOrders,
+  });
 }
 
 /** Seri kosong (bila Admin SDK tak tersedia) — tetap punya struktur. */

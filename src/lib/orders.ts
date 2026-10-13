@@ -18,8 +18,21 @@ import {
   type OrdersFilter,
   type OrdersSort,
 } from "@/lib/orders-filter-pure";
+import { dayKeyInTz as analyticsDayKey, dropDayAggregate } from "@/lib/analytics-daily";
 
 const COLLECTION = "orders";
+
+/**
+ * `AN-P3` — tandai agregat harian satu hari "kotor" (hapus) agar dihitung ulang.
+ * Kunci hari diturunkan dari `createdAtISO` order (zona `Asia/Jakarta`), sama
+ * dengan yang dipakai `analytics_daily`. Non-fatal & fire-and-forget.
+ */
+function invalidateAnalyticsForOrder(createdAtISO: string | undefined): void {
+  if (!createdAtISO) return;
+  const d = new Date(createdAtISO);
+  if (Number.isNaN(d.getTime())) return;
+  void dropDayAggregate(analyticsDayKey(d));
+}
 
 /** Jumlah item default per halaman admin. */
 export const ORDERS_PAGE_SIZE = 25;
@@ -57,6 +70,7 @@ export async function createOrder(
 
   const ref = await db.collection(COLLECTION).add(payload);
   invalidateOrdersSummaryCache();
+  invalidateAnalyticsForOrder(nowISO);
   return normalizeOrder({ ...payload, id: ref.id, createdAtISO: nowISO });
 }
 
@@ -547,15 +561,18 @@ export async function updateOrderStatus(
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
   const ref = db.collection(COLLECTION).doc(id);
+  let createdAtISO: string | undefined;
 
   const result = await db.runTransaction(async (tx) => {
     const doc = await tx.get(ref);
     if (!doc.exists) {
       return { previousStatus: null, changed: false, notFound: true };
     }
+    const data = doc.data() as Record<string, unknown>;
+    createdAtISO = String(data.createdAtISO ?? "");
     const previousStatus = normalizeOrder({
       id: doc.id,
-      ...(doc.data() as Record<string, unknown>),
+      ...data,
     }).status;
 
     if (previousStatus === status) {
@@ -569,7 +586,10 @@ export async function updateOrderStatus(
     });
     return { previousStatus, changed: true };
   });
-  if (result.changed) invalidateOrdersSummaryCache();
+  if (result.changed) {
+    invalidateOrdersSummaryCache();
+    invalidateAnalyticsForOrder(createdAtISO);
+  }
   return result;
 }
 
@@ -688,7 +708,10 @@ export async function markOrderPaid(
       });
       return { applied: true, order };
     });
-    if (result.applied) invalidateOrdersSummaryCache();
+    if (result.applied) {
+      invalidateOrdersSummaryCache();
+      invalidateAnalyticsForOrder(result.order?.createdAt);
+    }
     return result;
   } catch (err) {
     console.error("[orders] markOrderPaid gagal:", id, err);
@@ -782,8 +805,13 @@ export async function getOrdersForDay(dateKey: string): Promise<Order[]> {
 export async function deleteOrder(id: string): Promise<void> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const doc = await db.collection(COLLECTION).doc(id).get();
+  const createdAtISO = doc.exists
+    ? String((doc.data() as Record<string, unknown>).createdAtISO ?? "")
+    : "";
   await db.collection(COLLECTION).doc(id).delete();
   invalidateOrdersSummaryCache();
+  invalidateAnalyticsForOrder(createdAtISO);
 }
 
 // ===== Kedaluwarsa otomatis (FASE P2) =====
@@ -870,7 +898,10 @@ export async function markOrderExpired(
         }),
       };
     });
-    if (result.applied) invalidateOrdersSummaryCache();
+    if (result.applied) {
+      invalidateOrdersSummaryCache();
+      invalidateAnalyticsForOrder(result.order?.createdAt);
+    }
     return result;
   } catch (err) {
     console.error("[orders] markOrderExpired gagal:", id, err);

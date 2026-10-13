@@ -13,12 +13,13 @@ on:
     - cron: "30 */3 * * *"     # tiap 3 jam        → cart-reminders
     - cron: "0 2 * * *"        # harian 09:00 WIB  → wishlist-alerts
     - cron: "0 1 * * 1"        # Senin 08:00 WIB   → weekly-report
+    - cron: "45 * * * *"       # tiap jam (geser)  → analytics-daily
   workflow_dispatch:
     inputs:
       target:
         description: "Endpoint yang dipanggil manual"
         type: choice
-        options: [expire-orders, articles, cart-reminders, wishlist-alerts, weekly-report]
+        options: [expire-orders, articles, cart-reminders, wishlist-alerts, weekly-report, analytics-daily]
         default: expire-orders
 
 # Jangan tumpuk; cukup satu jalan.
@@ -64,3 +65,10 @@ jobs:
           curl -fsS --max-time 120 -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "https://lktech.vercel.app/api/cron/weekly-report"
+
+      - name: analytics-daily
+        if: github.event.schedule == '45 * * * *' || inputs.target == 'analytics-daily'
+        run: |
+          curl -fsS --max-time 120 -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://lktech.vercel.app/api/cron/analytics-daily"

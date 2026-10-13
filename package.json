@@ -32,6 +32,7 @@
     "test:locations": "node --experimental-strip-types --test scripts/locations.test.ts",
     "test:search-console": "node --experimental-strip-types --test scripts/search-console.test.ts",
     "test:pwa": "node --experimental-strip-types --test scripts/pwa.test.ts",
+    "test:analytics-daily": "node --experimental-strip-types --test scripts/analytics-daily.test.ts",
     "test:payment": "node --experimental-strip-types --test scripts/payment-metrics.test.ts",
     "test:order-schema": "node --experimental-strip-types --test scripts/order-schema.test.ts",
     "test:stock": "node --experimental-strip-types --test scripts/product-stock.test.ts",

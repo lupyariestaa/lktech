@@ -51,6 +51,7 @@ jobs:
           npm run test:wishlist
           npm run test:blog
           npm run test:pwa
+          npm run test:analytics-daily
 
       - name: Build
         run: npm run build
