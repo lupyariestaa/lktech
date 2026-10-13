@@ -12,10 +12,14 @@ cerita, misi, visi, dan nilai — sekaligus memperkuat sinyal kepercayaan
 
 - Rute baru `/tentang` (server component, ISR `revalidate = 3600`).
 - Konten statis di `src/lib/content.ts` (`ABOUT`): `story`, `mission`,
-  `vision`, `values`.
-- Section: hero, cerita + misi/visi, nilai (kartu ikon), teknologi (marquee
-  terkelola), statistik (tersembunyi bila masih default), CTA (`CtaContact`).
-- Metadata (title/description/canonical/OG) + JSON-LD `AboutPage` + breadcrumb.
+  `vision`, `values`, `principles`, `faqs`.
+- Section: hero, cerita + misi/visi, **layanan ringkas** (`Services`, sumber
+  tunggal `@/lib/services`), nilai (kartu ikon), **prinsip teknis** (kartu ikon),
+  **cara kerja** (`Process`, dari konten `process`), teknologi (marquee
+  terkelola), statistik (tersembunyi bila masih default), **FAQ** khusus
+  (`FaqAccordion` + JSON-LD `FAQPage`), CTA (`CtaContact`).
+- Metadata (title/description/canonical/OG) + JSON-LD `AboutPage` +
+  `BreadcrumbList` + `FAQPage`.
 - Integrasi: `NAV_LINKS` + `PAGE_NAV_LINKS` (navbar & footer), `sitemap.ts`,
   smoke E2E `e2e/public-pages.spec.ts`.
 

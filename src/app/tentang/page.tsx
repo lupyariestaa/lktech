@@ -7,6 +7,9 @@ import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/icon";
 import { Stats } from "@/components/sections/stats";
 import { Technologies } from "@/components/sections/technologies";
+import { Services } from "@/components/sections/services";
+import { Process } from "@/components/sections/process";
+import { FaqAccordion } from "@/components/faq-accordion";
 import { CtaContact } from "@/components/sections/cta-contact";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { ButtonLink } from "@/components/ui/button";
@@ -14,7 +17,7 @@ import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { ABOUT, COMPANY } from "@/lib/content";
 import { SITE } from "@/lib/site";
-import { buildBreadcrumb, type JsonLd } from "@/lib/structured-data-pure";
+import { buildBreadcrumb, buildFaqPage, type JsonLd } from "@/lib/structured-data-pure";
 import { JsonLdScript } from "@/components/json-ld-script";
 
 export const revalidate = 3600;
@@ -57,9 +60,13 @@ export default async function TentangPage() {
     },
   };
 
+  const faqLd = buildFaqPage(ABOUT.faqs);
+
   return (
     <>
-      <JsonLdScript node={[breadcrumbLd, aboutLd].filter((n): n is JsonLd => n !== null)} />
+      <JsonLdScript
+        node={[breadcrumbLd, aboutLd, faqLd].filter((n): n is JsonLd => n !== null)}
+      />
 
       <PageHero
         breadcrumbs={[{ label: "Beranda", href: "/" }, { label: "Tentang Kami" }]}
@@ -142,8 +149,11 @@ export default async function TentangPage() {
         </div>
       </section>
 
+      {/* Layanan ringkas (sumber tunggal: SERVICES) */}
+      <Services />
+
       {/* Nilai & prinsip */}
-      <section className="relative bg-surface py-20">
+      <section className="relative bg-white py-20">
         <div className="mx-auto max-w-6xl px-6">
           <SectionHeading
             eyebrow="Nilai Kami"
@@ -175,11 +185,69 @@ export default async function TentangPage() {
         </div>
       </section>
 
+      {/* Prinsip teknis — "cara kami beda" */}
+      <section className="relative bg-surface py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <SectionHeading
+            eyebrow="Cara Kami Bekerja"
+            title={
+              <>
+                Standar yang membuat hasilnya{" "}
+                <span className="text-gradient">beda</span>
+              </>
+            }
+            description="Bukan sekadar jadi. Kami membangun dengan standar yang membuat produk Anda tahan lama dan siap tumbuh."
+          />
+
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {ABOUT.principles.map((item, i) => (
+              <Reveal key={item.title} delay={i * 0.06}>
+                <div className="group flex h-full gap-4 rounded-3xl border border-slate-100 bg-white p-6 transition-all duration-300 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary-50 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
+                    <Icon name={item.icon} className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-secondary">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Cara kerja / alur (sumber tunggal: konten `process`) */}
+      <Process />
+
       {/* Teknologi (marquee, dari konten terkelola) */}
       <Technologies />
 
       {/* Statistik kumulatif — tersembunyi otomatis bila masih angka contoh */}
       <Stats />
+
+      {/* FAQ khusus tentang kami */}
+      <section className="relative bg-white py-20">
+        <div className="mx-auto max-w-3xl px-6">
+          <SectionHeading
+            eyebrow="FAQ"
+            title={
+              <>
+                Pertanyaan soal{" "}
+                <span className="text-gradient">kami</span>
+              </>
+            }
+            description="Hal-hal yang paling sering ditanyakan sebelum mulai bekerja sama."
+          />
+          <Reveal className="mt-12">
+            <FaqAccordion items={[...ABOUT.faqs]} />
+          </Reveal>
+        </div>
+      </section>
 
       {/* Penutup + CTA */}
       <section className="relative bg-white py-20">

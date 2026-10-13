@@ -296,6 +296,80 @@ export const ABOUT = {
       icon: "zap",
     },
   ],
+  /**
+   * Prinsip teknis — "cara kami beda" saat membangun produk. Tampil sebagai
+   * kartu di `/tentang`. Fokus pada standar kerja, bukan klaim angka.
+   */
+  principles: [
+    {
+      title: "Kode Bersih & Mudah Dirawat",
+      description:
+        "Struktur rapi, penamaan jelas, dan tanpa utang teknis tersembunyi — agar produk mudah dikembangkan siapa pun yang melanjutkan.",
+      icon: "code",
+    },
+    {
+      title: "Aman Sejak Awal",
+      description:
+        "Validasi di sisi server, data sensitif tidak pernah bocor, dan akses dijaga di setiap titik — bukan ditambal belakangan.",
+      icon: "shield",
+    },
+    {
+      title: "Cepat & Ringan",
+      description:
+        "Halaman dioptimalkan agar dimuat cepat di koneksi seadanya, karena kecepatan berpengaruh langsung pada pengalaman dan konversi.",
+      icon: "zap",
+    },
+    {
+      title: "Ramah Aksesibilitas",
+      description:
+        "Kontras layak, navigasi keyboard, dan konten yang terbaca — supaya semua orang bisa memakainya, bukan hanya sebagian.",
+      icon: "heart",
+    },
+    {
+      title: "Siap Tumbuh",
+      description:
+        "Fondasi yang tidak mengunci Anda: mudah menambah fitur, menyambung layanan, dan menyesuaikan saat kebutuhan berubah.",
+      icon: "trending",
+    },
+    {
+      title: "Terukur & Terpantau",
+      description:
+        "Kinerja dan kesalahan situs dipantau, sehingga masalah ketahuan lebih awal dan keputusan diambil berbasis data.",
+      icon: "chartBar",
+    },
+  ],
+  /** FAQ khusus halaman "Tentang Kami". */
+  faqs: [
+    {
+      question: "Apa itu LKTech dan apa yang dikerjakan?",
+      answer:
+        "LKTech adalah rumah pengembangan digital yang mengerjakan pembuatan website, aplikasi mobile, dan konsultasi teknologi. Kami membantu bisnis dan individu mengubah kebutuhan menjadi produk digital yang benar-benar dipakai.",
+    },
+    {
+      question: "LKTech melayani klien dari mana saja?",
+      answer: `Berbasis di ${COMPANY.location}, kami mengerjakan proyek secara remote untuk klien di seluruh Indonesia. Komunikasi berjalan lewat WhatsApp, telepon, atau video call sesuai kesepakatan.`,
+    },
+    {
+      question: "Bagaimana alur kerja sama LKTech?",
+      answer:
+        "Empat langkah ringkas: konsultasi kebutuhan, desain solusi, pengembangan, lalu rilis beserta dukungan. Anda tahu progres di setiap tahap — tanpa kejutan.",
+    },
+    {
+      question: "Berapa lama pengerjaan sebuah proyek?",
+      answer:
+        "Durasi bergantung ruang lingkup. Sebelum mulai, kami beri estimasi waktu yang jelas setelah kebutuhan disepakati, dan kami pegang komitmen itu.",
+    },
+    {
+      question: "Apakah ada dukungan setelah proyek selesai?",
+      answer:
+        "Ya. Kami menyediakan pendampingan awal setelah rilis — memastikan produk berjalan lancar dan membantu penyesuaian yang dibutuhkan. Penawaran dukungan lanjutan bisa dibicarakan sesuai kebutuhan.",
+    },
+    {
+      question: "Bagaimana cara memulai kerja sama?",
+      answer:
+        "Cukup hubungi kami lewat WhatsApp atau halaman kontak. Ceritakan kebutuhan Anda, lalu kami bantu tentukan langkah dan solusi paling tepat — tanpa komitmen di awal.",
+    },
+  ],
 } as const;
 
 export const WHY_US = [
