@@ -628,3 +628,30 @@ export function aggregateCouponStats(
   }
   return stats;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Anti-enumeration kode kupon (`KP-M4`) — murni & teruji                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Apakah kode kupon "berbentuk wajar" menurut aturan yang sama dengan form admin
+ * (huruf & angka saja, 3–40 karakter). Dipakai sebagai gerbang RINGAN anti
+ * enumeration: kode yang jelas-jelas tidak valid ditolak cepat tanpa menyentuh
+ * DB, sehingga pemindaian massal tidak membanjiri lookup.
+ */
+export function isPlausibleCouponCode(raw: string): boolean {
+  const code = raw.trim();
+  return code.length >= 3 && code.length <= 40 && /^[A-Za-z0-9]+$/.test(code);
+}
+
+/**
+ * Format kode kupon untuk observability TANPA membocorkan nilainya (`KP-M4`).
+ * Menyisakan 2 karakter awal + panjang, sisanya disamarkan — cukup untuk melihat
+ * pola percobaan (enumeration) tanpa mencatat rahasia.
+ */
+export function maskCouponCode(raw: string): string {
+  const code = raw.trim().toUpperCase();
+  if (code.length === 0) return "";
+  if (code.length <= 2) return "*".repeat(code.length);
+  return `${code.slice(0, 2)}${"*".repeat(Math.min(6, code.length - 2))}`;
+}

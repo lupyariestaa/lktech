@@ -5,6 +5,8 @@ import {
   validateCoupon,
   validateCouponForm,
   aggregateCouponStats,
+  isPlausibleCouponCode,
+  maskCouponCode,
   type ValidatableCoupon,
 } from "../src/lib/coupon-pure.ts";
 
@@ -336,4 +338,21 @@ test("aggregateCouponStats: kupon berbeda dipisah", () => {
   ]);
   assert.equal(stats.a.totalDiscount, 1_000);
   assert.equal(stats.b.totalDiscount, 2_000);
+});
+
+/* --------------------- anti-enumeration (KP-M4) ------------------------------ */
+
+test("isPlausibleCouponCode: terima kode wajar, tolak yang jelas invalid", () => {
+  assert.equal(isPlausibleCouponCode("PROMO2026"), true);
+  assert.equal(isPlausibleCouponCode(" abc123 "), true); // trim dulu
+  assert.equal(isPlausibleCouponCode("ab"), false); // < 3
+  assert.equal(isPlausibleCouponCode("PROMO 2026"), false); // spasi
+  assert.equal(isPlausibleCouponCode("PROMO-2026"), false); // simbol
+  assert.equal(isPlausibleCouponCode("A".repeat(41)), false); // > 40
+});
+
+test("maskCouponCode: sembunyikan nilai, sisakan awalan & panjang aman", () => {
+  assert.equal(maskCouponCode("PROMO2026"), "PR******");
+  assert.equal(maskCouponCode("AB"), "**");
+  assert.equal(maskCouponCode(""), "");
 });

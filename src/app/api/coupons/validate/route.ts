@@ -7,7 +7,9 @@ import {
   validateCoupon,
 } from "@/lib/coupons";
 import { getUserProfile } from "@/lib/user-profile";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { isPlausibleCouponCode, maskCouponCode } from "@/lib/coupon-pure";
+import { logEvent } from "@/lib/observability";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -16,6 +18,12 @@ export const dynamic = "force-dynamic";
 /** Batas validasi kupon per user dalam satu jendela waktu. */
 const RATE_LIMIT = 40;
 const RATE_WINDOW_MS = 10 * 60 * 1000;
+/**
+ * `KP-M4` — batas berbasis IP (anti-enumeration). Lebih ketat dari per-user agar
+ * satu alamat tak bisa memindai ribuan kode meski berganti akun.
+ */
+const IP_RATE_LIMIT = 120;
+const IP_RATE_WINDOW_MS = 10 * 60 * 1000;
 
 const bodySchema = z.object({
   code: z.string().trim().min(1).max(40),
@@ -46,6 +54,17 @@ export async function POST(req: Request) {
     );
   }
 
+  // `KP-M4` — batas berbasis IP (anti-enumeration lintas akun).
+  const ip = clientIp(req);
+  const ipRl = await checkRateLimit(`coupon-ip:${ip}`, IP_RATE_LIMIT, IP_RATE_WINDOW_MS);
+  if (!ipRl.ok) {
+    logEvent("coupon_enumeration_blocked", { ip, scope: "ip" });
+    return NextResponse.json(
+      { error: "Terlalu banyak percobaan. Coba lagi nanti." },
+      { status: 429, headers: { "Retry-After": String(ipRl.retryAfter) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -58,8 +77,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Data tidak valid." }, { status: 400 });
   }
 
+  // `KP-M4` — tolak cepat kode yang jelas tidak berbentuk kode wajar (spasi,
+  // simbol, terlalu pendek/panjang) tanpa menyentuh DB. Mencegah enumeration
+  // membanjiri lookup. Pesan tetap generik (tidak memberi petunjuk).
+  if (!isPlausibleCouponCode(parsed.data.code)) {
+    logEvent("coupon_validate_reject", {
+      ip,
+      reason: "implausible",
+      code: maskCouponCode(parsed.data.code),
+    });
+    return NextResponse.json({ valid: false, reason: "Kode promo tidak ditemukan." });
+  }
+
   try {
     const coupon = await getCouponByCode(parsed.data.code);
+    if (!coupon) {
+      // Catat percobaan kode tak dikenal (pola enumeration) tanpa membocorkan kode.
+      logEvent("coupon_validate_reject", {
+        ip,
+        reason: "not_found",
+        code: maskCouponCode(parsed.data.code),
+      });
+    }
     // Audit K3: sertakan pemakaian user ini agar aturan `limitPerUser` akurat
     // (fallback `usedBy` terbatas `MAX_COUPON_USED_BY`).
     const userUsageCount = coupon
