@@ -10,6 +10,12 @@
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
 >
+> ⏰ **Cron otomatis ✅ AKTIF (2026-10-13):** 5 endpoint `/api/cron/*` kini dijadwalkan
+> via **GitHub Actions** (`.github/workflows/cron.yml`, repo publik = gratis), bukan Vercel
+> Cron (butuh plan Pro). `CRON_SECRET` terpasang di Vercel (Production) **dan** GitHub repo
+> secret. Sekaligus memperbaiki bug: `wishlist-alerts` gagal 500 (`stock: undefined`).
+> Lihat §"SESI INI — Cron Otomatis (A1)".
+>
 > 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** Inisiatif **SEO & Konten Mesin (S0–S7) ✅ SELESAI (kode)**. Kandidat lanjutan (dari `docs/2026-10-06-roadmap-pengembangan.md`): **Multi-bahasa (ID/EN)** · **PWA + Web Push** · **Webhook Resend** (deliverability) · **Agregasi harian analitik** · **E2E test (Playwright)**. Atau selesaikan **langkah manual SEO** (submit sitemap, pantau GSC). Lihat §"STATUS & PETA SEKARANG".
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
@@ -29,7 +35,38 @@
 
 ---
 
-## ✅ SESI INI — SEO & Konten Mesin FASE S7 (QA & RILIS) — MENUTUP INISIATIF
+## ⏰ SESI INI — Cron Otomatis (A1) — AKTIF & TERVERIFIKASI LIVE
+
+**Status: ✅ SELESAI.** 5 endpoint cron yang sebelumnya mati (503) kini berjalan otomatis.
+
+- **Akar masalah:** `CRON_SECRET` tak pernah diisi di Vercel → **semua** endpoint
+  `/api/cron/*` fail-closed (503). Fitur yang sudah dibangun (kedaluwarsa order,
+  pengingat keranjang, laporan mingguan, alert wishlist, revalidate blog) **diam-diam mati**.
+- **Penjadwal:** `.github/workflows/cron.yml` — GitHub Actions (repo **publik** = gratis).
+  Vercel Cron bawaan butuh plan Pro → dihindari. Satu workflow, tiap step digerbangi
+  `github.event.schedule`; memakai header `Authorization: Bearer` (bukan query token).
+  - `expire-orders` tiap jam · `articles` tiap jam (geser 15 mnt) ·
+    `cart-reminders` tiap 3 jam · `wishlist-alerts` harian · `weekly-report` Senin 08:00 WIB.
+  - Dukungan `workflow_dispatch` (target pilihan) untuk uji manual.
+- **Secret:** `CRON_SECRET` diisi di Vercel (Production) **dan** GitHub repo secret
+  (`gh secret set CRON_SECRET`). Keduanya harus sama.
+- **Bug ditemukan & diperbaiki:** `wishlist-alerts` mengembalikan **500** saat dijalankan —
+  `toProductState` menulis `stock: undefined` ke Firestore (ditolak). Kini `stock` hanya
+  disertakan bila angka. Test `test:wishlist` 9 → **10**.
+- **Bukti live (semua HTTP 200):**
+  - `expire-orders` → `{ok:true, scanned:4, expired:4}` (membersihkan 4 order macet).
+  - `articles` → `{ok:true, due:0, revalidated:3}`.
+  - `cart-reminders` → `{ok:true, scanned:0}`.
+  - `wishlist-alerts` → `{ok:true, productsScanned:7}`.
+  - `weekly-report` → `{ok:true, email:{ok:true}, revenue:649000}` (email benar-benar terkirim).
+  - Workflow GH Actions manual run → **success**.
+
+**Commit:** `36c79c6` (workflow + `.nvmrc`) · `078186e` (fix wishlist).
+
+**Sisa manual (pemilik):** tidak ada — jadwal berjalan otomatis. Simpan salinan
+`CRON_SECRET` bila perlu memanggil endpoint manual.
+
+---
 
 **Status: ✅ SELESAI (kode) — INISIATIF SEO & KONTEN MESIN (S0–S7) TUNTAS.** Dokumen: [`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md) §13.
 
