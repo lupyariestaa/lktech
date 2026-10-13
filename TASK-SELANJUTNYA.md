@@ -26,9 +26,11 @@
 >
 > 🔐 **Anti-enumeration kupon ✅ (KP-M4, 2026-10-13):** rate-limit per-IP + tolak cepat kode non-wajar + observability (kode disamarkan) di `/api/coupons/validate`.
 >
+> 📄 **Halaman Tentang Kami ✅ SELESAI (kode, 2026-10-14):** `docs/2026-10-14-halaman-tentang-kami.md` — rute `/tentang` (cerita, misi/visi, nilai, teknologi, statistik, CTA), konten statis `ABOUT` di `content.ts`, integrasi nav + sitemap + smoke E2E, JSON-LD `AboutPage`.
+>
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend, submit sitemap GSC). Lihat §"STATUS & PETA SEKARANG".
+> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (Halaman Tentang Kami · B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend, submit sitemap GSC). Lihat §"STATUS & PETA SEKARANG".
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
