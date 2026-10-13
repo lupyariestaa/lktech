@@ -40,5 +40,11 @@ referensi-design-*.png
 Screenshot *.png
 Screenshot*.png
 
+# Playwright (E2E)
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # Log build lokal
 build*.log

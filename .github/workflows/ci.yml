@@ -59,3 +59,10 @@ jobs:
           # Build tidak boleh butuh kredensial asli — env dummy agar fail-safe
           # (fitur gateway/DB nonaktif bila kosong, build tetap sukses).
           NEXT_TELEMETRY_DISABLED: "1"
+
+      - name: E2E (Playwright)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
