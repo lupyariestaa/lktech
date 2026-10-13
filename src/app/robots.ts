@@ -17,6 +17,8 @@ export default function robots(): MetadataRoute.Robots {
           "/masuk",
           // Halaman unduhan bertoken: bersifat pribadi — jangan diindeks.
           "/unduhan",
+          // Halaman fallback offline PWA — bukan konten nyata.
+          "/offline",
         ],
       },
     ],

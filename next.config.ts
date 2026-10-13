@@ -53,6 +53,15 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // PWA (B2): service worker tidak boleh di-cache lama agar update
+        // cepat terpasang. Browser modern juga mem-bypass HTTP cache untuk SW.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
     ];
   },
 };

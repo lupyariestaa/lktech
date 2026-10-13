@@ -16,6 +16,10 @@
 > secret. Sekaligus memperbaiki bug: `wishlist-alerts` gagal 500 (`stock: undefined`).
 > Lihat §"SESI INI — Cron Otomatis (A1)".
 >
+> 📱 **PWA ✅ SELESAI (kode, 2026-10-13):** `docs/2026-10-13-pwa.md` — manifest
+> (`app/manifest.ts`), service worker vanilla (`public/sw.js`), halaman `/offline`,
+> ikon installable. **Web Push ditunda** (butuh kunci VAPID).
+>
 > 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** Inisiatif **SEO & Konten Mesin (S0–S7) ✅ SELESAI (kode)**. Kandidat lanjutan (dari `docs/2026-10-06-roadmap-pengembangan.md`): **Multi-bahasa (ID/EN)** · **PWA + Web Push** · **Webhook Resend** (deliverability) · **Agregasi harian analitik** · **E2E test (Playwright)**. Atau selesaikan **langkah manual SEO** (submit sitemap, pantau GSC). Lihat §"STATUS & PETA SEKARANG".
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
@@ -65,6 +69,29 @@
 
 **Sisa manual (pemilik):** tidak ada — jadwal berjalan otomatis. Simpan salinan
 `CRON_SECRET` bila perlu memanggil endpoint manual.
+
+---
+
+## 📱 SESI INI — PWA (Installable, Cache, Offline) — Selesai (kode)
+
+**Status: ✅ SELESAI.** Dokumen: [`docs/2026-10-13-pwa.md`](docs/2026-10-13-pwa.md). Tema 3.5 roadmap.
+
+- **Manifest** `src/app/manifest.ts` — `name`, `short_name`, `start_url: "/"`,
+  `display: "standalone"`, `theme_color`, ikon 192/512 + maskable, shortcuts (Produk/Kontak).
+- **Service worker vanilla** `public/sw.js` (tanpa dependensi): precache terbatas;
+  navigasi **network-first → cache → `/offline`**; aset statik **stale-while-revalidate**;
+  **lewati** `/api`, `/admin`, `/unduhan`/`/keranjang`/`/akun`, non-GET.
+- **Halaman `/offline`** statik (`noindex`) + tombol "Coba lagi" (klien) + link Produk.
+- **Ikon** `public/icons/*` (dari logo) — URL stabil untuk manifest.
+- **Registrasi** `src/components/pwa-register.tsx` (mount di root layout; produksi saja).
+- **Konfig:** `next.config.ts` (`/sw.js` `no-store` + `Service-Worker-Allowed`),
+  `robots.ts` (`disallow: /offline`), layout (`appleWebApp`).
+- **Test baru** `test:pwa` (**7**) — versi cache sinkron, bentuk manifest, bypass, dll. Masuk CI.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · `test:pwa` ✅ · `build` ✅ (188 halaman; `/manifest.webmanifest` & `/offline` terdaftar).
+
+**Web Push: DITUNDA** (butuh kunci VAPID + backend langganan). SW sudah jadi titik masuknya.
+
+**Sisa manual (pemilik):** DevTools → Application (SW aktif, manifest installable); uji offline (matikan jaringan → `/offline`).
 
 ---
 

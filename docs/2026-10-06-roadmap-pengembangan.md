@@ -200,10 +200,14 @@ Mengubah pembeli sekali menjadi pelanggan berulang, dan pengunjung menjadi audie
 - Mata uang tampilan (IDR default) bila menargetkan klien luar.
 - Pertimbangkan hanya bila memang ada permintaan pasar.
 
-### 3.5 [P2] PWA
+### 3.5 [P2] PWA — ✅ SELESAI (kode)
 **Rancangan:**
 - Manifest + service worker: installable, cache aset ringan, offline fallback.
 - Titik masuk notifikasi push (lihat 2.3).
+
+> **✅ Selesai (B2, 2026-10-13):** `docs/2026-10-13-pwa.md` — manifest (`app/manifest.ts`),
+> service worker vanilla (`public/sw.js`, network-first + SWR + bypass API), halaman `/offline`,
+> ikon. **Web Push ditunda** (butuh kunci VAPID + backend langganan).
 
 ---
 

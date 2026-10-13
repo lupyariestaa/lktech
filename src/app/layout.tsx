@@ -16,6 +16,7 @@ import { AccountStatusProvider } from "@/components/account-status-provider";
 import { CartProvider } from "@/components/cart-provider";
 import { CartDraftSync } from "@/components/cart-draft-sync";
 import { WishlistProvider } from "@/components/wishlist-provider";
+import { PwaRegister } from "@/components/pwa-register";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -66,6 +67,14 @@ export async function generateMetadata(): Promise<Metadata> {
     authors: [{ name: SITE.name }],
     creator: SITE.name,
     publisher: SITE.name,
+    // PWA (B2): tampilan standalone saat ditambahkan ke home screen (iOS).
+    // Manifest & ikon disuntik otomatis oleh `app/manifest.ts`.
+    appleWebApp: {
+      capable: true,
+      title: SITE.name,
+      statusBarStyle: "default",
+    },
+    formatDetection: { telephone: false },
     // Catatan (S1/R1): canonical TIDAK lagi ditetapkan global di root. Setiap
     // halaman WAJIB menetapkan canonical sendiri (lihat `alternates.canonical`
     // di tiap page.tsx) agar tidak bocor ke "/" (duplikasi/kanibalisasi).
@@ -153,6 +162,7 @@ export default async function RootLayout({
         </AuthProvider>
         <Analytics />
         <GoogleAnalytics />
+        <PwaRegister />
       </body>
     </html>
   );
