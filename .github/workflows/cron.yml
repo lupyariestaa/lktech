@@ -1,0 +1,66 @@
+name: Cron (eksternal)
+
+# Penjadwal cron LKTech. Vercel Cron bawaan butuh plan Pro → pakai GitHub Actions
+# (repo publik = gratis). Semua endpoint fail-closed: butuh CRON_SECRET, dikirim
+# sebagai `Authorization: Bearer` (tak muncul di query/log URL).
+#
+# Satu workflow, banyak jadwal. Setiap step digerbangi `github.event.schedule`
+# sehingga hanya endpoint yang cocok jadwalnya yang dipanggil.
+on:
+  schedule:
+    - cron: "0 * * * *"        # tiap jam          → expire-orders (juga articles)
+    - cron: "15 * * * *"       # tiap jam (geser)  → articles
+    - cron: "30 */3 * * *"     # tiap 3 jam        → cart-reminders
+    - cron: "0 2 * * *"        # harian 09:00 WIB  → wishlist-alerts
+    - cron: "0 1 * * 1"        # Senin 08:00 WIB   → weekly-report
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Endpoint yang dipanggil manual"
+        type: choice
+        options: [expire-orders, articles, cart-reminders, wishlist-alerts, weekly-report]
+        default: expire-orders
+
+# Jangan tumpuk; cukup satu jalan.
+concurrency:
+  group: cron
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: expire-orders
+        if: github.event.schedule == '0 * * * *' || inputs.target == 'expire-orders'
+        run: |
+          curl -fsS --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://lktech.vercel.app/api/cron/expire-orders"
+
+      - name: articles
+        if: github.event.schedule == '15 * * * *' || inputs.target == 'articles'
+        run: |
+          curl -fsS --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://lktech.vercel.app/api/cron/articles"
+
+      - name: cart-reminders
+        if: github.event.schedule == '30 */3 * * *' || inputs.target == 'cart-reminders'
+        run: |
+          curl -fsS --max-time 120 -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://lktech.vercel.app/api/cron/cart-reminders"
+
+      - name: wishlist-alerts
+        if: github.event.schedule == '0 2 * * *' || inputs.target == 'wishlist-alerts'
+        run: |
+          curl -fsS --max-time 120 -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://lktech.vercel.app/api/cron/wishlist-alerts"
+
+      - name: weekly-report
+        if: github.event.schedule == '0 1 * * 1' || inputs.target == 'weekly-report'
+        run: |
+          curl -fsS --max-time 120 -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://lktech.vercel.app/api/cron/weekly-report"
