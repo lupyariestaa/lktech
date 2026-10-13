@@ -75,7 +75,10 @@ export function diffProductAlerts(
 
 /** Snapshot keadaan saat ini untuk disimpan. */
 export function toProductState(snap: ProductSnapshot): ProductState {
-  return { price: snap.price, soldOut: Boolean(snap.soldOut), stock: snap.stock };
+  const state: ProductState = { price: snap.price, soldOut: Boolean(snap.soldOut) };
+  // Jangan sertakan `stock` bila kosong — Firestore menolak nilai `undefined`.
+  if (typeof snap.stock === "number") state.stock = snap.stock;
+  return state;
 }
 
 /** Apakah alert masih dalam cooldown (hindari spam). */

@@ -81,6 +81,13 @@ test("toProductState: ringkas", () => {
   });
 });
 
+test("toProductState: omits undefined stock (Firestore rejects undefined)", () => {
+  assert.deepEqual(toProductState({ slug: "a", price: 1000, soldOut: false }), {
+    price: 1000,
+    soldOut: false,
+  });
+});
+
 test("inCooldown: dalam & lewat jendela", () => {
   const now = new Date("2026-06-10T12:00:00Z");
   assert.equal(inCooldown(new Date(now.getTime() - 3600_000).toISOString(), now), true);
