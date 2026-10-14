@@ -204,6 +204,22 @@ function buildAnalyticsResult(input: {
   };
 }
 
+/** Keluaran analitik KOSONG — struktur tetap valid. Dipakai bila Admin SDK tak
+ *  tersedia ATAU pembacaan Firestore gagal (kuota/network), agar pemanggil
+ *  (halaman admin, API) tidak ikut gagal — cukup menampilkan angka nol. */
+function buildEmptyAnalytics(days: number, mode: AnalyticsMode): SalesAnalytics {
+  return {
+    days,
+    mode,
+    series: buildEmptySeries(days),
+    totals: { omzet: 0, orders: 0, aov: 0, completed: 0, cancelled: 0, completionRate: 0 },
+    deltas: { omzet: null, orders: null, aov: null },
+    statusBreakdown: emptyStatusBreakdown(),
+    payment: { initiated: 0, paid: 0, expired: 0, rate: 0 },
+    topProducts: [],
+  };
+}
+
 /** Hitung analitik penjualan untuk `days` hari terakhir. */
 export async function getSalesAnalytics(opts?: {
   days?: number;
@@ -215,18 +231,7 @@ export async function getSalesAnalytics(opts?: {
   const mode: AnalyticsMode = opts?.mode === "all" ? "all" : "completed";
 
   const db = getAdminDb();
-  if (!db) {
-    return {
-      days,
-      mode,
-      series: buildEmptySeries(days),
-      totals: { omzet: 0, orders: 0, aov: 0, completed: 0, cancelled: 0, completionRate: 0 },
-      deltas: { omzet: null, orders: null, aov: null },
-      statusBreakdown: emptyStatusBreakdown(),
-      payment: { initiated: 0, paid: 0, expired: 0, rate: 0 },
-      topProducts: [],
-    };
-  }
+  if (!db) return buildEmptyAnalytics(days, mode);
 
   // `AN-C2`: filter jendela di query + proyeksi field yang dibutuhkan saja
   // (hindari full-collection scan). Buffer 1 hari untuk aman terhadap batas TZ.
@@ -243,11 +248,20 @@ export async function getSalesAnalytics(opts?: {
   const fast = await getSalesAnalyticsFastPath({ days, mode });
   if (fast) return fast;
 
-  const snap = await db
-    .collection("orders")
-    .where("createdAtISO", ">=", cutoffISO)
-    .select("status", "total", "subtotal", "createdAtISO", "items", "coupon")
-    .get();
+  // Pembacaan `orders` bisa gagal (kuota Firestore habis, jaringan, izin) —
+  // termasuk saat build/prerender. Jangan pernah menjatuhkan pemanggil:
+  // kembalikan struktur kosong (angka nol) agar halaman tetap ter-render.
+  let snap;
+  try {
+    snap = await db
+      .collection("orders")
+      .where("createdAtISO", ">=", cutoffISO)
+      .select("status", "total", "subtotal", "createdAtISO", "items", "coupon")
+      .get();
+  } catch (err) {
+    console.error("[sales-analytics] gagal memuat pesanan:", err);
+    return buildEmptyAnalytics(days, mode);
+  }
 
   const orders = snap.docs
     .map((doc) =>
