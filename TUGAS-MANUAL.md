@@ -20,7 +20,7 @@
 | M1 | Search Console: verifikasi + submit sitemap | akun Google | 🔴 Tinggi | ✅ Selesai |
 | M2 | Mayar: aktifkan mode produksi | verifikasi bisnis | 🔴 Tinggi | ⬜ Belum |
 | M3 | Domain sendiri + Resend terverifikasi | beli domain | 🟠 Sedang | ⬜ Belum |
-| M4 | Env opsional (GA4 / GSC API / Upstash / WA) | akun masing-masing | 🟡 Rendah | ⬜ Belum |
+| M4 | Env opsional (GA4 / GSC API / Upstash / WA) | akun masing-masing | 🟡 Rendah | 🔄 Sebagian (GA4 ✅ · Upstash ✅) |
 | M5 | Backfill agregat analitik 90 hari (sekali) | — | 🟡 Rendah | ✅ Selesai |
 | M6 | Firestore Rules republish (A4) | Firebase Console | 🟢 Ditunda | ✅ Selesai |
 
@@ -89,12 +89,12 @@ Tag live terverifikasi: `<meta name="google-site-verification" content="…">` t
 
 Pilih sesuai kebutuhan. Isi → Vercel → **Redeploy**.
 
-- [ ] `NEXT_PUBLIC_GA_ID` — GA4 seluruh situs (`G-XXXXXXX`).
-- [ ] `GSC_SERVICE_ACCOUNT` (JSON service account 1 baris) + `GSC_SITE_URL` — panel `/admin/seo`.
-- [ ] `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — rate-limit lintas-instance (memperkuat anti-enumeration kupon KP-M4).
+- [x] `NEXT_PUBLIC_GA_ID` — GA4 seluruh situs (`G-XXXXXXX`). ✅ Terpasang (2026-10-15) — `G-HQDT6937K4` live di homepage.
+- [ ] `GSC_SERVICE_ACCOUNT` (JSON service account 1 baris) + `GSC_SITE_URL` — panel `/admin/seo`. ⏭️ Ditunda (butuh Google Cloud, menunggu kartu verifikasi).
+- [x] `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — rate-limit lintas-instance (memperkuat anti-enumeration kupon KP-M4). ✅ Terpasang (2026-10-15).
 - [ ] `WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` — notifikasi WhatsApp (Meta Business).
 
-**Status:** ⬜ Belum
+**Status:** 🔄 Sebagian — GA4 ✅ + Upstash ✅ terpasang; GSC API ditunda; WhatsApp belum.
 **Catatan:** daftar lengkap env + komentar ada di `.env.example`.
 
 ---
@@ -151,3 +151,4 @@ Composite **indexes** terpisah dari rules (lihat langkah opsional di atas).
 | 2026-10-14 | **M5 ✅ Selesai** — backfill analitik 90 hari (`written=90`). |
 | 2026-10-14 | **M1 ✅ Selesai** — GSC terverifikasi + sitemap tersubmit (via field admin, tanpa kode). |
 | 2026-10-14 | **M6 ✅ Selesai** — Firestore Rules deny-all terbaru dipublish. |
+| 2026-10-15 | **M4 🔄 Sebagian** — GA4 (`G-HQDT6937K4`) + Upstash terpasang; GSC API ditunda (butuh Google Cloud). |
