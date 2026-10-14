@@ -28,6 +28,8 @@
 >
 > 📄 **Halaman Tentang Kami ✅ SELESAI (kode, 2026-10-14):** `docs/2026-10-14-halaman-tentang-kami.md` — rute `/tentang` (cerita, misi/visi, nilai, teknologi, statistik, CTA), konten statis `ABOUT` di `content.ts`, integrasi nav + sitemap + smoke E2E, JSON-LD `AboutPage`.
 >
+> 🧭 **Upgrade Navbar Bertingkat ✅ SELESAI (kode, 2026-10-14):** `docs/2026-10-14-upgrade-navbar-bertingkat.md` — menu terpusat `src/lib/nav.ts` (murni), dropdown desktop (hover + keyboard) & akordeon mobile, `NAV_LINKS` dihapus, bug "Semua Layanan" ganda diperbaiki, `layout.tsx` `/tentang` ditambahkan (sebelumnya tanpa navbar/footer). Test `test:nav-menu` (6) + E2E `e2e/nav.spec.ts`.
+>
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat · M6 Firestore rules. Centang saat beres.
 >
 > 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (Halaman Tentang Kami · B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend, submit sitemap GSC). Lihat §"STATUS & PETA SEKARANG".
@@ -49,7 +51,35 @@
 
 ---
 
-## ⏰ SESI INI — Cron Otomatis (A1) — AKTIF & TERVERIFIKASI LIVE
+## ⏰ SESI INI — Upgrade Navbar Bertingkat (Dropdown & Akordeon) — SELESAI (kode)
+
+**Status: ✅ SELESAI.** Dokumen: [`docs/2026-10-14-upgrade-navbar-bertingkat.md`](docs/2026-10-14-upgrade-navbar-bertingkat.md).
+
+Melanjutkan pekerjaan navbar yang **terhenti di sesi sebelumnya** (belum di-commit).
+
+- **Sumber menu terpusat** `src/lib/nav.ts` (murni): `buildNavMenu(isLanding, SERVICES)`
+  + `isActiveHref()`. Navbar tak lagi memakai `NAV_LINKS` (dihapus dari `content.ts`).
+- **Menu bertingkat:** `Layanan ▾` (dari `SERVICES`) & `Harga ▾` (Paket/Promo/FAQ).
+  Baris desktop 9 → 7 item + CTA "Konsultasi".
+- **Desktop:** dropdown via hover **& fokus** (keyboard-accessible),
+  `aria-haspopup`/`aria-expanded`, panah berputar, rute aktif disorot.
+- **Mobile:** akordeon (`grid-rows-[0fr]→[1fr]`) + `aria-expanded`.
+- **Bug diperbaiki:** tautan **"Semua Layanan" ganda** di menu mobile (komponen
+  menambah sendiri padahal sudah ada di `children`) → kini satu sumber saja.
+- **`/tentang` dirapikan:** tambah `src/app/tentang/layout.tsx` (Navbar + Footer) —
+  sebelumnya halaman Tentang **tanpa navbar/footer**.
+- **Berkas baru:** `src/lib/nav.ts`, `scripts/nav-menu.test.ts` (**6** test),
+  `e2e/nav.spec.ts` (smoke dropdown desktop + akordeon mobile), `src/app/tentang/layout.tsx`.
+- **Berkas diubah:** `src/components/sections/navbar.tsx`, `src/lib/content.ts`
+  (hapus `NAV_LINKS`), `package.json` (`test:nav-menu`), `tsconfig.json`,
+  `.github/workflows/ci.yml` (jalankan `test:nav-menu`).
+- **Gate:** `tsc` ✅ · `eslint` ✅ · `test:nav-menu` ✅ (6) · `build` (uji pemilik).
+
+**Sisa manual (pemilik):** uji browser desktop (hover/Tab dropdown) & mobile (akordeon).
+
+---
+
+## ⏰ SESI SEBELUMNYA — Cron Otomatis (A1) — AKTIF & TERVERIFIKASI LIVE
 
 **Status: ✅ SELESAI.** 5 endpoint cron yang sebelumnya mati (503) kini berjalan otomatis.
 

@@ -20,8 +20,8 @@ cerita, misi, visi, dan nilai — sekaligus memperkuat sinyal kepercayaan
   (`FaqAccordion` + JSON-LD `FAQPage`), CTA (`CtaContact`).
 - Metadata (title/description/canonical/OG) + JSON-LD `AboutPage` +
   `BreadcrumbList` + `FAQPage`.
-- Integrasi: `NAV_LINKS` + `PAGE_NAV_LINKS` (navbar & footer), `sitemap.ts`,
-  smoke E2E `e2e/public-pages.spec.ts`.
+- Integrasi: `@/lib/nav` (navbar — menu bertingkat) + `PAGE_NAV_LINKS` (footer),
+  `sitemap.ts`, smoke E2E `e2e/public-pages.spec.ts`.
 
 ## Keputusan
 

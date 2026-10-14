@@ -72,6 +72,8 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-11 | [Catatan Gap — Polish Sistem Pengaturan (Audit)](2026-10-11-polish-pengaturan-gap.md) | 🚧 P0–P3 selesai (kode); P4 (QA) tersisa |
 | 2026-10-12 | [SEO & Konten Mesin (Perencanaan & Fase S0–S7)](2026-10-12-seo-konten-mesin.md) | ✅ Selesai (S0–S7, kode) |
 | 2026-10-13 | [PWA — Installable, Cache Ringan, Offline Fallback (Tema 3.5)](2026-10-13-pwa.md) | ✅ Selesai (kode; Web Push ditunda) |
+| 2026-10-14 | [Halaman Tentang Kami (`/tentang`)](2026-10-14-halaman-tentang-kami.md) | ✅ Selesai (kode) |
+| 2026-10-14 | [Upgrade Navbar — Menu Bertingkat (Dropdown & Akordeon)](2026-10-14-upgrade-navbar-bertingkat.md) | ✅ Selesai (kode) |
 
 ### Dokumen pendukung (referensi & setup)
 
