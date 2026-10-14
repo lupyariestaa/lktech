@@ -1,8 +1,24 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ArrowRight, Braces, Code2, MessageCircle, Star } from "lucide-react";
+import { Fragment, useEffect, useRef, type ReactNode, type RefObject } from "react";
+import {
+  motion,
+  useMotionValue,
+  useScroll,
+  useSpring,
+  useTransform,
+  type Variants,
+} from "framer-motion";
+import {
+  ArrowRight,
+  Braces,
+  Code2,
+  MessageCircle,
+  ShieldCheck,
+  Star,
+  Users,
+  Zap,
+} from "lucide-react";
 import { ButtonAnchor } from "@/components/ui/button";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { trackCtaClick } from "@/lib/analytics";
@@ -14,6 +30,7 @@ import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
 import { HeroShowcaseCarousel } from "@/components/hero-showcase-carousel";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
+import { MEDIA_QUERIES, useMediaQuery } from "@/lib/use-media-query";
 
 function DeviceMockups({
   showcase,
@@ -134,11 +151,145 @@ function DeviceMockups({
   );
 }
 
+/**
+ * Cahaya halus yang mengikuti kursor (desktop saja).
+ *
+ * Mendengarkan `mousemove` pada container hero (via `containerRef`) dan
+ * memakai motion value + pegas agar gerakannya lembut. Menggerakkan elemen
+ * dengan `transform` (motion `x`/`y`) — GPU-friendly, tanpa re-render React.
+ * Mulai tak terlihat lalu memudar masuk saat mouse pertama bergerak (menghindari
+ * "disc" yang menggantung di posisi awal). Hanya di-mount pada layar besar &
+ * bukan reduced-motion (lihat `cursorEnabled` di `Hero`).
+ */
+function CursorGlow({ containerRef }: { containerRef: RefObject<HTMLElement | null> }) {
+  // Ukuran elemen 36rem = 576px → offset separuh (288px) agar pusat tepat di kursor.
+  const HALF = 288;
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const opacity = useMotionValue(0);
+  const sx = useSpring(x, { stiffness: 90, damping: 25, mass: 0.4 });
+  const sy = useSpring(y, { stiffness: 90, damping: 25, mass: 0.4 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onMove = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      x.set(e.clientX - rect.left - HALF);
+      y.set(e.clientY - rect.top - HALF);
+      if (opacity.get() === 0) opacity.set(1);
+    };
+    el.addEventListener("mousemove", onMove, { passive: true });
+    return () => el.removeEventListener("mousemove", onMove);
+  }, [containerRef, x, y, opacity]);
+
+  return (
+    <motion.div
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 left-0 z-0 h-[36rem] w-[36rem] rounded-full bg-primary/10 blur-[120px]"
+      style={{ x: sx, y: sy, opacity }}
+    />
+  );
+}
+
+const HEADLINE_WORDS: { text: string }[] = [
+  { text: "Teknologi" },
+  { text: "Modern," },
+];
+
+const headlineWord: Variants = {
+  hidden: { opacity: 0, y: "0.6em" },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+/**
+ * Judul hero dengan animasi kata-per-kata (baris 1) + baris gradient yang naik
+ * sebagai satu unit (baris 2, agar gradien tetap menyambung rapi).
+ *
+ * Tetap **satu `<h1>`** (SEO) — kata dibungkus `span` ber-`aria-hidden` tidak
+ * dipakai; teks tetap terbaca screen reader. Saat reduced-motion, dirender
+ * statis tanpa animasi.
+ */
+function AnimatedHeadline({ base, reduced }: { base: number; reduced: boolean }) {
+  if (reduced) {
+    return (
+      <>
+        Teknologi Modern,
+        <br />
+        <span className="text-gradient">Hasil Nyata</span>
+      </>
+    );
+  }
+
+  const container: Variants = {
+    hidden: {},
+    show: {
+      transition: { staggerChildren: 0.09, delayChildren: base + 0.12 },
+    },
+  };
+
+  return (
+    <motion.span variants={container} initial="hidden" animate="show" className="block">
+      {/* Baris 1 — kata per kata. Spasi teks ASLI ({i>0 && " "}) dipertahankan
+          agar screen reader / copy-paste membaca "Teknologi Modern," (bukan
+          "TeknologiModern,"). Kata ber-`inline-block` sehingga spasi teks tetap
+          memisahkannya secara visual. */}
+      <span className="block">
+        {HEADLINE_WORDS.map((w, i) => (
+          <Fragment key={w.text}>
+            {i > 0 ? " " : null}
+            <motion.span variants={headlineWord} className="inline-block">
+              {w.text}
+            </motion.span>
+          </Fragment>
+        ))}
+      </span>
+      {/* Baris 2 — gradient, naik sebagai satu unit */}
+      <motion.span variants={headlineWord} className="text-gradient block">
+        Hasil Nyata
+      </motion.span>
+    </motion.span>
+  );
+}
+
+/** Satu butir pada trust bar hero (ikon + teks). */
+function TrustItem({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-2 text-sm text-muted">
+      <span className="grid h-6 w-6 place-items-center rounded-full bg-primary-50 text-primary">
+        {icon}
+      </span>
+      {children}
+    </span>
+  );
+}
+
 export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
   const reduced = useReducedMotionPreference();
   const settings = useSettings();
   const { hero, stats } = useContent();
   const base = introDelay(reduced);
+  // Efek kursor hanya untuk layar besar (tablet ke atas) & bukan reduced-motion.
+  const isDesktop = useMediaQuery(MEDIA_QUERIES.desktopUp);
+  const cursorEnabled = isDesktop && !reduced;
+
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // Parallax ringan: konten naik & memudar halus saat halaman di-scroll turun.
+  // Rentang: dari saat hero menyentuh atas viewport hingga hero keluar.
+  // Fade dimulai belakangan (0.35) agar konten tidak "hilang" terlalu cepat.
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+  const yText = useTransform(scrollYProgress, [0, 1], [0, -60]);
+  const opacityText = useTransform(scrollYProgress, [0.35, 1], [1, 0]);
+  const yMock = useTransform(scrollYProgress, [0, 1], [0, 50]);
 
   // Kejujuran data (FASE H2): klaim sosial di bawah CTA hanya ditampilkan bila
   // berasal dari data NYATA — bukan stat placeholder bawaan.
@@ -147,6 +298,7 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
 
   return (
     <section
+      ref={sectionRef}
       id="beranda"
       className="relative flex min-h-screen items-center overflow-hidden pt-32 pb-20"
     >
@@ -155,9 +307,10 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
       <div className="pointer-events-none absolute -top-24 -left-24 h-[32rem] w-[32rem] animate-aurora rounded-full bg-primary/25 blur-[120px]" />
       <div className="pointer-events-none absolute top-1/3 -right-24 h-[28rem] w-[28rem] animate-aurora rounded-full bg-primary-light/25 blur-[120px] [animation-delay:-6s]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white to-transparent" />
+      {cursorEnabled && <CursorGlow containerRef={sectionRef} />}
 
       <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2">
-        <div>
+        <motion.div style={reduced ? undefined : { y: yText, opacity: opacityText }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -168,16 +321,9 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
             Solusi Digital untuk Bisnis Anda
           </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 26 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: base + 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-6 text-4xl leading-[1.05] font-bold text-secondary sm:text-5xl lg:text-6xl"
-          >
-            Teknologi Modern,
-            <br />
-            <span className="text-gradient">Hasil Nyata</span>
-          </motion.h1>
+          <h1 className="mt-6 text-4xl leading-[1.05] font-bold text-secondary sm:text-5xl lg:text-6xl">
+            <AnimatedHeadline base={base} reduced={reduced} />
+          </h1>
 
           <motion.p
             initial={{ opacity: 0, y: 22 }}
@@ -218,30 +364,41 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
             </ButtonAnchor>
           </motion.div>
 
+          {/* Trust bar — hanya sinyal JUJUR (tanpa angka palsu). */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: base + 0.6, duration: 0.7 }}
-            className="mt-10 flex items-center gap-6"
+            className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3"
           >
             {clientStat && (
-              <p className="text-sm text-muted">
-                <span className="font-semibold text-secondary">
-                  {clientStat.value}
-                  {clientStat.suffix}
-                </span>{" "}
-                klien telah mempercayai kami
-              </p>
+              <TrustItem icon={<Users className="h-3.5 w-3.5" />}>
+                <span>
+                  <span className="font-semibold text-secondary">
+                    {clientStat.value}
+                    {clientStat.suffix}
+                  </span>{" "}
+                  klien mempercayai kami
+                </span>
+              </TrustItem>
             )}
+            <TrustItem icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+              Konsultasi gratis
+            </TrustItem>
+            <TrustItem icon={<Zap className="h-3.5 w-3.5" />}>
+              Respon cepat
+            </TrustItem>
           </motion.div>
-        </div>
+        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ delay: base + 0.3, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <DeviceMockups showcase={hero} socialProof={socialProof} />
+        <motion.div style={reduced ? undefined : { y: yMock }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: base + 0.3, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <DeviceMockups showcase={hero} socialProof={socialProof} />
+          </motion.div>
         </motion.div>
       </div>
     </section>

@@ -17,6 +17,7 @@ import { SocialProof } from "@/components/social-proof";
 import { ScrollDepthTracker } from "@/components/scroll-depth-tracker";
 import { ScrollProgress } from "@/components/scroll-progress";
 import { getSiteContent } from "@/lib/site-content";
+import { getSocialProof } from "@/lib/social-proof";
 import { buildFaqPage } from "@/lib/structured-data-pure";
 import { JsonLdScript } from "@/components/json-ld-script";
 
@@ -51,6 +52,12 @@ export default async function Home() {
   // FAQPage JSON-LD (fase S2) — FAQ tampil nyata di section #faq beranda.
   const faqLd = buildFaqPage(content.faqs ?? []);
 
+  // Bukti sosial hero: kirim elemen HANYA bila ada label nyata. Bila tidak,
+  // `undefined` membuat hero menampilkan fallback bawaan ("Garansi Kualitas") —
+  // mencegah chip kaca kosong (bug: `<SocialProof/>` render `null` saat kosong).
+  // `getSocialProof` di-cache (TTL 10 menit) sehingga panggilan ganda ini murah.
+  const proof = await getSocialProof(7);
+
   return (
     <>
       {faqLd && <JsonLdScript node={faqLd} />}
@@ -60,7 +67,9 @@ export default async function Home() {
       <main id="konten">
         <Hero
           socialProof={
-            <SocialProof className="flex items-center gap-1.5 text-xs font-semibold text-amber-700" />
+            proof.label ? (
+              <SocialProof className="flex items-center gap-1.5 text-xs font-semibold text-amber-700" />
+            ) : undefined
           }
         />
         <Technologies />

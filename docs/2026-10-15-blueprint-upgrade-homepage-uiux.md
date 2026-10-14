@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0 selesai — kode; F1–F6 belum)
+> **Status:** 🚧 Berjalan (F0–F1 selesai — kode; F2–F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -193,11 +193,18 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   tak terpakai.
 
 ### F1 — Hero upgrade (momen pertama) — effort M
-- **Scroll parallax**: konten hero naik/memudar halus saat di-scroll (Framer `useScroll`).
-- **Animated headline**: kata/kalimat muncul berurutan (stagger), tetap 1 `<h1>` untuk SEO.
-- **Cursor glow** (desktop): cahaya halus mengikuti kursor (transform only).
-- **Trust bar**: badge kredibilitas dari **data nyata** (statistik klien / bukti sosial) — sembunyi bila kosong.
-- Pertahankan seluruh teks & CTA yang ada.
+- **Scroll parallax** ✅: konten hero naik & memudar halus saat di-scroll (Framer `useScroll`;
+  fade mulai 0.35 agar tidak hilang terlalu cepat); mockup bergerak berlawanan arah (kedalaman).
+- **Animated headline** ✅: baris 1 kata-per-kata (stagger), baris 2 gradient naik sebagai satu unit;
+  tetap **satu `<h1>`** (SEO) dengan spasi teks asli agar terbaca "Teknologi Modern, Hasil Nyata".
+- **Cursor glow** ✅ (desktop ≥1024px): cahaya halus mengikuti kursor, transform-only, mulai
+  `opacity: 0` lalu memudar masuk saat mouse bergerak (tanpa "disc" menggantung).
+- **Trust bar** ✅: sinyal **jujur** — statistik klien (bila ada data nyata) + "Konsultasi gratis" +
+  "Respon cepat". Tanpa angka palsu.
+- **Perbaikan bug (pre-existing)** ✅: chip kaca hero kosong (`<SocialProof/>` render `null` →
+  `??` fallback tak aktif). Kini `page.tsx` hanya mengirim elemen bila ada label nyata; fallback
+  "Garansi Kualitas" kembali berfungsi.
+- Seluruh teks & CTA lama dipertahankan (tidak ada konten terpangkas).
 
 ### F2 — Ritme & transisi antar-section — effort M
 - **Scroll progress bar** aktif di beranda.
@@ -246,7 +253,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | --- | --- |
 | `src/app/globals.css` | *(F0: tidak diubah — lihat koreksi A1)*; token animasi/spacing menyusul bila perlu |
 | `src/app/page.tsx` | Pasang `ScrollProgress` (F0); susun ulang urutan section bila perlu (F2+) |
-| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow | ✅ Selesai |
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran |
 | `src/components/sections/process.tsx` | *(F3)* Pindah ke timeline pinned |
 | `src/components/sections/services.tsx` | *(F4)* Pindah ke bento |
@@ -277,7 +284,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | — | Audit detail beranda | ✅ Selesai (dokumen ini) |
 | — | Blueprint & rencana fase | ✅ Selesai (dokumen ini) |
 | F0 | Fondasi (util `useMediaQuery`, `ScrollProgress`, `PinnedSection`; koreksi A1) | ✅ Selesai (kode) |
-| F1 | Hero upgrade | ⬜ Todo |
+| F1 | Hero upgrade | ✅ Selesai (kode) |
 | F2 | Ritme & transisi antar-section | ⬜ Todo |
 | F3 | Pinned storytelling (process timeline) | ⬜ Todo |
 | F4 | Services bento grid | ⬜ Todo |
@@ -295,3 +302,4 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 - **Uji manual tiap fase:** desktop, tablet, mobile, dan mode `prefers-reduced-motion`.
 - **Dokumentasi:** perbarui dokumen ini (kolom Status) + `TASK-SELANJUTNYA.md` saat fase mulai/selesai.
 - **Referensi konvensi dokumen:** lihat [`docs/README.md`](README.md).
+ 
