@@ -5,7 +5,7 @@
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
-> 🔎 **Inisiatif SEO & Konten Mesin ✅ SELESAI (S0–S7, 2026-10-12):** **[`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md)** — sinyal teknis, structured data (FAQ/Breadcrumb/ItemList/LocalBusiness/SearchAction/Review), hub kategori/tag, programmatic SEO (40 halaman kota), panel Search Console. **Kode tuntas; sisa langkah manual pemilik (submit sitemap, pantau GSC).**
+> 🔎 **Inisiatif SEO & Konten Mesin ✅ SELESAI (S0–S7, 2026-10-12):** **[`docs/2026-10-12-seo-konten-mesin.md`](docs/2026-10-12-seo-konten-mesin.md)** — sinyal teknis, structured data (FAQ/Breadcrumb/ItemList/LocalBusiness/SearchAction/Review), hub kategori/tag, programmatic SEO (40 halaman kota), panel Search Console. **Kode tuntas; langkah manual pemilik (verifikasi GSC + submit sitemap) ✅ SELESAI 2026-10-14 (lihat M1).**
 >
 > 💳 **Fase detail Konversi & Closing:** **[`docs/2026-10-06-fase-konversi-closing.md`](docs/2026-10-06-fase-konversi-closing.md)** — gateway **Mayar.id** (Headless API V2), fulfillment dua jalur (INSTAN download / JASA konfirmasi), bundling, urgency, abandoned checkout. **FASE P0–P6 selesai (kode; uji sandbox P0/P1 terverifikasi).**
 > 🛠️ **Setup pembayaran & unduhan (langkah manual):** **[`docs/2026-10-06-setup-pembayaran-mayar.md`](docs/2026-10-06-setup-pembayaran-mayar.md)**.
@@ -34,9 +34,9 @@
 >
 > 🧊 **Optimasi Cache Firestore ✅ SELESAI (kode, 2026-10-14):** `docs/2026-10-14-optimasi-cache-firestore.md` — hemat kuota baca: `unstable_cache` untuk pembaca publik (`settings`/`content`/`articles`/`products`/`projects`/`promos`) + invalidasi `revalidateTag` di tiap mutasi admin; cache TTL singkat untuk analitik. Reader admin tetap segar (`read*`).
 >
-> 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat · M6 Firestore rules. Centang saat beres.
+> 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (Halaman Tentang Kami · B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend, submit sitemap GSC). Lihat §"STATUS & PETA SEKARANG".
+> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (Halaman Tentang Kami · B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend). Lihat §"STATUS & PETA SEKARANG".
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -186,8 +186,8 @@ Melanjutkan pekerjaan navbar yang **terhenti di sesi sebelumnya** (belum di-comm
   layanan×kota** via `serviceCityIntro()` + `SERVICE_ANGLES` (teruji).
 - **Rilis:** commit + push (Vercel auto-deploy).
 
-**Sisa (LANGKAH MANUAL pemilik):** submit sitemap di GSC, (opsional) env GA4/GSC,
-pantau 2–4 minggu, validasi Rich Results Test.
+**Sisa (LANGKAH MANUAL pemilik):** verifikasi GSC + submit sitemap ✅ (M1, 2026-10-14);
+(opsional) env GA4/GSC; pantau 2–4 minggu, validasi Rich Results Test.
 
 **Inisiatif berikutnya (kandidat):** Multi-bahasa, Web Push (VAPID), Webhook Resend, langkah manual pemilik.
 **✅ Selesai sesi ini:** agregasi harian analitik (`analytics_daily`), E2E Playwright + CI, anti-enumeration kupon (KP-M4).

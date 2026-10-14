@@ -17,7 +17,7 @@
 
 | Kode | Tugas | Butuh | Prioritas | Status |
 | --- | --- | --- | --- | --- |
-| M1 | Search Console: verifikasi + submit sitemap | akun Google | 🔴 Tinggi | ⬜ Belum |
+| M1 | Search Console: verifikasi + submit sitemap | akun Google | 🔴 Tinggi | ✅ Selesai |
 | M2 | Mayar: aktifkan mode produksi | verifikasi bisnis | 🔴 Tinggi | ⬜ Belum |
 | M3 | Domain sendiri + Resend terverifikasi | beli domain | 🟠 Sedang | ⬜ Belum |
 | M4 | Env opsional (GA4 / GSC API / Upstash / WA) | akun masing-masing | 🟡 Rendah | ⬜ Belum |
@@ -32,17 +32,18 @@ Legenda status: ⬜ Belum · 🔄 Sedang · ✅ Selesai · ⏭️ Ditunda
 
 **Guna:** agar halaman terindeks Google (gratis, tuntas cepat).
 
-- [ ] Buka https://search.google.com/search-console → **Add property** → **URL prefix**.
-- [ ] Isi `https://lktech.vercel.app`.
-- [ ] Verifikasi kepemilikan → pilih **HTML tag** → salin tag `<meta name="google-site-verification" ...>`.
-      → **Kirim tag ke asisten** (ditambahkan ke `layout.tsx`, 1 commit).
-      *(Alternatif tanpa kode: verifikasi via **Google Analytics** bila M4-GA4 sudah aktif.)*
-- [ ] Setelah terverifikasi → menu **Sitemaps** → isi `sitemap.xml` → **Submit**.
-- [ ] Cek: `https://lktech.vercel.app/sitemap.xml` (harus valid).
+- [x] Buka https://search.google.com/search-console → **Add property** → **URL prefix**.
+- [x] Isi `https://lktech.vercel.app`.
+- [x] Verifikasi kepemilikan → pilih **HTML tag** → salin **nilai `content`** saja.
+      → Tempel di `/admin/settings/seo` → field **"Google Search Console — verification"** → **Simpan**.
+      *(TIDAK perlu ubah kode: `layout.tsx` menyuntik `<meta name="google-site-verification">` otomatis dari `seo.searchConsoleId`.)*
+- [x] Setelah terverifikasi → menu **Sitemaps** → isi `sitemap.xml` → **Submit**.
+- [x] Cek: `https://lktech.vercel.app/sitemap.xml` (harus valid).
 - [ ] Pantau 2–4 minggu (menu **Pages** & **Performance**).
 
-**Status:** ⬜ Belum
-**Catatan:** satu-satunya langkah manual yang butuh perubahan kode (tag verifikasi).
+**Status:** ✅ Selesai (2026-10-14) — kepemilikan terverifikasi, sitemap tersubmit.
+**Catatan:** TIDAK butuh perubahan kode (sudah ada field SEO di admin).
+Tag live terverifikasi: `<meta name="google-site-verification" content="…">` tampil di homepage.
 
 ---
 
@@ -145,3 +146,4 @@ backfill ini hanya untuk riwayat lebih panjang.
 | --- | --- |
 | 2026-10-14 | Dokumen dibuat. M1–M6 terdaftar, semua ⬜ Belum (M6 ditunda). |
 | 2026-10-14 | **M5 ✅ Selesai** — backfill analitik 90 hari (`written=90`). |
+| 2026-10-14 | **M1 ✅ Selesai** — GSC terverifikasi + sitemap tersubmit (via field admin, tanpa kode). |
