@@ -6,19 +6,7 @@ export const COMPANY = {
   year: 2026,
 };
 
-export const NAV_LINKS = [
-  { label: "Beranda", href: "/#beranda" },
-  { label: "Layanan", href: "/layanan" },
-  { label: "Produk", href: "/produk" },
-  { label: "Portofolio", href: "/portofolio" },
-  { label: "Tentang", href: "/tentang" },
-  { label: "Blog", href: "/blog" },
-  { label: "Harga", href: "/harga" },
-  { label: "Promo", href: "/promo" },
-  { label: "FAQ", href: "/#faq" },
-];
-
-/** Navigasi khusus halaman dalam (path-based). */
+/** Navigasi khusus halaman dalam (footer). Navbar memakai `@/lib/nav`. */
 export const PAGE_NAV_LINKS = [
   { label: "Beranda", href: "/" },
   { label: "Layanan", href: "/layanan" },

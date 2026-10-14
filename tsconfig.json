@@ -84,6 +84,7 @@
     "scripts/heading-and-slug.test.ts",
     "scripts/co-purchase.test.ts",
     "scripts/analytics-daily.test.ts",
-    "scripts/product-related.test.ts"
+    "scripts/product-related.test.ts",
+    "scripts/nav-menu.test.ts"
   ]
 }

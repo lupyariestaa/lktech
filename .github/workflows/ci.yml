@@ -52,6 +52,7 @@ jobs:
           npm run test:blog
           npm run test:pwa
           npm run test:analytics-daily
+          npm run test:nav-menu
 
       - name: Build
         run: npm run build

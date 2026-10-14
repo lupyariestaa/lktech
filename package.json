@@ -33,6 +33,7 @@
     "test:search-console": "node --experimental-strip-types --test scripts/search-console.test.ts",
     "test:pwa": "node --experimental-strip-types --test scripts/pwa.test.ts",
     "test:analytics-daily": "node --experimental-strip-types --test scripts/analytics-daily.test.ts",
+    "test:nav-menu": "node --experimental-strip-types --test scripts/nav-menu.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:payment": "node --experimental-strip-types --test scripts/payment-metrics.test.ts",

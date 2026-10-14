@@ -4,8 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Menu, X, MessageCircle, ShoppingCart, UserRound, LayoutDashboard } from "lucide-react";
-import { NAV_LINKS, PAGE_NAV_LINKS } from "@/lib/content";
+import {
+  ChevronDown,
+  Menu,
+  X,
+  MessageCircle,
+  ShoppingCart,
+  UserRound,
+  LayoutDashboard,
+} from "lucide-react";
+import { buildNavMenu, isActiveHref, type NavItem } from "@/lib/nav";
+import { SERVICES } from "@/lib/services";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import { getIdToken } from "@/lib/auth";
@@ -17,16 +26,124 @@ import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 
+/**
+ * Item navbar desktop. Bila punya `children`, tampil sebagai dropdown saat
+ * hover/fokus (via state, agar bisa diakses keyboard). Panel ditutup saat fokus
+ * keluar dari item.
+ */
+function DesktopItem({
+  item,
+  pathname,
+  open,
+  onOpen,
+  onClose,
+}: {
+  item: NavItem;
+  pathname: string;
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  const active =
+    isActiveHref(pathname, item.href) ||
+    (item.children?.some((c) => isActiveHref(pathname, c.href)) ?? false);
+
+  const linkClass = cn(
+    "group relative inline-flex items-center gap-1 px-3.5 py-2 text-sm font-medium transition-colors",
+    active ? "text-primary" : "text-slate-600 hover:text-primary",
+  );
+
+  if (!item.children) {
+    return (
+      <li>
+        <Link href={item.href} className={linkClass}>
+          {item.label}
+          <span
+            className={cn(
+              "absolute inset-x-3.5 bottom-1 h-0.5 origin-left rounded-full bg-primary transition-transform duration-300",
+              active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100",
+            )}
+          />
+        </Link>
+      </li>
+    );
+  }
+
+  return (
+    <li
+      className="relative"
+      onMouseEnter={onOpen}
+      onMouseLeave={onClose}
+      onFocus={onOpen}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onClose();
+      }}
+    >
+      <Link
+        href={item.href}
+        className={linkClass}
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        {item.label}
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 transition-transform duration-300",
+            open && "rotate-180",
+          )}
+          aria-hidden="true"
+        />
+        <span
+          className={cn(
+            "absolute inset-x-3.5 bottom-1 h-0.5 origin-left rounded-full bg-primary transition-transform duration-300",
+            active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100",
+          )}
+        />
+      </Link>
+
+      <div
+        className={cn(
+          "absolute top-full left-1/2 z-50 w-80 -translate-x-1/2 pt-2 transition-all duration-200",
+          open
+            ? "pointer-events-auto translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-1 opacity-0",
+        )}
+      >
+        <ul className="overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 shadow-xl shadow-slate-900/10">
+          {item.children.map((child) => (
+            <li key={child.href}>
+              <Link
+                href={child.href}
+                className="flex flex-col rounded-xl px-3.5 py-2.5 transition-colors hover:bg-primary-50"
+              >
+                <span className="text-sm font-semibold text-secondary">
+                  {child.label}
+                </span>
+                {child.description && (
+                  <span className="mt-0.5 text-xs leading-snug text-muted">
+                    {child.description}
+                  </span>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </li>
+  );
+}
+
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
   const reduced = useReducedMotionPreference();
   const pathname = usePathname();
   const settings = useSettings();
   const { count, ready } = useCart();
   const { user } = useAuth();
   const isLanding = pathname === "/";
-  const links = isLanding ? NAV_LINKS : PAGE_NAV_LINKS;
+  const links = buildNavMenu(isLanding, SERVICES);
   // Intro loader hanya ada di landing; halaman dalam tampil langsung.
   const base = isLanding ? introDelay(reduced) : 0;
 
@@ -67,6 +184,9 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Menu ditutup lewat onClick tiap tautan (mobile akordeon + dropdown
+  // desktop via onClose) — tanpa effect setState (hindari cascading render).
+
   return (
     <header
       className={cn(
@@ -85,17 +205,16 @@ export function Navbar() {
       >
         <Logo height={32} href="/" />
 
-        <ul className="hidden items-center gap-1 lg:flex">
-          {links.map((link) => (
-            <li key={link.href}>
-              <a
-                href={link.href}
-                className="group relative px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-primary"
-              >
-                {link.label}
-                <span className="absolute inset-x-3.5 bottom-1 h-0.5 origin-left scale-x-0 rounded-full bg-primary transition-transform duration-300 group-hover:scale-x-100" />
-              </a>
-            </li>
+        <ul className="hidden items-center gap-0.5 lg:flex">
+          {links.map((item, i) => (
+            <DesktopItem
+              key={item.label}
+              item={item}
+              pathname={pathname}
+              open={openIdx === i}
+              onOpen={() => setOpenIdx(i)}
+              onClose={() => setOpenIdx((v) => (v === i ? null : v))}
+            />
           ))}
         </ul>
 
@@ -158,7 +277,7 @@ export function Navbar() {
         </div>
       </motion.nav>
 
-      {/* Mobile menu */}
+      {/* Mobile menu — akordeon untuk item bertingkat. */}
       <motion.div
         id="menu-mobile"
         initial={false}
@@ -171,17 +290,63 @@ export function Navbar() {
       >
         <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
           <ul className="flex flex-col">
-            {links.map((link) => (
-              <li key={link.href}>
-                <a
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-primary-50 hover:text-primary"
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
+            {links.map((item, i) => {
+              if (!item.children) {
+                return (
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-primary-50 hover:text-primary"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              }
+              const expanded = openIdx === i;
+              return (
+                <li key={item.label}>
+                  <button
+                    onClick={() => setOpenIdx(expanded ? null : i)}
+                    aria-expanded={expanded}
+                    className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-primary-50 hover:text-primary"
+                  >
+                    {item.label}
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform duration-300",
+                        expanded && "rotate-180",
+                      )}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <div
+                    className={cn(
+                      "grid overflow-hidden transition-all duration-300",
+                      expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                    )}
+                  >
+                    {/* Anak-anak dari `buildNavMenu` (satu sumber dengan dropdown
+                        desktop) — sudah memuat tautan ke halaman induk
+                        ("Semua Layanan"), jadi TIDAK ditambah lagi di sini. */}
+                    <ul className="ml-3 flex flex-col overflow-hidden border-l border-slate-100 pl-3">
+                      {item.children.map((child) => (
+                        <li key={child.href}>
+                          <Link
+                            href={child.href}
+                            onClick={() => setOpen(false)}
+                            className="block rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-primary-50 hover:text-primary"
+                          >
+                            {child.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {isAdmin ? (
