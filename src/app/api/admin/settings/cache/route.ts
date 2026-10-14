@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { invalidateOrdersSummaryCache } from "@/lib/orders";
+import { invalidateSalesAnalyticsCache } from "@/lib/sales-analytics";
 import { invalidateCouponStatsCache } from "@/lib/coupons";
+import { ALL_CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
@@ -18,7 +20,10 @@ export async function POST(req: Request) {
 
   try {
     invalidateOrdersSummaryCache();
+    invalidateSalesAnalyticsCache();
     invalidateCouponStatsCache();
+    // Buang cache data publik (settings, konten, artikel, produk, proyek, promo).
+    for (const tag of ALL_CACHE_TAGS) revalidateTag(tag, REVALIDATE_NOW);
     // Segarkan halaman publik yang bergantung data dinamis.
     revalidatePath("/", "layout");
     revalidatePath("/");

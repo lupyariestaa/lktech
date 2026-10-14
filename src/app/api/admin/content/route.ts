@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
-import { getSiteContent, normalizeSiteContent, saveSiteContent } from "@/lib/site-content";
+import {
+  normalizeSiteContent,
+  readSiteContent,
+  saveSiteContent,
+} from "@/lib/site-content";
+import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +20,7 @@ export async function GET(req: Request) {
   if (!check.ok) return check.response;
 
   try {
-    const content = await getSiteContent();
+    const content = await readSiteContent();
     return NextResponse.json(
       { content },
       { headers: { "Cache-Control": "no-store" } },
@@ -50,6 +55,7 @@ export async function PUT(req: Request) {
     await saveSiteContent(content, check.email);
 
     // Invalidasi cache halaman publik agar konten baru langsung tampil.
+    revalidateTag(CACHE_TAGS.content, REVALIDATE_NOW);
     revalidatePath("/");
     revalidatePath("/layanan");
     revalidatePath("/blog");

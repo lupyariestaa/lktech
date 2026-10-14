@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import {
   deleteReview,
@@ -10,6 +10,7 @@ import {
 import { REVIEW_STATUSES, type ReviewStatus } from "@/lib/review-types";
 import { reviewModerateSchema } from "@/lib/api-schemas";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,6 +81,7 @@ export async function PATCH(req: Request) {
     if (!review) {
       return NextResponse.json({ error: "Ulasan tidak ditemukan." }, { status: 404 });
     }
+    revalidateTag(CACHE_TAGS.products, REVALIDATE_NOW);
     revalidatePath(`/produk/${review.productSlug}`);
     revalidatePath("/produk");
     await recordAdminAudit({
@@ -110,6 +112,7 @@ export async function DELETE(req: Request) {
     if (!productSlug) {
       return NextResponse.json({ error: "Ulasan tidak ditemukan." }, { status: 404 });
     }
+    revalidateTag(CACHE_TAGS.products, REVALIDATE_NOW);
     revalidatePath("/produk");
     revalidatePath(`/produk/${productSlug}`);
     await recordAdminAudit({

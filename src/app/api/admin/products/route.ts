@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import {
   deleteProductBySlug,
@@ -15,6 +15,7 @@ import {
 import { productSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -170,6 +171,7 @@ export async function POST(req: Request) {
 
   try {
     await saveProduct(product, check.email);
+    revalidateTag(CACHE_TAGS.products, REVALIDATE_NOW);
     revalidatePath("/produk");
     revalidatePath(`/produk/${product.slug}`);
     await recordAdminAudit({
@@ -197,6 +199,7 @@ export async function DELETE(req: Request) {
 
   try {
     await deleteProductBySlug(slug);
+    revalidateTag(CACHE_TAGS.products, REVALIDATE_NOW);
     revalidatePath("/produk");
     await recordAdminAudit({
       action: "product.delete",

@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { getSiteSettings, mergeSettings, SETTINGS_DOC_ID } from "@/lib/settings";
+import {
+  readSiteSettings,
+  mergeSettings,
+  SETTINGS_DOC_ID,
+} from "@/lib/settings";
+import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 import { settingsSchema } from "@/lib/api-schemas";
 import {
   getBuyerEmailFrom,
@@ -28,7 +33,7 @@ export async function GET(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  const settings = await getSiteSettings();
+  const settings = await readSiteSettings();
   const emailHealth = {
     configured: isBuyerEmailConfigured,
     testOnly: isBuyerEmailTestOnly,
@@ -97,6 +102,7 @@ export async function PUT(req: Request) {
 
     // Pastikan halaman publik yang menampilkan kontak langsung segar
     // (kontak dipakai di footer/beranda & halaman kontak).
+    revalidateTag(CACHE_TAGS.settings, REVALIDATE_NOW);
     revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/kontak");

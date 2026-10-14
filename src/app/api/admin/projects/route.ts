@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import {
   deleteProjectBySlug,
@@ -10,6 +10,7 @@ import {
 import type { Project } from "@/lib/project-types";
 import { projectSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
+import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,6 +86,7 @@ export async function POST(req: Request) {
 
   try {
     await saveProject(project, check.email);
+    revalidateTag(CACHE_TAGS.projects, REVALIDATE_NOW);
     revalidatePath("/portofolio");
     revalidatePath(`/portofolio/${slug}`);
     revalidatePath("/");
@@ -110,6 +112,7 @@ export async function DELETE(req: Request) {
 
   try {
     await deleteProjectBySlug(slug);
+    revalidateTag(CACHE_TAGS.projects, REVALIDATE_NOW);
     revalidatePath("/portofolio");
     revalidatePath("/");
     return NextResponse.json({ ok: true });

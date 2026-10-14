@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 import {
   createCoupon,
   createCouponBatch,
@@ -23,6 +25,15 @@ import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * Segarkan data promo publik setelah mutasi kupon: buang cache DATA
+ * (`CACHE_TAGS.promos`) + revalidate halaman `/promo`.
+ */
+function revalidatePromos(): void {
+  revalidateTag(CACHE_TAGS.promos, REVALIDATE_NOW);
+  revalidatePath("/promo");
+}
 
 /**
  * GET /api/admin/coupons — daftar kupon.
@@ -203,6 +214,7 @@ export async function POST(req: Request) {
         target: `batch:${gen.codes.length}`,
         meta: { created: result.created.length, failed: result.failed.length },
       });
+      revalidatePromos();
       return NextResponse.json({
         ok: true,
         created: result.created,
@@ -231,6 +243,7 @@ export async function POST(req: Request) {
         target: coupon.code,
         meta: { duplicatedFrom: sourceId },
       });
+      revalidatePromos();
       return NextResponse.json({ ok: true, coupon });
     } catch (err) {
       console.error("[api/admin/coupons] duplicate gagal:", err);
@@ -265,6 +278,7 @@ export async function POST(req: Request) {
       target: coupon.code,
       meta: { created: true },
     });
+    revalidatePromos();
     return NextResponse.json({ ok: true, coupon });
   } catch (err) {
     // `KP-H2`: klaim kode atomik bisa gagal karena race → laporkan sebagai 409.
@@ -330,6 +344,7 @@ export async function PATCH(req: Request) {
       target: coupon.code,
       meta: { created: false },
     });
+    revalidatePromos();
     return NextResponse.json({ ok: true, coupon });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
@@ -364,6 +379,7 @@ export async function DELETE(req: Request) {
         actor: check.email,
         target: id,
       });
+      revalidatePromos();
       return NextResponse.json({ ok: true, restored: true });
     }
 
@@ -376,6 +392,7 @@ export async function DELETE(req: Request) {
       actor: check.email,
       target: id,
     });
+    revalidatePromos();
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/coupons] DELETE gagal:", err);

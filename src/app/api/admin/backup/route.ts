@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import { dryRunImport, exportBackup, importBackup } from "@/lib/backup";
 import { validateBackupBundle, BACKUP_SOURCES, type BackupSource } from "@/lib/backup-pure";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { ALL_CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
+import { invalidateSalesAnalyticsCache } from "@/lib/sales-analytics";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -90,6 +93,12 @@ export async function POST(req: Request) {
 
   try {
     const result = await importBackup(validation.bundle);
+    // Restore menulis ulang banyak koleksi → buang SEMUA cache data publik +
+    // cache turunan pesanan, lalu segarkan halaman publik.
+    for (const tag of ALL_CACHE_TAGS) revalidateTag(tag, REVALIDATE_NOW);
+    invalidateSalesAnalyticsCache();
+    revalidatePath("/", "layout");
+    revalidatePath("/");
     await recordAdminAudit({
       action: "settings.restore",
       actor: check.email,

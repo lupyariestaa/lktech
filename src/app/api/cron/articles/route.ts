@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getStoredArticles } from "@/lib/articles";
 import { taxonomySlug } from "@/lib/article-types";
 import { isCronAuthorized, revalidationPaths } from "@/lib/article-api-logic";
+import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,8 @@ async function run(req: Request) {
     });
 
     const paths = revalidationPaths(due, taxonomySlug);
+    // Artikel terjadwal baru jatuh tempo → buang cache data artikel juga.
+    if (due.length > 0) revalidateTag(CACHE_TAGS.articles, REVALIDATE_NOW);
     for (const p of paths) revalidatePath(p);
 
     return NextResponse.json(

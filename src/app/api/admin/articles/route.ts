@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import {
   deleteArticleBySlug,
@@ -13,6 +13,7 @@ import { findHistoryConflict, findOverwriteConflict } from "@/lib/slug-conflict"
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { articleSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
+import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,9 @@ export const dynamic = "force-dynamic";
 function revalidateBlog(
   ...articles: Array<Pick<Article, "slug" | "category" | "tags"> | undefined>
 ) {
+  // Buang cache DATA artikel (dipakai lintas halaman: blog, beranda, sitemap,
+  // RSS) — `revalidatePath` saja tidak membatalkan entri `unstable_cache`.
+  revalidateTag(CACHE_TAGS.articles, REVALIDATE_NOW);
   for (const p of revalidationPaths(articles, taxonomySlug)) revalidatePath(p);
 }
 /** GET /api/admin/articles — daftar artikel (termasuk draft). */

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin-guard";
 import { deleteArticleBySlug, getStoredArticles, saveArticle } from "@/lib/articles";
@@ -7,6 +7,7 @@ import { taxonomySlug, type Article } from "@/lib/article-types";
 import { BULK_ACTIONS, normalizeBulkSlugs, type BulkAction } from "@/lib/article-manage";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { revalidationPaths } from "@/lib/article-api-logic";
+import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,6 +82,7 @@ export async function POST(req: Request) {
 
   // Revalidate halaman terkait untuk semua item yang berhasil.
   const touched = all.filter((a) => results.some((r) => r.ok && r.slug === a.slug));
+  revalidateTag(CACHE_TAGS.articles, REVALIDATE_NOW);
   for (const p of revalidationPaths(touched, taxonomySlug)) revalidatePath(p);
 
   const okCount = results.filter((r) => r.ok).length;
