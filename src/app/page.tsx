@@ -15,6 +15,7 @@ import { CtaContact } from "@/components/sections/cta-contact";
 import { Footer } from "@/components/sections/footer";
 import { SocialProof } from "@/components/social-proof";
 import { ScrollDepthTracker } from "@/components/scroll-depth-tracker";
+import { ScrollProgress } from "@/components/scroll-progress";
 import { getSiteContent } from "@/lib/site-content";
 import { buildFaqPage } from "@/lib/structured-data-pure";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -54,6 +55,7 @@ export default async function Home() {
     <>
       {faqLd && <JsonLdScript node={faqLd} />}
       <IntroLoader />
+      <ScrollProgress />
       <Navbar />
       <main id="konten">
         <Hero

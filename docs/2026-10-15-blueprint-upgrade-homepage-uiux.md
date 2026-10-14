@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 📝 Rencana (audit selesai, belum ada kode berubah)
+> **Status:** 🚧 Berjalan (F0 selesai — kode; F1–F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -94,7 +94,7 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 
 | ID | Temuan | Dampak | Severity |
 | --- | --- | --- | --- |
-| **A1** | **`body { overflow-x: hidden }` mematikan `position: sticky`** (body jadi scroll-container). Ini **prasyarat wajib** untuk pinned scroll. | Efek pinned **tidak akan berfungsi** sampai ini diperbaiki | 🔴 **Blocker** |
+| **A1** | ~~`body { overflow-x: hidden }` mematikan `position: sticky`~~ — **DIKOREKSI (uji empiris F0):** kondisi repo saat ini (`html: visible` + `body: overflow-x: hidden`) **tetap membuat sticky bekerja** (overflow `body` dipropagasi ke viewport). Yang **benar-benar** mematikan sticky: (a) `overflow: hidden/clip` pada **`html`** *dan* `body` sekaligus, atau (b) **wrapper div** ber-`overflow: hidden` di antara container & elemen sticky. | **Aturan wajib**: jangan bungkus konten sticky dengan elemen `overflow: hidden`. Bila perlu memotong luapan horizontal → pakai `overflow-x: clip`. | 🟠 Sedang (aturan, bukan bug aktif) |
 | **A2** | Grid kartu **3 kolom seragam berulang** (Services, Portfolio, WhyUs, Products, Pricing) → monoton, kurang hierarki. | Beranda terasa "datar" & panjang | 🔴 Tinggi |
 | **A3** | **Transisi antar-section keras** — tiap section ganti latar (white→surface→secondary) tanpa jahitan/transisi. | Hilang rasa "satu cerita" | 🟠 Sedang |
 | **A4** | **Tidak ada scroll progress indicator** & tidak ada efek scroll-driven (parallax/pin). | Scroll terasa pasif, bukan "hidup" | 🟠 Sedang |
@@ -105,11 +105,15 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | **A9** | Efek **3D/WebGL** belum ada (baru tilt CSS). | Belum ada pembeda "high-tech" | 🟡 Rendah (opsional) |
 | **A10** | `Stats` sering **tidak tampil** (data contoh). | Kehilangan section bukti angka | 🟡 Rendah (perlu data nyata) |
 
-> **Catatan A1 (penting & mudah dilewatkan):** `overflow-x: hidden` pada `body` membuat body menjadi
-> *scroll container*. Akibatnya `position: sticky` pada elemen di dalamnya **tidak lengket** (tidak ada
-> ruang scroll pada container itu). Solusi standar: ganti ke **`overflow-x: clip`** (clip **tidak**
-> membuat scroll container) — atau terapkan `overflow-x: hidden` di `html`, bukan `body`. Ini **harus**
-> dibereskan di F0 sebelum fase pinned.
+> **Catatan A1 (dikoreksi lewat uji empiris, F0):** Dugaan awal bahwa `body { overflow-x: hidden }`
+> mematikan `position: sticky` **terbukti keliru** untuk kondisi repo ini. Uji dengan Chromium
+> (Playwright) menunjukkan `html: visible` + `body: overflow-x: hidden` **tetap** membuat sticky
+> lengket — karena overflow pada `body` **dipropagasi ke viewport**, sehingga `body` bukan
+> scroll-container. Yang benar-benar mematikan sticky hanya: (a) `overflow: hidden/clip` pada
+> **`html`** *dan* `body` bersamaan, atau (b) **wrapper div** ber-`overflow: hidden`.
+> **Konsekuensi:** `body` **tidak diubah** (mengubahnya tanpa manfaat = risiko regresi di browser
+> lama). Aturannya cukup: **jangan bungkus elemen sticky dengan wrapper `overflow: hidden`**; bila
+> perlu memotong luapan horizontal, gunakan `overflow-x: clip`.
 
 ---
 
@@ -122,6 +126,7 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | D3 | **3D/WebGL hanya tablet ke atas** (≥ 768px) | Menjaga performa mobile; mobile menyusul setelah terbukti |
 | D4 | **Konten tetap kaya** (tanpa pemangkasan) | Permintaan eksplisit pemilik |
 | D5 | **Tanpa scroll-hijack** — pakai CSS `position: sticky` native untuk pinning | Performa terbaik + a11y terjaga + tanpa dependensi berat |
+| D8 | **Tidak mengubah `body { overflow-x: hidden }`** (koreksi A1) | Uji empiris: tidak mematikan sticky di konfigurasi repo; mengubahnya hanya menambah risiko. Aturan: hindari wrapper `overflow: hidden` untuk konten sticky |
 | D6 | **Framer Motion** cukup untuk scroll-driven (tidak perlu GSAP) | `useScroll`/`useTransform`/`useSpring` sudah tersedia |
 | D7 | **Lenis (smooth scroll) = opsional**, di-gate reduced-motion | Tidak wajib; bisa ditunda bila bentrok dengan `scroll-behavior: smooth` |
 
@@ -176,12 +181,16 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 > Estimasi "effort" = relatif (S/M/L), bukan jam.
 
 ### F0 — Fondasi & util (prasyarat) — effort S
-- **Perbaiki A1:** `body { overflow-x: hidden }` → `overflow-x: clip` (uji: sticky berfungsi).
-- Tambah **token animasi** (durasi/easing/`--section-gap`) di `globals.css` bila perlu.
-- Tambah hook **`useMediaQuery`** (client, SSR-safe).
-- Tambah komponen **`ScrollProgress`** (bar tipis di atas, `transform: scaleX`).
-- Tambah komponen **`PinnedSection`** (wrapper sticky generik).
-- **Tidak mengubah tampilan** selain bar progress (bila langsung dipakai).
+- **Koreksi A1 (uji empiris):** konfirmasi `body { overflow-x: hidden }` **tidak** mematikan
+  `position: sticky` pada kondisi repo → **`body` tidak diubah**. Aturan dipindah ke dokumentasi
+  (`PinnedSection`) + catatan risiko.
+- Tambah hook **`useMediaQuery`** (`src/lib/use-media-query.ts`) — gate SSR-safe untuk efek berat.
+- Tambah komponen **`ScrollProgress`** (`src/components/scroll-progress.tsx`) — bar progres scroll.
+- Tambah komponen **`PinnedSection`** (`src/components/pinned-section.tsx`) — wrapper sticky generik
+  dengan render-prop `progress`, hormati `prefers-reduced-motion`, dan peringatan wrapper overflow.
+- Pasang **`ScrollProgress`** di beranda (`app/page.tsx`) — **satu-satunya perubahan UI** di F0.
+- Token animasi/spacing tambahan **ditunda** sampai benar-benar dibutuhkan (F2) — hindari token
+  tak terpakai.
 
 ### F1 — Hero upgrade (momen pertama) — effort M
 - **Scroll parallax**: konten hero naik/memudar halus saat di-scroll (Framer `useScroll`).
@@ -235,13 +244,13 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 ### Diubah (usulan)
 | File | Perubahan |
 | --- | --- |
-| `src/app/globals.css` | Fix `overflow-x` (A1) + token animasi/spacing |
-| `src/components/sections/hero.tsx` | Parallax, animated headline, trust bar, cursor glow |
-| `src/components/section-heading.tsx` | Varian alignment/ukuran |
-| `src/components/sections/process.tsx` | Pindah ke timeline pinned |
-| `src/components/sections/services.tsx` | Pindah ke bento |
-| `src/app/page.tsx` | Susun ulang urutan/tambahkan `ScrollProgress` |
-| `package.json` | (F5) tambah `three`, `@react-three/fiber` |
+| `src/app/globals.css` | *(F0: tidak diubah — lihat koreksi A1)*; token animasi/spacing menyusul bila perlu |
+| `src/app/page.tsx` | Pasang `ScrollProgress` (F0); susun ulang urutan section bila perlu (F2+) |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow |
+| `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran |
+| `src/components/sections/process.tsx` | *(F3)* Pindah ke timeline pinned |
+| `src/components/sections/services.tsx` | *(F4)* Pindah ke bento |
+| `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
 
 ---
@@ -253,7 +262,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | **Performa turun** (terlalu banyak animasi/3D) | SEO & konversi turun | Batasi efek, GPU-only, lazy, gate ukuran layar, ukur Lighthouse tiap fase |
 | **Mobile lemot** | Pengalaman buruk mayoritas pengguna | Efek berat hanya ≥768px; mobile = versi ringan |
 | **CLS/INP memburuk** | Core Web Vitals merah | Hindari animasi layout (pakai transform), reservasi ruang |
-| **Sticky tak jalan** (A1) | Fitur utama gagal | Perbaiki `overflow-x` di F0 + uji lebih dulu |
+| **Sticky tak jalan** (A1) | Fitur utama gagal | **Koreksi A1 (terverifikasi):** kondisi repo aman; cukup hindari wrapper `overflow: hidden` pada konten sticky (pakai `overflow-x: clip` bila perlu) |
 | **A11y** (animasi berlebih) | Pusing/disorientasi | Pertahankan `prefers-reduced-motion`; sediakan fallback statis |
 | **Bentrok smooth-scroll** | Scroll "lawan" | Lenis opsional; bila dipakai, matikan `scroll-behavior: smooth` |
 | **Konten terpangkas** | Melanggar permintaan | Review tiap fase: tidak ada section/teks yang hilang |
@@ -267,7 +276,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | --- | --- | --- |
 | — | Audit detail beranda | ✅ Selesai (dokumen ini) |
 | — | Blueprint & rencana fase | ✅ Selesai (dokumen ini) |
-| F0 | Fondasi (fix `overflow-x`, util, ScrollProgress, PinnedSection) | ⬜ Todo |
+| F0 | Fondasi (util `useMediaQuery`, `ScrollProgress`, `PinnedSection`; koreksi A1) | ✅ Selesai (kode) |
 | F1 | Hero upgrade | ⬜ Todo |
 | F2 | Ritme & transisi antar-section | ⬜ Todo |
 | F3 | Pinned storytelling (process timeline) | ⬜ Todo |
