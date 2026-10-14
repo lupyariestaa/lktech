@@ -22,7 +22,7 @@
 | M3 | Domain sendiri + Resend terverifikasi | beli domain | 🟠 Sedang | ⬜ Belum |
 | M4 | Env opsional (GA4 / GSC API / Upstash / WA) | akun masing-masing | 🟡 Rendah | ⬜ Belum |
 | M5 | Backfill agregat analitik 90 hari (sekali) | — | 🟡 Rendah | ✅ Selesai |
-| M6 | Firestore Rules republish (A4) | Firebase Console | 🟢 Ditunda | ⬜ Belum |
+| M6 | Firestore Rules republish (A4) | Firebase Console | 🟢 Ditunda | ✅ Selesai |
 
 Legenda status: ⬜ Belum · 🔄 Sedang · ✅ Selesai · ⏭️ Ditunda
 
@@ -124,10 +124,13 @@ backfill ini hanya untuk riwayat lebih panjang.
 **Guna:** memastikan rules deny-all benar-benar aktif di produksi.
 (Rules di repo sudah deny-all & benar; ini hanya verifikasi/re-publish.)
 
-- [ ] Buka Firebase Console → Firestore → **Rules** → pastikan `allow read, write: if false;` → **Publish**.
-- [ ] Verifikasi: `firestore.rules` di repo identik dengan yang tampil di Console.
+- [x] Buka Firebase Console → Firestore → **Rules** → pastikan `allow read, write: if false;` → **Publish**.
+- [x] Verifikasi: `firestore.rules` di repo identik dengan yang tampil di Console.
+- [ ] (Opsional) Cek **Indexes**: Firebase Console → Firestore → **Indexes** → pastikan 3 composite index dari `firestore.indexes.json` ada (atau `firebase deploy --only firestore:indexes`). Bila admin orders bisa filter status/tanggal tanpa error, index sudah ada.
 
-**Status:** 🟢 Ditunda (non-urgent)
+**Status:** ✅ Selesai (2026-10-14) — rules deny-all terbaru dipublish.
+**Catatan:** Rules cukup copy-paste + Publish (catch-all `match /{document=**}` menolak semua klien; koleksi baru otomatis ikut terlindungi — tak perlu rule terpisah).
+Composite **indexes** terpisah dari rules (lihat langkah opsional di atas).
 
 ---
 
@@ -147,3 +150,4 @@ backfill ini hanya untuk riwayat lebih panjang.
 | 2026-10-14 | Dokumen dibuat. M1–M6 terdaftar, semua ⬜ Belum (M6 ditunda). |
 | 2026-10-14 | **M5 ✅ Selesai** — backfill analitik 90 hari (`written=90`). |
 | 2026-10-14 | **M1 ✅ Selesai** — GSC terverifikasi + sitemap tersubmit (via field admin, tanpa kode). |
+| 2026-10-14 | **M6 ✅ Selesai** — Firestore Rules deny-all terbaru dipublish. |
