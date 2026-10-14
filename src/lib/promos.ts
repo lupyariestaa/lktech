@@ -1,7 +1,9 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { normalizeCoupon } from "@/lib/coupons";
 import type { CouponType } from "@/lib/coupon-types";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import {
   computePromoStatus,
   promoRequirement,
@@ -43,7 +45,7 @@ const UPCOMING_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 /**
  * Daftar kupon PUBLIK untuk halaman `/promo` (C7).
  */
-export async function listPublicPromos(): Promise<PublicPromo[]> {
+async function readPublicPromos(): Promise<PublicPromo[]> {
   const db = getAdminDb();
   if (!db) return [];
 
@@ -91,3 +93,13 @@ export async function listPublicPromos(): Promise<PublicPromo[]> {
     return [];
   }
 }
+
+/**
+ * Daftar kupon PUBLIK untuk halaman `/promo` (C7) — ber-CACHE.
+ * Invalidasi via `revalidateTag(CACHE_TAGS.promos)` saat admin mengubah kupon.
+ */
+export const listPublicPromos = unstable_cache(
+  readPublicPromos,
+  ["public-promos"],
+  { tags: [CACHE_TAGS.promos], revalidate: 120 },
+);

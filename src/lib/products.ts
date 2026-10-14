@@ -9,6 +9,8 @@ import type {
   ProductVariant,
   StoredProduct,
 } from "@/lib/product-types";
+import { unstable_cache } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { normalizeRatingSummary } from "@/lib/review-types";
 
 /** Normalisasi `ratingSummary` produk (FASE R) — re-export tipe aman-klien. */
@@ -307,7 +309,7 @@ function normalizeRelatedSlugs(v: unknown): string[] | undefined {
 }
 
 /** Produk yang tampil di publik (aktif), urut: unggulan dulu lalu nama. */
-export async function getProducts(): Promise<Product[]> {
+async function readProducts(): Promise<Product[]> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
   // Fallback ke produk contoh HANYA saat Admin SDK belum dikonfigurasi (mode demo).
@@ -328,6 +330,20 @@ export async function getProducts(): Promise<Product[]> {
     return [];
   }
 }
+
+/**
+ * Katalog produk PUBLIK (ber-CACHE). Dipakai `/produk`, beranda, blog, sitemap,
+ * `generateStaticParams`, & produk terkait — `unstable_cache` mencegah pemindaian
+ * koleksi berulang. Invalidasi via `revalidateTag(CACHE_TAGS.products)` saat admin
+ * menyimpan/moderasi ulasan.
+ *
+ * CATATAN: verifikasi checkout TIDAK memakai fungsi ini (lihat
+ * `getProductsBySlugs` yang sengaja tanpa cache agar harga selalu segar).
+ */
+export const getProducts = unstable_cache(readProducts, ["products"], {
+  tags: [CACHE_TAGS.products],
+  revalidate: 120,
+});
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const { getAdminDb } = await import("@/lib/firebase-admin");

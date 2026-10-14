@@ -1,4 +1,6 @@
 import type { Article, StoredArticle } from "@/lib/article-types";
+import { unstable_cache } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import {
   findArticleBySlugOrHistory,
   isPubliclyVisible,
@@ -53,7 +55,7 @@ function normalizeArticle(data: Record<string, unknown>): Article {
 }
 
 /** Semua artikel yang tayang publik (published & jadwal sudah lewat). Tanpa DB → kosong. */
-export async function getArticles(): Promise<Article[]> {
+async function readArticles(): Promise<Article[]> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
   if (!db) return [];
@@ -73,6 +75,17 @@ export async function getArticles(): Promise<Article[]> {
     return [];
   }
 }
+
+/**
+ * Artikel publik (ber-CACHE). Dipanggil halaman blog/beranda/sitemap/RSS —
+ * `unstable_cache` mencegah pemindaian koleksi berulang lintas-request.
+ * Invalidasi via `revalidateTag(CACHE_TAGS.articles)` saat admin menyimpan.
+ * Dashboard tetap memakai `getStoredArticles()` (tanpa cache, termasuk draft).
+ */
+export const getArticles = unstable_cache(readArticles, ["articles"], {
+  tags: [CACHE_TAGS.articles],
+  revalidate: 60,
+});
 
 /** Semua artikel untuk dashboard (termasuk draft). */
 export async function getStoredArticles(): Promise<StoredArticle[]> {

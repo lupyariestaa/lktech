@@ -1,4 +1,6 @@
 import { PROJECTS as DEFAULT_PROJECTS } from "@/lib/content";
+import { unstable_cache } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import type { Project, ProjectMetric, StoredProject } from "@/lib/project-types";
 
 export type { Project, StoredProject, ProjectMetric };
@@ -57,11 +59,12 @@ function sortProjects(a: Project, b: Project): number {
 }
 
 /**
- * Mengambil semua proyek dari Firestore (server-side).
- * Fallback ke data default di content.ts HANYA bila Admin SDK belum dikonfigurasi
- * (mode demo). Saat SDK aktif namun koleksi dikosongkan sengaja, kembalikan [].
+ * Pembacaan MENTAH dari Firestore (tanpa cache) untuk proyek publik.
+ * Fallback ke data default di content.ts HANYA bila Admin SDK belum
+ * dikonfigurasi (mode demo). Saat SDK aktif namun koleksi dikosongkan sengaja,
+ * kembalikan [].
  */
-export async function getProjects(): Promise<Project[]> {
+async function readProjects(): Promise<Project[]> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
   if (!db) return DEFAULT_PROJECTS.map((p) => ({ ...p, demo: true }));
@@ -75,6 +78,17 @@ export async function getProjects(): Promise<Project[]> {
     return [];
   }
 }
+
+/**
+ * Semua proyek publik (ber-CACHE). Dipakai beranda, `/portofolio`, sitemap,
+ * `generateStaticParams` — `unstable_cache` mencegah pemindaian koleksi
+ * berulang. Invalidasi via `revalidateTag(CACHE_TAGS.projects)` saat admin
+ * menyimpan. Dashboard memakai `getStoredProjects()` (tanpa cache).
+ */
+export const getProjects = unstable_cache(readProjects, ["projects"], {
+  tags: [CACHE_TAGS.projects],
+  revalidate: 60,
+});
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
   const projects = await getProjects();

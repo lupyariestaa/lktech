@@ -1,10 +1,12 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import {
   DEFAULT_SETTINGS,
   type SiteSettings,
   type SocialLink,
 } from "@/lib/settings-types";
 import { normalizePhone } from "@/lib/whatsapp";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 
 /** ID dokumen pengaturan di Firestore. */
 export const SETTINGS_DOC_ID = "site";
@@ -54,13 +56,10 @@ export function mergeSettings(data: Partial<SiteSettings> | undefined): SiteSett
 }
 
 /**
- * Mengambil pengaturan situs dari Firestore (server-side).
- * Fallback ke nilai default bila belum ada / Admin SDK tidak tersedia.
- *
- * Dibungkus `cache()` agar dalam satu request hanya di-query sekali
- * (dipanggil di `generateMetadata` DAN `RootLayout` — lihat gap G1).
+ * Pembacaan MENTAH dari Firestore (tanpa cache) — selalu segar.
+ * Dipakai dashboard (route GET) yang tidak boleh melihat data basi.
  */
-export const getSiteSettings = cache(async (): Promise<SiteSettings> => {
+export async function readSiteSettings(): Promise<SiteSettings> {
   try {
     const { getAdminDb } = await import("@/lib/firebase-admin");
     const db = getAdminDb();
@@ -77,4 +76,35 @@ export const getSiteSettings = cache(async (): Promise<SiteSettings> => {
     console.error("[settings] gagal memuat:", err);
     return DEFAULT_SETTINGS;
   }
-});
+}
+
+/**
+ * Versi ber-CACHE untuk pembaca PUBLIK.
+ *
+ * `unstable_cache` menyimpan hasil lintas-request di data cache Next sehingga
+ * `getSiteSettings()` yang dipanggil di SETIAP halaman (root layout +
+ * `generateMetadata`) tidak lagi membaca Firestore berulang kali — penghematan
+ * besar saat build (ratusan read) dan saat runtime (ISR).
+ *
+ * - `tags`: dibatalkan dashboard via `revalidateTag(CACHE_TAGS.settings)`.
+ * - `revalidate`: jaring pengaman bila invalidasi tag terlewat (5 menit).
+ *
+ * Dashboard memakai `readSiteSettings()` (tanpa cache) agar selalu segar.
+ */
+const getCachedSiteSettings = unstable_cache(
+  readSiteSettings,
+  ["site-settings"],
+  { tags: [CACHE_TAGS.settings], revalidate: 300 },
+);
+
+/**
+ * Mengambil pengaturan situs dari Firestore (server-side), ber-cache.
+ * Fallback ke nilai default bila belum ada / Admin SDK tidak tersedia.
+ *
+ * Dibungkus `cache()` (React) agar dalam satu request hanya dihitung sekali
+ * (dipanggil di `generateMetadata` DAN `RootLayout` — lihat gap G1); lapisan
+ * `unstable_cache` di bawahnya menghemat lintas-request.
+ */
+export const getSiteSettings = cache(
+  async (): Promise<SiteSettings> => getCachedSiteSettings(),
+);

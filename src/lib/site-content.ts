@@ -13,6 +13,8 @@ import {
   type ManagedWhyUs,
   type SiteContent,
 } from "@/lib/content-types";
+import { unstable_cache } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 
 const COLLECTION = "content";
 export const CONTENT_DOC_ID = "site";
@@ -249,10 +251,10 @@ export function normalizeSiteContent(raw: Record<string, unknown>): SiteContent 
 }
 
 /**
- * Mengambil konten situs (layanan, FAQ, harga) dari Firestore (server-side).
- * Fallback ke nilai default di content.ts bila kosong / belum dikonfigurasi.
+ * Pembacaan MENTAH dari Firestore (tanpa cache) — selalu segar.
+ * Dipakai dashboard (route GET) yang tidak boleh melihat data basi.
  */
-export async function getSiteContent(): Promise<SiteContent> {
+export async function readSiteContent(): Promise<SiteContent> {
   try {
     const { getAdminDb } = await import("@/lib/firebase-admin");
     const db = getAdminDb();
@@ -267,6 +269,20 @@ export async function getSiteContent(): Promise<SiteContent> {
     return defaultSiteContent();
   }
 }
+
+/**
+ * Versi ber-CACHE untuk pembaca PUBLIK.
+ *
+ * `getSiteContent()` dipanggil di root layout (SETIAP halaman) → tanpa cache,
+ * build membaca dokumen `content` puluhan kali. `unstable_cache` menyimpan hasil
+ * lintas-request; invalidasi via `revalidateTag(CACHE_TAGS.content)` saat admin
+ * menyimpan. Dashboard memakai `readSiteContent()` (tanpa cache).
+ */
+export const getSiteContent = unstable_cache(
+  readSiteContent,
+  ["site-content"],
+  { tags: [CACHE_TAGS.content], revalidate: 300 },
+);
 
 /** Menyimpan seluruh konten situs sebagai satu dokumen. */
 export async function saveSiteContent(
