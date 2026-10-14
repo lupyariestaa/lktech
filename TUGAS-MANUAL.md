@@ -21,7 +21,7 @@
 | M2 | Mayar: aktifkan mode produksi | verifikasi bisnis | 🔴 Tinggi | ⬜ Belum |
 | M3 | Domain sendiri + Resend terverifikasi | beli domain | 🟠 Sedang | ⬜ Belum |
 | M4 | Env opsional (GA4 / GSC API / Upstash / WA) | akun masing-masing | 🟡 Rendah | ⬜ Belum |
-| M5 | Backfill agregat analitik 90 hari (sekali) | — | 🟡 Rendah | ⬜ Belum |
+| M5 | Backfill agregat analitik 90 hari (sekali) | — | 🟡 Rendah | ✅ Selesai |
 | M6 | Firestore Rules republish (A4) | Firebase Console | 🟢 Ditunda | ⬜ Belum |
 
 Legenda status: ⬜ Belum · 🔄 Sedang · ✅ Selesai · ⏭️ Ditunda
@@ -103,16 +103,16 @@ Pilih sesuai kebutuhan. Isi → Vercel → **Redeploy**.
 **Guna:** mengaktifkan jalur cepat `analytics_daily` untuk rentang 30/90 hari.
 (Tanpa ini dashboard tetap **benar** via jalur LIVE, hanya sedikit lebih lambat.)
 
-- [ ] Jalankan sekali:
+- [x] Jalankan sekali:
 
 ```powershell
 $h = @{ Authorization = "Bearer <CRON_SECRET>" }
 Invoke-RestMethod -Method POST -Headers $h "https://lktech.vercel.app/api/cron/analytics-daily?days=90"
 ```
 
-- [ ] Harapkan balasan `{"ok":true,"days":90,"written":90,...}`.
+- [x] Harapkan balasan `{"ok":true,"days":90,"written":90,...}`.
 
-**Status:** ⬜ Belum
+**Status:** ✅ Selesai (2026-10-14) — balasan `ok=True, days=90, written=90`.
 **Catatan:** cron tiap jam (`cron.yml`) sudah otomatis mengisi 3 hari terakhir;
 backfill ini hanya untuk riwayat lebih panjang.
 
@@ -144,3 +144,4 @@ backfill ini hanya untuk riwayat lebih panjang.
 | Tanggal | Perubahan |
 | --- | --- |
 | 2026-10-14 | Dokumen dibuat. M1–M6 terdaftar, semua ⬜ Belum (M6 ditunda). |
+| 2026-10-14 | **M5 ✅ Selesai** — backfill analitik 90 hari (`written=90`). |
