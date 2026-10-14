@@ -75,6 +75,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-14 | [Halaman Tentang Kami (`/tentang`)](2026-10-14-halaman-tentang-kami.md) | ✅ Selesai (kode) |
 | 2026-10-14 | [Upgrade Navbar — Menu Bertingkat (Dropdown & Akordeon)](2026-10-14-upgrade-navbar-bertingkat.md) | ✅ Selesai (kode) |
 | 2026-10-14 | [Perbaikan Build Gagal — `/admin` Ter-prerender + Query Firestore Tanpa Pengaman](2026-10-14-perbaikan-build-admin-prerender.md) | ✅ Selesai (kode) |
+| 2026-10-14 | [Optimasi Cache Firestore — Hemat Kuota Baca (unstable_cache + revalidateTag)](2026-10-14-optimasi-cache-firestore.md) | ✅ Selesai (kode) |
 
 ### Dokumen pendukung (referensi & setup)
 

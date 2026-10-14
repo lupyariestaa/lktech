@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumentasi ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Perbaikan Build Gagal (admin prerender + Firestore fail-safe)**.
+> Terakhir diperbarui: sesi **Optimasi Cache Firestore (unstable_cache + revalidateTag)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -32,6 +32,8 @@
 >
 > 🚑 **Perbaikan Build Gagal ✅ SELESAI (kode, 2026-10-14):** `docs/2026-10-14-perbaikan-build-admin-prerender.md` — deploy gagal karena (1) `/admin` ikut di-prerender saat build → `force-dynamic` di layout dashboard, dan (2) `getSalesAnalytics()` membaca Firestore tanpa `try/catch` → kini fail-safe (`buildEmptyAnalytics`). Build kini sukses meski kuota Firestore habis.
 >
+> 🧊 **Optimasi Cache Firestore ✅ SELESAI (kode, 2026-10-14):** `docs/2026-10-14-optimasi-cache-firestore.md` — hemat kuota baca: `unstable_cache` untuk pembaca publik (`settings`/`content`/`articles`/`products`/`projects`/`promos`) + invalidasi `revalidateTag` di tiap mutasi admin; cache TTL singkat untuk analitik. Reader admin tetap segar (`read*`).
+>
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat · M6 Firestore rules. Centang saat beres.
 >
 > 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (Halaman Tentang Kami · B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend, submit sitemap GSC). Lihat §"STATUS & PETA SEKARANG".
@@ -53,7 +55,23 @@
 
 ---
 
-## ⏰ SESI INI — Perbaikan Build Gagal: `/admin` Ter-prerender + Query Firestore Tanpa Pengaman — SELESAI (kode)
+## ⏰ SESI INI — Optimasi Cache Firestore: Hemat Kuota Baca (`unstable_cache` + `revalidateTag`) — SELESAI (kode)
+
+**Status: ✅ SELESAI.** Dokumen: [`docs/2026-10-14-optimasi-cache-firestore.md`](docs/2026-10-14-optimasi-cache-firestore.md).
+
+Melanjutkan perbaikan build admin. Kuota baca Firestore (Spark: 50K/hari) boros karena pembaca publik dipanggil di SETIAP halaman (root layout) → saat build ≈72 halaman × (`settings`+`content`+koleksi) read.
+
+- **`unstable_cache`** (model lama — proyek TIDAK memakai `cacheComponents`) untuk `getSiteSettings`, `getSiteContent`, `getArticles`, `getProducts`, `getProjects`, `listPublicPromos`.
+- **`revalidateTag`** (WAJIB bentuk 2-argumen `{ expire: 0 }` di Next 16) di SEMUA route mutasi admin — `revalidatePath` saja TIDAK membatalkan data cache.
+- Reader **mentah** (`readSiteSettings`/`readSiteContent`) untuk route GET admin agar selalu segar.
+- Cache memori TTL 120s untuk `getSalesAnalytics` + invalidasi saat order berubah.
+- Tag terpusat `src/lib/cache-tags.ts`; guard regresi `test:cache-wiring` (4).
+
+**Gate:** `tsc` ✅ · lint ✅ · `test:cache-wiring` ✅ · `npm run build` ✅ (uji tanpa kredensial → 0 read).
+
+---
+
+## ⏰ SESI SEBELUMNYA — Perbaikan Build Gagal: `/admin` Ter-prerender + Query Firestore Tanpa Pengaman — SELESAI (kode)
 
 **Status: ✅ SELESAI.** Dokumen: [`docs/2026-10-14-perbaikan-build-admin-prerender.md`](docs/2026-10-14-perbaikan-build-admin-prerender.md).
 
