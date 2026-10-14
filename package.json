@@ -36,6 +36,7 @@
     "test:nav-menu": "node --experimental-strip-types --test scripts/nav-menu.test.ts",
     "test:admin-dynamic": "node --experimental-strip-types --test scripts/admin-dashboard-dynamic.test.ts",
     "test:cache-wiring": "node --experimental-strip-types --test scripts/cache-wiring.test.ts",
+    "test:unit": "node --experimental-strip-types --test \"scripts/*.test.ts\"",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:payment": "node --experimental-strip-types --test scripts/payment-metrics.test.ts",

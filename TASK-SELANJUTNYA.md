@@ -1776,7 +1776,7 @@ Lihat `docs/2026-10-05-audit-email-kupon-analitik.md`. Seluruh temuan kritis/may
 - [x] Kelola FAQ & harga dari dashboard.
 
 #### 7. Peningkatan SEO (lanjutan) — SKIP sementara (tunggu proper dulu)
-- [ ] Daftarkan ke **Google Search Console** + submit sitemap.
+- [x] Daftarkan ke **Google Search Console** + submit sitemap. ✅ (M1, 2026-10-14)
 - [ ] Daftarkan **Google Business Profile**.
 - [x] **Halaman kategori/tag blog + RSS + JSON-LD** — lihat `docs/2026-10-03-peningkatan-blog-seo-discovery.md`.
 

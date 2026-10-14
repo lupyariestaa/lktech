@@ -8,7 +8,7 @@ name: Cron (eksternal)
 # sehingga hanya endpoint yang cocok jadwalnya yang dipanggil.
 on:
   schedule:
-    - cron: "0 * * * *"        # tiap jam          → expire-orders (juga articles)
+    - cron: "0 * * * *"        # tiap jam          → expire-orders
     - cron: "15 * * * *"       # tiap jam (geser)  → articles
     - cron: "30 */3 * * *"     # tiap 3 jam        → cart-reminders
     - cron: "0 2 * * *"        # harian 09:00 WIB  → wishlist-alerts
