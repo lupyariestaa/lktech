@@ -54,6 +54,7 @@ jobs:
           npm run test:analytics-daily
           npm run test:nav-menu
           npm run test:admin-dynamic
+          npm run test:cache-wiring
 
       - name: Build
         run: npm run build
