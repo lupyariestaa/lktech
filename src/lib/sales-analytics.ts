@@ -220,7 +220,26 @@ function buildEmptyAnalytics(days: number, mode: AnalyticsMode): SalesAnalytics 
   };
 }
 
-/** Hitung analitik penjualan untuk `days` hari terakhir. */
+/**
+ * Cache memori singkat untuk `getSalesAnalytics` (mirip `getOrdersSummary`).
+ *
+ * Analitik menjalankan pemindaian `orders` (atau beberapa dokumen agregat) yang
+ * relatif mahal; dashboard memanggilnya berkali-kali (kartu Kesehatan Bisnis +
+ * tab Analitik + polling). TTL kecil menjaga angka tetap segar, sementara
+ * `invalidateSalesAnalyticsCache()` dipanggil saat order berubah agar aksi admin
+ * (ubah status/hapus) langsung tercermin. Dedupe `inflight` mencegah query
+ * ganda saat beberapa panggilan bersamaan.
+ */
+const ANALYTICS_TTL_MS = 120_000;
+const analyticsCache = new Map<string, { at: number; value: SalesAnalytics }>();
+const analyticsInflight = new Map<string, Promise<SalesAnalytics>>();
+
+/** Bersihkan cache analitik (dipanggil saat order dibuat/diubah/dihapus). */
+export function invalidateSalesAnalyticsCache(): void {
+  analyticsCache.clear();
+}
+
+/** Hitung analitik penjualan untuk `days` hari terakhir (dengan cache singkat). */
 export async function getSalesAnalytics(opts?: {
   days?: number;
   mode?: AnalyticsMode;
@@ -230,6 +249,30 @@ export async function getSalesAnalytics(opts?: {
     : 30;
   const mode: AnalyticsMode = opts?.mode === "all" ? "all" : "completed";
 
+  const key = `${days}:${mode}`;
+  const hit = analyticsCache.get(key);
+  if (hit && Date.now() - hit.at < ANALYTICS_TTL_MS) return hit.value;
+
+  const pending = analyticsInflight.get(key);
+  if (pending) return pending;
+
+  const p = computeSalesAnalytics(days, mode)
+    .then((value) => {
+      analyticsCache.set(key, { at: Date.now(), value });
+      return value;
+    })
+    .finally(() => {
+      analyticsInflight.delete(key);
+    });
+  analyticsInflight.set(key, p);
+  return p;
+}
+
+/** Inti perhitungan analitik (dipakai `getSalesAnalytics` yang ber-cache). */
+async function computeSalesAnalytics(
+  days: number,
+  mode: AnalyticsMode,
+): Promise<SalesAnalytics> {
   const db = getAdminDb();
   if (!db) return buildEmptyAnalytics(days, mode);
 

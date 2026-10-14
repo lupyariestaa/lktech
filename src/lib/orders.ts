@@ -19,6 +19,7 @@ import {
   type OrdersSort,
 } from "@/lib/orders-filter-pure";
 import { dayKeyInTz as analyticsDayKey, dropDayAggregate } from "@/lib/analytics-daily";
+import { invalidateSalesAnalyticsCache } from "@/lib/sales-analytics";
 
 const COLLECTION = "orders";
 
@@ -69,7 +70,7 @@ export async function createOrder(
   if (data.fulfillment) payload.fulfillment = data.fulfillment;
 
   const ref = await db.collection(COLLECTION).add(payload);
-  invalidateOrdersSummaryCache();
+  invalidateOrderDerivedCaches();
   invalidateAnalyticsForOrder(nowISO);
   return normalizeOrder({ ...payload, id: ref.id, createdAtISO: nowISO });
 }
@@ -159,6 +160,16 @@ let summaryInflight: Promise<OrdersSummary> | null = null;
 
 export function invalidateOrdersSummaryCache(): void {
   summaryCache = null;
+}
+
+/**
+ * Segarkan SEMUA cache turunan pesanan (ringkasan + analitik penjualan).
+ * Dipanggil setiap kali pesanan dibuat/diubah/dihapus agar dashboard langsung
+ * menampilkan angka terbaru tanpa menunggu TTL.
+ */
+function invalidateOrderDerivedCaches(): void {
+  invalidateOrdersSummaryCache();
+  invalidateSalesAnalyticsCache();
 }
 
 export async function getOrdersSummary(
@@ -587,7 +598,7 @@ export async function updateOrderStatus(
     return { previousStatus, changed: true };
   });
   if (result.changed) {
-    invalidateOrdersSummaryCache();
+    invalidateOrderDerivedCaches();
     invalidateAnalyticsForOrder(createdAtISO);
   }
   return result;
@@ -709,7 +720,7 @@ export async function markOrderPaid(
       return { applied: true, order };
     });
     if (result.applied) {
-      invalidateOrdersSummaryCache();
+      invalidateOrderDerivedCaches();
       invalidateAnalyticsForOrder(result.order?.createdAt);
     }
     return result;
@@ -810,7 +821,7 @@ export async function deleteOrder(id: string): Promise<void> {
     ? String((doc.data() as Record<string, unknown>).createdAtISO ?? "")
     : "";
   await db.collection(COLLECTION).doc(id).delete();
-  invalidateOrdersSummaryCache();
+  invalidateOrderDerivedCaches();
   invalidateAnalyticsForOrder(createdAtISO);
 }
 
@@ -899,7 +910,7 @@ export async function markOrderExpired(
       };
     });
     if (result.applied) {
-      invalidateOrdersSummaryCache();
+      invalidateOrderDerivedCaches();
       invalidateAnalyticsForOrder(result.order?.createdAt);
     }
     return result;
