@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumentasi ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **SEO & Konten Mesin — FASE S2 SELESAI**.
+> Terakhir diperbarui: sesi **Perbaikan Build Gagal (admin prerender + Firestore fail-safe)**.
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -30,6 +30,8 @@
 >
 > 🧭 **Upgrade Navbar Bertingkat ✅ SELESAI (kode, 2026-10-14):** `docs/2026-10-14-upgrade-navbar-bertingkat.md` — menu terpusat `src/lib/nav.ts` (murni), dropdown desktop (hover + keyboard) & akordeon mobile, `NAV_LINKS` dihapus, bug "Semua Layanan" ganda diperbaiki, `layout.tsx` `/tentang` ditambahkan (sebelumnya tanpa navbar/footer). Test `test:nav-menu` (6) + E2E `e2e/nav.spec.ts`.
 >
+> 🚑 **Perbaikan Build Gagal ✅ SELESAI (kode, 2026-10-14):** `docs/2026-10-14-perbaikan-build-admin-prerender.md` — deploy gagal karena (1) `/admin` ikut di-prerender saat build → `force-dynamic` di layout dashboard, dan (2) `getSalesAnalytics()` membaca Firestore tanpa `try/catch` → kini fail-safe (`buildEmptyAnalytics`). Build kini sukses meski kuota Firestore habis.
+>
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat · M6 Firestore rules. Centang saat beres.
 >
 > 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (Halaman Tentang Kami · B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend, submit sitemap GSC). Lihat §"STATUS & PETA SEKARANG".
@@ -51,7 +53,28 @@
 
 ---
 
-## ⏰ SESI INI — Upgrade Navbar Bertingkat (Dropdown & Akordeon) — SELESAI (kode)
+## ⏰ SESI INI — Perbaikan Build Gagal: `/admin` Ter-prerender + Query Firestore Tanpa Pengaman — SELESAI (kode)
+
+**Status: ✅ SELESAI.** Dokumen: [`docs/2026-10-14-perbaikan-build-admin-prerender.md`](docs/2026-10-14-perbaikan-build-admin-prerender.md).
+
+Deploy Vercel gagal (`8 RESOURCE_EXHAUSTED: Quota exceeded` saat build). **Dua akar masalah:**
+
+- **`/admin` ikut di-prerender.** Dashboard auth-gated dicoba dijadikan statis →
+  saat build Next menjalankan `BusinessHealth` (server) yang query Firestore.
+  Perbaikan: `export const dynamic = "force-dynamic"` di
+  `src/app/admin/(dashboard)/layout.tsx` (menutup seluruh area dashboard).
+- **`getSalesAnalytics()` satu-satunya pembacaan Firestore TANPA `try/catch`.**
+  Modul lain (`settings`, `site-content`, `articles`, `analytics-daily`) semua
+  fail-safe. Perbaikan: helper `buildEmptyAnalytics()` + bungkus query `orders`
+  dengan `try/catch` → kegagalan Firestore tak lagi menjatuhkan pemanggil.
+
+**Bukti:** `npm run build` kini **sukses meski kuota habis**; `/admin` muncul
+sebagai **ƒ Dynamic** (bukan static); tak ada lagi `Error occurred prerendering
+page "/admin"`. Gate: `tsc` ✅ · `eslint` ✅.
+
+---
+
+## ⏰ SESI SEBELUMNYA — Upgrade Navbar Bertingkat (Dropdown & Akordeon) — SELESAI (kode)
 
 **Status: ✅ SELESAI.** Dokumen: [`docs/2026-10-14-upgrade-navbar-bertingkat.md`](docs/2026-10-14-upgrade-navbar-bertingkat.md).
 
