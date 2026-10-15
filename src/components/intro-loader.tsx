@@ -44,9 +44,13 @@ export function IntroLoader() {
   );
   const [progress, setProgress] = useState(0);
 
+  // Fase efektif: saat reduced-motion, loader dianggap langsung selesai
+  // (turunan, tanpa setState di effect).
+  const effectivePhase = reduced ? "done" : phase;
+
   // Kunci scroll saat loader tampil.
   useEffect(() => {
-    if (phase === "done") {
+    if (effectivePhase === "done") {
       document.body.style.overflow = "";
       return;
     }
@@ -54,10 +58,14 @@ export function IntroLoader() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [phase]);
+  }, [effectivePhase]);
 
-  // Timeline fase. Saat `reduced`, `phase` sudah diinisialisasi ke "done"
-  // (lihat useState), jadi tidak perlu setState di sini.
+  // Timeline fase. Saat `reduced`, loader langsung dianggap selesai lewat
+  // `effectivePhase` (turunan, bukan setState di effect — mematuhi aturan
+  // react-hooks). Ini penting karena `reduced` baru bernilai benar setelah
+  // mount (SSR/first render = false); tanpa penanganan, loader akan macet di
+  // fase "enter": overlay `fixed inset-0 z-[10000]` tetap ada → memblokir klik
+  // & mengunci scroll (bug yang ditemukan pada F5).
   useEffect(() => {
     if (reduced) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -98,10 +106,10 @@ export function IntroLoader() {
     return () => cancelAnimationFrame(raf);
   }, [phase]);
 
-  if (phase === "done") return null;
+  if (effectivePhase === "done") return null;
 
-  const panelsClosed = phase !== "enter";
-  const contentVisible = phase === "hold";
+  const panelsClosed = effectivePhase !== "enter";
+  const contentVisible = effectivePhase === "hold";
 
   return (
     <div
@@ -113,14 +121,14 @@ export function IntroLoader() {
       <motion.div
         variants={panelTop}
         initial="hidden"
-        animate={panelsClosed ? (phase === "open" ? "open" : "closed") : "hidden"}
+        animate={panelsClosed ? (effectivePhase === "open" ? "open" : "closed") : "hidden"}
         className="absolute inset-x-0 top-0 h-1/2 bg-white shadow-[0_1px_0_rgba(15,23,42,0.08)]"
       />
       {/* Panel bawah */}
       <motion.div
         variants={panelBottom}
         initial="hidden"
-        animate={panelsClosed ? (phase === "open" ? "open" : "closed") : "hidden"}
+        animate={panelsClosed ? (effectivePhase === "open" ? "open" : "closed") : "hidden"}
         className="absolute inset-x-0 bottom-0 h-1/2 bg-white shadow-[0_-1px_0_rgba(15,23,42,0.08)]"
       />
 

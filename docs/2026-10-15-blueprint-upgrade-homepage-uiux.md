@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F4 selesai — kode; F5–F6 belum)
+> **Status:** 🚧 Berjalan (F0–F5 selesai — kode; F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -69,9 +69,9 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 
 | # | Section | File | Jenis | Catatan audit |
 | --- | --- | --- | --- | --- |
-| — | Intro loader | `components/intro-loader.tsx` | Client | Panel ganda + progress, ~2,1 dtk, **kunci scroll**. Selalu tampil tiap kunjungan beranda. |
+| — | Intro loader | `components/intro-loader.tsx` | Client | Panel ganda + progress, ~2,1 dtk, kunci scroll. Selalu tampil tiap kunjungan beranda. *(F5: bug reduced-motion diperbaiki)* |
 | — | Navbar | `sections/navbar.tsx` | Client | Sticky, dropdown desktop + akordeon mobile. Sudah rapi. |
-| 1 | Hero | `sections/hero.tsx` | Client | 3D-tilt mouse-follow, aurora, mockup browser+phone, chip mengambang. **Headline statis**, belum scroll-driven. |
+| 1 | Hero | `sections/hero.tsx` + `sections/hero-3d.tsx` | Client | Beranda: parallax + animated headline + trust bar + cursor glow ✅ (F1); **scene 3D/WebGL lazy** di tablet+ ✅ (F5). Mobile: mockup CSS. |
 | 2 | Technologies | `sections/technologies.tsx` | Client | Marquee logo (CSS `animate-marquee`), pause saat hover. Sudah bagus. |
 | 3 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor. `/tentang` tetap grid 3 kolom. |
 | 4 | Portfolio Teaser | `sections/portfolio-teaser.tsx` | Server | Grid 3 kolom, ambil `getProjects()`. |
@@ -261,10 +261,35 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   - Mobile: 1 kolom (banner unggulan di atas, 4 kartu di bawah); tablet: 2 kolom.
 
 ### F5 — 3D/WebGL (tablet ke atas) — effort L
-- Pasang `three` + `@react-three/fiber` (+ `drei` bila perlu).
-- Scene ringan (mis. objek abstrak/brand 3D) di Hero, **lazy + client-only**.
-- **Gate:** hanya ≥ 768px & bukan reduced-motion; selain itu fallback (mockup CSS saat ini).
-- Batasi DPR & frame agar hemat GPU; hentikan render saat tidak terlihat (IntersectionObserver).
+- **Dependensi** ✅: `three` + `@react-three/fiber` (+ `@types/three` dev). **Tanpa `drei`** agar tetap
+  ramping — hanya geometri dasar (`icosahedron`, `torus`, `sphere`).
+- **Scene** ✅ (`src/components/sections/hero-3d.tsx`): objek "artifact" — ikosahedron faset + cangkang
+  wireframe + cincin miring + satelit kecil; rotasi & "napas" halus (transform saja).
+- **Lazy + client-only** ✅: di-`dynamic import` dengan `ssr: false` dari `hero.tsx`. Terverifikasi
+  `three` berada di **chunk terpisah** dan **tidak** direferensikan di HTML awal → bundel awal/SSR
+  tidak bertambah.
+- **Gate** ✅: hanya `≥768px` (`MEDIA_QUERIES.tabletUp`) **dan** bukan `prefers-reduced-motion`.
+  Mobile/reduced-motion tetap memakai **mockup CSS** (fallback yang sudah ada). Plus **guard WebGL**:
+  bila `getContext("webgl")` gagal → `<Canvas>` tidak dirender sama sekali.
+- **Hemat GPU** ✅: `dpr=[1,1.5]`; `frameloop: "never"` saat hero keluar viewport
+  (IntersectionObserver) — diverifikasi frame naik setelah hero di-scroll keluar.
+- **Tidak menghalangi** ✅: lapisan `aria-hidden` + `pointer-events: none` (termasuk `<canvas>`),
+  konten hero di `z-10`. Diverifikasi CTA tetap "clickable" di semua skenario.
+- **Adaptif** ✅: posisi/skala menyesuaikan orientasi — desktop (hero 2 kolom) objek di sudut
+  kanan-atas; tablet portrait (hero 1 kolom) dikecilkan & digeser agar tidak menimpa teks.
+
+> **Catatan F5 — bug pre-existing ditemukan & diperbaiki (reduced-motion):**
+> `IntroLoader` menginisialisasi `phase` dari `useState(reduced ? "done" : "enter")`. Karena
+> `useReducedMotionPreference()` bernilai `false` pada SSR/first render (baru benar setelah mount),
+> pengguna `prefers-reduced-motion` **tidak pernah** membuat loader selesai: overlay
+> `fixed inset-0 z-[10000]` tetap ada → **memblokir semua klik & mengunci scroll** (`body
+> overflow: hidden`) di beranda. Diperbaiki dengan menurunkan **fase efektif** (`reduced ? "done" :
+> phase`) — bukan `setState` di dalam effect (mematuhi aturan `react-hooks`). Diverifikasi: loader
+> hilang, CTA bisa diklik, scroll bebas.
+
+> **Catatan F5 — keputusan mobile:** scene 3D hanya di tablet ke atas. Mobile tetap mockup CSS
+> (sesuai permintaan awal: "efek berat hanya ≥768px; mobile nyusul bila hasil bagus"). Bila nanti
+> diinginkan, gate tinggal diperluas.
 
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
@@ -283,7 +308,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/scroll-progress.tsx` | Bar progres scroll (beranda) |
 | `src/components/pinned-section.tsx` | Wrapper sticky generik untuk storytelling |
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
-| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL, lazy + gated |
+| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion) | ✅ Selesai |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` | **Dokumen ini** |
@@ -297,7 +322,9 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
-| `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` |
+| `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev) | ✅ Selesai |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten | ✅ Selesai |
+| `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll) | ✅ Selesai |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
 
 ---
@@ -328,7 +355,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F2 | Ritme & transisi antar-section | ✅ Selesai (kode) |
 | F3 | Pinned storytelling (process timeline beranda) | ✅ Selesai (kode) |
 | F4 | Services bento grid | ✅ Selesai (kode) |
-| F5 | 3D/WebGL (tablet ke atas) | ⬜ Todo |
+| F5 | 3D/WebGL (tablet ke atas) | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---

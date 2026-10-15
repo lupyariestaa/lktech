@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, type ReactNode, type RefObject } from "react";
+import dynamic from "next/dynamic";
 import {
   motion,
   useMotionValue,
@@ -31,6 +32,15 @@ import { useContent } from "@/components/content-provider";
 import { HeroShowcaseCarousel } from "@/components/hero-showcase-carousel";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 import { MEDIA_QUERIES, useMediaQuery } from "@/lib/use-media-query";
+
+/**
+ * Scene 3D hero (F5) — lazy + client-only (`ssr: false`) agar `three` hanya
+ * diunduh di layar besar & bukan pada bundel/SSR awal. Hanya di-mount saat
+ * `≥768px` dan bukan reduced-motion (lihat `sceneEnabled` di `Hero`).
+ */
+const Hero3D = dynamic(() => import("@/components/sections/hero-3d"), {
+  ssr: false,
+});
 
 function DeviceMockups({
   showcase,
@@ -277,6 +287,9 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
   // Efek kursor hanya untuk layar besar (tablet ke atas) & bukan reduced-motion.
   const isDesktop = useMediaQuery(MEDIA_QUERIES.desktopUp);
   const cursorEnabled = isDesktop && !reduced;
+  // Scene 3D (F5): hanya tablet ke atas & bukan reduced-motion.
+  const isTabletUp = useMediaQuery(MEDIA_QUERIES.tabletUp);
+  const sceneEnabled = isTabletUp && !reduced;
 
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -308,8 +321,9 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
       <div className="pointer-events-none absolute top-1/3 -right-24 h-[28rem] w-[28rem] animate-aurora rounded-full bg-primary-light/25 blur-[120px] [animation-delay:-6s]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white to-transparent" />
       {cursorEnabled && <CursorGlow containerRef={sectionRef} />}
+      {sceneEnabled && <Hero3D />}
 
-      <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2">
+      <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2">
         <motion.div style={reduced ? undefined : { y: yText, opacity: opacityText }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
