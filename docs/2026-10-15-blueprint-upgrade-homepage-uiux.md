@@ -262,9 +262,11 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 
 ### F5 — 3D/WebGL (tablet ke atas) — effort L
 - **Dependensi** ✅: `three` + `@react-three/fiber` (+ `@types/three` dev). **Tanpa `drei`** agar tetap
-  ramping — hanya geometri dasar (`icosahedron`, `torus`, `sphere`).
-- **Scene** ✅ (`src/components/sections/hero-3d.tsx`): objek "artifact" — ikosahedron faset + cangkang
-  wireframe + cincin miring + satelit kecil; rotasi & "napas" halus (transform saja).
+  ramping — shader & geometri (`sphere`, `torus`, `Points`) ditulis sendiri.
+- **Scene** ✅ (`src/components/sections/hero-3d.tsx`): **"digital core"** — bola dengan **custom GLSL
+  shader**: permukaan bergelombang (simplex-noise *displacement* di vertex shader) + gradasi warna &
+  **fresnel rim** di fragment shader; ditambah **halo ~900 partikel** (`Points`, additive) dan **dua
+  cincin** tipis yang mengorbit. Tanpa `drei`/postprocessing — shader ditulis sendiri.
 - **Lazy + client-only** ✅: di-`dynamic import` dengan `ssr: false` dari `hero.tsx`. Terverifikasi
   `three` berada di **chunk terpisah** dan **tidak** direferensikan di HTML awal → bundel awal/SSR
   tidak bertambah.
