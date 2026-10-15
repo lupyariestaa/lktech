@@ -33,6 +33,7 @@ export async function FeaturedProducts({
     >
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
+          align="left"
           eyebrow="Produk Digital"
           title={
             <span id="produk-heading">
@@ -41,6 +42,17 @@ export async function FeaturedProducts({
             </span>
           }
           description="Template, software, dan aset digital yang sudah jadi — harga transparan, checkout cepat, tanpa menunggu pengerjaan custom."
+          action={
+            <TrackedLink
+              href="/produk"
+              location="produk-section"
+              target="/produk"
+              className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-6 py-3 text-sm font-semibold text-secondary backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary hover:shadow-lg hover:shadow-primary/10"
+            >
+              Lihat semua produk
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </TrackedLink>
+          }
         />
 
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -50,18 +62,6 @@ export async function FeaturedProducts({
             </Reveal>
           ))}
         </div>
-
-        <Reveal className="mt-12 flex justify-center">
-          <TrackedLink
-            href="/produk"
-            location="produk-section"
-            target="/produk"
-            className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-6 py-3 text-sm font-semibold text-secondary backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary hover:shadow-lg hover:shadow-primary/10"
-          >
-            Lihat semua produk
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </TrackedLink>
-        </Reveal>
       </div>
     </section>
   );

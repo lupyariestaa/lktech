@@ -5,6 +5,7 @@ import { motion, useInView } from "framer-motion";
 import { useContent } from "@/components/content-provider";
 import { isDefaultStats } from "@/lib/content-types";
 import { useReducedMotionPreference } from "@/lib/intro";
+import { SectionSeam } from "@/components/section-seam";
 
 function Counter({
   value,
@@ -56,6 +57,12 @@ export function Stats() {
 
   return (
     <section id="statistik" className="relative scroll-mt-24 overflow-hidden bg-secondary py-20">
+      {/* Jahitan (F2): leburkan batas terang→gelap & gelap→terang agar tidak
+          "memotong keras". Diletakkan sebelum konten (urutan DOM) agar konten
+          tetap di atas. Tetangga atas & bawah sama-sama `bg-surface`. */}
+      <SectionSeam edge="top" from="surface" />
+      <SectionSeam edge="bottom" from="surface" />
+
       <div className="grid-lines absolute inset-0 opacity-[0.06]" />
       <div className="pointer-events-none absolute -top-24 left-1/4 h-72 w-72 animate-aurora rounded-full bg-primary/40 blur-[110px]" />
       <div className="pointer-events-none absolute -bottom-24 right-1/4 h-72 w-72 animate-aurora rounded-full bg-primary-light/30 blur-[110px] [animation-delay:-5s]" />

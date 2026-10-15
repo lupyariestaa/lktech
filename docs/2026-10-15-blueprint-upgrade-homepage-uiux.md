@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F1 selesai — kode; F2–F6 belum)
+> **Status:** 🚧 Berjalan (F0–F2 selesai — kode; F3–F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -207,9 +207,15 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 - Seluruh teks & CTA lama dipertahankan (tidak ada konten terpangkas).
 
 ### F2 — Ritme & transisi antar-section — effort M
-- **Scroll progress bar** aktif di beranda.
-- **Jahitan antar-section**: gradien/curve halus (mis. `surface`→`white`) agar tidak "potong keras".
-- **Ritme spacing** konsisten (token `--section-gap`) + variasi `SectionHeading` (kiri/kanan bergantian).
+- **Scroll progress bar** ✅ (dipasang di F0; tetap aktif di beranda).
+- **Jahitan antar-section** ✅: komponen baru `SectionSeam` — gradien tipis (40px, `opacity-60`) yang
+  meleburkan batas terang↔gelap di section **statistik** (tetangga `surface`), sehingga perpindahan
+  warna tidak "memotong keras". Section terang↔terang lainnya sudah halus (putih vs `surface`).
+- **Variasi `SectionHeading`** ✅: prop baru `align="left"` + `action` (slot kanan). Dipakai 3 section
+  katalog (**layanan, portofolio, produk**) → judul rata kiri dengan tautan "Lihat semua →" di kanan,
+  memindahkan CTA dari bawah grid ke samping heading (konten tetap, tidak dipangkas). Section
+  proses/harga/faq tetap tengah (ritme berselang).
+- Token spacing tambahan tidak diperlukan (semua section sudah `py-24`, konsisten).
 
 ### F3 — Pinned storytelling (inti permintaan) — effort L
 - **Process**: ubah jadi **timeline scroll-driven** — section di-pin, garis tumbuh, langkah menyala bergantian mengikuti scroll.
@@ -243,6 +249,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/lib/use-media-query.ts` | Hook `useMediaQuery` (SSR-safe) untuk gate efek |
 | `src/components/scroll-progress.tsx` | Bar progres scroll (beranda) |
 | `src/components/pinned-section.tsx` | Wrapper sticky generik untuk storytelling |
+| `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
 | `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL, lazy + gated |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven (ganti isi `process.tsx`) |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan |
@@ -254,7 +261,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/app/globals.css` | *(F0: tidak diubah — lihat koreksi A1)*; token animasi/spacing menyusul bila perlu |
 | `src/app/page.tsx` | Pasang `ScrollProgress` (F0); susun ulang urutan section bila perlu (F2+) |
 | `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow | ✅ Selesai |
-| `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran |
+| `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
 | `src/components/sections/process.tsx` | *(F3)* Pindah ke timeline pinned |
 | `src/components/sections/services.tsx` | *(F4)* Pindah ke bento |
 | `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` |
@@ -285,7 +292,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | — | Blueprint & rencana fase | ✅ Selesai (dokumen ini) |
 | F0 | Fondasi (util `useMediaQuery`, `ScrollProgress`, `PinnedSection`; koreksi A1) | ✅ Selesai (kode) |
 | F1 | Hero upgrade | ✅ Selesai (kode) |
-| F2 | Ritme & transisi antar-section | ⬜ Todo |
+| F2 | Ritme & transisi antar-section | ✅ Selesai (kode) |
 | F3 | Pinned storytelling (process timeline) | ⬜ Todo |
 | F4 | Services bento grid | ⬜ Todo |
 | F5 | 3D/WebGL (tablet ke atas) | ⬜ Todo |

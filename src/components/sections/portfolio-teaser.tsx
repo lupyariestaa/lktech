@@ -17,6 +17,7 @@ export async function PortfolioTeaser() {
     <section id="portofolio" className="relative scroll-mt-24 bg-white py-24">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
+          align="left"
           eyebrow="Portofolio"
           title={
             <>
@@ -25,6 +26,17 @@ export async function PortfolioTeaser() {
             </>
           }
           description="Sebagian karya yang telah kami kerjakan untuk membantu bisnis dan institusi tumbuh secara digital."
+          action={
+            <TrackedLink
+              href="/portofolio"
+              location="portofolio-teaser"
+              target="/portofolio"
+              className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-6 py-3 text-sm font-semibold text-secondary backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary hover:shadow-lg hover:shadow-primary/10"
+            >
+              Lihat semua proyek
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </TrackedLink>
+          }
         />
 
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -38,18 +50,6 @@ export async function PortfolioTeaser() {
             </Reveal>
           ))}
         </div>
-
-        <Reveal className="mt-12 flex justify-center">
-          <TrackedLink
-            href="/portofolio"
-            location="portofolio-teaser"
-            target="/portofolio"
-            className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-6 py-3 text-sm font-semibold text-secondary backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary hover:shadow-lg hover:shadow-primary/10"
-          >
-            Lihat semua proyek
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </TrackedLink>
-        </Reveal>
       </div>
     </section>
   );
