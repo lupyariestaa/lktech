@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F3 selesai — kode; F4–F6 belum)
+> **Status:** 🚧 Berjalan (F0–F4 selesai — kode; F5–F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -73,7 +73,7 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | — | Navbar | `sections/navbar.tsx` | Client | Sticky, dropdown desktop + akordeon mobile. Sudah rapi. |
 | 1 | Hero | `sections/hero.tsx` | Client | 3D-tilt mouse-follow, aurora, mockup browser+phone, chip mengambang. **Headline statis**, belum scroll-driven. |
 | 2 | Technologies | `sections/technologies.tsx` | Client | Marquee logo (CSS `animate-marquee`), pause saat hover. Sudah bagus. |
-| 3 | Services | `sections/services.tsx` | Client | Grid **3 kolom seragam** + `ServiceCard` (tilt). Pola berulang. |
+| 3 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor. `/tentang` tetap grid 3 kolom. |
 | 4 | Portfolio Teaser | `sections/portfolio-teaser.tsx` | Server | Grid 3 kolom, ambil `getProjects()`. |
 | 5 | Why Us | `sections/why-us.tsx` | Client | Grid 3 kolom + stagger. Pola berulang. |
 | 6 | Process | `sections/process.tsx` (grid, `/tentang`) + `sections/process-timeline.tsx` (pinned, beranda) | Client | Beranda: **timeline scroll-driven pinned** ✅ (F3). `/tentang` tetap grid 4 kolom + pulse. |
@@ -246,9 +246,19 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 > reduced-motion `static` dengan semua kartu `opacity: 1`.
 
 ### F4 — Services: Bento Grid — effort M
-- Ubah grid 3 kolom seragam → **bento** (kombinasi kartu besar/kecil) dengan hierarki visual.
-- Hover reveal lebih kaya (ikon/aksen bergerak), tetap aksesibel keyboard.
-- Jaga jumlah kartu & teks (tidak memangkas).
+- **Services (beranda)** ✅: grid 3 kolom seragam → **bento**: kartu **unggulan jadi banner lebar**
+  (baris 1) berisi ikon + judul/tagline/deskripsi + **poin singkat** (`landingPoints`) dalam chip
+  bercentang; **4 layanan lain sebaris** di bawahnya (baris 2, `lg:col-span-3`). Hierarki jelas,
+  tanpa ruang kosong.
+  - Komponen **baru** `src/components/sections/services-bento.tsx` dipakai **hanya di beranda**.
+    `src/components/sections/services.tsx` (grid 3 kolom) **tidak diubah** karena juga dipakai
+    `/tentang` (diverifikasi: tetap 3 kolom, 5 kartu).
+  - **Hover lebih kaya**: **spotlight mengikuti kursor** (radial-gradient via CSS var `--mx/--my`,
+    ditulis langsung ke elemen → **tanpa state React / re-render**) + glow aksen sudut + ikon
+    membesar + judul berubah warna. Kartu tetap `<a>` (fokus keyboard & Enter berfungsi).
+  - **Konten tidak dipangkas**: tiap layanan tetap menampilkan ikon, judul, tagline, deskripsi,
+    tautan "Lihat detail"; kartu unggulan menambah poin singkat yang sudah ada di data.
+  - Mobile: 1 kolom (banner unggulan di atas, 4 kartu di bawah); tablet: 2 kolom.
 
 ### F5 — 3D/WebGL (tablet ke atas) — effort L
 - Pasang `three` + `@react-three/fiber` (+ `drei` bila perlu).
@@ -275,7 +285,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
 | `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL, lazy + gated |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
-| `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan |
+| `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` | **Dokumen ini** |
 
 ### Diubah (usulan)
@@ -286,7 +296,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow | ✅ Selesai |
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
-| `src/components/sections/services.tsx` | *(F4)* Pindah ke bento |
+| `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
 
@@ -317,7 +327,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F1 | Hero upgrade | ✅ Selesai (kode) |
 | F2 | Ritme & transisi antar-section | ✅ Selesai (kode) |
 | F3 | Pinned storytelling (process timeline beranda) | ✅ Selesai (kode) |
-| F4 | Services bento grid | ⬜ Todo |
+| F4 | Services bento grid | ✅ Selesai (kode) |
 | F5 | 3D/WebGL (tablet ke atas) | ⬜ Todo |
 | F6 | Polish & QA | ⬜ Todo |
 

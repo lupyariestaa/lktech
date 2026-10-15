@@ -3,7 +3,7 @@ import { IntroLoader } from "@/components/intro-loader";
 import { Navbar } from "@/components/sections/navbar";
 import { Hero } from "@/components/sections/hero";
 import { Technologies } from "@/components/sections/technologies";
-import { Services } from "@/components/sections/services";
+import { ServicesBento } from "@/components/sections/services-bento";
 import { WhyUs } from "@/components/sections/why-us";
 import { ProcessTimeline } from "@/components/sections/process-timeline";
 import { FeaturedProducts } from "@/components/sections/featured-products";
@@ -73,7 +73,7 @@ export default async function Home() {
           }
         />
         <Technologies />
-        <Services />
+        <ServicesBento />
         <PortfolioTeaser />
         <WhyUs />
         <ProcessTimeline />
