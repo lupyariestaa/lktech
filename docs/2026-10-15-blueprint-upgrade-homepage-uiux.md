@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F2 selesai — kode; F3–F6 belum)
+> **Status:** 🚧 Berjalan (F0–F3 selesai — kode; F4–F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -76,7 +76,7 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | 3 | Services | `sections/services.tsx` | Client | Grid **3 kolom seragam** + `ServiceCard` (tilt). Pola berulang. |
 | 4 | Portfolio Teaser | `sections/portfolio-teaser.tsx` | Server | Grid 3 kolom, ambil `getProjects()`. |
 | 5 | Why Us | `sections/why-us.tsx` | Client | Grid 3 kolom + stagger. Pola berulang. |
-| 6 | Process | `sections/process.tsx` | Client | Grid 4 kolom + garis statis + pulse. **Belum scroll-driven**. |
+| 6 | Process | `sections/process.tsx` (grid, `/tentang`) + `sections/process-timeline.tsx` (pinned, beranda) | Client | Beranda: **timeline scroll-driven pinned** ✅ (F3). `/tentang` tetap grid 4 kolom + pulse. |
 | 7 | Featured Products | `sections/featured-products.tsx` | Server | Grid 3 kolom. Sembunyi bila kosong. |
 | 8 | Stats | `sections/stats.tsx` | Client | Counter animasi. **Sembunyi bila masih data contoh** (jujur, tapi sering tak tampil). |
 | 9 | Pricing | `sections/pricing.tsx` | Client | Grid 3 kartu, satu highlight. |
@@ -218,9 +218,32 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 - Token spacing tambahan tidak diperlukan (semua section sudah `py-24`, konsisten).
 
 ### F3 — Pinned storytelling (inti permintaan) — effort L
-- **Process**: ubah jadi **timeline scroll-driven** — section di-pin, garis tumbuh, langkah menyala bergantian mengikuti scroll.
-- **Satu section "pin" tambahan** (mis. "Cara kami bekerja" / ringkasan layanan) sebagai penutup cerita.
+- **Process (beranda)** ✅: diubah jadi **timeline scroll-driven** — section di-pin (CSS `position:
+  sticky` native, tanpa scroll-hijack) selama ~3 layar; garis rel terisi mengikuti scroll, simpul
+  langkah menyala bergantian, dan kartu detail langkah aktif bertukar halus (`cross-fade`).
+  - Komponen **baru** `src/components/sections/process-timeline.tsx` dipakai **hanya di beranda**.
+    `src/components/sections/process.tsx` (grid) **tidak diubah** karena juga dipakai `/tentang` —
+    halaman itu tetap tampil seperti semula (diverifikasi: `static`, 4 langkah).
+  - **Konten utuh**: seluruh langkah (step/title/description) tetap dirender di DOM. Di mobile &
+    `prefers-reduced-motion` **semua kartu tampil** tersusun normal (tanpa pin); di desktop hanya
+    kartu aktif yang tampak, sisanya tetap ada di DOM (SEO & a11y) via `cross-fade`.
+  - **`PinnedSection` diperbaiki (CSS-driven)** — lihat catatan di bawah.
+- **Satu section "pin" tambahan** ⏭️ **ditunda/ditiadakan (keputusan F3):** satu pin yang dieksekusi
+  baik lebih efektif daripada dua. Menambah pin kedua menambah panjang scroll beranda secara
+  signifikan (beranda sudah panjang) dan berisiko terasa "lengket berlebihan". Opsi tetap terbuka
+  bila setelah review diinginkan.
 - Semua konten lama **dipertahankan** (hanya penyajian berubah).
+
+> **Catatan F3 — `PinnedSection` kini CSS-driven (bukan JS-gated):**
+> Versi awal F0 menggerakkan pinning via JS (`useReducedMotionPreference` + `useMediaQuery`). Itu
+> menyebabkan **CLS** (server merender grid pendek → setelah mount melompat ke section 300vh) dan
+> berpotensi hydration mismatch. Versi F3 menggantinya dengan kelas **`motion-safe:md:*`** (yakni
+> `@media (prefers-reduced-motion: no-preference)` + `md:`): tinggi section `motion-safe:md:h-[var(--pin-h)]`
+> dan panel `motion-safe:md:sticky … h-screen`. Hasilnya: markup server = klien (tanpa mismatch),
+> tanpa lompatan layout, pengguna reduced-motion otomatis dapat alur statis, dan tata letak tetap
+> benar walau JS mati. Diverifikasi via Playwright: desktop pin aktif (h=3600px, `sticky`, panel
+> menempel di `top≈0`), garis rel terisi monoton 0→1, 4 langkah menyala bergantian; mobile &
+> reduced-motion `static` dengan semua kartu `opacity: 1`.
 
 ### F4 — Services: Bento Grid — effort M
 - Ubah grid 3 kolom seragam → **bento** (kombinasi kartu besar/kecil) dengan hierarki visual.
@@ -251,7 +274,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/pinned-section.tsx` | Wrapper sticky generik untuk storytelling |
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
 | `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL, lazy + gated |
-| `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven (ganti isi `process.tsx`) |
+| `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan |
 | `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` | **Dokumen ini** |
 
@@ -262,7 +285,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/app/page.tsx` | Pasang `ScrollProgress` (F0); susun ulang urutan section bila perlu (F2+) |
 | `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow | ✅ Selesai |
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
-| `src/components/sections/process.tsx` | *(F3)* Pindah ke timeline pinned |
+| `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* Pindah ke bento |
 | `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
@@ -293,7 +316,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F0 | Fondasi (util `useMediaQuery`, `ScrollProgress`, `PinnedSection`; koreksi A1) | ✅ Selesai (kode) |
 | F1 | Hero upgrade | ✅ Selesai (kode) |
 | F2 | Ritme & transisi antar-section | ✅ Selesai (kode) |
-| F3 | Pinned storytelling (process timeline) | ⬜ Todo |
+| F3 | Pinned storytelling (process timeline beranda) | ✅ Selesai (kode) |
 | F4 | Services bento grid | ⬜ Todo |
 | F5 | 3D/WebGL (tablet ke atas) | ⬜ Todo |
 | F6 | Polish & QA | ⬜ Todo |

@@ -5,7 +5,7 @@ import { Hero } from "@/components/sections/hero";
 import { Technologies } from "@/components/sections/technologies";
 import { Services } from "@/components/sections/services";
 import { WhyUs } from "@/components/sections/why-us";
-import { Process } from "@/components/sections/process";
+import { ProcessTimeline } from "@/components/sections/process-timeline";
 import { FeaturedProducts } from "@/components/sections/featured-products";
 import { Stats } from "@/components/sections/stats";
 import { PortfolioTeaser } from "@/components/sections/portfolio-teaser";
@@ -76,7 +76,7 @@ export default async function Home() {
         <Services />
         <PortfolioTeaser />
         <WhyUs />
-        <Process />
+        <ProcessTimeline />
         <FeaturedProducts />
         <Stats />
         <Pricing />

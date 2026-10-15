@@ -1,13 +1,8 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import {
-  useScroll,
-  useTransform,
-  type MotionValue,
-} from "framer-motion";
+import { useRef, type CSSProperties, type ReactNode } from "react";
+import { useScroll, useTransform, type MotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useReducedMotionPreference } from "@/lib/intro";
 
 /**
  * Rentang offset `useScroll` saat section dianggap "sedang di-pin":
@@ -25,19 +20,22 @@ export type PinProgress = MotionValue<number>;
  *
  * Struktur:
  * ```
- * <section style={{ height: `${slides * 100}vh` }}>   // memberi ruang scroll
- *   <div class="sticky top-0 h-screen">              // panel yang diam
+ * <section style={{ "--pin-h": "N00vh" }}>            // ruang scroll
+ *   <div class="motion-safe:md:sticky ... h-screen">  // panel yang diam
  *     ...konten yang bertransformasi via render-prop `progress`...
  *   </div>
  * </section>
  * ```
  *
- * PENTING (a11y & performa):
+ * PENTING (a11y, performa, & anti-CLS):
  * - **Tanpa scroll-hijack**: pinning memakai CSS `position: sticky` native.
  *   Scroll pengguna tidak pernah dicegat.
- * - **`prefers-reduced-motion`** → tidak dipin. Section menjadi blok normal dan
- *   konten ditampilkan statis. Bila diberi `aria-label`, `<section>` otomatis
- *   ber-role `region` sehingga struktur tetap bermakna.
+ * - **Digerakkan CSS, bukan JS**: pinning hanya aktif pada `md:` **dan**
+ *   `motion-safe:` (yakni `@media (prefers-reduced-motion: no-preference)`).
+ *   Konsekuensinya: (a) server & klien merender markup yang sama → tanpa
+ *   hydration mismatch; (b) tidak ada lompatan layout setelah mount (anti-CLS);
+ *   (c) pengguna `prefers-reduced-motion` otomatis mendapat alur normal (statis);
+ *   (d) tetap berfungsi tanpa JavaScript untuk tata letak.
  * - **JANGAN** membungkus komponen ini dengan elemen ber-`overflow: hidden`
  *   (atau `overflow-x: hidden`) — itu membuat wrapper menjadi scroll
  *   container dan **mematikan `position: sticky`**. Bila perlu memotong
@@ -45,7 +43,7 @@ export type PinProgress = MotionValue<number>;
  *
  * @param slides Jumlah "layar" ruang scroll. 1 = tanpa pin (setara blok biasa),
  *               2 = diam selama 1 layar penuh, dst. Minimal 1.
- * @param progress Render-prop: progres 0–1 selama section ter-pin, untuk
+ * @param children Render-prop: progres 0–1 selama section ter-pin, untuk
  *                 menggerakkan anak (`useTransform(progress, ...)`).
  */
 export function PinnedSection({
@@ -63,12 +61,9 @@ export function PinnedSection({
   "aria-label"?: string;
   id?: string;
 }) {
-  const reduced = useReducedMotionPreference();
   const ref = useRef<HTMLElement>(null);
   const total = Math.max(1, Math.round(slides));
 
-  // Hook dipanggil tanpa syarat (aturan hook). Nilai `progress` diabaikan
-  // saat `reduced` karena kita tidak merender panel sticky.
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: PIN_OFFSET,
@@ -78,32 +73,17 @@ export function PinnedSection({
     clamp: true,
   });
 
-  if (reduced) {
-    return (
-      <section
-        id={id}
-        ref={ref}
-        aria-label={ariaLabel}
-        className={cn("relative", className)}
-      >
-        <div className={cn("mx-auto w-full", panelClassName)}>
-          {children(progress)}
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section
       id={id}
       ref={ref}
       aria-label={ariaLabel}
-      className={cn("relative", className)}
-      style={{ height: `${total * 100}vh` }}
+      className={cn("relative motion-safe:md:h-[var(--pin-h)]", className)}
+      style={{ "--pin-h": `${total * 100}vh` } as CSSProperties}
     >
       <div
         className={cn(
-          "sticky top-0 flex h-screen w-full items-center justify-center",
+          "motion-safe:md:sticky motion-safe:md:top-0 motion-safe:md:flex motion-safe:md:h-screen motion-safe:md:items-center motion-safe:md:justify-center",
           panelClassName,
         )}
       >

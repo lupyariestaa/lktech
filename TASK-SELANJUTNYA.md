@@ -34,6 +34,8 @@
 >
 > 🧊 **Optimasi Cache Firestore ✅ SELESAI (kode, 2026-10-14):** `docs/2026-10-14-optimasi-cache-firestore.md` — hemat kuota baca: `unstable_cache` untuk pembaca publik (`settings`/`content`/`articles`/`products`/`projects`/`promos`) + invalidasi `revalidateTag` di tiap mutasi admin; cache TTL singkat untuk analitik. Reader admin tetap segar (`read*`).
 >
+> 🎨 **Upgrade UI/UX Beranda (storytelling scroll + premium minimalis) 🚧 BERJALAN:** [`docs/2026-10-15-blueprint-upgrade-homepage-uiux.md`](docs/2026-10-15-blueprint-upgrade-homepage-uiux.md) — **F0–F3 selesai (kode)**: fondasi util (`useMediaQuery`/`ScrollProgress`/`PinnedSection`), hero upgrade, ritme/jahitan antar-section, dan **F3 pinned storytelling** (alur kerja di-pin, garis & langkah menyala mengikuti scroll; `/tentang` tak berubah). Berikutnya **F4 bento grid layanan** → F5 3D/WebGL (tablet+, konfirmasi dulu) → F6 polish/QA. Konten beranda tidak dipangkas.
+>
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
 > 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Pilih inisiatif berikutnya.** (Halaman Tentang Kami · B4 agregasi harian · B5 E2E · B6 anti-enumeration kupon = ✅ selesai.) Kandidat sisa: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · langkah manual pemilik (Mayar produksi, domain/Resend). Lihat §"STATUS & PETA SEKARANG".
