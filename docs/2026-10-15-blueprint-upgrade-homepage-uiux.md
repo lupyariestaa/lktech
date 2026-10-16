@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1 selesai — kode; F6 belum)
+> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1 + F7.2 selesai — kode; F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -338,6 +338,22 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 - **Diverifikasi:** desktop 1440 (3D kanan, showcase tepat di bawah hero), tablet 834 (3D di bawah teks
   1 kolom), mobile 390 (hero teks saja — canvas 0, sesuai gate). tsc/eslint/unit/build hijau.
 
+### F7.2 — Hero 3D tidak lagi "terpotong" kotak — effort S
+- **Masalah (laporan pemilik):** elemen 3D tampak **ter-cut garis lurus** mengikuti frame panggung
+  (batas `<canvas>`). Sebabnya: (a) halo partikel disebar dengan bias **ke luar** sehingga
+  silhouette terpadat jatuh persis di tepi frame; (b) cincin orbit radius 2.5 **lebih besar** dari
+  separuh frame; (c) skala komposisi tidak dikaitkan ke ukuran frame.
+- **Perbaikan (tanpa menyentuh `overflow-hidden`/layout):**
+  - Komposisi **di-fit ke frame**: `COMPOSITION_HALF` (radius grup 2.6 == tepi frame) → inti
+    (r 1.3) ≈ **50% tinggi frame** di layar mana pun, dan cincin/satelit selalu di dalam.
+  - Halo di-**bias ke dalam** (radius 1.5–3.0) → tepi terluar menyebar halus, bukan padat.
+  - **Soft-fade tepi 2 lapis**: fade radial per-partikel di shader halo (`smoothstep` pada NDC)
+    **plus** `mask-image` radial pada wrapper canvas → sisa partikel/bloom memudar sebelum
+    menyentuh batas kanvas.
+- **Verifikasi:** uji piksel sepanjang tepi kanan & bawah → **tidak ada diskontinuitas**
+  (kolom 89→91 di tepi: 233.0→232.9→232.9); desktop & tablet bersih; mobile/reduced-motion tetap
+  canvas 0; tsc/eslint/unit(593)/build hijau.
+
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
 - Audit a11y (keyboard, kontras, reduced-motion, screen reader).
@@ -355,7 +371,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/scroll-progress.tsx` | Bar progres scroll (beranda) |
 | `src/components/pinned-section.tsx` | Wrapper sticky generik untuk storytelling |
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
-| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom | ✅ Selesai |
+| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask) | ✅ Selesai |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero | ✅ Selesai |
@@ -406,6 +422,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F5 | 3D/WebGL (tablet ke atas) | ✅ Selesai (kode) |
 | F7 | Hero fokus 3D + section Pratinjau (revisi F5) | ✅ Selesai (kode) |
 | F7.1 | Hero 3D "hidup & interaktif" (pointer/scroll/drag/entrance + bloom) | ✅ Selesai (kode) |
+| F7.2 | Hero 3D bebas "terpotong" kotak (fit frame + soft-fade tepi) | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---

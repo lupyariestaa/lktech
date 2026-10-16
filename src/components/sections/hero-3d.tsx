@@ -37,6 +37,10 @@ import type { MotionValue } from "framer-motion";
  * Visual: inti (GLSL noise displacement + fresnel rim), halo ~900 partikel,
  * konstelasi garis, 2 cincin orbit, satelit, starfield; **bloom** sinematik via
  * `@react-three/postprocessing`.
+ *
+ * F7.2 — bebas "terpotong": skala komposisi di-fit ke frame (`COMPOSITION_HALF`),
+ * halo di-bias ke dalam, cincin/satelit ditarik ke dalam, dan tepi di-soft-fade
+ * 2 lapis (radial fade per-partikel di shader + `mask-image` di wrapper canvas).
  */
 
 /* ------------------------------------------------------------------ */
@@ -107,7 +111,7 @@ void main() {
   float n1 = snoise(p * 1.5 + vec3(0.0, uTime * 0.18, 0.0));
   float n2 = snoise(p * 3.1 + vec3(uTime * 0.12, 0.0, 0.0));
   // Permukaan mulai halus lalu "bergelombang" saat intro selesai.
-  float disp = (n1 * 0.16 + n2 * 0.05) * uIntro;
+  float disp = (n1 * 0.19 + n2 * 0.06) * uIntro;
   p += normalize(position) * disp * uAmp;
 
   vDisp = disp;
@@ -172,7 +176,12 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
   gl_PointSize = uSize * aScale * uPixelRatio * (1.0 + vGlow * 1.5) * (1.0 / max(-mv.z, 0.001));
-  vAlpha = clamp(aScale, 0.15, 1.0) * uIntro * (1.0 - uScroll * 0.6);
+
+  // Soft-fade radial (NDC): partikel memudar sebelum menyentuh tepi frame →
+  // tidak ada potongan kotak yang terlihat di batas kanvas.
+  vec2 ndc = gl_Position.xy / max(gl_Position.w, 0.001);
+  float edge = smoothstep(1.0, 0.62, length(ndc));
+  vAlpha = clamp(aScale, 0.15, 1.0) * uIntro * (1.0 - uScroll * 0.6) * edge;
 }
 `;
 
@@ -216,6 +225,18 @@ const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 /** Progres "entrance" (0→1) dari waktu berjalan — sama di semua sub-scene. */
 const introAt = (t: number) => easeOutCubic(clamp01((t - 0.15) / 1.3));
 
+/**
+ * Jari-jari grup yang dipetakan tepat ke tepi frame (separuh sisi terpendek).
+ * Elemen dengan radius ≤ ini pasti terlihat; yang lebih besar jatuh di luar
+ * kanvas → dijaga seminimal mungkin & sisanya di-soft-fade mask di `Hero3D`,
+ * supaya tidak ada potongan kotak yang terlihat.
+ */
+const COMPOSITION_HALF = 2.6;
+
+/** Soft-fade tepi: buramkan sisa partikel terluar tepat sebelum batas kanvas. */
+const EDGE_MASK =
+  "radial-gradient(closest-side, rgba(0,0,0,1) 85%, rgba(0,0,0,0) 100%)";
+
 /** Props interaksi yang dibagi ke sub-scene (motion value dari hero). */
 type Interaction = {
   /** Progres scroll hero 0→1. */
@@ -253,7 +274,7 @@ function Core() {
 
   return (
     <mesh>
-      <sphereGeometry args={[1.05, 96, 96]} />
+      <sphereGeometry args={[1.3, 96, 96]} />
       <shaderMaterial
         ref={mat}
         uniforms={uniforms}
@@ -273,10 +294,13 @@ function Halo({ interaction, count = 900 }: { interaction: Interaction; count?: 
     const pos = new Float32Array(count * 3);
     const scl = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-      // Sebar di "cangkang" bola (radius 1.45–3.15).
+      // Sebar di "cangkang" bola (radius 1.5–3.0) dengan bias agak KE DALAM.
+      // Bias ini penting: kalau padat di radius terluar, silhouette partikel
+      // jatuh persis di tepi frame & tampak "terpotong" kotak. Sisanya (partikel
+      // terluar) di-soft-fade oleh `uAlpha` di shader + mask tepi di `Hero3D`.
       const theta = rand() * Math.PI * 2;
       const phi = Math.acos(2 * rand() - 1);
-      const r = 1.45 + Math.pow(rand(), 0.65) * 1.7;
+      const r = 1.5 + Math.pow(rand(), 1.25) * 1.5;
       pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
       pos[i * 3 + 1] = r * Math.cos(phi);
       pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
@@ -342,7 +366,8 @@ function Constellation({ count = 46 }: { count?: number }) {
     for (let i = 0; i < count; i++) {
       const theta = rand() * Math.PI * 2;
       const phi = Math.acos(2 * rand() - 1);
-      const r = 1.5 + rand() * 1.5;
+      // Bias ke dalam, sejajar halo (jaga agar tepi tetap di dalam frame).
+      const r = 1.55 + Math.pow(rand(), 1.2) * 1.0;
       pts.push([
         r * Math.sin(phi) * Math.cos(theta),
         r * Math.cos(phi),
@@ -404,11 +429,11 @@ function Rings() {
   return (
     <group ref={group}>
       <mesh rotation={[Math.PI / 2.3, 0, 0.3]}>
-        <torusGeometry args={[2.0, 0.012, 8, 160]} />
+        <torusGeometry args={[1.9, 0.012, 8, 160]} />
         <meshBasicMaterial color="#4d82ec" transparent opacity={0.55} />
       </mesh>
       <mesh rotation={[Math.PI / 1.9, 0.5, 0]}>
-        <torusGeometry args={[2.5, 0.008, 8, 160]} />
+        <torusGeometry args={[2.15, 0.008, 8, 160]} />
         <meshBasicMaterial color="#7aa2ff" transparent opacity={0.3} />
       </mesh>
     </group>
@@ -426,11 +451,11 @@ function Satellites() {
   });
   return (
     <group ref={group}>
-      <mesh position={[2.35, 0.55, 0]} scale={0.09}>
+      <mesh position={[2.0, 0.45, 0]} scale={0.09}>
         <octahedronGeometry args={[1, 0]} />
         <meshBasicMaterial color="#cfe0ff" />
       </mesh>
-      <mesh position={[-2.1, -0.7, 0.6]} scale={0.06}>
+      <mesh position={[-1.85, -0.6, 0.5]} scale={0.06}>
         <octahedronGeometry args={[1, 0]} />
         <meshBasicMaterial color="#9db8ff" />
       </mesh>
@@ -570,7 +595,12 @@ function Stage({ interaction }: { interaction: Interaction }) {
 
     const g = group.current;
     if (g) {
-      const base = Math.min(1, Math.min(viewport.width, viewport.height) * 0.34);
+      // Skala komposisi berbasis frame (bukan angka tetap): jari-jari grup
+      // `COMPOSITION_HALF` dipetakan tepat ke separuh sisi terpendek frame.
+      // → inti (r 1.3) selalu ≈50% tinggi frame, di layar mana pun; cincin &
+      // satelit tetap di dalam batas (tepi terluar halo di-soft-fade mask).
+      const half = Math.min(viewport.width, viewport.height) * 0.5;
+      const base = half / COMPOSITION_HALF;
       const scale = base * (0.25 + intro * 0.75) * (1 - s * 0.32);
       g.scale.setScalar(scale);
       g.rotation.y = spin.current + d.ry + px * 0.5;
@@ -639,7 +669,12 @@ export default function Hero3D({ interaction }: { interaction: Interaction }) {
   if (!webgl) return null;
 
   return (
-    <div ref={ref} aria-hidden="true" className="absolute inset-0 z-0">
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className="absolute inset-0 z-0"
+      style={{ maskImage: EDGE_MASK, WebkitMaskImage: EDGE_MASK }}
+    >
       <Canvas
         dpr={[1, 1.5]}
         frameloop={active ? "always" : "never"}
