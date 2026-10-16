@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1 + F7.2 selesai — kode; F6 belum)
+> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1 + F7.2 + F7.3 selesai — kode; F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -354,6 +354,29 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   (kolom 89→91 di tepi: 233.0→232.9→232.9); desktop & tablet bersih; mobile/reduced-motion tetap
   canvas 0; tsc/eslint/unit(593)/build hijau.
 
+### F7.3 — Hero kolom kiri: tipografi, entrance & mikro-interaksi — effort M
+- **Permintaan pemilik:** sisi kiri (teks) hero dibuat lebih menarik — "lebih hidup".
+- **A. Tipografi & ritme** ✅: kicker jadi **chip uppercase** (`tracking`, ikon gradient), judul
+  dengan `tracking` lebih rapat + `leading` lebih ketat, paragraf `max-w-xl` dengan **penekanan
+  bergaris** (`underline decoration-primary`) pada frasa kunci. **Teks/kalimat TIDAK diubah**
+  (nol risiko SEO/konten) — pemilik memberi izin rombak, tapi dipilih tetap sama.
+- **B. Entrance mask-reveal** ✅: judul muncul **dari balik topeng** (`overflow-hidden` +
+  `translateY`), **transform-only** (ramah kompositor) dan tetap **satu `<h1>`** teks utuh untuk
+  SEO/screen reader. Blok lain (kicker/paragraf/CTA/trust) memakai **satu induk `stagger`**
+  (`staggerChildren` + `delayChildren` dari `introDelay`) menggantikan delay manual.
+- **C. Mikro-interaksi** ✅: CTA utama dapat **magnetic** (spring, ±5px, desktop saja) + **shine
+  sweep** saat hover (dekoratif, `aria-hidden`); CTA sekunder glow lembut; trust bar angka
+  **count-up** sekali saat masuk viewport (tulis langsung ke DOM via `animate()` → **tanpa
+  re-render**) + ikon scale halus saat hover.
+- **D. Spotlight** ✅: `CursorGlow` (cahaya mengikuti kursor di belakang teks) dipertahankan.
+  Garis editorial vertikal sempat dicoba lalu **dibuang** — terbaca sebagai artefak, bukan detail.
+- **E. Scroll berlapis** ✅: tiap blok turun dengan **laju berbeda** (`yKicker/-18 · yHead/-38 ·
+  yPara/-26 · yCta/-14 · yTrust/-6`) → teks terasa "mengurai" saat hero ditinggalkan; kolom tetap
+  memudar utuh (`opacityText`).
+- **Verifikasi:** `h1` & paragraf terbaca utuh (SEO), trust akhir `"20+ klien mempercayai kami"`;
+  magnetic terukur (`none` di tengah → `-4.71px` / `+4.77px` di tepi); desktop/tablet/mobile/
+  reduced-motion & scroll bersih; nol error konsol; tsc/eslint/unit(593)/build(161) hijau.
+
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
 - Audit a11y (keyboard, kontras, reduced-motion, screen reader).
@@ -387,7 +410,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev); *(F7.1)* `@react-three/postprocessing` + `postprocessing` | ✅ Selesai |
-| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus | ✅ Selesai |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis | ✅ Selesai |
 | `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll) | ✅ Selesai |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
 
@@ -423,6 +446,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F7 | Hero fokus 3D + section Pratinjau (revisi F5) | ✅ Selesai (kode) |
 | F7.1 | Hero 3D "hidup & interaktif" (pointer/scroll/drag/entrance + bloom) | ✅ Selesai (kode) |
 | F7.2 | Hero 3D bebas "terpotong" kotak (fit frame + soft-fade tepi) | ✅ Selesai (kode) |
+| F7.3 | Hero kolom kiri: tipografi, mask-reveal, mikro-interaksi, scroll berlapis | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---

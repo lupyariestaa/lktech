@@ -1,13 +1,16 @@
 "use client";
 
-import { Fragment, useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import dynamic from "next/dynamic";
 import {
+  animate,
   motion,
+  useInView,
   useMotionValue,
   useScroll,
   useSpring,
   useTransform,
+  type MotionValue,
   type Variants,
 } from "framer-motion";
 import {
@@ -80,78 +83,174 @@ function CursorGlow({ containerRef }: { containerRef: RefObject<HTMLElement | nu
   );
 }
 
-const HEADLINE_WORDS: { text: string }[] = [
-  { text: "Teknologi" },
-  { text: "Modern," },
-];
-
-const headlineWord: Variants = {
-  hidden: { opacity: 0, y: "0.6em" },
+/**
+ * Blok teks "naik + fokus" untuk animasi masuk (entrance). Dipakai lewat
+ * `variants` supaya bisa di-stagger oleh induknya (tanpa delay manual).
+ */
+const rise: Variants = {
+  hidden: { opacity: 0, y: 18, filter: "blur(4px)" },
   show: {
     opacity: 1,
     y: 0,
+    filter: "blur(0px)",
     transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
 /**
- * Judul hero dengan animasi kata-per-kata (baris 1) + baris gradient yang naik
- * sebagai satu unit (baris 2, agar gradien tetap menyambung rapi).
- *
- * Tetap **satu `<h1>`** (SEO) — kata dibungkus `span` ber-`aria-hidden` tidak
- * dipakai; teks tetap terbaca screen reader. Saat reduced-motion, dirender
- * statis tanpa animasi.
+ * Baris judul: muncul dari balik "topeng" (`overflow-hidden`) — animasi
+ * `transform` saja (ramah kompositor) & teks tetap utuh untuk SEO/screen reader.
  */
-function AnimatedHeadline({ base, reduced }: { base: number; reduced: boolean }) {
+const lineUp: Variants = {
+  hidden: { y: "115%" },
+  show: { y: "0%", transition: { duration: 0.95, ease: [0.22, 1, 0.36, 1] } },
+};
+
+/**
+ * Judul hero: dua baris yang **muncul dari balik topeng** (`overflow-hidden`)
+ * saat masuk — kesan editorial/premium, `transform` saja (tanpa layout shift).
+ *
+ * Tetap **satu `<h1>`** dengan teks utuh (SEO & screen reader); baris 2 gradient
+ * utuh sebagai satu unit agar gradiennya menyambung rapi. Saat reduced-motion
+ * dirender statis tanpa animasi.
+ */
+function AnimatedHeadline({ reduced }: { reduced: boolean }) {
   if (reduced) {
     return (
       <>
-        Teknologi Modern,
-        <br />
-        <span className="text-gradient">Hasil Nyata</span>
+        <span className="block">Teknologi Modern,</span>
+        <span className="text-gradient block">Hasil Nyata</span>
       </>
     );
   }
 
-  const container: Variants = {
-    hidden: {},
-    show: {
-      transition: { staggerChildren: 0.09, delayChildren: base + 0.12 },
-    },
-  };
-
   return (
-    <motion.span variants={container} initial="hidden" animate="show" className="block">
-      {/* Baris 1 — kata per kata. Spasi teks ASLI ({i>0 && " "}) dipertahankan
-          agar screen reader / copy-paste membaca "Teknologi Modern," (bukan
-          "TeknologiModern,"). Kata ber-`inline-block` sehingga spasi teks tetap
-          memisahkannya secara visual. */}
-      <span className="block">
-        {HEADLINE_WORDS.map((w, i) => (
-          <Fragment key={w.text}>
-            {i > 0 ? " " : null}
-            <motion.span variants={headlineWord} className="inline-block">
-              {w.text}
-            </motion.span>
-          </Fragment>
-        ))}
+    <>
+      {/* `pb` + `-mb` sama besar → descender (g/y) tidak terpotong topeng. */}
+      <span className="block overflow-hidden pb-[0.16em] -mb-[0.16em]">
+        <motion.span variants={lineUp} className="block">
+          Teknologi Modern,
+        </motion.span>
       </span>
-      {/* Baris 2 — gradient, naik sebagai satu unit */}
-      <motion.span variants={headlineWord} className="text-gradient block">
-        Hasil Nyata
-      </motion.span>
-    </motion.span>
+      <span className="block overflow-hidden pb-[0.16em] -mb-[0.16em]">
+        <motion.span variants={lineUp} className="block">
+          <span className="text-gradient">Hasil Nyata</span>
+        </motion.span>
+      </span>
+    </>
   );
 }
 
 /** Satu butir pada trust bar hero (ikon + teks). */
 function TrustItem({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 text-sm text-muted">
-      <span className="grid h-6 w-6 place-items-center rounded-full bg-primary-50 text-primary">
+    <span className="group inline-flex items-center gap-2 text-sm text-muted">
+      <span className="grid h-6 w-6 place-items-center rounded-full bg-primary-50 text-primary transition-transform duration-300 group-hover:scale-110">
         {icon}
       </span>
       {children}
+    </span>
+  );
+}
+
+/**
+ * Blok konten dengan **dua lapis gerak**: `variants` untuk animasi masuk
+ * (di-stagger oleh induk) + `y` (motion value) untuk parallax saat scroll.
+ * Dipisah dua `<div>` supaya animasi `y` dari variant dan dari scroll tidak
+ * saling menimpa.
+ */
+function Block({
+  variants,
+  y,
+  className,
+  children,
+}: {
+  variants: Variants;
+  y?: MotionValue<number>;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <motion.div className={className} style={y ? { y } : undefined}>
+      <motion.div variants={variants}>{children}</motion.div>
+    </motion.div>
+  );
+}
+
+/**
+ * Pembungkus "magnet": isinya bergeser halus mengikuti kursor (spring), lalu
+ * kembali ke posisi awal. Hanya desktop (pointer presisi) & bukan reduced-motion
+ * — kalau tidak, anak dirender polos tanpa pembungkus.
+ */
+function Magnetic({ enabled, children }: { enabled: boolean; children: ReactNode }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const sx = useSpring(x, { stiffness: 220, damping: 20, mass: 0.4 });
+  const sy = useSpring(y, { stiffness: 220, damping: 20, mass: 0.4 });
+
+  if (!enabled) return <>{children}</>;
+
+  return (
+    <motion.div
+      className="inline-flex"
+      style={{ x: sx, y: sy }}
+      onPointerMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        x.set(((e.clientX - r.left) / r.width - 0.5) * 10);
+        y.set(((e.clientY - r.top) / r.height - 0.5) * 8);
+      }}
+      onPointerLeave={() => {
+        x.set(0);
+        y.set(0);
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * Angka yang "berhitung naik" sekali saat masuk viewport. Menulis langsung ke
+ * DOM (`textContent`) lewat `animate()` → **tanpa re-render** tiap frame.
+ * Nilai non-numerik atau reduced-motion dirender apa adanya.
+ */
+function CountUp({
+  to,
+  suffix,
+  reduced,
+  className,
+}: {
+  to: string | number;
+  suffix?: ReactNode;
+  reduced: boolean;
+  className?: string;
+}) {
+  const box = useRef<HTMLSpanElement>(null);
+  const num = useRef<HTMLSpanElement>(null);
+  const inView = useInView(box, { once: true, margin: "-10% 0px" });
+  const text = String(to);
+  const numeric = /^\s*\d[\d.\s]*\s*$/.test(text);
+  const target = numeric ? Number.parseInt(text.replace(/[^\d]/g, ""), 10) : NaN;
+
+  useEffect(() => {
+    if (reduced || !inView || !Number.isFinite(target)) return;
+    const el = num.current;
+    if (!el) return;
+    const controls = animate(0, target, {
+      duration: 1.1,
+      ease: [0.22, 1, 0.36, 1],
+      onUpdate: (v) => {
+        el.textContent = String(Math.round(v));
+      },
+    });
+    return () => controls.stop();
+  }, [inView, reduced, target]);
+
+  return (
+    <span ref={box} className={className}>
+      <span ref={num}>{text}</span>
+      {suffix}
     </span>
   );
 }
@@ -179,6 +278,11 @@ export function Hero() {
   const settings = useSettings();
   const { stats } = useContent();
   const base = introDelay(reduced);
+  // Entrance: satu induk yang men-stagger tiap blok teks (bukan delay manual).
+  const stagger: Variants = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.09, delayChildren: base } },
+  };
   // Efek kursor hanya untuk layar besar (tablet ke atas) & bukan reduced-motion.
   const isDesktop = useMediaQuery(MEDIA_QUERIES.desktopUp);
   const cursorEnabled = isDesktop && !reduced;
@@ -195,7 +299,13 @@ export function Hero() {
     target: sectionRef,
     offset: ["start start", "end start"],
   });
-  const yText = useTransform(scrollYProgress, [0, 1], [0, -60]);
+  // Parallax berlapis: tiap blok teks turun dengan laju berbeda → terasa
+  // "mengurai" saat hero ditinggalkan (bukan satu blok yang kaku).
+  const yKicker = useTransform(scrollYProgress, [0, 1], [0, -18]);
+  const yHead = useTransform(scrollYProgress, [0, 1], [0, -38]);
+  const yPara = useTransform(scrollYProgress, [0, 1], [0, -26]);
+  const yCta = useTransform(scrollYProgress, [0, 1], [0, -14]);
+  const yTrust = useTransform(scrollYProgress, [0, 1], [0, -6]);
   const opacityText = useTransform(scrollYProgress, [0.35, 1], [1, 0]);
   const yMock = useTransform(scrollYProgress, [0, 1], [0, 50]);
   const opacityStage = useTransform(scrollYProgress, [0, 1], [1, 0.65]);
@@ -234,85 +344,96 @@ export function Hero() {
       {cursorEnabled && <CursorGlow containerRef={sectionRef} />}
 
       <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2">
-        <motion.div style={reduced ? undefined : { y: yText, opacity: opacityText }}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: base, duration: 0.6 }}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-600 shadow-sm"
-          >
-            <Code2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-            Solusi Digital untuk Bisnis Anda
+        <motion.div
+          className="relative"
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          style={reduced ? undefined : { opacity: opacityText }}
+        >
+          <Block variants={rise} y={reduced ? undefined : yKicker}>
+            <span className="inline-flex items-center gap-2.5 rounded-full border border-slate-200/80 bg-white/80 py-1 pr-4 pl-1.5 text-[0.7rem] font-medium tracking-[0.14em] text-slate-600 uppercase shadow-sm backdrop-blur">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-light text-white">
+                <Code2 className="h-3 w-3" aria-hidden="true" />
+              </span>
+              Solusi Digital untuk Bisnis Anda
+            </span>
+          </Block>
+
+          <motion.div className="mt-6" style={reduced ? undefined : { y: yHead }}>
+            <h1 className="text-4xl leading-[1.04] font-bold tracking-[-0.025em] text-secondary sm:text-5xl lg:text-6xl">
+              <AnimatedHeadline reduced={reduced} />
+            </h1>
           </motion.div>
 
-          <h1 className="mt-6 text-4xl leading-[1.05] font-bold text-secondary sm:text-5xl lg:text-6xl">
-            <AnimatedHeadline base={base} reduced={reduced} />
-          </h1>
+          <Block variants={rise} y={reduced ? undefined : yPara} className="mt-6 max-w-xl">
+            <p className="text-base leading-relaxed text-muted sm:text-lg">
+              <span className="font-medium text-secondary">{COMPANY.name}</span>{" "}
+              membantu bisnis naik kelas lewat{" "}
+              <span className="font-medium text-secondary underline decoration-primary/35 decoration-[1.5px] underline-offset-4">
+                website, aplikasi mobile, dan konsultasi teknologi
+              </span>{" "}
+              yang mudah diakses, terjangkau, dan berkualitas.
+            </p>
+          </Block>
 
-          <motion.p
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: base + 0.3, duration: 0.7 }}
-            className="mt-6 max-w-lg text-base leading-relaxed text-muted sm:text-lg"
-          >
-            {COMPANY.name} membantu bisnis naik kelas lewat pembuatan website,
-            aplikasi mobile, dan konsultasi teknologi yang mudah diakses,
-            terjangkau, dan berkualitas.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: base + 0.45, duration: 0.7 }}
-            className="mt-8 flex flex-wrap items-center gap-3"
-          >
-            <TrackedWaButton
-              location="hero"
-              href={waLink(WA_MESSAGES.general, settings.whatsapp)}
-              target="_blank"
-              rel="noopener noreferrer"
-              size="lg"
-              className="group"
-            >
-              <MessageCircle className="h-5 w-5" />
-              Mulai Konsultasi
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </TrackedWaButton>
-            <ButtonAnchor
-              href="#layanan"
-              size="lg"
-              variant="outline"
-              onClick={() => trackCtaClick("hero", "#layanan")}
-            >
-              Lihat Layanan
-            </ButtonAnchor>
-          </motion.div>
+          <Block variants={rise} y={reduced ? undefined : yCta} className="mt-8">
+            <div className="flex flex-wrap items-center gap-3">
+              <Magnetic enabled={cursorEnabled}>
+                <TrackedWaButton
+                  location="hero"
+                  href={waLink(WA_MESSAGES.general, settings.whatsapp)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  size="lg"
+                  className="group overflow-hidden"
+                >
+                  {/* Sapuan kilau saat hover (murni dekoratif). */}
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-y-0 left-0 w-1/2 -translate-x-[150%] skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]"
+                  />
+                  <MessageCircle className="h-5 w-5" />
+                  Mulai Konsultasi
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </TrackedWaButton>
+              </Magnetic>
+              <ButtonAnchor
+                href="#layanan"
+                size="lg"
+                variant="outline"
+                onClick={() => trackCtaClick("hero", "#layanan")}
+                className="hover:shadow-[0_10px_30px_-14px_rgba(42,107,255,0.45)]"
+              >
+                Lihat Layanan
+              </ButtonAnchor>
+            </div>
+          </Block>
 
           {/* Trust bar — hanya sinyal JUJUR (tanpa angka palsu). */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: base + 0.6, duration: 0.7 }}
-            className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3"
-          >
-            {clientStat && (
-              <TrustItem icon={<Users className="h-3.5 w-3.5" />}>
-                <span>
-                  <span className="font-semibold text-secondary">
-                    {clientStat.value}
-                    {clientStat.suffix}
-                  </span>{" "}
-                  klien mempercayai kami
-                </span>
+          <Block variants={rise} y={reduced ? undefined : yTrust} className="mt-9">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              {clientStat && (
+                <TrustItem icon={<Users className="h-3.5 w-3.5" />}>
+                  <span>
+                    <CountUp
+                      to={clientStat.value}
+                      suffix={clientStat.suffix}
+                      reduced={reduced}
+                      className="font-semibold text-secondary"
+                    />{" "}
+                    klien mempercayai kami
+                  </span>
+                </TrustItem>
+              )}
+              <TrustItem icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                Konsultasi gratis
               </TrustItem>
-            )}
-            <TrustItem icon={<ShieldCheck className="h-3.5 w-3.5" />}>
-              Konsultasi gratis
-            </TrustItem>
-            <TrustItem icon={<Zap className="h-3.5 w-3.5" />}>
-              Respon cepat
-            </TrustItem>
-          </motion.div>
+              <TrustItem icon={<Zap className="h-3.5 w-3.5" />}>
+                Respon cepat
+              </TrustItem>
+            </div>
+          </Block>
         </motion.div>
 
         {/* Kolom kanan (tablet+): panggung visual untuk inti digital 3D. Canvas
