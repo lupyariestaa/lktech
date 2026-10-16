@@ -198,6 +198,22 @@ export function Hero() {
   const yText = useTransform(scrollYProgress, [0, 1], [0, -60]);
   const opacityText = useTransform(scrollYProgress, [0.35, 1], [1, 0]);
   const yMock = useTransform(scrollYProgress, [0, 1], [0, 50]);
+  const opacityStage = useTransform(scrollYProgress, [0, 1], [1, 0.65]);
+
+  // Posisi kursor ternormalisasi (−1…1) untuk interaksi scene 3D: miring inti,
+  // parallax kamera, & "lampu" partikel. Di-update via motion value → tanpa
+  // re-render React. Hanya didengar saat scene aktif (tablet+, bukan reduced).
+  const pointerX = useMotionValue(0);
+  const pointerY = useMotionValue(0);
+  useEffect(() => {
+    if (!sceneEnabled) return;
+    const onMove = (e: PointerEvent) => {
+      pointerX.set((e.clientX / window.innerWidth) * 2 - 1);
+      pointerY.set((e.clientY / window.innerHeight) * 2 - 1);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [sceneEnabled, pointerX, pointerY]);
 
   // Kejujuran data (FASE H2): klaim sosial di bawah CTA hanya ditampilkan bila
   // berasal dari data NYATA — bukan stat placeholder bawaan.
@@ -305,11 +321,23 @@ export function Hero() {
             kolom disembunyikan → hero murni teks. */}
         <motion.div
           aria-hidden="true"
-          className="pointer-events-none relative hidden h-[24rem] md:block lg:h-[32rem]"
-          style={reduced ? undefined : { y: yMock }}
+          className={
+            "relative hidden h-[24rem] md:block lg:h-[32rem] " +
+            (sceneEnabled
+              ? "cursor-grab active:cursor-grabbing"
+              : "pointer-events-none")
+          }
+          style={reduced ? undefined : { y: yMock, opacity: opacityStage }}
         >
           {!sceneEnabled && <CoreFallback />}
-          {sceneEnabled && <Hero3D />}
+          {sceneEnabled && (
+            <Hero3D
+              interaction={{
+                scroll: scrollYProgress,
+                pointer: { x: pointerX, y: pointerY },
+              }}
+            />
+          )}
         </motion.div>
       </div>
     </section>

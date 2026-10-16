@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F5 + F7 selesai — kode; F6 belum)
+> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1 selesai — kode; F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -298,6 +298,27 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 > `Pratinjau` (lihat F7). Mobile kini **hero murni teks** (tanpa mockup apa pun); visual pindah ke
 > section Pratinjau di bawahnya.
 
+### F7.1 — Hero 3D "hidup & interaktif" (upgrade atas F5/F7) — effort L
+- **Permintaan pemilik:** elemen 3D kolom kanan dibuat lebih menarik & interaktif — "lebih hidup".
+- **Interaksi pointer** ✅: inti **miring** & kamera **parallax** mengikuti kursor; kursor jadi
+  **"lampu"** yang menerangi partikel terdekat (`uPointer` di shader halo). Di-update via motion value
+  → **tanpa re-render React**. Hanya didengar saat scene aktif.
+- **Reaksi scroll** ✅: saat hero di-scroll, inti **mengecil, menjauh (z), & memutar lebih cepat**;
+  halo memuai & memudar (`uScroll`). Panggung juga memudar halus (`opacity` 1→0.65).
+- **Drag-to-spin** ✅: tahan & seret (mouse) untuk memutar inti, lalu **inersia**. Kursor `grab`/
+  `grabbing`; sentuh tetap bebas scroll (drag hanya `pointerType === "mouse"`).
+- **Entrance** ✅: inti tumbuh dari ~0, rim "menyala" lalu stabil, partikel **mengumpul dari luar**,
+  cincin & satelit memekar (~1,3 dtk).
+- **Kekayaan visual** ✅: **konstelasi** garis antar partikel terdekat (jejak "jaringan"),
+  **2 satelit** orbit, **starfield** kedalaman; plus **bloom sinematik** nyata.
+- **Dependensi baru** ✅: `@react-three/postprocessing` + `postprocessing` (peer react 19 / fiber 9.7
+  / three ≥0.156 terpenuhi). Di-`dynamic import` bersama scene → tetap chunk lazy terpisah.
+- **Guardrail tetap** ✅: tablet+; `prefers-reduced-motion` → **canvas tidak dirender** (fallback CSS
+  `CoreFallback`); `frameloop: "never"` saat hero keluar viewport; `aria-hidden`; konten hero `z-10`.
+- **Diverifikasi (Playwright):** desktop bloom+konstelasi+satelit render; tilt mengikuti kursor;
+  drag memutar; scroll membuat inti menjauh; tablet skala lebih kecil; reduced-motion canvas = 0;
+  tanpa error konsol. Gate tsc/eslint/unit(593)/build(161) hijau.
+
 ### F7 — Hero fokus + section Pratinjau (revisi atas F5) — effort M
 - **Permintaan pemilik:** elemen 3D menjadi pengganti mockup di kolom kanan hero; konten mockup
   (2 gambar yang saling berganti) dipindah ke bawah section header.
@@ -334,7 +355,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/scroll-progress.tsx` | Bar progres scroll (beranda) |
 | `src/components/pinned-section.tsx` | Wrapper sticky generik untuk storytelling |
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
-| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion) | ✅ Selesai |
+| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom | ✅ Selesai |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero | ✅ Selesai |
@@ -349,7 +370,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
-| `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev) | ✅ Selesai |
+| `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev); *(F7.1)* `@react-three/postprocessing` + `postprocessing` | ✅ Selesai |
 | `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus | ✅ Selesai |
 | `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll) | ✅ Selesai |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
@@ -384,6 +405,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F4 | Services bento grid | ✅ Selesai (kode) |
 | F5 | 3D/WebGL (tablet ke atas) | ✅ Selesai (kode) |
 | F7 | Hero fokus 3D + section Pratinjau (revisi F5) | ✅ Selesai (kode) |
+| F7.1 | Hero 3D "hidup & interaktif" (pointer/scroll/drag/entrance + bloom) | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---

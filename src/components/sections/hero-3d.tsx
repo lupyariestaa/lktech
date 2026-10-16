@@ -2,34 +2,41 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import {
   AdditiveBlending,
   Color,
+  MathUtils,
+  Vector2,
   type Group,
   type IUniform,
   type ShaderMaterial,
 } from "three";
+import type { MotionValue } from "framer-motion";
 
 /**
- * F5 — Scene 3D/WebGL "digital core" untuk hero (tablet ke atas).
+ * F7.1 — Scene 3D/WebGL "digital core" hero (tablet ke atas). Versi "hidup".
  *
- * Prinsip (lihat blueprint F5):
- * - **Lazy + client-only**: komponen ini di-`dynamic import` dengan `ssr: false`
- *   dari `hero.tsx`, jadi `three` hanya diunduh di layar besar & setelah mount —
- *   tidak membebani bundel awal / SSR.
- * - **Gated**: hanya dirender saat `≥768px` **dan** bukan `prefers-reduced-motion`
- *   (pengecekan ada di pemanggil). Mobile/reduced-motion tetap memakai mockup CSS.
- * - **Hemat GPU**: `dpr` dibatasi `[1, 1.5]`; loop render **berhenti** (`frameloop:
- *   "never"`) saat hero keluar dari viewport (IntersectionObserver).
- * - **Dekoratif & tidak menghalangi**: `aria-hidden`, `pointer-events: none`, dan
- *   konten hero tetap di atasnya (`z-10`).
+ * Prinsip (blueprint F5):
+ * - **Lazy + client-only**: di-`dynamic import` (`ssr: false`) dari `hero.tsx` —
+ *   `three` hanya diunduh di layar besar, tidak membebani bundel/SSR awal.
+ * - **Gated**: hanya saat `≥768px` **dan** bukan `prefers-reduced-motion`
+ *   (pengecekan di pemanggil). Mobile: hero teks + fallback CSS.
+ * - **Hemat GPU**: `dpr [1,1.5]`; loop render berhenti (`frameloop: "never"`)
+ *   saat hero keluar viewport.
+ * - **Dekoratif**: `aria-hidden`; draggable (mouse) untuk "memutar" inti.
  *
- * Visual (tanpa dependensi tambahan — tanpa `drei`/postprocessing):
- * - **Core**: bola dengan **custom GLSL shader** — permukaan bergelombang
- *   (simplex-noise displacement di vertex shader) + gradasi warna & **fresnel
- *   rim** di fragment shader.
- * - **Halo**: ~900 partikel (titik) di sekitar core, berputar perlahan.
- * - **Rings**: dua cincin tipis miring yang mengorbit.
+ * Interaksi (F7.1):
+ * - **Pointer** — inti miring + kamera parallax mengikuti kursor; kursor jadi
+ *   "lampu" yang menerangi partikel terdekat (`uPointer`), tanpa re-render React.
+ * - **Scroll** — saat hero di-scroll, inti menjauh/mengecil/memutar, halo memuai
+ *   & memudar (`uScroll`).
+ * - **Drag-to-spin** — tahan & seret (mouse) untuk memutar inti, lalu inersia.
+ * - **Entrance** — inti tumbuh & partikel mengumpul dari luar (`uIntro`).
+ *
+ * Visual: inti (GLSL noise displacement + fresnel rim), halo ~900 partikel,
+ * konstelasi garis, 2 cincin orbit, satelit, starfield; **bloom** sinematik via
+ * `@react-three/postprocessing`.
  */
 
 /* ------------------------------------------------------------------ */
@@ -87,6 +94,7 @@ float snoise(vec3 v){
 const CORE_VERT = /* glsl */ `
 uniform float uTime;
 uniform float uAmp;
+uniform float uIntro;
 varying float vDisp;
 varying vec3 vNormal;
 varying vec3 vViewDir;
@@ -98,7 +106,8 @@ void main() {
   // Dua lapis noise → gelombang organik (bergerak perlahan seiring waktu).
   float n1 = snoise(p * 1.5 + vec3(0.0, uTime * 0.18, 0.0));
   float n2 = snoise(p * 3.1 + vec3(uTime * 0.12, 0.0, 0.0));
-  float disp = n1 * 0.16 + n2 * 0.05;
+  // Permukaan mulai halus lalu "bergelombang" saat intro selesai.
+  float disp = (n1 * 0.16 + n2 * 0.05) * uIntro;
   p += normalize(position) * disp * uAmp;
 
   vDisp = disp;
@@ -113,6 +122,7 @@ const CORE_FRAG = /* glsl */ `
 uniform vec3 uColorA;
 uniform vec3 uColorB;
 uniform vec3 uColorC;
+uniform float uIntro;
 varying float vDisp;
 varying vec3 vNormal;
 varying vec3 vViewDir;
@@ -124,6 +134,8 @@ void main() {
   float t = clamp(vDisp * 2.2 + 0.5, 0.0, 1.0);
   vec3 col = mix(uColorA, uColorB, t);
   col = mix(col, uColorC, fres);
+  // Rim di-boost saat intro → "menyala" lalu stabil.
+  col += vec3(0.35, 0.5, 0.9) * fres * (1.0 - uIntro) * 0.8;
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -132,11 +144,20 @@ const HALO_VERT = /* glsl */ `
 uniform float uTime;
 uniform float uSize;
 uniform float uPixelRatio;
+uniform float uIntro;
+uniform float uScroll;
+uniform vec2 uPointer;
 attribute float aScale;
 varying float vAlpha;
+varying float vGlow;
 
 void main() {
   vec3 p = position;
+  // Entrance: partikel mengumpul dari luar (2.2x) ke posisi aslinya.
+  p *= mix(2.2, 1.0, uIntro);
+  // Scroll: halo memuai perlahan saat hero ditinggalkan.
+  p *= 1.0 + uScroll * 0.7;
+
   // Rotasi lambat mengelilingi sumbu Y + "napas" halus.
   float a = uTime * 0.06;
   float c = cos(a);
@@ -144,33 +165,40 @@ void main() {
   p.xz = mat2(c, -s, s, c) * p.xz;
   p *= 1.0 + sin(uTime * 0.7 + p.y * 1.5) * 0.03;
 
+  // Kursor sebagai "lampu": partikel di dekatnya menyala & membesar.
+  float ld = distance(p.xy, uPointer * 3.2);
+  vGlow = smoothstep(2.6, 0.0, ld);
+
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = uSize * aScale * uPixelRatio * (1.0 / max(-mv.z, 0.001));
-  vAlpha = clamp(aScale, 0.15, 1.0);
+  gl_PointSize = uSize * aScale * uPixelRatio * (1.0 + vGlow * 1.5) * (1.0 / max(-mv.z, 0.001));
+  vAlpha = clamp(aScale, 0.15, 1.0) * uIntro * (1.0 - uScroll * 0.6);
 }
 `;
 
 const HALO_FRAG = /* glsl */ `
 uniform vec3 uColor;
 varying float vAlpha;
+varying float vGlow;
 
 void main() {
   // Titik bundar lembut (buang sudut kotak).
   vec2 d = gl_PointCoord - 0.5;
   float alpha = smoothstep(0.5, 0.05, length(d)) * vAlpha;
   if (alpha < 0.01) discard;
-  gl_FragColor = vec4(uColor, alpha);
+  // Di dekat kursor partikel memutih (kesan "tersinari").
+  vec3 col = mix(uColor, vec3(1.0), vGlow * 0.7);
+  gl_FragColor = vec4(col, alpha);
 }
 `;
 
 /* ------------------------------------------------------------------ */
-/* Sub-scene                                                           */
+/* Helper                                                              */
 /* ------------------------------------------------------------------ */
 
 /**
- * PRNG deterministik (mulberry32) — dipakai agar sebaran partikel tetap
- * (tidak `Math.random` yang impure & memicu aturan react-hooks/purity).
+ * PRNG deterministik (mulberry32) — agar sebaran tetap (tidak `Math.random`
+ * yang impure & memicu aturan react-hooks/purity).
  */
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -183,12 +211,30 @@ function mulberry32(seed: number) {
   };
 }
 
+const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+/** Progres "entrance" (0→1) dari waktu berjalan — sama di semua sub-scene. */
+const introAt = (t: number) => easeOutCubic(clamp01((t - 0.15) / 1.3));
+
+/** Props interaksi yang dibagi ke sub-scene (motion value dari hero). */
+type Interaction = {
+  /** Progres scroll hero 0→1. */
+  scroll: MotionValue<number>;
+  /** Kursor ternormalisasi (−1…1) pada viewport. */
+  pointer: { x: MotionValue<number>; y: MotionValue<number> };
+};
+
+/* ------------------------------------------------------------------ */
+/* Sub-scene                                                           */
+/* ------------------------------------------------------------------ */
+
 /** Inti: bola dengan shader displacement + gradasi + fresnel rim. */
 function Core() {
   const mat = useRef<ShaderMaterial>(null);
   const uniforms = useMemo<Record<string, IUniform>>(
     () => ({
       uTime: { value: 0 },
+      uIntro: { value: 0 },
       uAmp: { value: 1 },
       uColorA: { value: new Color("#0a1a4d") },
       uColorB: { value: new Color("#2a6bff") },
@@ -198,7 +244,11 @@ function Core() {
   );
 
   useFrame((state) => {
-    if (mat.current) mat.current.uniforms.uTime.value = state.clock.elapsedTime;
+    const m = mat.current;
+    if (!m) return;
+    const t = state.clock.elapsedTime;
+    m.uniforms.uTime.value = t;
+    m.uniforms.uIntro.value = introAt(t);
   });
 
   return (
@@ -215,7 +265,7 @@ function Core() {
 }
 
 /** Halo partikel (titik) yang berputar perlahan di sekitar core. */
-function Halo({ count = 900 }: { count?: number }) {
+function Halo({ interaction, count = 900 }: { interaction: Interaction; count?: number }) {
   const mat = useRef<ShaderMaterial>(null);
 
   const { positions, scales } = useMemo(() => {
@@ -238,6 +288,9 @@ function Halo({ count = 900 }: { count?: number }) {
   const uniforms = useMemo<Record<string, IUniform>>(
     () => ({
       uTime: { value: 0 },
+      uIntro: { value: 0 },
+      uScroll: { value: 0 },
+      uPointer: { value: new Vector2(0, 0) },
       uSize: { value: 24 },
       uPixelRatio: { value: 1.5 },
       uColor: { value: new Color("#8fb6ff") },
@@ -246,9 +299,17 @@ function Halo({ count = 900 }: { count?: number }) {
   );
 
   useFrame((state) => {
-    if (!mat.current) return;
-    mat.current.uniforms.uTime.value = state.clock.elapsedTime;
-    mat.current.uniforms.uPixelRatio.value = state.gl.getPixelRatio();
+    const m = mat.current;
+    if (!m) return;
+    const t = state.clock.elapsedTime;
+    m.uniforms.uTime.value = t;
+    m.uniforms.uIntro.value = introAt(t);
+    m.uniforms.uScroll.value = clamp01(interaction.scroll.get());
+    m.uniforms.uPointer.value.set(
+      interaction.pointer.x.get(),
+      interaction.pointer.y.get(),
+    );
+    m.uniforms.uPixelRatio.value = state.gl.getPixelRatio();
   });
 
   return (
@@ -270,14 +331,74 @@ function Halo({ count = 900 }: { count?: number }) {
   );
 }
 
+/**
+ * Konstelasi: garis tipis antar partikel terdekat (jejak "jaringan").
+ * Geometri dihitung sekali (`useMemo`) → satu draw call, murah.
+ */
+function Constellation({ count = 46 }: { count?: number }) {
+  const geometry = useMemo(() => {
+    const rand = mulberry32(90210);
+    const pts: [number, number, number][] = [];
+    for (let i = 0; i < count; i++) {
+      const theta = rand() * Math.PI * 2;
+      const phi = Math.acos(2 * rand() - 1);
+      const r = 1.5 + rand() * 1.5;
+      pts.push([
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.cos(phi),
+        r * Math.sin(phi) * Math.sin(theta),
+      ]);
+    }
+    const verts: number[] = [];
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const dx = pts[i][0] - pts[j][0];
+        const dy = pts[i][1] - pts[j][1];
+        const dz = pts[i][2] - pts[j][2];
+        if (dx * dx + dy * dy + dz * dz < 1.15) {
+          verts.push(...pts[i], ...pts[j]);
+        }
+      }
+    }
+    return new Float32Array(verts);
+  }, [count]);
+
+  const group = useRef<Group>(null);
+  useFrame((state, delta) => {
+    const g = group.current;
+    if (!g) return;
+    g.rotation.y += delta * 0.05;
+    g.scale.setScalar(0.4 + introAt(state.clock.elapsedTime) * 0.6);
+  });
+
+  return (
+    <group ref={group}>
+      <lineSegments>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[geometry, 3]} />
+        </bufferGeometry>
+        <lineBasicMaterial
+          color="#6f9bff"
+          transparent
+          opacity={0.14}
+          blending={AdditiveBlending}
+          depthWrite={false}
+        />
+      </lineSegments>
+    </group>
+  );
+}
+
 /** Dua cincin tipis miring yang mengorbit. */
 function Rings() {
   const group = useRef<Group>(null);
 
-  useFrame((_, delta) => {
-    if (!group.current) return;
-    group.current.rotation.z += delta * 0.06;
-    group.current.rotation.y += delta * 0.04;
+  useFrame((state, delta) => {
+    const g = group.current;
+    if (!g) return;
+    g.rotation.z += delta * 0.06;
+    g.rotation.y += delta * 0.04;
+    g.scale.setScalar(0.4 + introAt(state.clock.elapsedTime) * 0.6);
   });
 
   return (
@@ -294,41 +415,199 @@ function Rings() {
   );
 }
 
-/** Grup utama: posisi & skala adaptif + "napas" halus. */
-function Artifact() {
+/** 2 satelit kecil yang mengorbit inti (induk berputar perlahan). */
+function Satellites() {
   const group = useRef<Group>(null);
-  const { viewport } = useThree();
-
-  // Sejak F7 hero memakai kolom visual khusus (panggung) di kanan, jadi inti
-  // digital cukup DIPUSATKAN. Skala menyesuaikan sisi terpendek viewport agar
-  // tetap proporsional di panggung lebar (desktop) maupun sempit (tablet).
-  const scale = Math.min(1, Math.min(viewport.width, viewport.height) * 0.34);
-
   useFrame((state, delta) => {
     const g = group.current;
     if (!g) return;
-    g.rotation.y += delta * 0.08;
-    g.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.12;
+    g.rotation.y -= delta * 0.35;
+    g.scale.setScalar(introAt(state.clock.elapsedTime));
+  });
+  return (
+    <group ref={group}>
+      <mesh position={[2.35, 0.55, 0]} scale={0.09}>
+        <octahedronGeometry args={[1, 0]} />
+        <meshBasicMaterial color="#cfe0ff" />
+      </mesh>
+      <mesh position={[-2.1, -0.7, 0.6]} scale={0.06}>
+        <octahedronGeometry args={[1, 0]} />
+        <meshBasicMaterial color="#9db8ff" />
+      </mesh>
+    </group>
+  );
+}
+
+/** Starfield kedalaman di belakang (tidak ikut skala/mundur grup inti). */
+function Stars({ count = 480 }: { count?: number }) {
+  const group = useRef<Group>(null);
+
+  const positions = useMemo(() => {
+    const rand = mulberry32(4242);
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const theta = rand() * Math.PI * 2;
+      const phi = Math.acos(2 * rand() - 1);
+      const r = 6 + rand() * 8;
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.cos(phi);
+      pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    return pos;
+  }, [count]);
+
+  useFrame((_, delta) => {
+    const g = group.current;
+    if (g) g.rotation.y += delta * 0.01;
   });
 
   return (
-    <group ref={group} scale={scale}>
-      <Core />
-      <Halo />
-      <Rings />
+    <group ref={group}>
+      <points>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        </bufferGeometry>
+        <pointsMaterial
+          color="#9db8ff"
+          size={0.045}
+          sizeAttenuation
+          transparent
+          opacity={0.55}
+          depthWrite={false}
+          blending={AdditiveBlending}
+        />
+      </points>
     </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage — pointer/scroll/drag + entrance                              */
+/* ------------------------------------------------------------------ */
+function Stage({ interaction }: { interaction: Interaction }) {
+  const group = useRef<Group>(null);
+  const spin = useRef(0);
+  const { viewport, gl } = useThree();
+
+  // Status drag (ref → tanpa re-render React saat bergerak).
+  const drag = useRef({
+    active: false,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    rx: 0,
+    ry: 0,
+  });
+
+  // Drag-to-spin (mouse saja, agar tidak bentrok dengan scroll sentuh).
+  useEffect(() => {
+    const el = gl.domElement;
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      const d = drag.current;
+      d.active = true;
+      d.x = e.clientX;
+      d.y = e.clientY;
+      d.vx = 0;
+      d.vy = 0;
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        /* abaikan */
+      }
+    };
+    const move = (e: PointerEvent) => {
+      const d = drag.current;
+      if (!d.active) return;
+      const dx = e.clientX - d.x;
+      const dy = e.clientY - d.y;
+      d.x = e.clientX;
+      d.y = e.clientY;
+      d.ry += dx * 0.006;
+      d.rx += dy * 0.006;
+      d.vx = dx * 0.006;
+      d.vy = dy * 0.006;
+    };
+    const up = (e: PointerEvent) => {
+      const d = drag.current;
+      d.active = false;
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch {
+        /* abaikan */
+      }
+    };
+    el.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    return () => {
+      el.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+  }, [gl]);
+
+  useFrame((state, delta) => {
+    const t = state.clock.elapsedTime;
+    const dt = Math.min(delta, 0.05);
+    const intro = introAt(t);
+    const s = clamp01(interaction.scroll.get());
+    const px = interaction.pointer.x.get();
+    const py = interaction.pointer.y.get();
+
+    const d = drag.current;
+    if (!d.active) {
+      // Inersia setelah dilepas + auto-spin (makin cepat saat di-scroll).
+      d.ry += d.vx;
+      d.rx += d.vy;
+      d.vx *= 0.93;
+      d.vy *= 0.93;
+      d.rx *= 0.98;
+      spin.current += dt * (0.14 + s * 0.5);
+    }
+    d.rx = MathUtils.clamp(d.rx, -1.0, 1.0);
+
+    const g = group.current;
+    if (g) {
+      const base = Math.min(1, Math.min(viewport.width, viewport.height) * 0.34);
+      const scale = base * (0.25 + intro * 0.75) * (1 - s * 0.32);
+      g.scale.setScalar(scale);
+      g.rotation.y = spin.current + d.ry + px * 0.5;
+      g.rotation.x = d.rx * 0.6 - py * 0.35;
+      g.position.y = Math.sin(t * 0.5) * 0.12;
+      g.position.z = -s * 2.2;
+    }
+
+    // Parallax kamera halus (kedalaman).
+    const cam = state.camera;
+    cam.position.x += (px * 0.6 - cam.position.x) * 0.05;
+    cam.position.y += (-py * 0.6 - cam.position.y) * 0.05;
+    cam.lookAt(0, 0, 0);
+  });
+
+  return (
+    <>
+      <Stars />
+      <group ref={group}>
+        <Core />
+        <Halo interaction={interaction} />
+        <Constellation />
+        <Rings />
+        <Satellites />
+      </group>
+    </>
   );
 }
 
 /* ------------------------------------------------------------------ */
 /* Canvas + gate                                                       */
 /* ------------------------------------------------------------------ */
-export default function Hero3D() {
+export default function Hero3D({ interaction }: { interaction: Interaction }) {
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
   // Guard: bila WebGL tidak tersedia (browser/perangkat lama, GPU diblokir),
-  // jangan render `<Canvas>` sama sekali — mockup CSS hero tetap tampil sebagai
-  // fallback. Dicek sekali (lazy, di klien).
+  // jangan render `<Canvas>` sama sekali — fallback CSS hero tetap tampil.
   const [webgl] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -360,19 +639,23 @@ export default function Hero3D() {
   if (!webgl) return null;
 
   return (
-    <div
-      ref={ref}
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-0"
-    >
+    <div ref={ref} aria-hidden="true" className="absolute inset-0 z-0">
       <Canvas
         dpr={[1, 1.5]}
         frameloop={active ? "always" : "never"}
         camera={{ position: [0, 0, 6], fov: 45 }}
         gl={{ antialias: true, powerPreference: "high-performance" }}
-        style={{ pointerEvents: "none" }}
       >
-        <Artifact />
+        <Stage interaction={interaction} />
+        <EffectComposer>
+          <Bloom
+            intensity={0.9}
+            luminanceThreshold={0.2}
+            luminanceSmoothing={0.3}
+            mipmapBlur
+            radius={0.7}
+          />
+        </EffectComposer>
       </Canvas>
     </div>
   );
