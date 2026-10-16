@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IntroLoader } from "@/components/intro-loader";
 import { Navbar } from "@/components/sections/navbar";
 import { Hero } from "@/components/sections/hero";
+import { Showcase } from "@/components/sections/showcase";
 import { Technologies } from "@/components/sections/technologies";
 import { ServicesBento } from "@/components/sections/services-bento";
 import { WhyUs } from "@/components/sections/why-us";
@@ -13,11 +14,9 @@ import { Pricing } from "@/components/sections/pricing";
 import { Faq } from "@/components/sections/faq";
 import { CtaContact } from "@/components/sections/cta-contact";
 import { Footer } from "@/components/sections/footer";
-import { SocialProof } from "@/components/social-proof";
 import { ScrollDepthTracker } from "@/components/scroll-depth-tracker";
 import { ScrollProgress } from "@/components/scroll-progress";
 import { getSiteContent } from "@/lib/site-content";
-import { getSocialProof } from "@/lib/social-proof";
 import { buildFaqPage } from "@/lib/structured-data-pure";
 import { JsonLdScript } from "@/components/json-ld-script";
 
@@ -52,12 +51,6 @@ export default async function Home() {
   // FAQPage JSON-LD (fase S2) — FAQ tampil nyata di section #faq beranda.
   const faqLd = buildFaqPage(content.faqs ?? []);
 
-  // Bukti sosial hero: kirim elemen HANYA bila ada label nyata. Bila tidak,
-  // `undefined` membuat hero menampilkan fallback bawaan ("Garansi Kualitas") —
-  // mencegah chip kaca kosong (bug: `<SocialProof/>` render `null` saat kosong).
-  // `getSocialProof` di-cache (TTL 10 menit) sehingga panggilan ganda ini murah.
-  const proof = await getSocialProof(7);
-
   return (
     <>
       {faqLd && <JsonLdScript node={faqLd} />}
@@ -65,13 +58,8 @@ export default async function Home() {
       <ScrollProgress />
       <Navbar />
       <main id="konten">
-        <Hero
-          socialProof={
-            proof.label ? (
-              <SocialProof className="flex items-center gap-1.5 text-xs font-semibold text-amber-700" />
-            ) : undefined
-          }
-        />
+        <Hero />
+        <Showcase />
         <Technologies />
         <ServicesBento />
         <PortfolioTeaser />

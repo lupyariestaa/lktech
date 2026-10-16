@@ -299,24 +299,20 @@ function Artifact() {
   const group = useRef<Group>(null);
   const { viewport } = useThree();
 
-  // Posisi & skala adaptif. Di layar lebar (desktop, hero 2 kolom) objek di
-  // sudut kanan-atas — area kosong di samping teks. Di tablet portrait (hero
-  // 1 kolom) objek digeser ke sudut kanan-atas & dikecilkan agar tidak menimpa
-  // teks (teks menempati kolom penuh di layar sempit).
-  const portrait = viewport.width < viewport.height;
-  const x = viewport.width * (portrait ? 0.47 : 0.43);
-  const baseY = viewport.height * (portrait ? 0.37 : 0.28);
-  const scale = portrait ? 0.5 : 0.8;
+  // Sejak F7 hero memakai kolom visual khusus (panggung) di kanan, jadi inti
+  // digital cukup DIPUSATKAN. Skala menyesuaikan sisi terpendek viewport agar
+  // tetap proporsional di panggung lebar (desktop) maupun sempit (tablet).
+  const scale = Math.min(1, Math.min(viewport.width, viewport.height) * 0.34);
 
   useFrame((state, delta) => {
     const g = group.current;
     if (!g) return;
     g.rotation.y += delta * 0.08;
-    g.position.y = baseY + Math.sin(state.clock.elapsedTime * 0.5) * 0.12;
+    g.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.12;
   });
 
   return (
-    <group ref={group} position={[x, baseY, 0]} scale={scale}>
+    <group ref={group} scale={scale}>
       <Core />
       <Halo />
       <Rings />

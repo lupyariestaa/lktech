@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F5 selesai — kode; F6 belum)
+> **Status:** 🚧 Berjalan (F0–F5 + F7 selesai — kode; F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -71,7 +71,8 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | --- | --- | --- | --- | --- |
 | — | Intro loader | `components/intro-loader.tsx` | Client | Panel ganda + progress, ~2,1 dtk, kunci scroll. Selalu tampil tiap kunjungan beranda. *(F5: bug reduced-motion diperbaiki)* |
 | — | Navbar | `sections/navbar.tsx` | Client | Sticky, dropdown desktop + akordeon mobile. Sudah rapi. |
-| 1 | Hero | `sections/hero.tsx` + `sections/hero-3d.tsx` | Client | Beranda: parallax + animated headline + trust bar + cursor glow ✅ (F1); **scene 3D/WebGL lazy** di tablet+ ✅ (F5). Mobile: mockup CSS. |
+| 1 | Hero | `sections/hero.tsx` + `sections/hero-3d.tsx` | Client | Beranda: parallax + animated headline + trust bar + cursor glow ✅ (F1); **scene 3D/WebGL lazy** di tablet+ ✅ (F5), kini **terpusat di kolom visual kanan** (F7). Mobile: hero murni teks. |
+| 1b | Pratinjau | `sections/showcase.tsx` | Client | **Baru (F7):** mockup browser (carousel, gambar `browser` saja) — dipindah dari hero. Tepat setelah hero. |
 | 2 | Technologies | `sections/technologies.tsx` | Client | Marquee logo (CSS `animate-marquee`), pause saat hover. Sudah bagus. |
 | 3 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor. `/tentang` tetap grid 3 kolom. |
 | 4 | Portfolio Teaser | `sections/portfolio-teaser.tsx` | Server | Grid 3 kolom, ambil `getProjects()`. |
@@ -292,6 +293,29 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 > **Catatan F5 — keputusan mobile:** scene 3D hanya di tablet ke atas. Mobile tetap mockup CSS
 > (sesuai permintaan awal: "efek berat hanya ≥768px; mobile nyusul bila hasil bagus"). Bila nanti
 > diinginkan, gate tinggal diperluas.
+>
+> **Catatan F7 (revisi):** sejak hero kolom kanan diisi inti digital, mockup **dipindah** ke section
+> `Pratinjau` (lihat F7). Mobile kini **hero murni teks** (tanpa mockup apa pun); visual pindah ke
+> section Pratinjau di bawahnya.
+
+### F7 — Hero fokus + section Pratinjau (revisi atas F5) — effort M
+- **Permintaan pemilik:** elemen 3D menjadi pengganti mockup di kolom kanan hero; konten mockup
+  (2 gambar yang saling berganti) dipindah ke bawah section header.
+- **Hero** ✅: kolom kanan hero kini **panggung visual** untuk `Hero3D` (canvas di-scope ke kolom,
+  inti digital **terpusat & diskalakan** ke sisi viewport — bukan lagi aksen sudut). Chip melayang
+  ("Garansi"/social proof + "Clean Code") **dihapus**. Kolom kanan **disembunyikan di mobile** →
+  hero murni teks.
+- **Fallback** ✅: `CoreFallback` CSS statis (tanpa animasi) tampil di panggung saat scene tak aktif
+  (reduced-motion / WebGL gagal) → tidak ada panggung kosong.
+- **Section `Pratinjau`** ✅ (`sections/showcase.tsx`, tepat setelah hero): mockup **browser** di-redesign
+  lebih proper (kartu membulat, bar browser, glow lembut) memakai carousel yang sama
+  (`HeroShowcaseCarousel`) — **hanya gambar `browser`**; gambar `mobile` (mockup ponsel) **belum dipakai**.
+  Judul+deskripsi memakai `SectionHeading` (eyebrow "Pratinjau").
+- **Plumbing** ✅: prop `socialProof` pada `Hero` + `getSocialProof()` di `page.tsx` dihapus (tak lagi
+  terpakai). `Showcase` membaca `hero` dari `useContent()` (data & pengaturan carousel yang sama — tanpa
+  data baru). `SocialProof` tetap dipakai halaman produk.
+- **Diverifikasi:** desktop 1440 (3D kanan, showcase tepat di bawah hero), tablet 834 (3D di bawah teks
+  1 kolom), mobile 390 (hero teks saja — canvas 0, sesuai gate). tsc/eslint/unit/build hijau.
 
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
@@ -313,19 +337,20 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion) | ✅ Selesai |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
+| `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero | ✅ Selesai |
 | `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` | **Dokumen ini** |
 
 ### Diubah (usulan)
 | File | Perubahan |
 | --- | --- |
 | `src/app/globals.css` | *(F0: tidak diubah — lihat koreksi A1)*; token animasi/spacing menyusul bila perlu |
-| `src/app/page.tsx` | Pasang `ScrollProgress` (F0); susun ulang urutan section bila perlu (F2+) |
+| `src/app/page.tsx` | Pasang `ScrollProgress` (F0); *(F7)* sisip `Showcase` setelah hero, buang plumbing `socialProof` | ✅ Selesai |
 | `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow | ✅ Selesai |
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev) | ✅ Selesai |
-| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten | ✅ Selesai |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus | ✅ Selesai |
 | `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll) | ✅ Selesai |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
 
@@ -358,6 +383,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F3 | Pinned storytelling (process timeline beranda) | ✅ Selesai (kode) |
 | F4 | Services bento grid | ✅ Selesai (kode) |
 | F5 | 3D/WebGL (tablet ke atas) | ✅ Selesai (kode) |
+| F7 | Hero fokus 3D + section Pratinjau (revisi F5) | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---

@@ -12,11 +12,9 @@ import {
 } from "framer-motion";
 import {
   ArrowRight,
-  Braces,
   Code2,
   MessageCircle,
   ShieldCheck,
-  Star,
   Users,
   Zap,
 } from "lucide-react";
@@ -25,11 +23,9 @@ import { TrackedWaButton } from "@/components/tracked-wa-button";
 import { trackCtaClick } from "@/lib/analytics";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { COMPANY } from "@/lib/content";
-import type { HeroShowcase } from "@/lib/content-types";
 import { isDefaultStats } from "@/lib/content-types";
 import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
-import { HeroShowcaseCarousel } from "@/components/hero-showcase-carousel";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 import { MEDIA_QUERIES, useMediaQuery } from "@/lib/use-media-query";
 
@@ -41,125 +37,6 @@ import { MEDIA_QUERIES, useMediaQuery } from "@/lib/use-media-query";
 const Hero3D = dynamic(() => import("@/components/sections/hero-3d"), {
   ssr: false,
 });
-
-function DeviceMockups({
-  showcase,
-  socialProof,
-}: {
-  showcase: HeroShowcase;
-  socialProof?: ReactNode;
-}) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const rx = useSpring(useTransform(my, [-0.5, 0.5], [12, -12]), {
-    stiffness: 120,
-    damping: 18,
-  });
-  const ry = useSpring(useTransform(mx, [-0.5, 0.5], [-14, 14]), {
-    stiffness: 120,
-    damping: 18,
-  });
-
-  const onMove = (e: React.MouseEvent) => {
-    const rect = wrapRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    mx.set((e.clientX - rect.left) / rect.width - 0.5);
-    my.set((e.clientY - rect.top) / rect.height - 0.5);
-  };
-
-  return (
-    <div
-      ref={wrapRef}
-      onMouseMove={onMove}
-      onMouseLeave={() => {
-        mx.set(0);
-        my.set(0);
-      }}
-      className="relative mx-auto w-full max-w-lg [perspective:1400px]"
-    >
-      <motion.div
-        style={{ rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }}
-        className="relative"
-      >
-        {/* Browser card */}
-        <div className="glass-strong overflow-hidden rounded-3xl shadow-2xl shadow-slate-900/10">
-          <div className="flex items-center gap-1.5 border-b border-slate-100 bg-white/60 px-4 py-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-            <div className="ml-3 h-5 flex-1 rounded-full bg-slate-100" />
-          </div>
-          <div className="relative aspect-[16/10] w-full">
-            <HeroShowcaseCarousel
-              images={showcase.browser}
-              enabled={showcase.enabled}
-              interval={showcase.interval}
-              effect={showcase.effect}
-              sizes="(max-width: 1024px) 90vw, 512px"
-              priority
-            />
-          </div>
-        </div>
-
-        {/* Phone card */}
-        <motion.div
-          className="absolute -right-1 -bottom-10 w-28 sm:-right-10 sm:-bottom-12 sm:w-44"
-          style={{ transform: "translateZ(80px)" }}
-          animate={{ y: [0, -14, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <div className="glass-strong overflow-hidden rounded-[2rem] p-2 shadow-2xl shadow-primary/20">
-            <div className="overflow-hidden rounded-[1.6rem] bg-white p-3">
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200" />
-              <div className="relative aspect-[9/16] overflow-hidden rounded-xl">
-                <HeroShowcaseCarousel
-                  images={showcase.mobile}
-                  enabled={showcase.enabled}
-                  interval={showcase.interval}
-                  effect={showcase.effect}
-                  sizes="180px"
-                />
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Floating chips */}
-        <motion.div
-          className="glass-strong absolute -top-4 -left-2 flex items-center gap-2 rounded-2xl px-3 py-2 shadow-lg sm:-top-5 sm:-left-8"
-          style={{ transform: "translateZ(60px)" }}
-          animate={{ y: [0, -10, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
-        >
-          {socialProof ?? (
-            <>
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-100 text-emerald-600">
-                <Star className="h-4 w-4 fill-current" />
-              </span>
-              <div>
-                <p className="text-xs font-bold text-secondary">Garansi</p>
-                <p className="text-[10px] text-muted">Kualitas</p>
-              </div>
-            </>
-          )}
-        </motion.div>
-
-        <motion.div
-          className="glass-strong absolute top-1/3 -right-6 hidden items-center gap-2 rounded-2xl px-3 py-2 shadow-lg sm:flex"
-          style={{ transform: "translateZ(100px)" }}
-          animate={{ y: [0, 12, 0] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
-        >
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary-50 text-primary">
-            <Braces className="h-4 w-4" />
-          </span>
-          <p className="text-xs font-semibold text-secondary">Clean Code</p>
-        </motion.div>
-      </motion.div>
-    </div>
-  );
-}
 
 /**
  * Cahaya halus yang mengikuti kursor (desktop saja).
@@ -279,10 +156,28 @@ function TrustItem({ icon, children }: { icon: ReactNode; children: ReactNode })
   );
 }
 
-export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
+/**
+ * Fallback CSS statis untuk visual hero (tablet ke atas) saat scene 3D tidak
+ * aktif — mis. `prefers-reduced-motion` — atau belum selesai diunduh. Bentuk
+ * "inti digital" murni CSS, TANPA animasi, jadi aman untuk reduced-motion.
+ */
+function CoreFallback() {
+  return (
+    <div className="absolute inset-0 grid place-items-center">
+      <div className="relative h-[74%] w-[74%]">
+        <div className="absolute inset-0 rounded-full bg-primary/25 blur-[90px]" />
+        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_32%_26%,#c9dcff_0%,#2a6bff_34%,#0a1a4d_82%)] shadow-[0_0_140px_-20px_rgba(42,107,255,0.85)]" />
+        <div className="absolute top-1/2 left-1/2 h-[125%] w-[125%] -translate-x-1/2 -translate-y-1/2 rotate-[18deg] rounded-[50%] border border-primary-light/40" />
+        <div className="absolute top-1/2 left-1/2 h-[148%] w-[148%] -translate-x-1/2 -translate-y-1/2 -rotate-[24deg] rounded-[50%] border border-primary-light/25" />
+      </div>
+    </div>
+  );
+}
+
+export function Hero() {
   const reduced = useReducedMotionPreference();
   const settings = useSettings();
-  const { hero, stats } = useContent();
+  const { stats } = useContent();
   const base = introDelay(reduced);
   // Efek kursor hanya untuk layar besar (tablet ke atas) & bukan reduced-motion.
   const isDesktop = useMediaQuery(MEDIA_QUERIES.desktopUp);
@@ -321,7 +216,6 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
       <div className="pointer-events-none absolute top-1/3 -right-24 h-[28rem] w-[28rem] animate-aurora rounded-full bg-primary-light/25 blur-[120px] [animation-delay:-6s]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white to-transparent" />
       {cursorEnabled && <CursorGlow containerRef={sectionRef} />}
-      {sceneEnabled && <Hero3D />}
 
       <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2">
         <motion.div style={reduced ? undefined : { y: yText, opacity: opacityText }}>
@@ -405,14 +299,17 @@ export function Hero({ socialProof }: { socialProof?: ReactNode } = {}) {
           </motion.div>
         </motion.div>
 
-        <motion.div style={reduced ? undefined : { y: yMock }}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: base + 0.3, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <DeviceMockups showcase={hero} socialProof={socialProof} />
-          </motion.div>
+        {/* Kolom kanan (tablet+): panggung visual untuk inti digital 3D. Canvas
+            `Hero3D` di-scope ke panggung ini; bila scene tidak aktif (reduced-
+            motion / WebGL gagal) tampil `CoreFallback` CSS statis. Di mobile
+            kolom disembunyikan → hero murni teks. */}
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none relative hidden h-[24rem] md:block lg:h-[32rem]"
+          style={reduced ? undefined : { y: yMock }}
+        >
+          {!sceneEnabled && <CoreFallback />}
+          {sceneEnabled && <Hero3D />}
         </motion.div>
       </div>
     </section>
