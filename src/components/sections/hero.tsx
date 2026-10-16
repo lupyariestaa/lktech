@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import dynamic from "next/dynamic";
 import {
   animate,
@@ -98,46 +98,120 @@ const rise: Variants = {
 };
 
 /**
- * Baris judul: muncul dari balik "topeng" (`overflow-hidden`) — animasi
- * `transform` saja (ramah kompositor) & teks tetap utuh untuk SEO/screen reader.
+ * Naskah berputar di hero (F7.4): **3 pasang** judul (baris 1 + baris 2 gradient)
+ * beserta sub-judulnya.
+ *
+ * Varian `#1` sengaja = naskah lama dan dipakai sebagai isi render pertama →
+ * SSR, no-JS, LCP, dan SEO tetap aman. Ketiga varian ditulis panjang serupa
+ * supaya tinggi blok stabil saat naskah berganti.
  */
-const lineUp: Variants = {
-  hidden: { y: "115%" },
-  show: { y: "0%", transition: { duration: 0.95, ease: [0.22, 1, 0.36, 1] } },
+const ROTATION = [
+  {
+    line1: "Teknologi Modern,",
+    line2: "Hasil Nyata",
+    sub: `${COMPANY.name} membantu bisnis naik kelas lewat website, aplikasi mobile, dan konsultasi teknologi yang mudah diakses, terjangkau, dan berkualitas.`,
+  },
+  {
+    line1: "Proses Cepat,",
+    line2: "Hasil Rapi",
+    sub: "Dari perencanaan sampai rilis, kami kerjakan website dan aplikasi mobile yang cepat, rapi, dan siap dipakai untuk mengembangkan bisnis Anda.",
+  },
+  {
+    line1: "Harga Jujur,",
+    line2: "Kualitas Terjaga",
+    sub: "Konsultasi teknologi tanpa istilah rumit: kami bantu memilih solusi yang paling masuk akal untuk kebutuhan dan anggaran bisnis Anda.",
+  },
+] as const;
+
+/** Panjang judul (baris 1 + baris 2) per varian — dipakai mesin tik. */
+const HEAD_LEN = ROTATION.map((r) => r.line1.length + r.line2.length);
+
+/* Tempo mesin tik (ms). */
+const TYPE_TICK = 55;
+const ERASE_TICK = 24;
+const ERASE_STEP = 3;
+const HOLD_MS = 3000;
+const GAP_MS = 260;
+
+type Typed = {
+  /** Indeks varian naskah yang aktif. */
+  i: number;
+  /** Jumlah karakter judul yang sudah diketik (gabungan baris 1 + 2). */
+  head: number;
+  /** Sub-judul sudah tampil (fade-in) atau belum. */
+  sub: boolean;
+  phase: "type" | "hold" | "erase";
 };
 
 /**
- * Judul hero: dua baris yang **muncul dari balik topeng** (`overflow-hidden`)
- * saat masuk — kesan editorial/premium, `transform` saja (tanpa layout shift).
+ * Mesin tik judul: **ketik → sub fade-in → jeda → hapus → varian berikutnya**
+ * (berulang tanpa henti).
  *
- * Tetap **satu `<h1>`** dengan teks utuh (SEO & screen reader); baris 2 gradient
- * utuh sebagai satu unit agar gradiennya menyambung rapi. Saat reduced-motion
- * dirender statis tanpa animasi.
+ * Keadaan awal = varian `#1` yang **sudah utuh** dan sub tampil, jadi HTML
+ * hasil SSR/no-JS langsung berisi naskah lengkap. `enabled=false`
+ * (reduced-motion) membiarkannya statis. Satu `setTimeout` aktif per langkah.
+ *
+ * `startMs` menahan langkah pertama sampai intro loader selesai — kalau tidak,
+ * varian `#1` sudah terhapus sebelum hero sempat terlihat.
  */
-function AnimatedHeadline({ reduced }: { reduced: boolean }) {
-  if (reduced) {
-    return (
-      <>
-        <span className="block">Teknologi Modern,</span>
-        <span className="text-gradient block">Hasil Nyata</span>
-      </>
-    );
-  }
+function useTypewriter(enabled: boolean, startMs: number): Typed {
+  const [t, setT] = useState<Typed>({
+    i: 0,
+    head: HEAD_LEN[0],
+    sub: true,
+    phase: "hold",
+  });
+  const [started, setStarted] = useState(false);
 
+  useEffect(() => {
+    if (!enabled) return;
+    const id = window.setTimeout(() => setStarted(true), startMs);
+    return () => window.clearTimeout(id);
+  }, [enabled, startMs]);
+
+  useEffect(() => {
+    if (!enabled || !started) return;
+    const { i, head, phase } = t;
+    const len = HEAD_LEN[i];
+    let next: Typed;
+    let delay: number;
+
+    if (phase === "type") {
+      if (head < len) {
+        next = { ...t, head: head + 1 };
+        delay = TYPE_TICK;
+      } else {
+        // Judul selesai → sub muncul (fade CSS) saat itu juga, lalu ditahan.
+        next = { ...t, head: len, sub: true, phase: "hold" };
+        delay = 0;
+      }
+    } else if (phase === "hold") {
+      // Sub tampil selama `HOLD_MS` (cukup untuk dibaca), baru mulai dihapus.
+      next = { ...t, sub: false, phase: "erase" };
+      delay = HOLD_MS;
+    } else {
+      const h = Math.max(0, head - ERASE_STEP);
+      next =
+        h === 0
+          ? { i: (i + 1) % ROTATION.length, head: 0, sub: false, phase: "type" }
+          : { ...t, head: h };
+      delay = h === 0 ? GAP_MS : ERASE_TICK;
+    }
+
+    const id = window.setTimeout(() => setT(next), delay);
+    return () => window.clearTimeout(id);
+  }, [t, enabled, started]);
+
+  return t;
+}
+
+/** Kursor ketik berkedip (murni dekoratif) di ujung teks yang sedang diketik. */
+function Caret() {
   return (
-    <>
-      {/* `pb` + `-mb` sama besar → descender (g/y) tidak terpotong topeng. */}
-      <span className="block overflow-hidden pb-[0.16em] -mb-[0.16em]">
-        <motion.span variants={lineUp} className="block">
-          Teknologi Modern,
-        </motion.span>
-      </span>
-      <span className="block overflow-hidden pb-[0.16em] -mb-[0.16em]">
-        <motion.span variants={lineUp} className="block">
-          <span className="text-gradient">Hasil Nyata</span>
-        </motion.span>
-      </span>
-    </>
+    <span
+      aria-hidden="true"
+      className="ml-[0.05em] inline-block h-[0.84em] w-[0.07em] animate-caret bg-primary align-[-0.04em]"
+    />
   );
 }
 
@@ -207,6 +281,86 @@ function Magnetic({ enabled, children }: { enabled: boolean; children: ReactNode
     >
       {children}
     </motion.div>
+  );
+}
+
+/**
+ * Judul + sub-judul hero yang **berputar** (F7.4).
+ *
+ * Dipisah jadi komponen sendiri supaya mesin tik — yang men-update state tiap
+ * ±55 ms — hanya me-render ulang subtree kecil ini; `Hero` dan scene 3D tidak
+ * ikut tersentuh.
+ *
+ * Anti-CLS: judul & sub dibungkus `grid` berisi salinan **tak terlihat** semua
+ * varian (`invisible col-start-1 row-start-1`) → tinggi kotak dikunci oleh
+ * varian tertinggi, jadi mengetik/menghapus tidak menggeser CTA & trust bar.
+ */
+function HeroTyped({
+  reduced,
+  startMs,
+  yHead,
+  yPara,
+}: {
+  reduced: boolean;
+  startMs: number;
+  yHead?: MotionValue<number>;
+  yPara?: MotionValue<number>;
+}) {
+  const t = useTypewriter(!reduced, startMs);
+  const { line1, line2, sub } = ROTATION[t.i];
+  const typed1 = line1.slice(0, Math.min(t.head, line1.length));
+  const typed2 = t.head > line1.length ? line2.slice(0, t.head - line1.length) : "";
+  const typing = !reduced && t.phase === "type";
+  const caretTop = typing && t.head < line1.length;
+
+  return (
+    <>
+      <Block variants={rise} y={reduced ? undefined : yHead} className="mt-6">
+        <h1 className="grid text-4xl leading-[1.04] font-bold tracking-[-0.025em] text-secondary sm:text-5xl lg:text-6xl">
+          <span className="col-start-1 row-start-1 block">
+            <span className="block">
+              {typed1 || "\u00A0"}
+              {caretTop && <Caret />}
+            </span>
+            <span className="text-gradient block">
+              {typed2 || "\u00A0"}
+              {typing && !caretTop && <Caret />}
+            </span>
+          </span>
+          {/* Salinan tak terlihat: mengunci tinggi judul ke varian tertinggi. */}
+          {ROTATION.map((r) => (
+            <span
+              key={r.line1}
+              aria-hidden="true"
+              className="invisible col-start-1 row-start-1 block"
+            >
+              <span className="block">{r.line1}</span>
+              <span className="text-gradient block">{r.line2}</span>
+            </span>
+          ))}
+        </h1>
+      </Block>
+
+      <Block variants={rise} y={reduced ? undefined : yPara} className="mt-6 max-w-xl">
+        <div className="grid">
+          <p
+            className="col-start-1 row-start-1 text-base leading-relaxed text-muted transition-all duration-500 sm:text-lg"
+            style={{ opacity: t.sub ? 1 : 0, transform: t.sub ? "none" : "translateY(6px)" }}
+          >
+            {sub}
+          </p>
+          {ROTATION.map((r) => (
+            <p
+              key={r.sub}
+              aria-hidden="true"
+              className="invisible col-start-1 row-start-1 text-base leading-relaxed text-muted sm:text-lg"
+            >
+              {r.sub}
+            </p>
+          ))}
+        </div>
+      </Block>
+    </>
   );
 }
 
@@ -360,22 +514,12 @@ export function Hero() {
             </span>
           </Block>
 
-          <motion.div className="mt-6" style={reduced ? undefined : { y: yHead }}>
-            <h1 className="text-4xl leading-[1.04] font-bold tracking-[-0.025em] text-secondary sm:text-5xl lg:text-6xl">
-              <AnimatedHeadline reduced={reduced} />
-            </h1>
-          </motion.div>
-
-          <Block variants={rise} y={reduced ? undefined : yPara} className="mt-6 max-w-xl">
-            <p className="text-base leading-relaxed text-muted sm:text-lg">
-              <span className="font-medium text-secondary">{COMPANY.name}</span>{" "}
-              membantu bisnis naik kelas lewat{" "}
-              <span className="font-medium text-secondary underline decoration-primary/35 decoration-[1.5px] underline-offset-4">
-                website, aplikasi mobile, dan konsultasi teknologi
-              </span>{" "}
-              yang mudah diakses, terjangkau, dan berkualitas.
-            </p>
-          </Block>
+          <HeroTyped
+            reduced={reduced}
+            startMs={base * 1000}
+            yHead={yHead}
+            yPara={yPara}
+          />
 
           <Block variants={rise} y={reduced ? undefined : yCta} className="mt-8">
             <div className="flex flex-wrap items-center gap-3">

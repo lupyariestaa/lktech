@@ -25,6 +25,7 @@
   --animate-marquee: marquee 30s linear infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-aurora: aurora 18s ease-in-out infinite alternate;
+  --animate-caret: caret 1s step-end infinite;
 }
 
 @keyframes marquee {
@@ -61,6 +62,17 @@
 @keyframes spin-slow {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Kursor ketik (caret) di judul hero — berkedip tegas, bukan fade. */
+@keyframes caret {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
   }
 }
 
