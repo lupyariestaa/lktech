@@ -4,18 +4,25 @@ import { useContent } from "@/components/content-provider";
 import { SectionHeading } from "@/components/section-heading";
 import { Reveal } from "@/components/motion";
 import { HeroShowcaseCarousel } from "@/components/hero-showcase-carousel";
+import { ShowcaseBand } from "@/components/sections/showcase-band";
 
 /**
  * Section "Pratinjau" (F7) — hasil desain yang sebelumnya menjadi mockup di
  * kolom kanan hero. Hero kini menampilkan inti digital 3D; mockup dipindah ke
  * sini agar tetap tampil sebagai bukti visual.
  *
+ * F7.5: gambar tidak lagi berupa carousel satu kartu, melainkan **band
+ * melengkung** (`ShowcaseBand`) yang mengalir terus — gambar yang sama, cara
+ * tampil yang jauh lebih megah. Bila belum ada gambar / fitur dimatikan, kartu
+ * mockup browser lama dipertahankan sebagai keadaan kosong yang rapi.
+ *
  * Hanya memakai gambar `browser` (desktop) — mockup ponsel (`mobile`) sengaja
- * belum dipakai. Konten diambil dari `hero` (pengaturan carousel yang sama,
- * dikelola di dashboard) sehingga tidak ada data baru/duplikat.
+ * belum dipakai. Konten diambil dari `hero` (pengaturan yang sama, dikelola di
+ * dashboard) sehingga tidak ada data baru/duplikat.
  */
 export function Showcase() {
   const { hero } = useContent();
+  const hasImages = hero.enabled && hero.browser.length > 0;
 
   return (
     <section
@@ -23,7 +30,7 @@ export function Showcase() {
       aria-label="Pratinjau hasil desain"
       className="relative scroll-mt-24 overflow-hidden bg-white py-24"
     >
-      {/* Latar lembut agar mockup terasa "berpanggung" (bukan menempel datar). */}
+      {/* Latar lembut agar gambar terasa "berpanggung" (bukan menempel datar). */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface via-white to-white" />
       <div className="pointer-events-none absolute -right-24 -top-16 h-[26rem] w-[26rem] rounded-full bg-primary/10 blur-[120px]" />
 
@@ -41,8 +48,19 @@ export function Showcase() {
             description="Antarmuka modern, cepat, dan responsif — dirancang agar bisnis Anda tampil profesional di mata pelanggan, di perangkat apa pun."
           />
         </Reveal>
+      </div>
 
+      {hasImages ? (
+        /* Full-bleed: ujung band melengkung & memudar ke tepi layar. */
         <Reveal delay={0.1} className="mt-14">
+          <ShowcaseBand
+            images={hero.browser}
+            speed={3}
+            className="h-[240px] sm:h-[300px] lg:h-[360px]"
+          />
+        </Reveal>
+      ) : (
+        <div className="relative mx-auto mt-14 max-w-6xl px-6">
           <div className="relative mx-auto max-w-5xl">
             {/* Glow dasar agar kartu "mengambang". */}
             <div className="pointer-events-none absolute inset-x-8 -bottom-6 h-24 rounded-[50%] bg-primary/20 blur-3xl" />
@@ -69,8 +87,8 @@ export function Showcase() {
               </div>
             </div>
           </div>
-        </Reveal>
-      </div>
+        </div>
+      )}
     </section>
   );
 }

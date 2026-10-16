@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1 + F7.2 + F7.3 + F7.4 selesai — kode; F6 belum)
+> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1 + F7.2 + F7.3 + F7.4 + F7.5 selesai — kode; F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -401,6 +401,45 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   tiap siklus, `ctaY` konstan (nol CLS), tanpa overflow-x di mobile, reduced-motion statis,
   nol error konsol; tsc/eslint/unit(593)/build hijau.
 
+### F7.5 — Section Pratinjau: band gambar melengkung (loop ala silinder) — effort M
+- **Permintaan pemilik:** gambar di section "Pratinjau" (sebelumnya carousel satu kartu)
+  diganti **band melengkung yang mengalir terus** — referensi kode `TiltedGridHero` dipakai
+  gayanya, disesuaikan ke tech kita.
+- **Komponen baru** ✅ `src/components/sections/showcase-band.tsx`: satu baris gambar berjalan
+  kanan→kiri mengelilingi **bagian dalam silinder**. Kotak CSS tak bisa dibengkokkan, jadi tiap
+  tile dipotong **12 pita vertikal** (faset datar), masing-masing diputar beberapa derajat pada
+  sumbu silinder; yang bergerak = tile-nya (`preserve-3d`, satu `rotateY`), sehingga pita tak
+  mungkin terpisah atau menampilkan gambar berbeda. Delay negatif tiap tile menentukan posisinya
+  di busur. Murni `transform` (compositor) + mask fade statis — **tanpa WebGL, tanpa dependensi
+  baru**.
+- **Gambar bawaannya cuma berganti saat tile membungkus di luar layar** (handler
+  `onAnimationIteration`), jadi resize/putaran tidak pernah menukar gambar yang sedang tampil.
+  Semua gambar diunduh di awal (`new Image()`); tile pertama = placeholder `bg-slate-100`.
+- **Adaptasi ke stack kita** ✅:
+  - Tile = **gambar polos rounded** (pilihan pemilik), bukan mockup browser — kartu mockup lama
+    tetap dipakai sebagai **keadaan kosong** bila belum ada gambar / fitur dimatikan.
+  - **Full-bleed** (tepi ke tepi) — ujung band melengkung & memudar ke tepi layar; tinggi band
+    eksplisit (`h-[240px] sm:h-[300px] lg:h-[360px]`) karena `container-type: size` mematikan
+    sizing dari konten.
+  - `CAMERA` **2.0** (referensi 1.6): dengan 1.6 tile di ujung membengkak 5–16× (raster
+    compositor membuangnya → tile tampak abu-abu, terbukti lewat sampling piksel). 2.0 membuat
+    busur tetap terasa tapi pembengkakannya ~2.5× → aman untuk perangkat lemah.
+  - Ukuran pita 12 (referensi 16) demi jumlah layer compositor yang lebih ringan.
+- **`prefers-reduced-motion`** ✅: tiap tile **ditempatkan statis** pada busurnya (`transform:
+  turn(-sweep + t*pitch)` + `visibility` mengikuti `limit`) = satu frame band yang beku, tetap
+  melengkung & utuh. Tidak bisa memakai pola referensi (`animation-play-state: paused`): aturan
+  global kita mematikan **semua** animasi pada mode itu (`animation-duration: 0.001ms`), sehingga
+  band "dijeda" justru berakhir menumpuk di tengah sebagai `transform: none`.
+- **A11y/SEO** ✅: band `aria-hidden` (gambar dekoratif yang terus bergerak), tapi `alt` tetap
+  ditulis pada pita pertama tiap tile; judul/deskripsi section tetap sumber makna. Band baru
+  mulai terlihat setelah `ResizeObserver` mengukur, jadi paint pertama berukuran salah tak
+  pernah tampil.
+- **Verifikasi:** desktop 1440 (8 tile, band 1440×360, nol overflow-x, loop jalan) & mobile 390
+  (5 tile, 390×240); sampling piksel tiap tile: `slate=0%` (semua gambar benar ter-paint),
+  sudut simetris −68.9°…+68.9°, tile di luar `limit` tersembunyi; reduced-motion beku & utuh di
+  busurnya; nol error konsol (kecuali 404 `_vercel/insights` yang diketahui); tsc/eslint/unit(593)/
+  build hijau.
+
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
 - Audit a11y (keyboard, kontras, reduced-motion, screen reader).
@@ -421,7 +460,8 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask) | ✅ Selesai |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
-| `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero | ✅ Selesai |
+| `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero; *(F7.5)* ganti carousel satu kartu → **band melengkung full-bleed** (`ShowcaseBand`), kartu mockup lama jadi keadaan kosong | ✅ Selesai |
+| `src/components/sections/showcase-band.tsx` *(F7.5)* | Band gambar melengkung ala silinder (12 pita/tile, loop murni CSS `transform`, statis saat reduced-motion) | ✅ Selesai |
 | `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` | **Dokumen ini** |
 
 ### Diubah (usulan)
@@ -472,6 +512,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F7.2 | Hero 3D bebas "terpotong" kotak (fit frame + soft-fade tepi) | ✅ Selesai (kode) |
 | F7.3 | Hero kolom kiri: tipografi, mask-reveal, mikro-interaksi, scroll berlapis | ✅ Selesai (kode) |
 | F7.4 | Judul & sub-judul hero berputar 3 varian (animasi ketik) | ✅ Selesai (kode) |
+| F7.5 | Section Pratinjau: band gambar melengkung (loop ala silinder) | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---
