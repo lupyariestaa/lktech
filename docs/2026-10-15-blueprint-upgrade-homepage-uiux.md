@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1 + F7.2 + F7.3 + F7.4 + F7.5 selesai — kode; F6 belum)
+> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1–F7.8 selesai — kode; F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -550,6 +550,47 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   - Komposit bukti: fallback ≡ frame tengah cross-fade (bola yang sama), baru frame terakhir hidup.
   - tsc/eslint/unit(593)/build hijau.
 
+### F7.8 — Hero 3D: panggung kosong dulu, lalu muncul dengan animasi — effort S
+- **Keluhan pemilik (verbatim):** *"wait ini masih gini, bisa ngga si element 3D di header itu sebelum
+  loading page beres displaynya kayak nonde dulu gitu nah kalo loading sudah beres nanti element 3D
+  mucul dengan animasi ngga instan banget"* (+1 tangkapan layar: bola sudah ada di panggung saat
+  halaman masih menjalankan animasi masuknya).
+- **Masalah:** F7.6/F7.7 justru menaruh bola CSS (fallback) **sejak awal** dan menyamarkannya dengan
+  cross-fade. Hasilnya bola terasa "sudah ada" — pergantian ke 3D tak pernah terbaca sebagai
+  *kemunculan*, sekalipun tak terasa jahitnya.
+- **Perbaikan** ✅:
+  - **Panggung dibiarkan kosong** selama menunggu: fallback tidak lagi dirender sebagai tampilan
+    awal (`fallbackOn` mulai `false`). Fallback turun pangkat jadi **jaring pengaman**, hanya tampil
+    bila scene tak akan/tak boleh hidup: reduced-motion, WebGL tak tersedia, atau kanvas tak melapor
+    siap dalam **4 s** (`SAFETY_FALLBACK_MS`) — supaya panggung tidak kosong selamanya.
+  - **Semua kemunculan fallback lewat fade** (prop `hidden` di `CoreFallback`, satu frame jeda
+    sebelum kelas opacity-nya berubah) — tidak pernah "pop".
+  - **Kemunculan 3D dianimasikan**: wrapper kanvas di `hero-3d.tsx` sekarang
+    `transition-[opacity,scale] duration-[900ms] ease-out` dari `scale-[0.94] opacity-0` → `scale-100
+    opacity-100`. Catatan: Tailwind v4 memakai properti `scale` (bukan `transform`), jadi
+    `transition-transform`/`transition-[opacity,transform]` **tidak** menangkapnya.
+  - **`play` digeser** dari `!fallbackOn` (setelah cross-fade tuntas) ke `sceneReady` — jadi jam R3F
+    di-reset dan entrance mulai dari nol **di momen yang sama** dengan fade-in-nya: yang terlihat
+    bukan "pergantian elemen", melainkan 3D yang datang sambil bangun (bola mulus → bergelombang,
+    partikel mengumpul, cincin & satelit memuai).
+- **Verifikasi** ✅ (Playwright + CDP, software-WebGL, 1440×900; produksi `next start -p 3987`):
+  - **Panggung kosong:** setelah intro, stage `children=0` (fallback dilepas) sampai kanvas mount;
+    kanvas mount dengan `opacity 0,000` / `scale 0,94` (belum tergambar) — jadi panggung memang
+    kosong ±5,4 s di lingkungan uji (di GPU nyata: ±0,2–1 s). Piksel: plato rata stage
+    **253,5–255 dengan diff ≤ 0,25** (tidak ada apa pun di panggung).
+  - **Kemunculan beranimasi:** `opacity` 0 → 0,33/0,59 → 0,71/0,84 → 0,91/0,96 → 0,99 → 1,000 dengan
+    `scale` 0,94 → 0,960/0,975 → 0,982/0,990 → 0,994/0,998 → 1,000 (≥ 5 keadaan antara, ±0,75 s) —
+    bukan lompatan satu frame. Piksel: rata-rata panggung turun bertahap 254,5 → 252,5 → 250,2 →
+    247,6 dengan diff per frame 0,5–2,7 (fade halus).
+  - **Scene benar-benar hidup setelah tampil:** diff antar `captureScreenshot` 1,6 s terpisah =
+    **7,28** dan **5,01** (bola bergelombang + partikel bergerak) — sekaligus bukti `play` menyala
+    (kalau beku, diff-nya 0). Catatan QA: **screencast CDP bisa basi** untuk isi kanvas di mode
+    software (diff 0,00 palsu) — verifikasi isi kanvas harus pakai `captureScreenshot`.
+  - **Jaring pengaman tidak menyala** di jalur normal (`fb=none` sepanjang run) walau render pertama
+    makan ±2,7 s di lingkungan uji. **Jalur reduced-motion:** fallback satu-satunya visual (tanpa
+    kanvas sama sekali), fade-in 0 → 1, tampilan bola + cincin sesuai kalibrasi F7.7 (dicek visual).
+  - tsc/eslint/unit(593)/build hijau.
+
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
 - Audit a11y (keyboard, kontras, reduced-motion, screen reader).
@@ -567,7 +608,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/scroll-progress.tsx` | Bar progres scroll (beranda) |
 | `src/components/pinned-section.tsx` | Wrapper sticky generik untuk storytelling |
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
-| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask); *(F7.6)* probe WebGL melepas konteks (`WEBGL_lose_context`), cross-fade frame pertama (`FirstFrame` → `onReady`), `antialias:false`, bola inti 64², entrance diperhalus; *(F7.7)* `FrozenFrame` — frame beku via `advance(0)` selama `frameloop="never"` sampai `play`, lalu jam R3F di-reset → entrance mulai dari nol | ✅ Selesai |
+| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask); *(F7.6)* probe WebGL melepas konteks (`WEBGL_lose_context`), cross-fade frame pertama (`FirstFrame` → `onReady`), `antialias:false`, bola inti 64², entrance diperhalus; *(F7.7)* `FrozenFrame` — frame beku via `advance(0)` selama `frameloop="never"` sampai `play`, lalu jam R3F di-reset → entrance mulai dari nol; *(F7.8)* wrapper kanvas = kemunculan beranimasi (`transition-[opacity,scale]` 0,9 s dari `scale-[0.94] opacity-0`) dan `play` menyala tepat saat itu (`sceneReady`) | ✅ Selesai |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero; *(F7.5)* ganti carousel satu kartu → **band melengkung full-bleed** (`ShowcaseBand`), kartu mockup lama jadi keadaan kosong | ✅ Selesai |
@@ -585,7 +626,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev); *(F7.1)* `@react-three/postprocessing` + `postprocessing` | ✅ Selesai |
-| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`); *(F7.6)* `mountScene` (gerbang intro) + `CoreFallback` yang tak pernah dibuang sebelum frame pertama 3D; *(F7.7)* kirim `play={!fallbackOn}`, samakan `CoreFallback` dengan **frame beku** (gradien dari profil render `uIntro=0`, cincin = proyeksi eksak torus) | ✅ Selesai |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`); *(F7.6)* `mountScene` (gerbang intro) + `CoreFallback` yang tak pernah dibuang sebelum frame pertama 3D; *(F7.7)* kirim `play={!fallbackOn}`, samakan `CoreFallback` dengan **frame beku** (gradien dari profil render `uIntro=0`, cincin = proyeksi eksak torus); *(F7.8)* panggung **kosong** selama menunggu (`fallbackOn` mulai `false`), fallback turun jadi jaring pengaman (`SAFETY_FALLBACK_MS` 4 s, selalu fade-in lewat prop `hidden`), `play={sceneReady}` | ✅ Selesai |
 | `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll); *(F7.6)* lapor `finish()` ke `IntroGate` saat fase `done` | ✅ Selesai |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
 
@@ -626,6 +667,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F7.5 | Section Pratinjau: band gambar melengkung (loop ala silinder) | ✅ Selesai (kode) |
 | F7.6 | Hero 3D: gerbang intro (nol kerja GPU sebelum loader beres) + cross-fade fallback + optimasi | ✅ Selesai (kode) |
 | F7.7 | Hero 3D: "frame beku" (`advance(0)`) sampai cross-fade tuntas + fallback disetel ke frame-0 | ✅ Selesai (kode) |
+| F7.8 | Hero 3D: panggung kosong saat menunggu → muncul dengan animasi (fade + scale 0,9 s); fallback jadi jaring pengaman | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---

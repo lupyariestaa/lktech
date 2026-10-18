@@ -49,39 +49,38 @@ import type { MotionValue } from "framer-motion";
  *   shader / frame pertama yang berebut main thread dengan animasi pembuka.
  * - **Probe WebGL** melepas konteksnya (`WEBGL_lose_context`) — sebelumnya satu
  *   konteks GPU dibiarkan hidup sia-sia.
- * - **Cross-fade**: canvas memudar masuk setelah frame pertamanya tergambar
- *   (`onReady` → `painted`), bersamaan fallback CSS memudar keluar → panggung
- *   tidak pernah kosong (sebelumnya kosong beberapa detik, lihat audit F7.6).
+ * - **Kemunculan beranimasi** (F7.8): kanvas memudar + membesar masuk begitu
+ *   frame pertamanya tergambar (`onReady` → `painted`). Sebelum itu panggung
+ *   sengaja **kosong** — `hero.tsx` tidak lagi menaruh bola CSS di panggungnya.
  * - `antialias: false`: MSAA scene sudah dikerjakan EffectComposer
  *   (`multisampling`), jadi MSAA di kanvas hanya pemborosan fill-rate.
  * - Bola inti 64² (dari 96²): vertex shader-nya yang paling berat (2× simplex
  *   noise per vertex) → segmen turun ~55% tanpa perubahan visual terlihat.
- * - Entrance **disamakan dengan fallback CSS** (F7.6b): inti tampil langsung
- *   seukuran penuh (tanpa skala awal 0,62) dan semua detail hidup — gelombang
- *   permukaan, mottling warna, partikel, konstelasi, satelit, cincin memuai —
- *   baru berbunga setelah jendela cross-fade lewat (`lateAt`), karena fallback
- *   CSS di `hero.tsx` disalin persis dari kondisi frame-0 scene ini.
+ * - Entrance (F7.6b, disesuaikan F7.8): inti tampil langsung seukuran penuh
+ *   (tanpa skala awal 0,62) dan detail hidupnya berbunga lewat jendela
+ *   `lateAt`. F7.8: jendela itu justru *terlihat* (dulu tersembunyi di balik
+ *   cross-fade) — fade-in ±0,9 s sementara permukaan mulai bergelombang,
+ *   partikel mengumpul, cincin & satelit memuai.
  *
- * F7.7 — **frame beku** sampai cross-fade tuntas (`play`):
+ * F7.7 — **frame beku** sampai scene ditampilkan (`play`):
  * - Masalah terukur: render pertama scene ini (kompilasi shader + alokasi render
  *   target bloom) memblokir main thread berdetik-detik. Jam three.js — yang
  *   dipakai semua timeline entrance lewat `state.clock.elapsedTime` — sudah
  *   berjalan sejak mount, jadi frame pertama yang **benar-benar tampil** sudah
- *   di `t ≈ 4 s`: bola sudah "hidup" (bergelombang, berpartikel) sementara
- *   fallback CSS masih halus → terbaca sebagai **dua elemen 3D berbeda**.
+ *   di `t ≈ 4 s`: bola sudah "hidup" (bergelombang, berpartikel) padahal yang
+ *   dilihat mata masih kondisi tenang → terbaca sebagai **dua elemen 3D
+ *   berbeda**.
  * - Solusinya bukan menambah delay `lateAt`, tapi **membekukan waktunya**:
  *   selama `!play` kanvas memakai `frameloop="never"` dan digambar manual satu
  *   frame per rAF dengan `advance(0)`. Di mode `never`, R3F memaksa
  *   `delta = timestamp − elapsedTime` dan `elapsedTime = timestamp` (lihat
  *   `update()` @react-three/fiber) → `advance(0)` membuat semua `useFrame`
- *   membaca `t = 0` **dan** `delta = 0`: persis kondisi frame-0 yang disalin
- *   `CoreFallback` (tanpa gelombang, mottling, partikel, satelit).
- * - Saat `play` menyala (fallback CSS sudah dilepas `hero.tsx`, ±0,9 s setelah
- *   frame pertama), `frameloop` jadi `"always"` → R3F me-reset jam
- *   (`stop()` → `elapsedTime = 0` → `start()`) → timeline entrance mulai dari
- *   nol **tepat pada momen itu**, bukan sejak frame pertama yang tak sesiapa
- *   lihat. Urutan terlihat: fallback CSS mulus → kanvas menggambar kondisi yang
- *   sama (masih beku) → cross-fade tak terasa → baru scene "bangun".
+ *   membaca `t = 0` **dan** `delta = 0`.
+ * - F7.8: `play` kini menyala tepat saat 3D mulai tampil (`sceneReady` dari
+ *   `hero.tsx`), bukan setelah cross-fade tuntas. Saat itu `frameloop` jadi
+ *   `"always"` → R3F me-reset jam (`stop()` → `elapsedTime = 0` → `start()`)
+ *   → timeline entrance mulai dari nol **persis di frame pertama yang dilihat
+ *   mata**, jadi tidak ada jendela "sudah hidup" yang terlewat.
  */
 
 /* ------------------------------------------------------------------ */
@@ -268,12 +267,11 @@ const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
  * `delay + dur` detik setelah scene "bangun".
  *
  * Yang jadi acuan bukan jam sejak mount, melainkan jam yang mulai berjalan saat
- * `play` (cross-fade tuntas, F7.7 — lihat `FrozenFrame`): selama beku `t` tetap
- * 0, jadi jendela cross-fade berjalan pada kondisi frame-0 yang identik dengan
- * `CoreFallback` di `hero.tsx` — bola mulus, warna rata, cincin skala 0,8×,
- * tanpa partikel/satelit. `delay` di sini hanya memberi jeda kecil *setelah*
- * handoff sebelum scene "berbunga": permukaan menggelombang, warna termottling,
- * halo mengumpul dari luar, konstelasi & satelit menyala.
+ * `play` (F7.8: tepat ketika 3D mulai tampil — lihat `FrozenFrame`): selama
+ * beku `t` tetap 0, jadi tak ada jendela entrance yang "terlewat" di balik
+ * layar. `delay` di sini hanya memberi jeda kecil *setelah* kemunculan sebelum
+ * scene "berbunga": permukaan menggelombang, warna termottling, halo mengumpul
+ * dari luar, konstelasi & satelit menyala.
  */
 const lateAt = (t: number, delay: number, dur: number) =>
   easeOutCubic(clamp01((t - delay) / dur));
@@ -745,14 +743,14 @@ function FirstFrame({ onFirstFrame }: { onFirstFrame: () => void }) {
  * `elapsedTime = timestamp` (lihat `update()` @react-three/fiber) — dengan
  * `advance(0)` semua `useFrame` menerima `t = 0` **dan** `delta = 0`.
  *
- * Akibatnya gambar yang tampil selama handoff selalu persis kondisi frame-0
- * `CoreFallback`: bola mulus tanpa gelombang, warna rata tanpa mottling, cincin
- * pada skala 0,8×, tanpa partikel/konstelasi/satelit, tanpa rotasi maupun
- * inersia — sekalipun render pertama memblokir main thread berdetik-detik
- * (jam three.js tidak lagi "mencuri" waktu di belakang layar).
+ * Akibatnya gambar yang tampil sampai scene ditampilkan selalu persis kondisi
+ * frame-0: bola mulus tanpa gelombang, warna rata tanpa mottling, cincin pada
+ * skala 0,8×, tanpa partikel/konstelasi/satelit, tanpa rotasi maupun inersia —
+ * sekalipun render pertama memblokir main thread berdetik-detik (jam three.js
+ * tidak lagi "mencuri" waktu di belakang layar).
  *
- * Loop hanya hidup selama jendela handoff (±1 s; berhenti saat `play` menyala
- * atau saat hero keluar viewport).
+ * Loop hanya hidup sampai frame pertama selesai digambar (praktis 1–2 frame:
+ * `play` menyala begitu `onReady` terpanggil) atau saat hero keluar viewport.
  */
 function FrozenFrame({ active, play }: { active: boolean; play: boolean }) {
   const advance = useThree((s) => s.advance);
@@ -778,18 +776,19 @@ export default function Hero3D({
   /** Dipanggil sekali saat canvas sudah menggambar frame pertamanya. */
   onReady?: () => void;
   /**
-   * Cross-fade dengan `CoreFallback` sudah tuntas → scene boleh "bangun"
-   * (F7.7). Selama `false` kanvas menggambar kondisi frame-0 yang beku
-   * (`FrozenFrame`); saat `true`, jam R3F di-reset → entrance mulai dari nol.
+   * Scene boleh "bangun" (F7.8: dipasang tepat saat kemunculannya mulai
+   * dianimasikan — `hero.tsx` mengirim `sceneReady`). Selama `false` kanvas
+   * menggambar kondisi frame-0 yang beku (`FrozenFrame`); saat `true`, jam R3F
+   * di-reset → entrance mulai dari nol di momen yang sama dengan fade-in-nya.
    */
   play?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
-  // Belum tergambar → wrapper transparan; `onReady` menyalakannya (cross-fade
-  // dengan `CoreFallback` di hero). Frame pertama scene ini juga yang paling
-  // mahal (kompilasi shader + alokasi render target bloom), jadi lebih baik
-  // tidak terlihat "muncul setengah jadi".
+  // Belum tergambar → wrapper transparan + sedikit mengecil; `onReady`
+  // menyalakannya (fade + membesar, F7.8). Frame pertama scene ini juga yang
+  // paling mahal (kompilasi shader + alokasi render target bloom), jadi lebih
+  // baik tidak terlihat "muncul setengah jadi".
   const [painted, setPainted] = useState(false);
   // Guard: bila WebGL tidak tersedia (browser/perangkat lama, GPU diblokir),
   // jangan render `<Canvas>` sama sekali — fallback CSS hero tetap tampil.
@@ -821,17 +820,20 @@ export default function Hero3D({
       ref={ref}
       aria-hidden="true"
       className={
-        "absolute inset-0 z-0 transition-opacity duration-700 " +
-        (painted ? "opacity-100" : "opacity-0")
+        // F7.8: kemunculan scene = fade + sedikit membesar (±0,9 s). Sebelum
+        // siap panggung memang kosong (bukan diisi bola CSS), jadi animasi masuk
+        // inilah yang membuat 3D terasa "datang", bukan "sudah ada".
+        "absolute inset-0 z-0 transition-[opacity,scale] duration-[900ms] ease-out " +
+        (painted ? "scale-100 opacity-100" : "scale-[0.94] opacity-0")
       }
       style={{ maskImage: EDGE_MASK, WebkitMaskImage: EDGE_MASK }}
     >
       <Canvas
         dpr={[1, 1.5]}
-        // F7.7: scene hanya "hidup" saat cross-fade tuntas (`play`). Sebelum itu
+        // F7.8: scene "hidup" begitu kemunculannya dimulai (`play`). Sebelum itu
         // `never` + `FrozenFrame` → frame beku kondisi frame-0, jam tidak jalan.
-        // Setelah `play`, R3F me-reset jam saat `frameloop` berubah → entrance
-        // mulai dari nol tepat di momen handoff.
+        // Saat `play` menyala, R3F me-reset jam ketika `frameloop` berubah →
+        // entrance mulai dari nol tepat di momen 3D mulai tampil.
         frameloop={active && play ? "always" : "never"}
         camera={{ position: [0, 0, 6], fov: 45 }}
         // `antialias: false` — scene dirender ke FBO EffectComposer yang sudah

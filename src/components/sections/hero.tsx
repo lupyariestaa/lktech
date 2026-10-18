@@ -420,12 +420,29 @@ const EDGE_MASK =
   "radial-gradient(closest-side, rgba(0,0,0,1) 85%, rgba(0,0,0,0) 100%)";
 
 /**
- * Fallback CSS statis "inti digital" (tablet ke atas) saat scene 3D belum/tidak
- * aktif — mis. `prefers-reduced-motion`, WebGL tidak tersedia, atau scene 3D
- * belum menggambar frame pertamanya
+ * F7.8: batas tunggu sebelum panggung 3D dianggap gagal (WebGL tak pernah
+ * melapor siap) → fallback CSS muncul sebagai jaring pengaman. Di perangkat
+ * normal frame pertama jauh lebih cepat dari ini (≤ ~1 s).
+ */
+const SAFETY_FALLBACK_MS = 4000;
+
+/**
+ * Fallback CSS statis "inti digital" (tablet ke atas) — **jaring pengaman**,
+ * bukan lagi tampilan default.
  *
- * F7.6: fallback **selalu ada lebih dulu** dan baru memudar setelah canvas
- * melaporkan frame pertamanya (`painted`) → panggung tak pernah kosong.
+ * F7.8: selama menunggu, panggung sengaja dibiarkan **kosong**; bola 3D-nya
+ * masuk dengan animasi begitu ia siap (fade + sedikit membesar — lihat
+ * `Hero3D`). Bola CSS yang sudah nongol sejak awal justru membuat kemunculan
+ * 3D terbaca sebagai "pergantian elemen", bukan animasi masuk.
+ *
+ * Fallback ini hanya tampil bila scene tak akan/tak boleh hidup:
+ * - `prefers-reduced-motion`, layar < tablet, atau WebGL tak tersedia → ia
+ *   satu-satunya visual (statis, tanpa animasi);
+ * - canvas tak melapor siap dalam 4 s (WebGL gagal dibuat di tengah jalan) →
+ *   panggung tidak boleh kosong selamanya (jaring pengaman `fallbackOn`).
+ *
+ * Ia selalu **fade in** (lewat prop `hidden`), tidak pernah "pop"; dan bila
+ * ternyata 3D menyusul siap, ia memudar lewat `painted` seperti dulu.
  *
  * F7.6b: fallback ini adalah **salinan eksak kondisi frame-0 scene 3D**, jadi
  * cross-fade ke canvas tidak lagi terbaca sebagai "dua elemen 3D berbeda"
@@ -487,12 +504,20 @@ const CORE_GLOW =
   "rgba(255,255,255,0.3) 77%,rgba(255,255,255,0.18) 86%," +
   "rgba(255,255,255,0.09) 91%,rgba(255,255,255,0) 100%)";
 
-function CoreFallback({ painted = false }: { painted?: boolean }) {
+function CoreFallback({
+  painted = false,
+  hidden = false,
+}: {
+  /** Ada canvas 3D siap → fallback memudar keluar (cross-fade). */
+  painted?: boolean;
+  /** Belum diizinkan tampil → tetap transparan (dipakai untuk fade-in). */
+  hidden?: boolean;
+}) {
   return (
     <div
       className={
         "absolute inset-0 transition-opacity duration-700 " +
-        (painted ? "opacity-0" : "opacity-100")
+        (painted || hidden ? "opacity-0" : "opacity-100")
       }
       style={{ maskImage: EDGE_MASK, WebkitMaskImage: EDGE_MASK }}
     >
@@ -542,15 +567,39 @@ export function Hero() {
   const mountScene = sceneEnabled && introDone;
   // `sceneReady` = canvas 3D sudah menggambar frame pertamanya.
   const [sceneReady, setSceneReady] = useState(false);
-  // Fallback CSS tetap tampil sampai cross-fade selesai (bukan sampai mount),
-  // jadi tidak pernah ada momen panggung kosong.
-  const [fallbackOn, setFallbackOn] = useState(true);
-  const onSceneReady = useCallback(() => setSceneReady(true), []);
+  // F7.8: panggung **kosong** selama menunggu (bukan bola CSS diam). Elemen 3D
+  // baru ditampilkan saat siap, dan tampilnya dianimasikan (fade + membesar di
+  // `Hero3D`) — permintaan: "sebelum loading beres kayak none dulu, kalau sudah
+  // beres muncul dengan animasi, nggak instan banget".
+  const [fallbackOn, setFallbackOn] = useState(false);
+  // Jaring pengaman: kalau canvas tak pernah melapor siap (WebGL gagal dibuat di
+  // tengah jalan — `probeWebgl` lolos tapi konteks asli ditolak, GPU diblokir),
+  // panggung tak boleh kosong selamanya → fallback CSS muncul, dengan fade.
   useEffect(() => {
-    if (!sceneReady) return;
+    if (!mountScene || sceneReady) return;
+    const t = setTimeout(() => setFallbackOn(true), SAFETY_FALLBACK_MS);
+    return () => clearTimeout(t);
+  }, [mountScene, sceneReady]);
+  const onSceneReady = useCallback(() => setSceneReady(true), []);
+  // Fallback yang sempat tampil (jalur jaring pengaman) baru dilepas setelah
+  // cross-fade ke canvas selesai — supaya pergantiannya tidak "memotong".
+  useEffect(() => {
+    if (!sceneReady || !fallbackOn) return;
     const t = setTimeout(() => setFallbackOn(false), 900);
     return () => clearTimeout(t);
-  }, [sceneReady]);
+  }, [sceneReady, fallbackOn]);
+  // Semua kemunculan fallback lewat fade (bukan pop): satu frame jeda dulu
+  // supaya kelas `opacity` barunya ikut ditransisikan.
+  const showFallback = !sceneEnabled || fallbackOn;
+  const [fallbackIn, setFallbackIn] = useState(false);
+  useEffect(() => {
+    if (!showFallback) return;
+    const raf = requestAnimationFrame(() => setFallbackIn(true));
+    return () => {
+      cancelAnimationFrame(raf);
+      setFallbackIn(false);
+    };
+  }, [showFallback]);
 
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -689,10 +738,10 @@ export function Hero() {
         </motion.div>
 
         {/* Kolom kanan (tablet+): panggung visual untuk inti digital 3D. Canvas
-            `Hero3D` di-scope ke panggung ini; bila scene tidak aktif (reduced-
-            motion / WebGL gagal) atau belum menggambar frame pertamanya,
-            `CoreFallback` CSS statis yang tampil. Di mobile kolom disembunyikan
-            → hero murni teks. */}
+            `Hero3D` di-scope ke panggung ini. F7.8: selama menunggu panggung
+            dibiarkan **kosong** — canvas masuk dengan animasi saat siap; fallback
+            CSS hanya jaring pengaman (reduced-motion / WebGL tak tersedia / 3D
+            tak pernah siap). Di mobile kolom disembunyikan → hero murni teks. */}
         <motion.div
           aria-hidden="true"
           className={
@@ -707,7 +756,9 @@ export function Hero() {
           }
           style={reduced ? undefined : { y: yMock, opacity: opacityStage }}
         >
-          {(!sceneEnabled || fallbackOn) && <CoreFallback painted={sceneReady} />}
+          {showFallback && (
+            <CoreFallback painted={sceneReady} hidden={!fallbackIn} />
+          )}
           {mountScene && (
             <Hero3D
               interaction={{
@@ -715,11 +766,11 @@ export function Hero() {
                 pointer: { x: pointerX, y: pointerY },
               }}
               onReady={onSceneReady}
-              // F7.7: scene baru boleh "bangun" setelah fallback CSS benar-benar
-              // dilepas (`fallbackOn` → false, ±0,9 s setelah frame pertama).
-              // Selama itu kanvas menggambar frame beku yang identik dengan
-              // `CoreFallback`, jadi pergantiannya tak terasa.
-              play={!fallbackOn}
+              // F7.8: begitu frame pertama tergambar, scene langsung "bangun"
+              // (entrance dari nol) bersamaan dengan animasi masuknya kanvas
+              // (fade + membesar, di `Hero3D`) — jadi kemunculannya terlihat
+              // sebagai satu animasi, bukan pergantian elemen.
+              play={sceneReady}
             />
           )}
         </motion.div>
