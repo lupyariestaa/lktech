@@ -506,6 +506,50 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   - Chunk `three` tetap terpisah (**1.001 KB** mentah / 265 KB terkirim) dan **tidak ada** di 19
     `<script>` HTML awal → bundel awal tidak berubah. tsc/eslint/unit/build hijau.
 
+### F7.7 — Hero 3D: "frame beku" sampai cross-fade tuntas — effort S
+- **Keluhan pemilik (verbatim):** *"loh kok masih bug kayak ada 2 element 3D yang berbeda gitu pas
+  awal refres dan pas udah beres loading, kok agak sulit menjelaskannya"* (+2 tangkapan layar:
+  bola fallback halus di jendela pemuatan vs bola 3D yang sudah "hidup" setelah loading).
+- **Investigasi (terukur: screencast CDP + profil radial, bukan dugaan):**
+  - Fallback CSS memang sudah disalin dari kondisi frame-0 (`uIntro = 0`), tapi **frame pertama yang
+    benar-benar tampil di kanvas bukan frame-0**: render pertama scene (kompilasi shader + alokasi
+    render target bloom) memblokir main thread **±4 detik** di lingkungan uji. R3F memakai
+    `clock.getDelta()` tiap tick (`update()` @react-three/fiber), jadi begitu render pertama selesai
+    `elapsedTime` sudah ±4 s → frame yang dipresentasikan sudah `uIntro ≈ 1` = bola bergelombang +
+    partikel + satelit. Fallback (halus) vs kanvas (hidup) = dua elemen berbeda.
+  - Efek samping: `onReady` menyala di `useFrame` pertama, *sebelum* `gl.render` selesai.
+- **Perbaikan** ✅:
+  - **Frame beku (`FrozenFrame` di `hero-3d.tsx`)**: selama `play` belum menyala, kanvas memakai
+    `frameloop="never"` dan digambar manual satu frame per rAF dengan `advance(0)`. Di mode `never`
+    R3F memaksa `delta = timestamp − elapsedTime` dan `elapsedTime = timestamp` (lihat `update()`
+    @react-three/fiber) → `advance(0)` membuat semua `useFrame` membaca **`t = 0` dan `delta = 0`**:
+    persis kondisi frame-0 yang disalin fallback (tanpa gelombang, mottling, partikel, satelit,
+    rotasi, atau inersia) — berapa pun lamanya render pertama.
+  - `hero.tsx` mengirim `play={!fallbackOn}` (cross-fade tuntas, ±0,9 s setelah frame pertama).
+    Saat itu `frameloop` berubah ke `"always"` → R3F me-reset jam (`stop()` → `elapsedTime = 0` →
+    `start()`) → timeline entrance mulai dari nol **tepat di momen handoff**, bukan sejak frame
+    pertama yang tak sesiapa lihat.
+  - Delay `lateAt` dipendekkan (inti 0,7→0,25 s; halo 0,55→0,15; cincin/konstelasi 0,5→0,15;
+    satelit 0,9→0,4) karena jendela cross-fade kini dijaga pembekuan, bukan oleh delay.
+  - **Fallback disetel ulang terhadap frame beku** (bukan terhadap kondisi stabil):
+    - `CORE_GRADIENT` diukur ulang per radius dari frame beku `uIntro = 0` (tiap stop = rata-rata
+      piksel render 3D di radius itu). Rim fresnel di kondisi itu di-boost (`1 − uIntro`) sehingga
+      tepi bola jauh lebih putih — di ukur sebelumnya (kondisi stabil) tepi fallback 40–55 level
+      lebih gelap dari kanvas.
+    - Cincin kini **proyeksi eksak** torus (perspektif kamera z=6, fov 45): ring1
+      60,7 × 10,0cqmin @ −3°, ring2 69,0 × 4,0cqmin @ −29,9° (sebelumnya 58,5 × 11,9 @ 0° dan
+      66,2 × 4,8 @ −29°; perkiraan "pipih dari normal torus" melewatkan koreksi perspektif).
+- **Verifikasi** ✅ (screencast CDP, software-WebGL, 1440×900; referensi = frame terakhir sebelum
+  kanvas tampil, diff di-crop ke kotak panggung):
+  - **Fase beku:** diff vs fallback **1,83 mean / 0,28 % piksel > 24** dan **konstan** ±1 s (bukti
+    jam benar-benar beku) — sebelumnya 4,05–6,9 dengan 4–14 % piksel > 24 karena bola sudah hidup.
+    Profil radial: glow luar (r ≥ 264 px) **identik 0,0,0**; tepi bola 2,65 mean; band cincin
+    **17,75 → 3,54 mean** dan **33,9 % → 0,97 % piksel > 24**.
+  - **Setelah `play`:** diff naik **bertahap** 1,88 → 2,22 → 3,02 → 3,77 → 4,56 → … → 6,6
+    (entrance ±2,5 s) — tidak ada lompatan: scene "bangun", bukan "berganti".
+  - Komposit bukti: fallback ≡ frame tengah cross-fade (bola yang sama), baru frame terakhir hidup.
+  - tsc/eslint/unit(593)/build hijau.
+
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
 - Audit a11y (keyboard, kontras, reduced-motion, screen reader).
@@ -523,7 +567,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/scroll-progress.tsx` | Bar progres scroll (beranda) |
 | `src/components/pinned-section.tsx` | Wrapper sticky generik untuk storytelling |
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
-| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask); *(F7.6)* probe WebGL melepas konteks (`WEBGL_lose_context`), cross-fade frame pertama (`FirstFrame` → `onReady`), `antialias:false`, bola inti 64², entrance diperhalus | ✅ Selesai |
+| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask); *(F7.6)* probe WebGL melepas konteks (`WEBGL_lose_context`), cross-fade frame pertama (`FirstFrame` → `onReady`), `antialias:false`, bola inti 64², entrance diperhalus; *(F7.7)* `FrozenFrame` — frame beku via `advance(0)` selama `frameloop="never"` sampai `play`, lalu jam R3F di-reset → entrance mulai dari nol | ✅ Selesai |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero; *(F7.5)* ganti carousel satu kartu → **band melengkung full-bleed** (`ShowcaseBand`), kartu mockup lama jadi keadaan kosong | ✅ Selesai |
@@ -541,7 +585,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev); *(F7.1)* `@react-three/postprocessing` + `postprocessing` | ✅ Selesai |
-| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`); *(F7.6)* `mountScene` (gerbang intro) + `CoreFallback` yang tak pernah dibuang sebelum frame pertama 3D | ✅ Selesai |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`); *(F7.6)* `mountScene` (gerbang intro) + `CoreFallback` yang tak pernah dibuang sebelum frame pertama 3D; *(F7.7)* kirim `play={!fallbackOn}`, samakan `CoreFallback` dengan **frame beku** (gradien dari profil render `uIntro=0`, cincin = proyeksi eksak torus) | ✅ Selesai |
 | `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll); *(F7.6)* lapor `finish()` ke `IntroGate` saat fase `done` | ✅ Selesai |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
 
@@ -581,6 +625,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F7.4 | Judul & sub-judul hero berputar 3 varian (animasi ketik) | ✅ Selesai (kode) |
 | F7.5 | Section Pratinjau: band gambar melengkung (loop ala silinder) | ✅ Selesai (kode) |
 | F7.6 | Hero 3D: gerbang intro (nol kerja GPU sebelum loader beres) + cross-fade fallback + optimasi | ✅ Selesai (kode) |
+| F7.7 | Hero 3D: "frame beku" (`advance(0)`) sampai cross-fade tuntas + fallback disetel ke frame-0 | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---

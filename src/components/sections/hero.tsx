@@ -412,30 +412,108 @@ function CountUp({
 }
 
 /**
- * Fallback CSS statis untuk visual hero (tablet ke atas) saat scene 3D tidak
- * aktif — mis. `prefers-reduced-motion`, WebGL tidak tersedia, atau scene 3D
- * belum selesai dimuat/menyalakan frame pertamanya. Bentuk "inti digital" murni
- * CSS, TANPA animasi, jadi aman untuk reduced-motion.
- *
- * F7.6: fallback ini **selalu ada lebih dulu** dan baru memudar setelah scene
- * 3D melaporkan frame pertamanya (`painted`). Sebelumnya fallback di-unmount
- * begitu hidrasi selesai → panggung kosong beberapa detik sebelum canvas 3D
- * muncul (bug yang terukur di audit: stage kosong ~6 s).
+ * Soft-fade tepi panggung — **sama persis** dengan `EDGE_MASK` di `hero-3d.tsx`.
+ * Sengaja disalin, bukan diimpor: file itu di-`dynamic import` (client-only), dan
+ * mengimpor konstanta darinya akan ikut menarik `three` ke bundel awal.
  */
+const EDGE_MASK =
+  "radial-gradient(closest-side, rgba(0,0,0,1) 85%, rgba(0,0,0,0) 100%)";
+
+/**
+ * Fallback CSS statis "inti digital" (tablet ke atas) saat scene 3D belum/tidak
+ * aktif — mis. `prefers-reduced-motion`, WebGL tidak tersedia, atau scene 3D
+ * belum menggambar frame pertamanya
+ *
+ * F7.6: fallback **selalu ada lebih dulu** dan baru memudar setelah canvas
+ * melaporkan frame pertamanya (`painted`) → panggung tak pernah kosong.
+ *
+ * F7.6b: fallback ini adalah **salinan eksak kondisi frame-0 scene 3D**, jadi
+ * cross-fade ke canvas tidak lagi terbaca sebagai "dua elemen 3D berbeda"
+ * (keluhan: bentuk awal vs sesudah loading terlihat seperti dua objek). Semua
+ * angka di bawah disalin dari `hero-3d.tsx` saat `uIntro = 0`:
+ * - Bola inti: radius 1,3 unit; skala grup `COMPOSITION_HALF` (2,6) → siluet
+ *   selalu **50 % sisi terpendek panggung** (`50cqmin`; panggung diberi
+ *   `container-type: size` → `cqmin` = sisi terpendeknya, persis seperti
+ *   `Math.min(viewport.width, viewport.height)` di shader). Di sini digambar
+ *   `54cqmin` karena tepi *terlihat* bola 3D melebar oleh bloom (lihat
+ *   `CORE_GRADIENT`).
+ * - Warna & halo: nilai **render** 3D (tepi + bloom) diukur per radius dengan
+ *   skrip QA screencast ad-hoc (buang setelah dipakai) lalu disalin apa adanya
+ *   ke `CORE_GRADIENT` (0→138 px) dan `CORE_GLOW` (putih ±0,6 → 0 sampai 264 px).
+ *   Profilnya diambil dari **frame beku** (`uIntro = 0`): di kondisi itu rim
+ *   fresnel di-boost (`(1 − uIntro)`) sehingga tepi bola lebih putih daripada
+ *   kondisi stabil — kalau diukur saat stabil, tepi fallback tampak 40–55 level
+ *   lebih gelap dari canvas saat cross-fade (terukur F7.7).
+ * - Cincin: torus r 1,9 & 2,15 pada skala entrance 0,8× — diproyeksikan eksak
+ *   (perspektif kamera z=6, fov 45) → ring1
+ *   60,7 × 10,0cqmin @ −3°, ring2 69,0 × 4,0cqmin @ −29,9°; warna + opasitas
+ *   sama seperti materialnya. Perkiraan "pipih dari normal torus" (F7.6b) tidak
+ *   akurat: perspektif membuat sumbu mayor +3 % dan sumbu minor lebih pipih.
+ *
+ * Tanpa animasi → aman untuk reduced-motion; semuanya ikut ukuran panggung.
+ */
+/**
+ * Gradasi bola fallback = **hasil ukur profil radial** render 3D kondisi
+ * frame beku (`uIntro = 0`, F7.7).
+ *
+ * Radius 0→138 px pada panggung 512 px dipetakan ke 0→100 % radius bola di sini
+ * (`54cqmin` = diameter 276 px — yaitu tepi bola 3D yang *terlihat*: siluet
+ * asli 256 px + sebaran bloom). Tiap stop = warna rata-rata piksel 3D di radius
+ * itu, jadi efek bloom + rim boost yang "mencuci" bola 3D ikut tersalin apa
+ * adanya (bukan tebakan): tengah ~#2454c3, zona gelap pertengahan lebih lebar,
+ * lalu tepi naik tajam ke putih di 90→96 %, dan memudar (`rgba(...,0)`) di ujung
+ * supaya tepinya lembut seperti bloom.
+ */
+const CORE_GRADIENT =
+  "radial-gradient(circle closest-side," +
+  "#2454c3 0%,#2956c5 32%,#315bc7 49%,#4066cd 61%,#4b6fd2 67%," +
+  "#597bdb 72%,#698ae7 78%,#85a9fa 84%,#b4dffe 90%,#f7fffe 96%," +
+  "rgba(250,254,254,0.6) 98%,rgba(250,254,254,0) 100%)";
+
+/**
+ * Halo bloom di luar bola — dari profil radial yang sama: putih ±0,6 → 0 pada
+ * radius 264 px (= `103cqmin`), puncaknya tepat di tepi bola (r 156–180 px).
+ * Ini yang membuat siluet bola 3D tampak "menyala" di atas latar terang.
+ *
+ * Alphanya sengaja ~0,5 (bukan ~0,9 walau itu lebih dekat ke angka profil):
+ * bloom 3D bersifat *additive*, jadi garis grid di belakang panggung tetap
+ * terlihat menembus glow — dengan alpha tinggi, garis itu "tercuci" putih di
+ * fallback (terukur di QA: fallback kehilangan grid, 3D tidak).
+ */
+const CORE_GLOW =
+  "radial-gradient(circle closest-side," +
+  "rgba(255,255,255,0.6) 0%,rgba(255,255,255,0.6) 50%," +
+  "rgba(255,255,255,0.52) 59%,rgba(255,255,255,0.45) 68%," +
+  "rgba(255,255,255,0.3) 77%,rgba(255,255,255,0.18) 86%," +
+  "rgba(255,255,255,0.09) 91%,rgba(255,255,255,0) 100%)";
+
 function CoreFallback({ painted = false }: { painted?: boolean }) {
   return (
     <div
       className={
-        "absolute inset-0 grid place-items-center transition-opacity duration-700 " +
+        "absolute inset-0 transition-opacity duration-700 " +
         (painted ? "opacity-0" : "opacity-100")
       }
+      style={{ maskImage: EDGE_MASK, WebkitMaskImage: EDGE_MASK }}
     >
-      <div className="relative h-[74%] w-[74%]">
-        <div className="absolute inset-0 rounded-full bg-primary/25 blur-[90px]" />
-        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_32%_26%,#c9dcff_0%,#2a6bff_34%,#0a1a4d_82%)] shadow-[0_0_140px_-20px_rgba(42,107,255,0.85)]" />
-        <div className="absolute top-1/2 left-1/2 h-[125%] w-[125%] -translate-x-1/2 -translate-y-1/2 rotate-[18deg] rounded-[50%] border border-primary-light/40" />
-        <div className="absolute top-1/2 left-1/2 h-[148%] w-[148%] -translate-x-1/2 -translate-y-1/2 -rotate-[24deg] rounded-[50%] border border-primary-light/25" />
-      </div>
+      {/* Halo bloom di belakang inti (pengganti Bloom 3D). */}
+      <div
+        className="absolute top-1/2 left-1/2 size-[103cqmin] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{ background: CORE_GLOW }}
+      />
+      {/* Inti: warna & gradasi tersalin dari profil render 3D. */}
+      <div
+        className="absolute top-1/2 left-1/2 size-[54cqmin] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{ background: CORE_GRADIENT }}
+      />
+      {/* Cincin orbit, geometri dari proyeksi eksak torusnya (kamera z=6, fov 45),
+          pada skala entrance 0,8×:
+          ring1 — semi-mayor 154,3 px & semi-minor 24,6 px, sumbu mayor −3,0° →
+          kotak 60,7 × 10,0cqmin (border-box: garis tengah = 154,4 / 24,6 px).
+          ring2 — semi-mayor 176,1 px & semi-minor 9,6 px, sumbu mayor −29,9° →
+          kotak 69,0 × 4,0cqmin (garis tengah = 176,0 / 9,6 px). */}
+      <div className="absolute top-1/2 left-1/2 h-[10cqmin] w-[60.7cqmin] -translate-x-1/2 -translate-y-1/2 -rotate-[3deg] rounded-[50%] border-2 border-[#4d82ec]/55" />
+      <div className="absolute top-1/2 left-1/2 h-[4cqmin] w-[69cqmin] -translate-x-1/2 -translate-y-1/2 -rotate-[29.9deg] rounded-[50%] border-[1.25px] border-[#7aa2ff]/30" />
     </div>
   );
 }
@@ -618,7 +696,11 @@ export function Hero() {
         <motion.div
           aria-hidden="true"
           className={
-            "relative hidden h-[24rem] md:block lg:h-[32rem] " +
+            // `[container-type:size]`: panggung jadi *size container* → fallback
+            // CSS bisa memakai satuan `cqmin` (= sisi terpendek panggung), sama
+            // seperti `Math.min(viewport.width, viewport.height)` di shader 3D.
+            // Hasilnya ukuran bola fallback = bola 3D di viewport mana pun.
+            "relative hidden h-[24rem] [container-type:size] md:block lg:h-[32rem] " +
             (sceneEnabled
               ? "cursor-grab active:cursor-grabbing"
               : "pointer-events-none")
@@ -633,6 +715,11 @@ export function Hero() {
                 pointer: { x: pointerX, y: pointerY },
               }}
               onReady={onSceneReady}
+              // F7.7: scene baru boleh "bangun" setelah fallback CSS benar-benar
+              // dilepas (`fallbackOn` → false, ±0,9 s setelah frame pertama).
+              // Selama itu kanvas menggambar frame beku yang identik dengan
+              // `CoreFallback`, jadi pergantiannya tak terasa.
+              play={!fallbackOn}
             />
           )}
         </motion.div>

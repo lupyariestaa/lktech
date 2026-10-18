@@ -10,6 +10,7 @@ import {
   Vector2,
   type Group,
   type IUniform,
+  type LineBasicMaterial,
   type ShaderMaterial,
 } from "three";
 import type { MotionValue } from "framer-motion";
@@ -55,8 +56,32 @@ import type { MotionValue } from "framer-motion";
  *   (`multisampling`), jadi MSAA di kanvas hanya pemborosan fill-rate.
  * - Bola inti 64² (dari 96²): vertex shader-nya yang paling berat (2× simplex
  *   noise per vertex) → segmen turun ~55% tanpa perubahan visual terlihat.
- * - Entrance diperhalus (skala awal 0,62 bukan 0,25) supaya ukurannya tidak
- *   "melompat" terhadap fallback yang baru memudar.
+ * - Entrance **disamakan dengan fallback CSS** (F7.6b): inti tampil langsung
+ *   seukuran penuh (tanpa skala awal 0,62) dan semua detail hidup — gelombang
+ *   permukaan, mottling warna, partikel, konstelasi, satelit, cincin memuai —
+ *   baru berbunga setelah jendela cross-fade lewat (`lateAt`), karena fallback
+ *   CSS di `hero.tsx` disalin persis dari kondisi frame-0 scene ini.
+ *
+ * F7.7 — **frame beku** sampai cross-fade tuntas (`play`):
+ * - Masalah terukur: render pertama scene ini (kompilasi shader + alokasi render
+ *   target bloom) memblokir main thread berdetik-detik. Jam three.js — yang
+ *   dipakai semua timeline entrance lewat `state.clock.elapsedTime` — sudah
+ *   berjalan sejak mount, jadi frame pertama yang **benar-benar tampil** sudah
+ *   di `t ≈ 4 s`: bola sudah "hidup" (bergelombang, berpartikel) sementara
+ *   fallback CSS masih halus → terbaca sebagai **dua elemen 3D berbeda**.
+ * - Solusinya bukan menambah delay `lateAt`, tapi **membekukan waktunya**:
+ *   selama `!play` kanvas memakai `frameloop="never"` dan digambar manual satu
+ *   frame per rAF dengan `advance(0)`. Di mode `never`, R3F memaksa
+ *   `delta = timestamp − elapsedTime` dan `elapsedTime = timestamp` (lihat
+ *   `update()` @react-three/fiber) → `advance(0)` membuat semua `useFrame`
+ *   membaca `t = 0` **dan** `delta = 0`: persis kondisi frame-0 yang disalin
+ *   `CoreFallback` (tanpa gelombang, mottling, partikel, satelit).
+ * - Saat `play` menyala (fallback CSS sudah dilepas `hero.tsx`, ±0,9 s setelah
+ *   frame pertama), `frameloop` jadi `"always"` → R3F me-reset jam
+ *   (`stop()` → `elapsedTime = 0` → `start()`) → timeline entrance mulai dari
+ *   nol **tepat pada momen itu**, bukan sejak frame pertama yang tak sesiapa
+ *   lihat. Urutan terlihat: fallback CSS mulus → kanvas menggambar kondisi yang
+ *   sama (masih beku) → cross-fade tak terasa → baru scene "bangun".
  */
 
 /* ------------------------------------------------------------------ */
@@ -238,8 +263,20 @@ function mulberry32(seed: number) {
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-/** Progres "entrance" (0→1) dari waktu berjalan — sama di semua sub-scene. */
-const introAt = (t: number) => easeOutCubic(clamp01((t - 0.15) / 1.3));
+/**
+ * Progres "entrance" (0→1) yang **tertunda**: mulai `delay` detik, tuntas
+ * `delay + dur` detik setelah scene "bangun".
+ *
+ * Yang jadi acuan bukan jam sejak mount, melainkan jam yang mulai berjalan saat
+ * `play` (cross-fade tuntas, F7.7 — lihat `FrozenFrame`): selama beku `t` tetap
+ * 0, jadi jendela cross-fade berjalan pada kondisi frame-0 yang identik dengan
+ * `CoreFallback` di `hero.tsx` — bola mulus, warna rata, cincin skala 0,8×,
+ * tanpa partikel/satelit. `delay` di sini hanya memberi jeda kecil *setelah*
+ * handoff sebelum scene "berbunga": permukaan menggelombang, warna termottling,
+ * halo mengumpul dari luar, konstelasi & satelit menyala.
+ */
+const lateAt = (t: number, delay: number, dur: number) =>
+  easeOutCubic(clamp01((t - delay) / dur));
 
 /**
  * Jari-jari grup yang dipetakan tepat ke tepi frame (separuh sisi terpendek).
@@ -285,7 +322,11 @@ function Core() {
     if (!m) return;
     const t = state.clock.elapsedTime;
     m.uniforms.uTime.value = t;
-    m.uniforms.uIntro.value = introAt(t);
+    // Jeda kecil lalu gelombang (0,25 → 2,25 s setelah scene "bangun"):
+    // permukaan masih mulus & warna rata saat handoff (persis `CoreFallback`),
+    // baru sesudahnya menggelombang + termottling — displacement & gradasi
+    // dua-duanya dikendalikan `uIntro`.
+    m.uniforms.uIntro.value = lateAt(t, 0.25, 2.0);
   });
 
   return (
@@ -346,7 +387,9 @@ function Halo({ interaction, count = 900 }: { interaction: Interaction; count?: 
     if (!m) return;
     const t = state.clock.elapsedTime;
     m.uniforms.uTime.value = t;
-    m.uniforms.uIntro.value = introAt(t);
+    // Halo baru mengumpul (2,2× → 1×) & memudar masuk setelah handoff;
+    // `vAlpha` di shader dikali `uIntro`, jadi selama beku nilainya masih 0.
+    m.uniforms.uIntro.value = lateAt(t, 0.15, 1.6);
     m.uniforms.uScroll.value = clamp01(interaction.scroll.get());
     m.uniforms.uPointer.value.set(
       interaction.pointer.x.get(),
@@ -408,11 +451,16 @@ function Constellation({ count = 46 }: { count?: number }) {
   }, [count]);
 
   const group = useRef<Group>(null);
+  const line = useRef<LineBasicMaterial>(null);
   useFrame((state, delta) => {
     const g = group.current;
     if (!g) return;
+    const t = state.clock.elapsedTime;
     g.rotation.y += delta * 0.05;
-    g.scale.setScalar(0.8 + introAt(state.clock.elapsedTime) * 0.2);
+    g.scale.setScalar(0.8 + lateAt(t, 0.15, 1.5) * 0.2);
+    // Jejaring ini tak ada di `CoreFallback` → menyala belakangan, bukan
+    // mendadak di frame pertama.
+    if (line.current) line.current.opacity = 0.14 * lateAt(t, 0.25, 1.4);
   });
 
   return (
@@ -422,6 +470,7 @@ function Constellation({ count = 46 }: { count?: number }) {
           <bufferAttribute attach="attributes-position" args={[geometry, 3]} />
         </bufferGeometry>
         <lineBasicMaterial
+          ref={line}
           color="#6f9bff"
           transparent
           opacity={0.14}
@@ -442,7 +491,8 @@ function Rings() {
     if (!g) return;
     g.rotation.z += delta * 0.06;
     g.rotation.y += delta * 0.04;
-    g.scale.setScalar(0.8 + introAt(state.clock.elapsedTime) * 0.2);
+    // Skala awal 0,8× = persis yang digambar `CoreFallback`, lalu memuai ke 1×.
+    g.scale.setScalar(0.8 + lateAt(state.clock.elapsedTime, 0.15, 1.5) * 0.2);
   });
 
   return (
@@ -466,7 +516,8 @@ function Satellites() {
     const g = group.current;
     if (!g) return;
     g.rotation.y -= delta * 0.35;
-    g.scale.setScalar(introAt(state.clock.elapsedTime));
+    // Satelit tak ada di `CoreFallback` → muncul setelah handoff lewat.
+    g.scale.setScalar(lateAt(state.clock.elapsedTime, 0.4, 1.6));
   });
   return (
     <group ref={group}>
@@ -595,7 +646,6 @@ function Stage({ interaction }: { interaction: Interaction }) {
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
     const dt = Math.min(delta, 0.05);
-    const intro = introAt(t);
     const s = clamp01(interaction.scroll.get());
     const px = interaction.pointer.x.get();
     const py = interaction.pointer.y.get();
@@ -620,10 +670,11 @@ function Stage({ interaction }: { interaction: Interaction }) {
       // satelit tetap di dalam batas (tepi terluar halo di-soft-fade mask).
       const half = Math.min(viewport.width, viewport.height) * 0.5;
       const base = half / COMPOSITION_HALF;
-      // Skala awal 0,62 (bukan 0,25): saat canvas muncul, fallback CSS yang
-      // seukuran penuh baru memudar — jarak ukurannya kecil jadi tak terasa
-      // "melompat", lalu inti tetap "mengendap" ke ukuran akhirnya.
-      const scale = base * (0.62 + intro * 0.38) * (1 - s * 0.32);
+      // Tanpa skala entrance (F7.6b): grup sudah seukuran penuh sejak frame
+      // pertama — persis `CoreFallback` yang baru memudar, jadi ukurannya tidak
+      // pernah "melompat" dan tak terbaca sebagai elemen lain. Yang "tumbuh"
+      // setelah fade hanyalah detail hidupnya (`lateAt` di tiap sub-scene).
+      const scale = base * (1 - s * 0.32);
       g.scale.setScalar(scale);
       g.rotation.y = spin.current + d.ry + px * 0.5;
       g.rotation.x = d.rx * 0.6 - py * 0.35;
@@ -685,13 +736,53 @@ function FirstFrame({ onFirstFrame }: { onFirstFrame: () => void }) {
   return null;
 }
 
+/**
+ * **Frame beku** (F7.7) — inti perbaikan "dua elemen 3D berbeda".
+ *
+ * Selama `!play` kanvas ber-`frameloop="never"` dan digambar manual di sini:
+ * satu frame per rAF lewat `advance(0)`. Kenapa `0`? Di mode `never`, `update()`
+ * R3F membuang `getDelta()` dan memakai `delta = timestamp − elapsedTime` +
+ * `elapsedTime = timestamp` (lihat `update()` @react-three/fiber) — dengan
+ * `advance(0)` semua `useFrame` menerima `t = 0` **dan** `delta = 0`.
+ *
+ * Akibatnya gambar yang tampil selama handoff selalu persis kondisi frame-0
+ * `CoreFallback`: bola mulus tanpa gelombang, warna rata tanpa mottling, cincin
+ * pada skala 0,8×, tanpa partikel/konstelasi/satelit, tanpa rotasi maupun
+ * inersia — sekalipun render pertama memblokir main thread berdetik-detik
+ * (jam three.js tidak lagi "mencuri" waktu di belakang layar).
+ *
+ * Loop hanya hidup selama jendela handoff (±1 s; berhenti saat `play` menyala
+ * atau saat hero keluar viewport).
+ */
+function FrozenFrame({ active, play }: { active: boolean; play: boolean }) {
+  const advance = useThree((s) => s.advance);
+  useEffect(() => {
+    if (!active || play) return;
+    let raf = 0;
+    const tick = () => {
+      advance(0);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active, play, advance]);
+  return null;
+}
+
 export default function Hero3D({
   interaction,
   onReady,
+  play = false,
 }: {
   interaction: Interaction;
   /** Dipanggil sekali saat canvas sudah menggambar frame pertamanya. */
   onReady?: () => void;
+  /**
+   * Cross-fade dengan `CoreFallback` sudah tuntas → scene boleh "bangun"
+   * (F7.7). Selama `false` kanvas menggambar kondisi frame-0 yang beku
+   * (`FrozenFrame`); saat `true`, jam R3F di-reset → entrance mulai dari nol.
+   */
+  play?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
@@ -737,13 +828,18 @@ export default function Hero3D({
     >
       <Canvas
         dpr={[1, 1.5]}
-        frameloop={active ? "always" : "never"}
+        // F7.7: scene hanya "hidup" saat cross-fade tuntas (`play`). Sebelum itu
+        // `never` + `FrozenFrame` → frame beku kondisi frame-0, jam tidak jalan.
+        // Setelah `play`, R3F me-reset jam saat `frameloop` berubah → entrance
+        // mulai dari nol tepat di momen handoff.
+        frameloop={active && play ? "always" : "never"}
         camera={{ position: [0, 0, 6], fov: 45 }}
         // `antialias: false` — scene dirender ke FBO EffectComposer yang sudah
         // punya MSAA sendiri (`multisampling`), jadi MSAA kanvas hanya menambah
         // memori + satu resolve pass tanpa menambah kehalusan.
         gl={{ antialias: false, powerPreference: "high-performance" }}
       >
+        <FrozenFrame active={active} play={play} />
         <Stage interaction={interaction} />
         <FirstFrame onFirstFrame={handleFirstFrame} />
         <EffectComposer>
