@@ -418,7 +418,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 - **Adaptasi ke stack kita** ✅:
   - Tile = **gambar polos rounded** (pilihan pemilik), bukan mockup browser — kartu mockup lama
     tetap dipakai sebagai **keadaan kosong** bila belum ada gambar / fitur dimatikan.
-  - **Full-bleed** (tepi ke tepi) — ujung band melengkung & memudar ke tepi layar; tinggi band
+  - **Teks section rata tengah** (`align="center"`): eyebrow, judul, dan deskripsi terpusat di atas\n    band full-bleed → komposisi simetris (revisi pemilik).\n  - **Full-bleed** (tepi ke tepi) — ujung band melengkung & memudar ke tepi layar; tinggi band
     eksplisit (`h-[280px] sm:h-[340px] lg:h-[400px]`) karena `container-type: size` mematikan
     sizing dari konten.
   - **Ukuran tile** `tileHeight` **52%** tinggi band (referensi 26%) + `aspectRatio` **1.6** =

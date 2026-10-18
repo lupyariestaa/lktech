@@ -18,6 +18,10 @@ import { ShowcaseBand } from "@/components/sections/showcase-band";
  * `aspectRatio` 1.6 = rasio asli tangkapan layar (1902×1198), jadi `object-cover`
  * praktis tidak memotong isinya.
  *
+ * Judul/deskripsi section **di tengah** (`align="center"`): band-nya sendiri
+ * full-bleed, jadi teks yang terpusat terbaca sebagai satu komposisi simetris
+ * (teks tengah → band melengkung → memudar ke tepi).
+ *
  * Hanya memakai gambar `browser` (desktop) — mockup ponsel (`mobile`) sengaja
  * belum dipakai. Konten diambil dari `hero` (pengaturan yang sama, dikelola di
  * dashboard) sehingga tidak ada data baru/duplikat.
@@ -39,7 +43,7 @@ export function Showcase() {
       <div className="relative mx-auto max-w-6xl px-6">
         <Reveal>
           <SectionHeading
-            align="left"
+            align="center"
             eyebrow="Pratinjau"
             title={
               <>
