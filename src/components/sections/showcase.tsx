@@ -56,7 +56,8 @@ export function Showcase() {
           <ShowcaseBand
             images={hero.browser}
             speed={3}
-            className="h-[240px] sm:h-[300px] lg:h-[360px]"
+            tileHeight={34}
+            className="h-[260px] sm:h-[320px] lg:h-[380px]"
           />
         </Reveal>
       ) : (

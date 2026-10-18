@@ -419,8 +419,11 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   - Tile = **gambar polos rounded** (pilihan pemilik), bukan mockup browser — kartu mockup lama
     tetap dipakai sebagai **keadaan kosong** bila belum ada gambar / fitur dimatikan.
   - **Full-bleed** (tepi ke tepi) — ujung band melengkung & memudar ke tepi layar; tinggi band
-    eksplisit (`h-[240px] sm:h-[300px] lg:h-[360px]`) karena `container-type: size` mematikan
+    eksplisit (`h-[260px] sm:h-[320px] lg:h-[380px]`) karena `container-type: size` mematikan
     sizing dari konten.
+  - **Ukuran tile** `tileHeight` **34%** tinggi band (referensi 26% — di layar kita terasa
+    kekecilan/"zoom out"), jadi tile lebih besar & gambar lebih terbaca; sudut tile **tipis 4px**
+    (semula `rounded-2xl`).
   - `CAMERA` **2.0** (referensi 1.6): dengan 1.6 tile di ujung membengkak 5–16× (raster
     compositor membuangnya → tile tampak abu-abu, terbukti lewat sampling piksel). 2.0 membuat
     busur tetap terasa tapi pembengkakannya ~2.5× → aman untuk perangkat lemah.
@@ -434,11 +437,11 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   ditulis pada pita pertama tiap tile; judul/deskripsi section tetap sumber makna. Band baru
   mulai terlihat setelah `ResizeObserver` mengukur, jadi paint pertama berukuran salah tak
   pernah tampil.
-- **Verifikasi:** desktop 1440 (8 tile, band 1440×360, nol overflow-x, loop jalan) & mobile 390
-  (5 tile, 390×240); sampling piksel tiap tile: `slate=0%` (semua gambar benar ter-paint),
-  sudut simetris −68.9°…+68.9°, tile di luar `limit` tersembunyi; reduced-motion beku & utuh di
-  busurnya; nol error konsol (kecuali 404 `_vercel/insights` yang diketahui); tsc/eslint/unit(593)/
-  build hijau.
+- **Verifikasi:** desktop 1440 (band 1440×380, ±5 tile besar terlihat, nol overflow-x, loop jalan)
+  & mobile 390 (band 390×260, 3 tile — 2 tampak); sampling piksel tiap tile: `slate=0%` (semua
+  gambar benar ter-paint), sudut simetris, tile di luar `limit` tersembunyi; reduced-motion beku
+  & utuh di busurnya; nol error konsol (kecuali 404 `_vercel/insights` yang diketahui);
+  tsc/eslint/unit(593)/build hijau.
 
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.

@@ -279,8 +279,8 @@ export function ShowcaseBand({
                   key={k}
                   className={cn(
                     "absolute top-0 overflow-hidden bg-slate-100",
-                    k === 0 && "rounded-l-2xl",
-                    k === SLICES - 1 && "rounded-r-2xl",
+                    k === 0 && "rounded-l-[4px]",
+                    k === SLICES - 1 && "rounded-r-[4px]",
                   )}
                   style={{
                     // Tiap pita mulai dari tengah tile dan diputar pada sumbu
