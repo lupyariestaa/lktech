@@ -456,6 +456,56 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   (software raster), bukan band — terbukti long-task tetap ada saat band di-scroll jauh dari
   viewport, dan nol di mobile 390 (tak ada scene 3D). tsc/eslint/unit(593)/build hijau.
 
+### F7.6 — Hero 3D: gerbang intro + audit pemuatan & optimasi — effort M
+- **Permintaan pemilik:** elemen 3D di header **jangan ikut dimuat/muncul sebelum intro loader
+  beres** ("kayak ada sedikit glitch"), sekaligus minta audit + QA + optimasi menyeluruh.
+- **Akar masalah (terukur lewat instrumentasi Playwright, bukan dugaan):**
+  - **Panggung kosong ±6 detik.** HTML awal dari server merender `CoreFallback` (media query di
+    server = false) → saat **hidrasi** `sceneEnabled` berbalik jadi true → fallback
+    **di-unmount**, sementara `<canvas>` WebGL baru muncul setelah chunk `three` selesai diunduh
+    + shader dikompilasi (draw pertama **8.310 ms** di lingkungan uji). Antara 2,1 s–7 s itu
+    panggung benar-benar kosong (terlihat jelas di frame screencast 7.004 ms).
+  - **Init 3D berebut dengan animasi intro.** Unduh + eval chunk (265 KB), pembuatan konteks
+    WebGL, kompilasi shader, dan alokasi render target bloom terjadi **di dalam jendela intro**
+    (long task 431 ms terukur di 2,2 s) → animasi pembuka patah-patah = glitch yang dirasakan.
+  - **Konteks WebGL dibuat 3×** — kanvas probe `getContext()` tidak pernah dilepas (memori GPU
+    hidup terus sepanjang umur halaman).
+  - `antialias: true` di kanvas **sia-sia**: scene dirender ke FBO `EffectComposer` yang sudah
+    punya MSAA sendiri (`multisampling`), jadi MSAA kanvas hanya menambah memori + satu resolve
+    pass tanpa menambah kehalusan.
+  - **Entrance scene tak pernah terlihat**: skala 0,25 → 1 selesai jauh sebelum loader membuka,
+    dan ukurannya "melompat" dibanding fallback yang baru memudar.
+- **Perbaikan** ✅:
+  - **Gerbang intro** baru `src/components/intro-gate.tsx` (`IntroGate`, `useIntroDone`,
+    `useIntroFinisher`). State-nya **per-mount halaman** — navigasi ulang ke beranda memainkan
+    intro lagi dan scene 3D ikut menunggu lagi, tanpa state basi dari kunjungan sebelumnya.
+    `app/page.tsx` membungkus loader + seluruh halaman; `IntroLoader` memanggil `finish()` saat
+    fase `done` (termasuk jalur reduced-motion yang langsung selesai).
+  - `Hero`: `mountScene = sceneEnabled && introDone` → **nol kerja 3D** (unduh chunk, konteks,
+    shader) sebelum intro selesai; listener pointer juga baru dipasang saat scene hidup.
+  - **Fallback CSS tidak pernah dibuang lagi**: tampil terus sampai scene melaporkan frame
+    pertamanya (`onReady` dari `FirstFrame` + `useFrame`), lalu **cross-fade 700 ms** (canvas
+    memudar masuk, fallback memudar keluar) dan fallback baru di-unmount 900 ms setelahnya →
+    tidak ada momen panggung kosong, dan tak ada dua inti tampil bersamaan.
+  - `probeWebgl()` melepas konteks probe lewat `WEBGL_lose_context` → konteks WebGL hidup **3 → 2**.
+  - `antialias: false`; bola inti **96² → 64²** (vertex shader-nya yang paling berat: 2× simplex
+    noise per vertex → beban vertex turun ~55%, silhouette tetap halus karena normal dihitung
+    analitis, bukan dari faset); entrance diperhalus (skala awal grup 0,62; cincin & konstelasi
+    0,8) supaya tidak "melompat" terhadap fallback.
+- **Verifikasi** ✅ (instrumentasi: timestamp `getContext`, draw pertama, long task, rAF stall +
+  screencast CDP, 1440×900 dan 390×844, server produksi):
+  - **Sebelum:** konteks WebGL 3× (7.909/7.947/8.104 ms), draw pertama 8.310 ms, fallback hilang
+    saat hidrasi (frame 7.004 ms = panggung kosong), long task 431 ms di dalam intro + 1.591 ms
+    pada frame pertama.
+  - **Sesudah:** **nol kejadian GL sebelum intro selesai**; fallback terlihat di semua frame
+    1,5–10,9 s; konteks WebGL **2×**; draw pertama 6.256 ms; `canvas opacity 1` (fade-in selesai)
+    dan fallback ter-unmount.
+  - Mobile 390: tanpa canvas, stage `display: none`, overflow-x 0. Reduced-motion 1440: tanpa
+    konteks GL sama sekali, fallback statis opasitas 1. Soft-nav beranda → halaman lain →
+    beranda: selama intro diputar ulang **0 konteks GL**, 3D menyala setelah intro selesai.
+  - Chunk `three` tetap terpisah (**1.001 KB** mentah / 265 KB terkirim) dan **tidak ada** di 19
+    `<script>` HTML awal → bundel awal tidak berubah. tsc/eslint/unit/build hijau.
+
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
 - Audit a11y (keyboard, kontras, reduced-motion, screen reader).
@@ -473,25 +523,26 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/scroll-progress.tsx` | Bar progres scroll (beranda) |
 | `src/components/pinned-section.tsx` | Wrapper sticky generik untuk storytelling |
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
-| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask) | ✅ Selesai |
+| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask); *(F7.6)* probe WebGL melepas konteks (`WEBGL_lose_context`), cross-fade frame pertama (`FirstFrame` → `onReady`), `antialias:false`, bola inti 64², entrance diperhalus | ✅ Selesai |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero; *(F7.5)* ganti carousel satu kartu → **band melengkung full-bleed** (`ShowcaseBand`), kartu mockup lama jadi keadaan kosong | ✅ Selesai |
 | `src/components/sections/showcase-band.tsx` *(F7.5)* | Band gambar melengkung ala silinder (12 pita/tile, loop murni CSS `transform`, statis saat reduced-motion) | ✅ Selesai |
+| `src/components/intro-gate.tsx` *(F7.6)* | Gerbang intro beranda: `IntroGate` (provider per-mount halaman) + `useIntroDone` / `useIntroFinisher` — sumber tunggal "intro loader sudah selesai?" untuk scene 3D | ✅ Selesai |
 | `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` | **Dokumen ini** |
 
 ### Diubah (usulan)
 | File | Perubahan |
 | --- | --- |
 | `src/app/globals.css` | *(F0: tidak diubah — lihat koreksi A1)*; token animasi/spacing menyusul bila perlu |
-| `src/app/page.tsx` | Pasang `ScrollProgress` (F0); *(F7)* sisip `Showcase` setelah hero, buang plumbing `socialProof` | ✅ Selesai |
+| `src/app/page.tsx` | Pasang `ScrollProgress` (F0); *(F7)* sisip `Showcase` setelah hero, buang plumbing `socialProof`; *(F7.6)* bungkus seluruh halaman dengan `IntroGate` | ✅ Selesai |
 | `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow | ✅ Selesai |
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev); *(F7.1)* `@react-three/postprocessing` + `postprocessing` | ✅ Selesai |
-| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`) | ✅ Selesai |
-| `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll) | ✅ Selesai |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`); *(F7.6)* `mountScene` (gerbang intro) + `CoreFallback` yang tak pernah dibuang sebelum frame pertama 3D | ✅ Selesai |
+| `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll); *(F7.6)* lapor `finish()` ke `IntroGate` saat fase `done` | ✅ Selesai |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
 
 ---
@@ -529,6 +580,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F7.3 | Hero kolom kiri: tipografi, mask-reveal, mikro-interaksi, scroll berlapis | ✅ Selesai (kode) |
 | F7.4 | Judul & sub-judul hero berputar 3 varian (animasi ketik) | ✅ Selesai (kode) |
 | F7.5 | Section Pratinjau: band gambar melengkung (loop ala silinder) | ✅ Selesai (kode) |
+| F7.6 | Hero 3D: gerbang intro (nol kerja GPU sebelum loader beres) + cross-fade fallback + optimasi | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---

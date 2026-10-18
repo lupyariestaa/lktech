@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, type Variants } from "framer-motion";
+import { useIntroFinisher } from "@/components/intro-gate";
 import { useReducedMotionPreference } from "@/lib/intro";
 
 /**
@@ -43,10 +44,17 @@ export function IntroLoader() {
     reduced ? "done" : "enter",
   );
   const [progress, setProgress] = useState(0);
+  const finish = useIntroFinisher();
 
   // Fase efektif: saat reduced-motion, loader dianggap langsung selesai
   // (turunan, tanpa setState di effect).
   const effectivePhase = reduced ? "done" : phase;
+
+  // Kabari gerbang intro saat loader benar-benar selesai — inilah pemicu
+  // scene 3D hero (F7.6): sebelum ini tidak ada kerja GPU sama sekali.
+  useEffect(() => {
+    if (effectivePhase === "done") finish?.();
+  }, [effectivePhase, finish]);
 
   // Kunci scroll saat loader tampil.
   useEffect(() => {

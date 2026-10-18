@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IntroGate } from "@/components/intro-gate";
 import { IntroLoader } from "@/components/intro-loader";
 import { Navbar } from "@/components/sections/navbar";
 import { Hero } from "@/components/sections/hero";
@@ -52,7 +53,7 @@ export default async function Home() {
   const faqLd = buildFaqPage(content.faqs ?? []);
 
   return (
-    <>
+    <IntroGate>
       {faqLd && <JsonLdScript node={faqLd} />}
       <IntroLoader />
       <ScrollProgress />
@@ -74,6 +75,6 @@ export default async function Home() {
       <Footer />
       {/* Pelacak kedalaman scroll (FASE H7) — tanpa UI, aman tanpa analytics. */}
       <ScrollDepthTracker />
-    </>
+    </IntroGate>
   );
 }

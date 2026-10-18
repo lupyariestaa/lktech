@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import dynamic from "next/dynamic";
 import {
   animate,
@@ -29,13 +29,15 @@ import { COMPANY } from "@/lib/content";
 import { isDefaultStats } from "@/lib/content-types";
 import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
+import { useIntroDone } from "@/components/intro-gate";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 import { MEDIA_QUERIES, useMediaQuery } from "@/lib/use-media-query";
 
 /**
  * Scene 3D hero (F5) — lazy + client-only (`ssr: false`) agar `three` hanya
- * diunduh di layar besar & bukan pada bundel/SSR awal. Hanya di-mount saat
- * `≥768px` dan bukan reduced-motion (lihat `sceneEnabled` di `Hero`).
+ * diunduh di layar besar & bukan pada bundel/SSR awal. Di-mount hanya saat
+ * `≥768px`, bukan reduced-motion, **dan intro loader sudah selesai** (F7.6,
+ * lihat `mountScene`).
  */
 const Hero3D = dynamic(() => import("@/components/sections/hero-3d"), {
   ssr: false,
@@ -411,12 +413,23 @@ function CountUp({
 
 /**
  * Fallback CSS statis untuk visual hero (tablet ke atas) saat scene 3D tidak
- * aktif — mis. `prefers-reduced-motion` — atau belum selesai diunduh. Bentuk
- * "inti digital" murni CSS, TANPA animasi, jadi aman untuk reduced-motion.
+ * aktif — mis. `prefers-reduced-motion`, WebGL tidak tersedia, atau scene 3D
+ * belum selesai dimuat/menyalakan frame pertamanya. Bentuk "inti digital" murni
+ * CSS, TANPA animasi, jadi aman untuk reduced-motion.
+ *
+ * F7.6: fallback ini **selalu ada lebih dulu** dan baru memudar setelah scene
+ * 3D melaporkan frame pertamanya (`painted`). Sebelumnya fallback di-unmount
+ * begitu hidrasi selesai → panggung kosong beberapa detik sebelum canvas 3D
+ * muncul (bug yang terukur di audit: stage kosong ~6 s).
  */
-function CoreFallback() {
+function CoreFallback({ painted = false }: { painted?: boolean }) {
   return (
-    <div className="absolute inset-0 grid place-items-center">
+    <div
+      className={
+        "absolute inset-0 grid place-items-center transition-opacity duration-700 " +
+        (painted ? "opacity-0" : "opacity-100")
+      }
+    >
       <div className="relative h-[74%] w-[74%]">
         <div className="absolute inset-0 rounded-full bg-primary/25 blur-[90px]" />
         <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_32%_26%,#c9dcff_0%,#2a6bff_34%,#0a1a4d_82%)] shadow-[0_0_140px_-20px_rgba(42,107,255,0.85)]" />
@@ -443,6 +456,23 @@ export function Hero() {
   // Scene 3D (F5): hanya tablet ke atas & bukan reduced-motion.
   const isTabletUp = useMediaQuery(MEDIA_QUERIES.tabletUp);
   const sceneEnabled = isTabletUp && !reduced;
+  // F7.6: scene 3D baru di-mount setelah intro loader selesai. Sebelumnya ia
+  // ikut menyala di balik loader (chunk `three` + init WebGL + kompilasi shader
+  // berebut main thread dengan animasi pembuka) dan fallback CSS-nya justru
+  // hilang saat hidrasi → panggung kosong beberapa detik.
+  const introDone = useIntroDone();
+  const mountScene = sceneEnabled && introDone;
+  // `sceneReady` = canvas 3D sudah menggambar frame pertamanya.
+  const [sceneReady, setSceneReady] = useState(false);
+  // Fallback CSS tetap tampil sampai cross-fade selesai (bukan sampai mount),
+  // jadi tidak pernah ada momen panggung kosong.
+  const [fallbackOn, setFallbackOn] = useState(true);
+  const onSceneReady = useCallback(() => setSceneReady(true), []);
+  useEffect(() => {
+    if (!sceneReady) return;
+    const t = setTimeout(() => setFallbackOn(false), 900);
+    return () => clearTimeout(t);
+  }, [sceneReady]);
 
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -466,18 +496,18 @@ export function Hero() {
 
   // Posisi kursor ternormalisasi (−1…1) untuk interaksi scene 3D: miring inti,
   // parallax kamera, & "lampu" partikel. Di-update via motion value → tanpa
-  // re-render React. Hanya didengar saat scene aktif (tablet+, bukan reduced).
+  // re-render React. Hanya didengar saat scene benar-benar hidup (F7.6).
   const pointerX = useMotionValue(0);
   const pointerY = useMotionValue(0);
   useEffect(() => {
-    if (!sceneEnabled) return;
+    if (!mountScene) return;
     const onMove = (e: PointerEvent) => {
       pointerX.set((e.clientX / window.innerWidth) * 2 - 1);
       pointerY.set((e.clientY / window.innerHeight) * 2 - 1);
     };
     window.addEventListener("pointermove", onMove, { passive: true });
     return () => window.removeEventListener("pointermove", onMove);
-  }, [sceneEnabled, pointerX, pointerY]);
+  }, [mountScene, pointerX, pointerY]);
 
   // Kejujuran data (FASE H2): klaim sosial di bawah CTA hanya ditampilkan bila
   // berasal dari data NYATA — bukan stat placeholder bawaan.
@@ -582,8 +612,9 @@ export function Hero() {
 
         {/* Kolom kanan (tablet+): panggung visual untuk inti digital 3D. Canvas
             `Hero3D` di-scope ke panggung ini; bila scene tidak aktif (reduced-
-            motion / WebGL gagal) tampil `CoreFallback` CSS statis. Di mobile
-            kolom disembunyikan → hero murni teks. */}
+            motion / WebGL gagal) atau belum menggambar frame pertamanya,
+            `CoreFallback` CSS statis yang tampil. Di mobile kolom disembunyikan
+            → hero murni teks. */}
         <motion.div
           aria-hidden="true"
           className={
@@ -594,13 +625,14 @@ export function Hero() {
           }
           style={reduced ? undefined : { y: yMock, opacity: opacityStage }}
         >
-          {!sceneEnabled && <CoreFallback />}
-          {sceneEnabled && (
+          {(!sceneEnabled || fallbackOn) && <CoreFallback painted={sceneReady} />}
+          {mountScene && (
             <Hero3D
               interaction={{
                 scroll: scrollYProgress,
                 pointer: { x: pointerX, y: pointerY },
               }}
+              onReady={onSceneReady}
             />
           )}
         </motion.div>

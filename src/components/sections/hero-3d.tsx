@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import {
@@ -41,6 +41,22 @@ import type { MotionValue } from "framer-motion";
  * F7.2 — bebas "terpotong": skala komposisi di-fit ke frame (`COMPOSITION_HALF`),
  * halo di-bias ke dalam, cincin/satelit ditarik ke dalam, dan tepi di-soft-fade
  * 2 lapis (radial fade per-partikel di shader + `mask-image` di wrapper canvas).
+ *
+ * F7.6 — hemat & mulus saat pemuatan (hasil audit):
+ * - **Digate intro**: canvas baru di-mount setelah intro loader selesai
+ *   (`mountScene` di `hero.tsx`), jadi tidak ada konteks WebGL / kompilasi
+ *   shader / frame pertama yang berebut main thread dengan animasi pembuka.
+ * - **Probe WebGL** melepas konteksnya (`WEBGL_lose_context`) — sebelumnya satu
+ *   konteks GPU dibiarkan hidup sia-sia.
+ * - **Cross-fade**: canvas memudar masuk setelah frame pertamanya tergambar
+ *   (`onReady` → `painted`), bersamaan fallback CSS memudar keluar → panggung
+ *   tidak pernah kosong (sebelumnya kosong beberapa detik, lihat audit F7.6).
+ * - `antialias: false`: MSAA scene sudah dikerjakan EffectComposer
+ *   (`multisampling`), jadi MSAA di kanvas hanya pemborosan fill-rate.
+ * - Bola inti 64² (dari 96²): vertex shader-nya yang paling berat (2× simplex
+ *   noise per vertex) → segmen turun ~55% tanpa perubahan visual terlihat.
+ * - Entrance diperhalus (skala awal 0,62 bukan 0,25) supaya ukurannya tidak
+ *   "melompat" terhadap fallback yang baru memudar.
  */
 
 /* ------------------------------------------------------------------ */
@@ -274,7 +290,10 @@ function Core() {
 
   return (
     <mesh>
-      <sphereGeometry args={[1.3, 96, 96]} />
+      {/* 64² sudah cukup: displacement-nya low-frequency & normal dihitung
+          analitis (bukan dari faset), jadi silhouette tetap halus sementara
+          beban vertex shader (noise) turun ~55%. */}
+      <sphereGeometry args={[1.3, 64, 64]} />
       <shaderMaterial
         ref={mat}
         uniforms={uniforms}
@@ -393,7 +412,7 @@ function Constellation({ count = 46 }: { count?: number }) {
     const g = group.current;
     if (!g) return;
     g.rotation.y += delta * 0.05;
-    g.scale.setScalar(0.4 + introAt(state.clock.elapsedTime) * 0.6);
+    g.scale.setScalar(0.8 + introAt(state.clock.elapsedTime) * 0.2);
   });
 
   return (
@@ -423,7 +442,7 @@ function Rings() {
     if (!g) return;
     g.rotation.z += delta * 0.06;
     g.rotation.y += delta * 0.04;
-    g.scale.setScalar(0.4 + introAt(state.clock.elapsedTime) * 0.6);
+    g.scale.setScalar(0.8 + introAt(state.clock.elapsedTime) * 0.2);
   });
 
   return (
@@ -601,7 +620,10 @@ function Stage({ interaction }: { interaction: Interaction }) {
       // satelit tetap di dalam batas (tepi terluar halo di-soft-fade mask).
       const half = Math.min(viewport.width, viewport.height) * 0.5;
       const base = half / COMPOSITION_HALF;
-      const scale = base * (0.25 + intro * 0.75) * (1 - s * 0.32);
+      // Skala awal 0,62 (bukan 0,25): saat canvas muncul, fallback CSS yang
+      // seukuran penuh baru memudar — jarak ukurannya kecil jadi tak terasa
+      // "melompat", lalu inti tetap "mengendap" ke ukuran akhirnya.
+      const scale = base * (0.62 + intro * 0.38) * (1 - s * 0.32);
       g.scale.setScalar(scale);
       g.rotation.y = spin.current + d.ry + px * 0.5;
       g.rotation.x = d.rx * 0.6 - py * 0.35;
@@ -633,23 +655,58 @@ function Stage({ interaction }: { interaction: Interaction }) {
 /* ------------------------------------------------------------------ */
 /* Canvas + gate                                                       */
 /* ------------------------------------------------------------------ */
-export default function Hero3D({ interaction }: { interaction: Interaction }) {
+
+/**
+ * Deteksi WebGL sekali (tanpa `three`), lalu **lepaskan konteks probe**:
+ * browser membatasi jumlah konteks WebGL hidup per halaman (±16), dan konteks
+ * probe yang dibiarkan hidup ikut memakan memori GPU sepanjang umur halaman.
+ */
+function probeWebgl() {
+  if (typeof window === "undefined" || !window.WebGLRenderingContext) return false;
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
+    if (!ctx) return false;
+    ctx.getExtension("WEBGL_lose_context")?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Lapor **sekali** saat frame pertama benar-benar tergambar di kanvas. */
+function FirstFrame({ onFirstFrame }: { onFirstFrame: () => void }) {
+  const fired = useRef(false);
+  useFrame(() => {
+    if (fired.current) return;
+    fired.current = true;
+    onFirstFrame();
+  });
+  return null;
+}
+
+export default function Hero3D({
+  interaction,
+  onReady,
+}: {
+  interaction: Interaction;
+  /** Dipanggil sekali saat canvas sudah menggambar frame pertamanya. */
+  onReady?: () => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
+  // Belum tergambar → wrapper transparan; `onReady` menyalakannya (cross-fade
+  // dengan `CoreFallback` di hero). Frame pertama scene ini juga yang paling
+  // mahal (kompilasi shader + alokasi render target bloom), jadi lebih baik
+  // tidak terlihat "muncul setengah jadi".
+  const [painted, setPainted] = useState(false);
   // Guard: bila WebGL tidak tersedia (browser/perangkat lama, GPU diblokir),
   // jangan render `<Canvas>` sama sekali — fallback CSS hero tetap tampil.
-  const [webgl] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      const c = document.createElement("canvas");
-      return !!(
-        window.WebGLRenderingContext &&
-        (c.getContext("webgl2") || c.getContext("webgl"))
-      );
-    } catch {
-      return false;
-    }
-  });
+  const [webgl] = useState(probeWebgl);
+  const handleFirstFrame = useCallback(() => {
+    setPainted(true);
+    onReady?.();
+  }, [onReady]);
 
   // Hentikan loop render saat hero tidak terlihat (hemat baterai/GPU).
   useEffect(() => {
@@ -672,16 +729,23 @@ export default function Hero3D({ interaction }: { interaction: Interaction }) {
     <div
       ref={ref}
       aria-hidden="true"
-      className="absolute inset-0 z-0"
+      className={
+        "absolute inset-0 z-0 transition-opacity duration-700 " +
+        (painted ? "opacity-100" : "opacity-0")
+      }
       style={{ maskImage: EDGE_MASK, WebkitMaskImage: EDGE_MASK }}
     >
       <Canvas
         dpr={[1, 1.5]}
         frameloop={active ? "always" : "never"}
         camera={{ position: [0, 0, 6], fov: 45 }}
-        gl={{ antialias: true, powerPreference: "high-performance" }}
+        // `antialias: false` — scene dirender ke FBO EffectComposer yang sudah
+        // punya MSAA sendiri (`multisampling`), jadi MSAA kanvas hanya menambah
+        // memori + satu resolve pass tanpa menambah kehalusan.
+        gl={{ antialias: false, powerPreference: "high-performance" }}
       >
         <Stage interaction={interaction} />
+        <FirstFrame onFirstFrame={handleFirstFrame} />
         <EffectComposer>
           <Bloom
             intensity={0.9}
