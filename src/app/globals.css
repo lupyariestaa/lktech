@@ -23,6 +23,8 @@
 
   /* ===== Animations ===== */
   --animate-marquee: marquee 30s linear infinite;
+  /* Baris kedua marquee teknologi: arah kanan (animasi dasar diputar balik). */
+  --animate-marquee-reverse: marquee 36s linear infinite reverse;
   --animate-float: float 6s ease-in-out infinite;
   --animate-aurora: aurora 18s ease-in-out infinite alternate;
   --animate-caret: caret 1s step-end infinite;

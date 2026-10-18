@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1–F7.8 selesai — kode; F6 belum)
+> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1–F7.8 + F8 selesai — kode; F6 belum)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -73,8 +73,8 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | — | Navbar | `sections/navbar.tsx` | Client | Sticky, dropdown desktop + akordeon mobile. Sudah rapi. |
 | 1 | Hero | `sections/hero.tsx` + `sections/hero-3d.tsx` | Client | Beranda: parallax + animated headline + trust bar + cursor glow ✅ (F1); **scene 3D/WebGL lazy** di tablet+ ✅ (F5), kini **terpusat di kolom visual kanan** (F7). Mobile: hero murni teks. |
 | 1b | Pratinjau | `sections/showcase.tsx` | Client | **Baru (F7):** mockup browser (carousel, gambar `browser` saja) — dipindah dari hero. Tepat setelah hero. |
-| 2 | Technologies | `sections/technologies.tsx` | Client | Marquee logo (CSS `animate-marquee`), pause saat hover. Sudah bagus. |
-| 3 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor. `/tentang` tetap grid 3 kolom. |
+| 2 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor. `/tentang` tetap grid 3 kolom. |
+| 3 | Technologies | `sections/technologies.tsx` | Client | **F8:** strip "Teknologi yang kami gunakan" dipindah ke **antara Layanan & Portofolio** (dulu tepat setelah Pratinjau); marquee kini **dua baris** — atas ke kiri (`animate-marquee`), bawah ke kanan (urutan dibalik, `animate-marquee-reverse`), satu mask kiri/kanan untuk keduanya; pause saat hover. |
 | 4 | Portfolio Teaser | `sections/portfolio-teaser.tsx` | Server | Grid 3 kolom, ambil `getProjects()`. |
 | 5 | Why Us | `sections/why-us.tsx` | Client | Grid 3 kolom + stagger. Pola berulang. |
 | 6 | Process | `sections/process.tsx` (grid, `/tentang`) + `sections/process-timeline.tsx` (pinned, beranda) | Client | Beranda: **timeline scroll-driven pinned** ✅ (F3). `/tentang` tetap grid 4 kolom + pulse. |
@@ -591,6 +591,40 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
     kanvas sama sekali), fade-in 0 → 1, tampilan bola + cincin sesuai kalibrasi F7.7 (dicek visual).
   - tsc/eslint/unit(593)/build hijau.
 
+### F8 — Teknologi: pindah posisi + marquee dua baris — effort S
+- **Permintaan pemilik (verbatim):** *"okeey nice, next section Teknologi yang kami gunakan, nah aku pengen
+  section tersebut jangan di bawah section Pratinjau, tapi aku pengen section tersebut di bawah section
+  Layanan Kami diatas section Portofolio. nah terus ada perubahan sedikit section Teknologi yang kami
+  gunakan perubahannya: Kan sekarang mah cuman satu baris yaa logo yang berjajar dan berjalan ke samping
+  kiri, nah ku pengen sekarang mah ada dua baris jadi yang satu majunya ke kiri yang satunya ke kanan jadi
+  ada dua baris kebawah."*
+- **Perubahan** ✅:
+  - **Urutan beranda:** `Hero → Pratinjau → Layanan → **Teknologi** → Portofolio → …` (sebelumnya strip
+    Teknologi tepat setelah Pratinjau). Tidak ada section/teks yang dihapus — hanya urutan.
+  - **Marquee dua baris** di `technologies.tsx` (komponen lokal `MarqueeRow`):
+    - baris 1 — konten urutan asli, `animate-marquee` (30 s, ke **kiri**);
+    - baris 2 — urutan **dibalik**, `animate-marquee-reverse` (36 s, ke **kanan**). Arah kanan dicapai
+      dengan `animation-direction: reverse` pada keyframes `marquee` yang sama: mulai dari −50 % menuju
+      0 %, jadi loop tetap mulus karena konten digandakan.
+    - Satu mask gradien kiri/kanan membungkus kedua baris; jarak antar-baris 12 px.
+    - **A11y:** baris kedua `aria-hidden` (hanya gema visual) + salinan duplikat tiap baris juga
+      `aria-hidden` — screen reader tetap membaca daftar teknologi **sekali**.
+    - **Token baru** `--animate-marquee-reverse` di `globals.css`; `--animate-marquee` (30 s) tidak
+      berubah sehingga marquee di `/tentang` tetap seperti dulu.
+    - Catatan kecil: class `group` pada track dihapus — dulu membuat **semua** kartu ikut ter-highlight
+      saat kursor berada di mana pun atas marquee; kini highlight per kartu.
+- **Verifikasi** ✅ (Playwright, produksi `next start -p 3987`, 1440×900 + 390×844):
+  - **Urutan DOM:** `#layanan` (y 1713) → `#teknologi` (y 2841) → `#portofolio` (y 3127) di desktop;
+    urutan sama di mobile.
+  - **Dua baris:** 40 kartu/baris (20 logo × 2), tinggi section 286 px; baris 2 mulai dari logo terbalik
+    ("Figma" vs "React").
+  - **Arah benar-benar berlawanan:** `transform` tx baris 1 **−143,8 px/s** (kiri), baris 2
+    **+119,8 px/s** (kanan) pada desktop. `animation-name`/`duration`/`direction` terverifikasi
+    (`marquee` 30 s normal vs `marquee` 36 s reverse).
+  - **Tanpa overflow horizontal:** `scrollWidth = innerWidth` (1440 / 390) — dua baris tetap terkunci
+    di dalam mask. Tangkapan layar desktop & mobile diperiksa (dua pita, tepi memudar, ritme rapi).
+  - tsc/eslint/unit(593)/build hijau.
+
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
 - Audit a11y (keyboard, kontras, reduced-motion, screen reader).
@@ -619,8 +653,9 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 ### Diubah (usulan)
 | File | Perubahan |
 | --- | --- |
-| `src/app/globals.css` | *(F0: tidak diubah — lihat koreksi A1)*; token animasi/spacing menyusul bila perlu |
-| `src/app/page.tsx` | Pasang `ScrollProgress` (F0); *(F7)* sisip `Showcase` setelah hero, buang plumbing `socialProof`; *(F7.6)* bungkus seluruh halaman dengan `IntroGate` | ✅ Selesai |
+| `src/app/globals.css` | *(F0: tidak diubah — lihat koreksi A1)*; token animasi/spacing menyusul bila perlu; *(F8)* token `--animate-marquee-reverse` (keyframes `marquee` diputar balik, 36 s) untuk baris kedua strip teknologi | ✅ Selesai |
+| `src/app/page.tsx` | Pasang `ScrollProgress` (F0); *(F7)* sisip `Showcase` setelah hero, buang plumbing `socialProof`; *(F7.6)* bungkus seluruh halaman dengan `IntroGate`; *(F8)* pindahkan `Technologies` ke antara `ServicesBento` & `PortfolioTeaser` | ✅ Selesai |
+| `src/components/sections/technologies.tsx` | *(F8)* Satu track marquee → **dua baris** (`MarqueeRow`): atas ke kiri (30 s, urutan asli), bawah ke kanan (36 s, urutan dibalik, `animate-marquee-reverse`); mask kiri/kanan tunggal, baris kedua `aria-hidden`, hover pause per baris | ✅ Selesai |
 | `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow | ✅ Selesai |
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
@@ -668,6 +703,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F7.6 | Hero 3D: gerbang intro (nol kerja GPU sebelum loader beres) + cross-fade fallback + optimasi | ✅ Selesai (kode) |
 | F7.7 | Hero 3D: "frame beku" (`advance(0)`) sampai cross-fade tuntas + fallback disetel ke frame-0 | ✅ Selesai (kode) |
 | F7.8 | Hero 3D: panggung kosong saat menunggu → muncul dengan animasi (fade + scale 0,9 s); fallback jadi jaring pengaman | ✅ Selesai (kode) |
+| F8 | Teknologi: pindah ke antara Layanan & Portofolio + marquee dua baris (kiri/kanan) | ✅ Selesai (kode) |
 | F6 | Polish & QA | ⬜ Todo |
 
 ---

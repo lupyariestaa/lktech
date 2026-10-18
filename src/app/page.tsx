@@ -4,8 +4,8 @@ import { IntroLoader } from "@/components/intro-loader";
 import { Navbar } from "@/components/sections/navbar";
 import { Hero } from "@/components/sections/hero";
 import { Showcase } from "@/components/sections/showcase";
-import { Technologies } from "@/components/sections/technologies";
 import { ServicesBento } from "@/components/sections/services-bento";
+import { Technologies } from "@/components/sections/technologies";
 import { WhyUs } from "@/components/sections/why-us";
 import { ProcessTimeline } from "@/components/sections/process-timeline";
 import { FeaturedProducts } from "@/components/sections/featured-products";
@@ -61,8 +61,10 @@ export default async function Home() {
       <main id="konten">
         <Hero />
         <Showcase />
-        <Technologies />
         <ServicesBento />
+        {/* F8: strip teknologi sengaja di antara Layanan & Portofolio (bukan
+            lagi di bawah Pratinjau) — jadi "jeda napas" sebelum karya. */}
+        <Technologies />
         <PortfolioTeaser />
         <WhyUs />
         <ProcessTimeline />
