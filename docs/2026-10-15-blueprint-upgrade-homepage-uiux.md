@@ -419,11 +419,21 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   - Tile = **gambar polos rounded** (pilihan pemilik), bukan mockup browser — kartu mockup lama
     tetap dipakai sebagai **keadaan kosong** bila belum ada gambar / fitur dimatikan.
   - **Full-bleed** (tepi ke tepi) — ujung band melengkung & memudar ke tepi layar; tinggi band
-    eksplisit (`h-[260px] sm:h-[320px] lg:h-[380px]`) karena `container-type: size` mematikan
+    eksplisit (`h-[280px] sm:h-[340px] lg:h-[400px]`) karena `container-type: size` mematikan
     sizing dari konten.
-  - **Ukuran tile** `tileHeight` **34%** tinggi band (referensi 26% — di layar kita terasa
-    kekecilan/"zoom out"), jadi tile lebih besar & gambar lebih terbaca; sudut tile **tipis 4px**
+  - **Ukuran tile** `tileHeight` **52%** tinggi band (referensi 26%) + `aspectRatio` **1.6** =
+    rasio asli tangkapan layar (1902×1198) sehingga `object-cover` praktis tak memotong isi;
+    tile tengah ± 334×214 px di desktop dan ± 214×134 px di ponsel. Sudut tile **tipis 4px**
     (semula `rounded-2xl`).
+  - **Optimasi gambar (temuan audit):** tile memakai PNG asli Cloudinary lewat `<img>` polos —
+    artinya **6 MB** untuk 6 gambar (satu file 3,5 MB), karena `<img>` melewati optimizer Next.
+    Kini URL Cloudinary disisipi `f_auto,q_auto,w_900` langsung di komponen (tanpa impor
+    `cloudinary-client.ts`, yang akan menarik Firebase client ke bundel beranda) →
+    **372 KB total, ~16× lebih kecil**, dan preload-nya ditunda lewat `IntersectionObserver`
+    (`rootMargin` 800 px) + `loading="lazy"` agar tidak berebut di pemuatan awal (LCP).
+  - **`SLICES` 12 → 8** & `CAMERA` **2.0 → 2.4**: simpangan faset masih < 1 px (tak terlihat),
+    dan bbox tile ujung turun dari **1430×2302 px** menjadi **398×448 px** (tablet 768) — raster
+    lebih ringan & gambar lebih tajam (tidak diperbesar terus).
   - `CAMERA` **2.0** (referensi 1.6): dengan 1.6 tile di ujung membengkak 5–16× (raster
     compositor membuangnya → tile tampak abu-abu, terbukti lewat sampling piksel). 2.0 membuat
     busur tetap terasa tapi pembengkakannya ~2.5× → aman untuk perangkat lemah.
@@ -437,11 +447,14 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   ditulis pada pita pertama tiap tile; judul/deskripsi section tetap sumber makna. Band baru
   mulai terlihat setelah `ResizeObserver` mengukur, jadi paint pertama berukuran salah tak
   pernah tampil.
-- **Verifikasi:** desktop 1440 (band 1440×380, ±5 tile besar terlihat, nol overflow-x, loop jalan)
-  & mobile 390 (band 390×260, 3 tile — 2 tampak); sampling piksel tiap tile: `slate=0%` (semua
-  gambar benar ter-paint), sudut simetris, tile di luar `limit` tersembunyi; reduced-motion beku
-  & utuh di busurnya; nol error konsol (kecuali 404 `_vercel/insights` yang diketahui);
-  tsc/eslint/unit(593)/build hijau.
+- **Verifikasi (audit 5 viewport + reduced-motion):** 390 / 768 / 1440 / 1920 px — band
+  full-bleed sesuai viewport (`1440×400`, `768×340`, `390×280`, `1920×400`), **overflow-x 0 px**,
+  **CLS 0–0.0007** (ambang "baik" 0,1), semua tile terlihat **ter-paint gambarnya** (sampling
+  piksel `slate≈0%`), dan nol error konsol (kecuali 404 `_vercel/insights` di server lokal).
+  `prefers-reduced-motion`: band beku & utuh di busurnya.
+  Long-task headless sempat terlihat besar, tapi setelah ditelusuri sumbernya **WebGL hero**
+  (software raster), bukan band — terbukti long-task tetap ada saat band di-scroll jauh dari
+  viewport, dan nol di mobile 390 (tak ada scene 3D). tsc/eslint/unit(593)/build hijau.
 
 ### F6 — Polish & QA — effort M
 - Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.

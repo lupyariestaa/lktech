@@ -15,6 +15,8 @@ import { ShowcaseBand } from "@/components/sections/showcase-band";
  * melengkung** (`ShowcaseBand`) yang mengalir terus — gambar yang sama, cara
  * tampil yang jauh lebih megah. Bila belum ada gambar / fitur dimatikan, kartu
  * mockup browser lama dipertahankan sebagai keadaan kosong yang rapi.
+ * `aspectRatio` 1.6 = rasio asli tangkapan layar (1902×1198), jadi `object-cover`
+ * praktis tidak memotong isinya.
  *
  * Hanya memakai gambar `browser` (desktop) — mockup ponsel (`mobile`) sengaja
  * belum dipakai. Konten diambil dari `hero` (pengaturan yang sama, dikelola di
@@ -56,8 +58,9 @@ export function Showcase() {
           <ShowcaseBand
             images={hero.browser}
             speed={3}
-            tileHeight={34}
-            className="h-[260px] sm:h-[320px] lg:h-[380px]"
+            tileHeight={52}
+            aspectRatio={1.6}
+            className="h-[280px] sm:h-[340px] lg:h-[400px]"
           />
         </Reveal>
       ) : (

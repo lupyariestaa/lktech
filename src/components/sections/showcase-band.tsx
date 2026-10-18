@@ -33,15 +33,17 @@ import { cn } from "@/lib/utils";
 
 /** Pita per tile. Tiap pita hanya beberapa derajat busur — terlalu sempit
  * untuk terbaca sebagai faset; lebih sedikit mulai terlihat "berpatah" di
- * tepi atas/bawah. */
-const SLICES = 12;
+ * tepi atas/bawah. 8 sudah mulus: simpangan faset terukur < 1 px pada
+ * geometri terbesar kita, dan jumlah layer compositor jadi ~5×8 = 40 —
+ * jauh lebih ringan untuk perangkat lemah. */
+const SLICES = 8;
 
 /** Jarak kamera dari layar, sebagai kelipatan radius silinder. Sedikit di
  * belakang sumbu, supaya ujung-ujungnya datang mendekati lensa & membesar —
  * tapi tidak lebih dekat dari ini: makin dekat, makin ekstrem pembesaran tile
  * di ujung (raster-nya membengkak sampai beberapa kali lipat, dan itu bikin
- * compositor membuang raster tile lain). @default 2 */
-const CAMERA = 2;
+ * compositor membuang raster tile lain). @default 2,4 */
+const CAMERA = 2.4;
 
 /**
  * Radius silinder (sebagai porsi lebar panggung) yang menempatkan tepi frame
@@ -55,6 +57,36 @@ function arc(bend: number) {
 /** Tile tidak pernah lebih lebar dari porsi ini agar ponsel tetap menunjukkan
  * tetangganya, bukan satu tile selebar layar. */
 const MAX_WIDTH = 55;
+
+/**
+ * Lebar sumber gambar (px). Tile terbesar kita ± 350 px CSS; dengan layar
+ * retina 2× itu ± 700 px, jadi 900 px sudah tajam untuk tile tengah dan
+ * masih wajar untuk tile ujung yang membesar.
+ */
+const IMG_WIDTH = 900;
+
+/**
+ * URL gambar yang sudah dioptimalkan Cloudinary. Tangkapan layar aslinya PNG
+ * 1900×1198 (satu file bisa 3,5 MB — 6 gambar = 6 MB!); dengan `f_auto,q_auto`
+ * Cloudinary mengirim WebP/AVIF seukuran kebutuhan, turun ke ratusan KB.
+ *
+ * Sengaja tidak memakai `imgUrl()` dari `cloudinary-client.ts`: modul itu ikut
+ * menarik Firebase client (`@/lib/auth`) ke bundel beranda — mahal untuk
+ * sesuatu yang cuma menyusun URL. Di sini transformasi disisipkan langsung ke
+ * URL yang sudah ada, dan URL non-Cloudinary (atau yang sudah punya
+ * transformasi sendiri) dibiarkan apa adanya.
+ */
+function optimizedUrl(url: string, width: number) {
+  const marker = "/image/upload/";
+  const i = url.indexOf(marker);
+  if (i === -1) return url;
+  const head = url.slice(0, i + marker.length);
+  const rest = url.slice(i + marker.length);
+  const [first = ""] = rest.split("/");
+  // Segmen pertama berisi ","/"_" = sudah ada transformasi (mis. f_auto,q_auto).
+  if (first.includes(",") || first.includes("_")) return url;
+  return `${head}f_auto,q_auto,w_${width}/${rest}`;
+}
 
 /**
  * Menempatkan loop pada silinder. Radius menaruh tepi frame `bend` radian di
@@ -170,10 +202,24 @@ export function ShowcaseBand({
     return () => ro.disconnect();
   }, [tileHeight, aspectRatio, gap, bend]);
 
-  // Unduh semua gambar lebih awal: tile mengambil gambar berikutnya sesaat
-  // sebelum masuk layar kembali — terlalu telat untuk mulai memuatnya.
+  // Unduh gambar lebih awal, tapi **baru saat section mendekat**: enam gambar
+  // ini ratusan KB setelah dioptimalkan, dan tak perlu ikut berebut di pemuatan
+  // awal beranda (LCP). Tile mengambil gambar berikutnya sesaat sebelum masuk
+  // layar kembali — terlalu telat untuk mulai memuatnya, jadi preload ini yang
+  // menjaga band tak berkedip abu-abu.
   useEffect(() => {
-    for (const { url } of images) new Image().src = url;
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        for (const { url } of images) new Image().src = optimizedUrl(url, IMG_WIDTH);
+        io.disconnect();
+      },
+      { rootMargin: "800px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
   }, [images]);
 
   const { columns, sweep, unit, limit } =
@@ -299,9 +345,10 @@ export function ShowcaseBand({
                     // di dalam klipnya; `next/image` tak bisa di-offset begitu.
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={img.url}
+                      src={optimizedUrl(img.url, IMG_WIDTH)}
                       alt={k === 0 ? img.alt : ""}
                       draggable={false}
+                      loading="lazy"
                       decoding="async"
                       className="absolute top-0 max-w-none object-cover"
                       style={{
