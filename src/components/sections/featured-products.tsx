@@ -58,7 +58,10 @@ export async function FeaturedProducts({
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((product, i) => (
             <Reveal key={product.slug} delay={i * 0.08}>
-              <ProductCard product={product} />
+              <ProductCard
+                product={product}
+                imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
+              />
             </Reveal>
           ))}
         </div>

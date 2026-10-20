@@ -560,7 +560,11 @@ export default async function ProdukDetailPage({
             </p>
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((p) => (
-                <ProductCard key={p.slug} product={p} />
+                <ProductCard
+                  key={p.slug}
+                  product={p}
+                  imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                />
               ))}
             </div>
           </div>
@@ -576,7 +580,11 @@ export default async function ProdukDetailPage({
             </h2>
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {others.map((p) => (
-                <ProductCard key={p.slug} product={p} />
+                <ProductCard
+                  key={p.slug}
+                  product={p}
+                  imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                />
               ))}
             </div>
             <div className="mt-10">

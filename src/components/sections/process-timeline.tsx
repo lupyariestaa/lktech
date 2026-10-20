@@ -108,7 +108,7 @@ function ProcessPanel({
                     "grid h-10 w-10 place-items-center rounded-full border text-sm font-bold transition-all duration-300",
                     i === active
                       ? "scale-110 border-primary bg-primary text-white shadow-lg shadow-primary/30"
-                      : "border-slate-200 bg-white text-slate-400",
+                      : "border-slate-200 bg-white text-slate-500",
                   )}
                 >
                   {item.step}

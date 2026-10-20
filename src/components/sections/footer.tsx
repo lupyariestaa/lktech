@@ -45,12 +45,12 @@ export function Footer() {
 
           <div>
             <h2 className="text-sm font-semibold text-secondary">Navigasi</h2>
-            <ul className="mt-4 flex flex-col gap-2.5">
+            <ul className="mt-4 flex flex-col gap-1.5">
               {PAGE_NAV_LINKS.map((l) => (
                 <li key={l.href}>
                   <a
                     href={l.href}
-                    className="text-sm text-muted transition-colors hover:text-primary"
+                    className="inline-flex py-1 text-sm text-slate-600 transition-colors hover:text-primary"
                   >
                     {l.label}
                   </a>
@@ -61,12 +61,12 @@ export function Footer() {
 
           <div>
             <h2 className="text-sm font-semibold text-secondary">Layanan</h2>
-            <ul className="mt-4 flex flex-col gap-2.5">
+            <ul className="mt-4 flex flex-col gap-1.5">
               {SERVICES.slice(0, 5).map((s) => (
                 <li key={s.slug}>
                   <a
                     href={`/layanan/${s.slug}`}
-                    className="text-sm text-muted transition-colors hover:text-primary"
+                    className="inline-flex py-1 text-sm text-slate-600 transition-colors hover:text-primary"
                   >
                     {s.title}
                   </a>
@@ -77,14 +77,14 @@ export function Footer() {
 
           <div>
             <h2 className="text-sm font-semibold text-secondary">Kontak</h2>
-            <ul className="mt-4 flex flex-col gap-3">
+            <ul className="mt-4 flex flex-col gap-1.5">
               <li>
                 <a
                   href={waLink(WA_MESSAGES.general, settings.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => trackWhatsAppClick("footer")}
-                  className="flex items-start gap-2.5 text-sm text-muted transition-colors hover:text-primary"
+                  className="flex items-start gap-2.5 py-1 text-sm text-slate-600 transition-colors hover:text-primary"
                 >
                   <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   Chat via WhatsApp
@@ -93,13 +93,13 @@ export function Footer() {
               <li>
                 <a
                   href={`mailto:${settings.email}`}
-                  className="flex items-start gap-2.5 text-sm text-muted transition-colors hover:text-primary"
+                  className="flex items-start gap-2.5 py-1 text-sm text-slate-600 transition-colors hover:text-primary"
                 >
                   <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   {settings.email}
                 </a>
               </li>
-              <li className="flex items-start gap-2.5 text-sm text-muted">
+              <li className="flex items-start gap-2.5 py-1 text-sm text-slate-600">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 {settings.location}
               </li>

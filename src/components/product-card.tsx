@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Layers, Package, Tag } from "lucide-react";
@@ -11,8 +12,25 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { RatingStars } from "@/components/rating-stars";
 import { cn } from "@/lib/utils";
 
-/** Kartu produk untuk daftar `/produk`. */
-export function ProductCard({ product }: { product: Product }) {
+/**
+ * Kartu produk untuk daftar `/produk`, beranda, dan "produk terkait".
+ *
+ * `imageSizes` mengikuti grid pemanggil (Next/Image `fill`): nilai bawaan
+ * cocok untuk grid `/produk` (2 kolom di HP), sedangkan beranda memakai
+ * 1 kolom di HP sehingga perlu `100vw` agar gambar tetap tajam di retina.
+ */
+export function ProductCard({
+  product,
+  imageSizes = "(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw",
+}: {
+  product: Product;
+  imageSizes?: string;
+}) {
+  // Bila cover gagal dimuat (jaringan lambat / aset hilang), jangan biarkan
+  // kartu kosong: tampilkan placeholder ikon yang sama dengan cover bawaan.
+  const [coverFailed, setCoverFailed] = useState(false);
+  const cover =
+    product.cover && product.cover !== "default" ? product.cover : null;
   const multi = hasVariants(product);
   const hasDiscount =
     !multi &&
@@ -34,18 +52,20 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5 sm:rounded-3xl">
-      {/* Cover — rasio 4:3 agar proporsional di kartu 2 kolom (HP). */}
+      {/* Cover — rasio 16:9 mengikuti asli gambar, jadi teks di dalam cover
+          tidak terpotong (dulu 4:3 + object-cover memotong ±25% lebarnya). */}
       <Link
         href={`/produk/${product.slug}`}
-        className="relative block aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10"
+        className="relative block aspect-[16/9] overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10"
       >
-        {product.cover && product.cover !== "default" ? (
+        {cover && !coverFailed ? (
           <Image
-            src={product.cover}
+            src={cover}
             alt={product.coverAlt || product.name}
             fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
+            sizes={imageSizes}
             className="object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setCoverFailed(true)}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-primary/40">
