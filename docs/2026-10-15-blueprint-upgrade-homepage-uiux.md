@@ -1,6 +1,6 @@
 # Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)
 
-> **Status:** 🚧 Berjalan (F0–F5 + F7 + F7.1–F7.8 + F8 selesai — kode; F6 belum)
+> **Status:** ✅ Selesai (F0–F8 + F6 — kode, QA, & dokumentasi)
 > **Tanggal:** 2026-10-15
 > **Pemilik:** Lupy (LKTech)
 > **Keputusan tema:** **A (Storytelling Scroll)** + **B (Premium Minimalis Modern)**
@@ -74,7 +74,7 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | 1 | Hero | `sections/hero.tsx` + `sections/hero-3d.tsx` | Client | Beranda: parallax + animated headline + trust bar + cursor glow ✅ (F1); **scene 3D/WebGL lazy** di tablet+ ✅ (F5), kini **terpusat di kolom visual kanan** (F7). Mobile: hero murni teks. |
 | 1b | Pratinjau | `sections/showcase.tsx` | Client | **Baru (F7):** mockup browser (carousel, gambar `browser` saja) — dipindah dari hero. Tepat setelah hero. |
 | 2 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor. `/tentang` tetap grid 3 kolom. |
-| 3 | Technologies | `sections/technologies.tsx` | Client | **F8:** strip "Teknologi yang kami gunakan" dipindah ke **antara Layanan & Portofolio** (dulu tepat setelah Pratinjau); marquee kini **dua baris** — atas ke kiri (`animate-marquee`), bawah ke kanan (urutan dibalik, `animate-marquee-reverse`), satu mask kiri/kanan untuk keduanya; pause saat hover. |
+| 3 | Technologies | `sections/technologies.tsx` | Client | **F8:** strip "Teknologi yang kami gunakan" dipindah ke **antara Layanan & Portofolio** (dulu tepat setelah Pratinjau); marquee kini **dua baris** — atas ke kiri (`animate-marquee`), bawah ke kanan (urutan dibalik, `animate-marquee-reverse`), satu mask kiri/kanan untuk keduanya; pause saat hover. **F6.2:** tombol **Jeda/Mainkan** (WCAG 2.2.2), disembunyikan saat reduced-motion. |
 | 4 | Portfolio Teaser | `sections/portfolio-teaser.tsx` | Server | Grid 3 kolom, ambil `getProjects()`. |
 | 5 | Why Us | `sections/why-us.tsx` | Client | Grid 3 kolom + stagger. Pola berulang. |
 | 6 | Process | `sections/process.tsx` (grid, `/tentang`) + `sections/process-timeline.tsx` (pinned, beranda) | Client | Beranda: **timeline scroll-driven pinned** ✅ (F3). `/tentang` tetap grid 4 kolom + pulse. |
@@ -626,10 +626,20 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   - tsc/eslint/unit(593)/build hijau.
 
 ### F6 — Polish & QA — effort M
-- Audit performa (Lighthouse/Core Web Vitals), perbaiki regresi CLS/INP.
-- Audit a11y (keyboard, kontras, reduced-motion, screen reader).
-- Uji mobile & lintas browser (Chrome/Safari/Firefox, iOS/Android).
-- Gate: `tsc`, eslint, unit test, `npm run build` hijau.
+- **Temuan audit (P1–P3) & resolusi** ✅:
+  - **P1 — cover produk terpotong:** cover asli 16:9 dipaksa ke bingkai 4:3 + `object-cover`, teks di dalam cover terpangkas ±25% lebarnya. **F6.1:** bingkai kartu jadi `aspect-[16/9]`; prop baru `imageSizes` (default `/produk` 2 kolom: `(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw`; beranda & detail: `(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw`) agar `srcset` tidak mengunduh 100vw. Bila cover gagal dimuat (timeout optimizer/aset hilang), `onError` menampilkan placeholder ikon — bukan kartu kosong.
+  - **P1 — kontras AA gagal:** nomor proses non-aktif `text-slate-400` (2,63:1) → `text-slate-500`; tautan footer di atas gradien (3,88:1) → `text-slate-600` (≈7,6:1). axe-core: **0 violation** desktop & mobile (sebelumnya 5 node kontras).
+  - **P2 — target sentuh <24 px:** tautan footer 15–18 px → `inline-flex py-1` = **28 px**; tombol pause **31 px**.
+  - **P2 — konten bergerak tanpa kontrol (WCAG 2.2.2):** marquee teknologi & band Pratinjau kini punya **tombol Jeda/Mainkan** (`MotionToggle`, `aria-label` dinamis); hover-pause per baris tetap ada; tombol disembunyikan saat `prefers-reduced-motion` (animasi memang statis).
+  - **P2 — intro 2,13 dtk setiap load:** intro kini **sekali per sesi tab** (`sessionStorage` `lktech:intro-seen`). Reload/navigasi ulang ke beranda melewati loader; entrance hero & navbar tidak lagi memakai delay 2,13 dtk — animasi dimulai saat `introDone` (bukan `delayChildren` yang bisa "basi"), jadi tak ada layar kosong menunggu delay yang sudah tidak ada.
+  - **P3 — `sizes` mismatch** (lihat P1) & **ritme heading:** dipertahankan sebagai pola yang disengaja — section ber-aksi kanan (Layanan, Portofolio, Produk) rata kiri; section naratif rata tengah. Tidak ada churn kode; keputusan didokumentasikan di sini.
+- **F6.4 — QA & perf** ✅:
+  - **Gate:** tsc 0 error, eslint 0 error, unit **593/593**, build **161 halaman**, E2E **22/22** (produksi `next start -p 3987`).
+  - **axe-core** (WCAG 2.0/2.1/2.2 A+AA): **0 violation** desktop 1440×900 & mobile 390×844.
+  - **Chromium QA:** pause marquee (2 baris) & band (5 tile) `running → paused → running`; tombol dapat dijangkau keyboard; tanpa overflow horizontal; cover 16:9 (rasio 1,778; natural 359×202); reload melewati intro (loader hilang ~2,3 dtk = batas hidrasi lokal, bukan +2,13 dtk); fallback cover terverifikasi (6/6 ikon saat request gambar di-abort).
+  - **Firefox** (Playwright headless): desktop + mobile — tanpa overflow, pause berfungsi, cover 16:9, **0 page error**. **WebKit** belum terverifikasi (unduhan browser Playwright timeout di jaringan sesi ini).
+  - **Lighthouse produksi (`lktech.vercel.app`, mobile throttle):** A11y **100**, Best Practices **100**, SEO **92**, CLS **0**. Performa **32** (LCP 19,1 dtk / TBT 13,4 dtk) di lingkungan uji **tanpa GPU** — didominasi script-evaluation hidrasi app + gtag. **F6.4:** GA4 ditunda ke `lazyOnload` (dari `afterInteractive`; ~3,9 dtk script-eval) untuk mengangkat LCP/TBT; ukur ulang setelah deploy. Optimasi bundle/hidrasi lanjutan (mis. menunda init Firebase Auth) dicatat sebagai kandidat fase berikutnya — bukan regresi F6.
+  - Catatan: angka LCP/TBT lokal & Lighthouse tanpa GPU tidak representatif untuk perangkat pengguna; PSI API publik terkena **429** saat sesi ini, Lighthouse CLI dipakai sebagai gantinya.
 
 ---
 
@@ -645,9 +655,10 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask); *(F7.6)* probe WebGL melepas konteks (`WEBGL_lose_context`), cross-fade frame pertama (`FirstFrame` → `onReady`), `antialias:false`, bola inti 64², entrance diperhalus; *(F7.7)* `FrozenFrame` — frame beku via `advance(0)` selama `frameloop="never"` sampai `play`, lalu jam R3F di-reset → entrance mulai dari nol; *(F7.8)* wrapper kanvas = kemunculan beranimasi (`transition-[opacity,scale]` 0,9 s dari `scale-[0.94] opacity-0`) dan `play` menyala tepat saat itu (`sceneReady`) | ✅ Selesai |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
-| `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero; *(F7.5)* ganti carousel satu kartu → **band melengkung full-bleed** (`ShowcaseBand`), kartu mockup lama jadi keadaan kosong | ✅ Selesai |
-| `src/components/sections/showcase-band.tsx` *(F7.5)* | Band gambar melengkung ala silinder (12 pita/tile, loop murni CSS `transform`, statis saat reduced-motion) | ✅ Selesai |
-| `src/components/intro-gate.tsx` *(F7.6)* | Gerbang intro beranda: `IntroGate` (provider per-mount halaman) + `useIntroDone` / `useIntroFinisher` — sumber tunggal "intro loader sudah selesai?" untuk scene 3D | ✅ Selesai |
+| `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero; *(F7.5)* ganti carousel satu kartu → **band melengkung full-bleed** (`ShowcaseBand`), kartu mockup lama jadi keadaan kosong; *(F6.2)* state pause + tombol Jeda/Mainkan di bawah band | ✅ Selesai |
+| `src/components/sections/showcase-band.tsx` *(F7.5)* | Band gambar melengkung ala silinder (12 pita/tile, loop murni CSS `transform`, statis saat reduced-motion); *(F6.2)* prop `paused` → `animationPlayState` per tile | ✅ Selesai |
+| `src/components/motion-toggle.tsx` *(F6.2)* | Tombol **Jeda/Mainkan** bersama untuk konten bergerak otomatis (marquee teknologi & band Pratinjau) — WCAG 2.2.2; `aria-label` dinamis, ikon Pause/Play | ✅ Selesai |
+| `src/components/intro-gate.tsx` *(F7.6)* | Gerbang intro beranda: `IntroGate` (provider per-mount halaman) + `useIntroDone` / `useIntroFinisher` — sumber tunggal "intro loader sudah selesai?" untuk scene 3D; *(F6.3)* `useIntroSkip` + cek `sessionStorage` di layout-effect → intro sekali per sesi tab | ✅ Selesai |
 | `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` | **Dokumen ini** |
 
 ### Diubah (usulan)
@@ -655,14 +666,21 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | --- | --- |
 | `src/app/globals.css` | *(F0: tidak diubah — lihat koreksi A1)*; token animasi/spacing menyusul bila perlu; *(F8)* token `--animate-marquee-reverse` (keyframes `marquee` diputar balik, 36 s) untuk baris kedua strip teknologi | ✅ Selesai |
 | `src/app/page.tsx` | Pasang `ScrollProgress` (F0); *(F7)* sisip `Showcase` setelah hero, buang plumbing `socialProof`; *(F7.6)* bungkus seluruh halaman dengan `IntroGate`; *(F8)* pindahkan `Technologies` ke antara `ServicesBento` & `PortfolioTeaser` | ✅ Selesai |
-| `src/components/sections/technologies.tsx` | *(F8)* Satu track marquee → **dua baris** (`MarqueeRow`): atas ke kiri (30 s, urutan asli), bawah ke kanan (36 s, urutan dibalik, `animate-marquee-reverse`); mask kiri/kanan tunggal, baris kedua `aria-hidden`, hover pause per baris | ✅ Selesai |
+| `src/components/sections/technologies.tsx` | *(F8)* Satu track marquee → **dua baris** (`MarqueeRow`): atas ke kiri (30 s, urutan asli), bawah ke kanan (36 s, urutan dibalik, `animate-marquee-reverse`); mask kiri/kanan tunggal, baris kedua `aria-hidden`, hover pause per baris; *(F6.2)* tombol Jeda/Mainkan di header + `animationPlayState` per baris | ✅ Selesai |
 | `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow | ✅ Selesai |
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev); *(F7.1)* `@react-three/postprocessing` + `postprocessing` | ✅ Selesai |
-| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`); *(F7.6)* `mountScene` (gerbang intro) + `CoreFallback` yang tak pernah dibuang sebelum frame pertama 3D; *(F7.7)* kirim `play={!fallbackOn}`, samakan `CoreFallback` dengan **frame beku** (gradien dari profil render `uIntro=0`, cincin = proyeksi eksak torus); *(F7.8)* panggung **kosong** selama menunggu (`fallbackOn` mulai `false`), fallback turun jadi jaring pengaman (`SAFETY_FALLBACK_MS` 4 s, selalu fade-in lewat prop `hidden`), `play={sceneReady}` | ✅ Selesai |
-| `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll); *(F7.6)* lapor `finish()` ke `IntroGate` saat fase `done` | ✅ Selesai |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`); *(F7.6)* `mountScene` (gerbang intro) + `CoreFallback` yang tak pernah dibuang sebelum frame pertama 3D; *(F7.7)* kirim `play={!fallbackOn}`, samakan `CoreFallback` dengan **frame beku** (gradien dari profil render `uIntro=0`, cincin = proyeksi eksak torus); *(F7.8)* panggung **kosong** selama menunggu (`fallbackOn` mulai `false`), fallback turun jadi jaring pengaman (`SAFETY_FALLBACK_MS` 4 s, selalu fade-in lewat prop `hidden`), `play={sceneReady}`; *(F6.3)* entrance teks dijalankan saat `introDone` (tanpa `delayChildren` 2,13 dtk) + `HeroTyped` mulai langsung saat intro dilewati | ✅ Selesai |
+| `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll); *(F7.6)* lapor `finish()` ke `IntroGate` saat fase `done`; *(F6.3)* lewati seluruh timeline saat sesi sudah melihat intro + tandai `sessionStorage` di akhir intro pertama | ✅ Selesai |
+| `src/components/product-card.tsx` | *(F6.1)* Cover `aspect-[16/9]` (mengikuti rasio asli, tidak terpotong), prop `imageSizes`, fallback `onError` → placeholder ikon | ✅ Selesai |
+| `src/components/sections/footer.tsx` | *(F6.1)* Kontras tautan `text-slate-600` + target sentuh 28 px (`inline-flex py-1`, gap dirapatkan) | ✅ Selesai |
+| `src/components/sections/process-timeline.tsx` | *(F6.1)* Nomor langkah non-aktif `text-slate-400` → `text-slate-500` (kontras AA) | ✅ Selesai |
+| `src/components/sections/featured-products.tsx` + `src/app/produk/[slug]/page.tsx` | *(F6.1)* Teruskan `imageSizes` sesuai grid masing-masing (`33vw` beranda, `50vw` detail) | ✅ Selesai |
+| `src/lib/intro.ts` | *(F6.3)* `hasSeenIntro()` / `markIntroSeen()` (kunci `lktech:intro-seen`, aman saat storage diblokir) | ✅ Selesai |
+| `src/components/sections/navbar.tsx` | *(F6.3)* Entrance ditahan `introDone` (tanpa `delay` 2,13 dtk) — halaman dalam tetap tampil langsung | ✅ Selesai |
+| `src/components/google-analytics.tsx` | *(F6.4)* GA4 `afterInteractive` → `lazyOnload` (audit Lighthouse: ~3,9 dtk script-eval di jalur kritis mobile) | ✅ Selesai |
 | `docs/README.md` | Tambah baris indeks dokumen ini |
 
 ---
@@ -704,14 +722,13 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F7.7 | Hero 3D: "frame beku" (`advance(0)`) sampai cross-fade tuntas + fallback disetel ke frame-0 | ✅ Selesai (kode) |
 | F7.8 | Hero 3D: panggung kosong saat menunggu → muncul dengan animasi (fade + scale 0,9 s); fallback jadi jaring pengaman | ✅ Selesai (kode) |
 | F8 | Teknologi: pindah ke antara Layanan & Portofolio + marquee dua baris (kiri/kanan) | ✅ Selesai (kode) |
-| F6 | Polish & QA | ⬜ Todo |
+| F6 | Polish & QA (cover 16:9, kontras/target, pause animasi, intro sekali per sesi, perf & lintas browser) | ✅ Selesai (kode + QA) |
 
 ---
 
 ## 10. Catatan Operasional
 
-- **Urutan eksekusi disarankan:** F0 → F1 → F2 → F3 → F4 → F5 → F6.
-  Bisa berhenti di fase mana pun; tiap fase = 1 commit.
+- **Urutan eksekusi:** F0 → F1 → F2 → F3 → F4 → F5 → F7 → F8 → F6. F6 dieksekusi terakhir sebagai polish/QA. Tiap fase = 1 commit (F6 dipecah F6.1–F6.4).
 - **Sebelum F5:** konfirmasi ulang (dependensi 3D berat; pastikan hasil F1–F4 sudah memuaskan).
 - **Gate wajib tiap fase:** `tsc` + eslint (file terkait) + `npm run test:unit` + `npm run build`.
 - **Uji manual tiap fase:** desktop, tablet, mobile, dan mode `prefers-reduced-motion`.
