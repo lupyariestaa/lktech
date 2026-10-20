@@ -29,7 +29,7 @@ import { COMPANY } from "@/lib/content";
 import { isDefaultStats } from "@/lib/content-types";
 import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
-import { useIntroDone } from "@/components/intro-gate";
+import { useIntroDone, useIntroSkip } from "@/components/intro-gate";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
 import { MEDIA_QUERIES, useMediaQuery } from "@/lib/use-media-query";
 
@@ -547,11 +547,17 @@ export function Hero() {
   const reduced = useReducedMotionPreference();
   const settings = useSettings();
   const { stats } = useContent();
-  const base = introDelay(reduced);
-  // Entrance: satu induk yang men-stagger tiap blok teks (bukan delay manual).
+  const introDone = useIntroDone();
+  // Sesi yang sudah melihat intro melewati loader → pengetikan headline
+  // dimulai segera, bukan menunggu 2,1 detik yang sudah tidak ada.
+  const introSkip = useIntroSkip();
+  const base = introSkip ? 0 : introDelay(reduced);
+  // Entrance: satu induk yang men-stagger tiap blok teks. Animasi baru
+  // dijalankan saat `introDone` (loader selesai / dilewati), jadi tidak ada
+  // delay yang bisa "basi" bila intro tidak dimainkan.
   const stagger: Variants = {
     hidden: {},
-    show: { transition: { staggerChildren: 0.09, delayChildren: base } },
+    show: { transition: { staggerChildren: 0.09 } },
   };
   // Efek kursor hanya untuk layar besar (tablet ke atas) & bukan reduced-motion.
   const isDesktop = useMediaQuery(MEDIA_QUERIES.desktopUp);
@@ -563,7 +569,6 @@ export function Hero() {
   // ikut menyala di balik loader (chunk `three` + init WebGL + kompilasi shader
   // berebut main thread dengan animasi pembuka) dan fallback CSS-nya justru
   // hilang saat hidrasi → panggung kosong beberapa detik.
-  const introDone = useIntroDone();
   const mountScene = sceneEnabled && introDone;
   // `sceneReady` = canvas 3D sudah menggambar frame pertamanya.
   const [sceneReady, setSceneReady] = useState(false);
@@ -659,7 +664,7 @@ export function Hero() {
           className="relative"
           variants={stagger}
           initial="hidden"
-          animate="show"
+          animate={introDone ? "show" : "hidden"}
           style={reduced ? undefined : { opacity: opacityText }}
         >
           <Block variants={rise} y={reduced ? undefined : yKicker}>

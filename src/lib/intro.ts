@@ -15,6 +15,32 @@ export const INTRO_DURATION = 1830;
 /** Jeda singkat agar exit-animation loader terlihat halus sebelum konten masuk. */
 export const INTRO_EXIT = 300;
 
+/**
+ * Intro beranda hanya dimainkan **sekali per sesi tab** (F6). Reload halaman
+ * yang sama tidak lagi menahan pengunjung 2,1 detik; tab/ sesi baru tetap
+ * mendapat intro. Disimpan di `sessionStorage` (bukan localStorage) supaya
+ * kunjungan esok hari tetap disambut intro.
+ */
+const INTRO_SEEN_KEY = "lktech:intro-seen";
+
+/** Apakah intro sudah selesai di sesi tab ini. Aman bila storage diblokir. */
+export function hasSeenIntro() {
+  try {
+    return window.sessionStorage.getItem(INTRO_SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Tandai intro sudah selesai untuk sesi tab ini. */
+export function markIntroSeen() {
+  try {
+    window.sessionStorage.setItem(INTRO_SEEN_KEY, "1");
+  } catch {
+    // Mode privat / storage diblokir: intro boleh tampil lagi, bukan error.
+  }
+}
+
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 function subscribe(callback: () => void) {

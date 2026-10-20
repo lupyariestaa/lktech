@@ -24,7 +24,7 @@ import { Logo } from "@/components/logo";
 import { useSettings } from "@/components/settings-provider";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
-import { introDelay, useReducedMotionPreference } from "@/lib/intro";
+import { useIntroDone } from "@/components/intro-gate";
 
 /**
  * Item navbar desktop. Bila punya `children`, tampil sebagai dropdown saat
@@ -137,15 +137,16 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
-  const reduced = useReducedMotionPreference();
   const pathname = usePathname();
   const settings = useSettings();
   const { count, ready } = useCart();
   const { user } = useAuth();
   const isLanding = pathname === "/";
   const links = buildNavMenu(isLanding, SERVICES);
-  // Intro loader hanya ada di landing; halaman dalam tampil langsung.
-  const base = isLanding ? introDelay(reduced) : 0;
+  // Entrance navbar ditahan sampai intro selesai. Bila intro dilewati
+  // (sesi yang sama), `done` langsung true setelah hidrasi → navbar langsung
+  // masuk tanpa menunggu delay 2,1 detik.
+  const introDone = useIntroDone();
 
   // Apakah user yang login punya akses admin? Bila ya, ikon profil di navbar
   // diganti menjadi tautan ke dashboard admin (bukan profil user).
@@ -199,8 +200,8 @@ export function Navbar() {
       <motion.nav
         aria-label="Navigasi utama"
         initial={{ y: -24, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: base, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        animate={introDone ? { y: 0, opacity: 1 } : { y: -24, opacity: 0 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6"
       >
         <Logo height={32} href="/" />

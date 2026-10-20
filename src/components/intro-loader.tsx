@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, type Variants } from "framer-motion";
-import { useIntroFinisher } from "@/components/intro-gate";
-import { useReducedMotionPreference } from "@/lib/intro";
+import { useIntroFinisher, useIntroSkip } from "@/components/intro-gate";
+import { markIntroSeen, useReducedMotionPreference } from "@/lib/intro";
 
 /**
  * Intro / loading screen dengan animasi dua panel:
@@ -45,16 +45,20 @@ export function IntroLoader() {
   );
   const [progress, setProgress] = useState(0);
   const finish = useIntroFinisher();
+  const skip = useIntroSkip();
 
-  // Fase efektif: saat reduced-motion, loader dianggap langsung selesai
-  // (turunan, tanpa setState di effect).
-  const effectivePhase = reduced ? "done" : phase;
+  // Fase efektif: reduced-motion atau sesi yang sudah pernah melihat intro
+  // dianggap langsung selesai (turunan, tanpa setState di effect).
+  const effectivePhase = reduced || skip ? "done" : phase;
 
   // Kabari gerbang intro saat loader benar-benar selesai — inilah pemicu
-  // scene 3D hero (F7.6): sebelum ini tidak ada kerja GPU sama sekali.
+  // scene 3D hero (F7.6): sebelum ini tidak ada kerja GPU sama sekali. Di
+  // akhir intro pertama, tandai sesi supaya reload berikutnya tidak menunggu.
   useEffect(() => {
-    if (effectivePhase === "done") finish?.();
-  }, [effectivePhase, finish]);
+    if (effectivePhase !== "done") return;
+    finish?.();
+    if (!skip) markIntroSeen();
+  }, [effectivePhase, finish, skip]);
 
   // Kunci scroll saat loader tampil.
   useEffect(() => {
@@ -68,14 +72,15 @@ export function IntroLoader() {
     };
   }, [effectivePhase]);
 
-  // Timeline fase. Saat `reduced`, loader langsung dianggap selesai lewat
-  // `effectivePhase` (turunan, bukan setState di effect — mematuhi aturan
-  // react-hooks). Ini penting karena `reduced` baru bernilai benar setelah
-  // mount (SSR/first render = false); tanpa penanganan, loader akan macet di
-  // fase "enter": overlay `fixed inset-0 z-[10000]` tetap ada → memblokir klik
-  // & mengunci scroll (bug yang ditemukan pada F5).
+  // Timeline fase. Saat `reduced` atau sesi sudah melihat intro, loader
+  // langsung dianggap selesai lewat `effectivePhase` (turunan, bukan setState
+  // di effect — mematuhi aturan react-hooks). Ini penting karena status
+  // tersebut baru diketahui setelah mount (SSR/first render = false); tanpa
+  // penanganan, loader akan macet di fase "enter": overlay `fixed inset-0
+  // z-[10000]` tetap ada → memblokir klik & mengunci scroll (bug F5), dan
+  // pengunjung yang reload tetap menunggu 2,1 detik.
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || skip) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     timers.push(setTimeout(() => setPhase("hold"), CLOSE_DURATION));
     timers.push(
@@ -97,7 +102,7 @@ export function IntroLoader() {
       ),
     );
     return () => timers.forEach(clearTimeout);
-  }, [reduced]);
+  }, [reduced, skip]);
 
   // Animasi progres 0 → 100% selama fase hold.
   useEffect(() => {
