@@ -145,6 +145,8 @@ export type ShowcaseBandProps = {
   curve?: number;
   /** Lebar fade di tiap ujung, persen lebar panggung. @default 12 */
   fade?: number;
+  /** Bekukan band di posisi saat ini (dipakai tombol MotionToggle). */
+  paused?: boolean;
 };
 
 /**
@@ -165,6 +167,7 @@ export function ShowcaseBand({
   axis = 50,
   curve = 80,
   fade = 12,
+  paused = false,
   className,
   ...props
 }: ComponentProps<"div"> & ShowcaseBandProps) {
@@ -308,6 +311,10 @@ export function ShowcaseBand({
                 animation: reduced
                   ? "none"
                   : `${orbit} ${duration}s linear ${-t * speed}s infinite`,
+                // Jeda manual (tombol) — bukan reduced-motion; posisi beku di
+                // frame saat tombol ditekan, lanjut lagi saat dimainkan.
+                animationPlayState:
+                  !reduced && paused ? "paused" : undefined,
                 transform: reduced ? turn(deg) : undefined,
                 visibility: reduced ? (off ? "hidden" : "visible") : undefined,
               }}

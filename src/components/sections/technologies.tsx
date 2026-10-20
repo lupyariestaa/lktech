@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import type { ManagedTechnology } from "@/lib/content-types";
 import { Reveal } from "@/components/motion";
 import { TechnologyLogo } from "@/components/technology-logo";
+import { MotionToggle } from "@/components/motion-toggle";
 import { useContent } from "@/components/content-provider";
+import { useReducedMotionPreference } from "@/lib/intro";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,10 +25,12 @@ function MarqueeRow({
   items,
   reverse = false,
   decorative = false,
+  paused = false,
 }: {
   items: ManagedTechnology[];
   reverse?: boolean;
   decorative?: boolean;
+  paused?: boolean;
 }) {
   const loop = [...items, ...items];
   return (
@@ -35,6 +40,7 @@ function MarqueeRow({
           "flex w-max gap-4 [will-change:transform] hover:[animation-play-state:paused]",
           reverse ? "animate-marquee-reverse" : "animate-marquee",
         )}
+        style={paused ? { animationPlayState: "paused" } : undefined}
       >
         {loop.map((item, i) => (
           <div
@@ -51,6 +57,8 @@ function MarqueeRow({
 
 export function Technologies() {
   const { technologies } = useContent();
+  const [paused, setPaused] = useState(false);
+  const reduced = useReducedMotionPreference();
 
   // Tidak ada teknologi → jangan tampilkan section sama sekali.
   if (technologies.length === 0) return null;
@@ -66,9 +74,20 @@ export function Technologies() {
       aria-label="Teknologi yang kami gunakan"
     >
       <Reveal className="mx-auto max-w-6xl px-6">
-        <p className="text-center text-xs font-medium tracking-widest text-muted uppercase">
-          Teknologi yang kami gunakan
-        </p>
+        <div className="relative flex flex-col items-center gap-3 sm:block">
+          <p className="text-center text-xs font-medium tracking-widest text-muted uppercase">
+            Teknologi yang kami gunakan
+          </p>
+          {/* WCAG 2.2.2: kontrol jeda yang bisa dipakai keyboard & sentuh. */}
+          {!reduced && (
+            <MotionToggle
+              paused={paused}
+              onToggle={() => setPaused((v) => !v)}
+              label="animasi logo teknologi"
+              className="sm:absolute sm:top-1/2 sm:right-0 sm:-translate-y-1/2"
+            />
+          )}
+        </div>
       </Reveal>
 
       {/* Dua baris marquee: atas ke kiri, bawah ke kanan. Satu mask kiri/kanan
@@ -77,8 +96,8 @@ export function Technologies() {
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-white to-transparent sm:w-24" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-white to-transparent sm:w-24" />
         <div className="flex flex-col gap-3">
-          <MarqueeRow items={technologies} />
-          <MarqueeRow items={reversed} reverse decorative />
+          <MarqueeRow items={technologies} paused={paused} />
+          <MarqueeRow items={reversed} reverse decorative paused={paused} />
         </div>
       </div>
     </section>

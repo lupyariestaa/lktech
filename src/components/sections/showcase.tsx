@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useContent } from "@/components/content-provider";
 import { SectionHeading } from "@/components/section-heading";
 import { Reveal } from "@/components/motion";
 import { HeroShowcaseCarousel } from "@/components/hero-showcase-carousel";
 import { ShowcaseBand } from "@/components/sections/showcase-band";
+import { MotionToggle } from "@/components/motion-toggle";
+import { useReducedMotionPreference } from "@/lib/intro";
 
 /**
  * Section "Pratinjau" (F7) — hasil desain yang sebelumnya menjadi mockup di
@@ -28,6 +31,8 @@ import { ShowcaseBand } from "@/components/sections/showcase-band";
  */
 export function Showcase() {
   const { hero } = useContent();
+  const [paused, setPaused] = useState(false);
+  const reduced = useReducedMotionPreference();
   const hasImages = hero.enabled && hero.browser.length > 0;
 
   return (
@@ -58,15 +63,28 @@ export function Showcase() {
 
       {hasImages ? (
         /* Full-bleed: ujung band melengkung & memudar ke tepi layar. */
-        <Reveal delay={0.1} className="mt-14">
-          <ShowcaseBand
-            images={hero.browser}
-            speed={3}
-            tileHeight={52}
-            aspectRatio={1.6}
-            className="h-[280px] sm:h-[340px] lg:h-[400px]"
-          />
-        </Reveal>
+        <>
+          <Reveal delay={0.1} className="mt-14">
+            <ShowcaseBand
+              images={hero.browser}
+              speed={3}
+              tileHeight={52}
+              aspectRatio={1.6}
+              paused={paused}
+              className="h-[280px] sm:h-[340px] lg:h-[400px]"
+            />
+          </Reveal>
+          {/* WCAG 2.2.2: band bergerak terus → sediakan kontrol jeda. */}
+          {!reduced && (
+            <div className="relative mt-6 flex justify-center">
+              <MotionToggle
+                paused={paused}
+                onToggle={() => setPaused((v) => !v)}
+                label="animasi pratinjau"
+              />
+            </div>
+          )}
+        </>
       ) : (
         <div className="relative mx-auto mt-14 max-w-6xl px-6">
           <div className="relative mx-auto max-w-5xl">
