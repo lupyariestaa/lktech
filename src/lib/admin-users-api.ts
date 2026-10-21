@@ -1,4 +1,5 @@
 import { adminFetch } from "@/lib/admin-fetch";
+import { csvCell } from "@/lib/csv";
 import type {
   AdminUserRow,
   AdminUsersSummary,
@@ -69,12 +70,6 @@ export async function deleteUser(id: string): Promise<void> {
     `/api/admin/users?id=${encodeURIComponent(id)}`,
     { method: "DELETE" },
   );
-}
-
-/** Quote satu sel CSV (aman terhadap koma/kutip/newline). */
-function csvCell(value: unknown): string {
-  const s = value === null || value === undefined ? "" : String(value);
-  return `"${s.replace(/"/g, '""')}"`;
 }
 
 /** Ekspor daftar user ke CSV (menghormati urutan yang sedang tampil). */

@@ -1,4 +1,5 @@
 import { adminFetch } from "@/lib/admin-fetch";
+import { csvCell } from "@/lib/csv";
 import {
   ORDER_STATUS_LABEL,
   type Order,
@@ -216,12 +217,6 @@ export async function createOrderInvoiceManual(id: string) {
     method: "POST",
     body: JSON.stringify({ id, action: "invoice" }),
   });
-}
-
-/** Bungkus nilai agar aman sebagai sel CSV (quote + escape). */
-function csvCell(value: unknown): string {
-  const s = value === null || value === undefined ? "" : String(value);
-  return `"${s.replace(/"/g, '""')}"`;
 }
 
 /**

@@ -17,6 +17,7 @@ import {
   restoreCoupon,
   type CouponDetailResult,
 } from "@/lib/admin-coupons-api";
+import { csvCell } from "@/lib/csv";
 import {
   COUPON_TYPE_LABEL,
   COUPON_AUDIENCE_LABEL,
@@ -50,12 +51,14 @@ function valueLabel(c: Coupon): string {
 
 /** Ekspor daftar pemakai ke CSV (C5). */
 function exportRedemptions(coupon: Coupon, rows: CouponDetailResult["redemptions"]) {
-  const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const headers = ["Email", "UID", "Jumlah Pakai", "Terakhir"];
   const body = rows.map((r) =>
-    [r.email ?? "", r.uid, r.count, r.lastRedeemedAtISO ?? ""].map(cell).join(","),
+    [r.email ?? "", r.uid, r.count, r.lastRedeemedAtISO ?? ""]
+      .map(csvCell)
+      .join(","),
   );
-  const csv = "\uFEFF" + [headers.map(cell).join(","), ...body].join("\r\n");
+  const csv =
+    "\uFEFF" + [headers.map(csvCell).join(","), ...body].join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

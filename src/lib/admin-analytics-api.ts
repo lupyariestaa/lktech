@@ -1,4 +1,5 @@
 import { adminFetch } from "@/lib/admin-fetch";
+import { csvCell } from "@/lib/csv";
 import type {
   AnalyticsMode,
   SalesAnalytics,
@@ -19,12 +20,6 @@ export async function fetchSalesAnalytics(opts: {
     `/api/admin/analytics?${params.toString()}`,
   );
   return data.analytics;
-}
-
-/** Quote sel CSV. */
-function csvCell(value: unknown): string {
-  const s = value === null || value === undefined ? "" : String(value);
-  return `"${s.replace(/"/g, '""')}"`;
 }
 
 /**

@@ -246,7 +246,7 @@ export function BroadcastComposer() {
         {/* Kirim uji */}
         <label className="flex flex-col gap-1.5 sm:max-w-xs">
           <span className="text-xs font-medium text-slate-600">
-            Email uji (opsional — kosong = email Anda)
+            Email uji (opsional — kosong = email Anda; harus admin aktif)
           </span>
           <input
             type="email"

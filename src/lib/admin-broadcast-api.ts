@@ -1,4 +1,5 @@
 import { adminFetch } from "@/lib/admin-fetch";
+import { csvCell } from "@/lib/csv";
 import type { Subscriber, BroadcastSegment } from "@/lib/newsletter-types";
 import type { BroadcastLog } from "@/lib/newsletter-pure";
 
@@ -79,7 +80,6 @@ export function exportSubscribersToCsv(
   filename?: string,
 ) {
   const header = ["Email", "Nama", "Sumber", "Status", "Terdaftar", "Berhenti"];
-  const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const rows = subscribers.map((s) =>
     [
       s.email,
@@ -89,10 +89,10 @@ export function exportSubscribersToCsv(
       s.createdAtISO,
       s.unsubscribedAtISO ?? "",
     ]
-      .map(cell)
+      .map(csvCell)
       .join(","),
   );
-  const csv = "\uFEFF" + [header.map(cell).join(","), ...rows].join("\r\n");
+  const csv = "\uFEFF" + [header.map(csvCell).join(","), ...rows].join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
+import { isAdminEmail } from "@/lib/admins";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
 import {
   getBroadcastOverview,
@@ -69,6 +71,19 @@ export async function POST(req: Request) {
 
   const action = body.action === "test" ? "test" : "send";
 
+  // ADM-07: batasi spam/kuota email. Broadcast massal lebih ketat daripada uji.
+  const rl = await checkRateLimit(
+    `broadcast-${action}:${check.uid}`,
+    action === "test" ? 10 : 5,
+    10 * 60 * 1000,
+  );
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Terlalu banyak percobaan. Coba lagi nanti." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   // Validasi murni (pesan error seragam dgn UI).
   const validated = validateBroadcast({
     subject: body.subject,
@@ -86,8 +101,18 @@ export async function POST(req: Request) {
   if (action === "test") {
     const to =
       typeof body.testEmail === "string" && body.testEmail.trim()
-        ? body.testEmail.trim()
+        ? body.testEmail.trim().toLowerCase()
         : check.email;
+
+    // Cegah endpoint uji dipakai mengirim ke alamat publik sembarang.
+    const self = check.email.trim().toLowerCase();
+    if (to !== self && !(await isAdminEmail(to))) {
+      return NextResponse.json(
+        { error: "Email uji harus alamat admin aktif." },
+        { status: 403 },
+      );
+    }
+
     const result = await sendTestBroadcast({
       to,
       subject: draft.subject,

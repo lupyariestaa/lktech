@@ -1,4 +1,5 @@
 ﻿import { adminFetch } from "@/lib/admin-fetch";
+import { csvCell } from "@/lib/csv";
 import type { StoredLead, LeadStatus } from "@/lib/lead-types";
 import type {
   MediaItem,
@@ -56,12 +57,6 @@ export async function deleteLead(id: string) {
     `/api/admin/leads?id=${encodeURIComponent(id)}`,
     { method: "DELETE" },
   );
-}
-
-/** Bungkus nilai agar aman sebagai sel CSV (quote + escape). */
-function csvCell(value: unknown): string {
-  const s = value === null || value === undefined ? "" : String(value);
-  return `"${s.replace(/"/g, '""')}"`;
 }
 
 /**
@@ -340,12 +335,6 @@ export async function fetchMediaAudit(
   return data.items;
 }
 
-/** Bungkus nilai agar aman sebagai sel CSV (quote + escape). */
-function mediaCsvCell(value: unknown): string {
-  const s = value === null || value === undefined ? "" : String(value);
-  return `"${s.replace(/"/g, '""')}"`;
-}
-
 /**
  * Ubah daftar media menjadi CSV dan unduh di browser. Kolom mencakup metadata
  * inti + `alt`, kategori, tag, koleksi, dan status.
@@ -391,11 +380,11 @@ export function exportMediaToCsv(
       m.createdAt ?? "",
       m.usageCount,
     ]
-      .map(mediaCsvCell)
+      .map(csvCell)
       .join(","),
   );
 
-  const csv = "\uFEFF" + [headers.map(mediaCsvCell).join(","), ...rows].join("\r\n");
+  const csv = "\uFEFF" + [headers.map(csvCell).join(","), ...rows].join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

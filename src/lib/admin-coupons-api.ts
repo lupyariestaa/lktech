@@ -1,4 +1,5 @@
 import { adminFetch } from "@/lib/admin-fetch";
+import { csvCell } from "@/lib/csv";
 import {
   COUPON_TYPE_LABEL,
   type Coupon,
@@ -166,12 +167,6 @@ export async function duplicateCouponRequest(id: string): Promise<Coupon> {
     body: JSON.stringify({ action: "duplicate", id }),
   });
   return data.coupon;
-}
-
-/** Quote satu sel CSV. */
-function csvCell(value: unknown): string {
-  const s = value === null || value === undefined ? "" : String(value);
-  return `"${s.replace(/"/g, '""')}"`;
 }
 
 /** Ekspor daftar kupon ke CSV (opsional menyertakan statistik dampak). */

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { isEmailConfigured, sendTestEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -15,6 +16,14 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  const rl = await checkRateLimit(`email-test:${check.uid}`, 5, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Terlalu banyak permintaan. Coba lagi nanti." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
 
   if (!isEmailConfigured) {
     return NextResponse.json(
