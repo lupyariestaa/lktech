@@ -9,7 +9,7 @@ import {
   validateBackupBundle,
   type BackupSource,
 } from "@/lib/backup-pure";
-import { adminFetch } from "@/lib/admin-fetch";
+import { adminFetch, ApiError } from "@/lib/admin-fetch";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { cn } from "@/lib/utils";
@@ -89,7 +89,14 @@ export function SettingsBackup() {
           { method: "POST", body: JSON.stringify(json) },
         );
         setDryRun(res);
-      } catch {
+      } catch (err) {
+        // Kebijakan OWNER untuk sumber admins bukan kegagalan pratinjau biasa:
+        // hentikan di sini agar admin tidak lanjut ke tombol Pulihkan.
+        if (err instanceof ApiError && err.status === 403) {
+          toast.error(err.message);
+          setPending(null);
+          return;
+        }
         /* pratinjau opsional — jangan blokir bila gagal */
       }
     } catch {
@@ -189,7 +196,8 @@ export function SettingsBackup() {
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             Impor menimpa/menggabungkan dokumen dengan id yang sama. Pastikan file berasal dari
-            sumber tepercaya. Tindakan dicatat di audit log.
+            sumber tepercaya. Tindakan dicatat di audit log. Sumber “Daftar admin” hanya dapat
+            dipulihkan oleh OWNER.
           </span>
         </div>
         <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-secondary transition-colors hover:border-primary/30 hover:text-primary">
@@ -241,8 +249,9 @@ export function SettingsBackup() {
           </ul>
           {dryRun && (
             <p className="mt-3 text-[11px] text-muted">
-              OWNER dilindungi & admin dipaksa aktif saat restore. Snapshot otomatis dibuat
-              sebelum penulisan (koleksi <code>_backup_snapshots</code>).
+              OWNER dilindungi & admin dipaksa aktif saat restore. Sumber “Daftar admin” hanya
+              untuk OWNER. Snapshot otomatis dibuat sebelum penulisan (koleksi{" "}
+              <code>_backup_snapshots</code>).
             </p>
           )}
 

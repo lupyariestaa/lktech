@@ -1,4 +1,4 @@
-import type { JsonLd } from "@/lib/structured-data-pure";
+import { jsonLdString, type JsonLd } from "@/lib/structured-data-pure";
 
 /**
  * Merender satu node JSON-LD sebagai `<script type="application/ld+json">`.
@@ -13,8 +13,8 @@ export function JsonLdScript({ node }: { node: JsonLd | JsonLd[] | null | undefi
   return (
     <script
       type="application/ld+json"
-      // Data terstruktur tepercaya (bukan input pengguna mentah) — aman untuk inline.
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      // Serializer men-escape `</script>` & karakter pemutus script lainnya.
+      dangerouslySetInnerHTML={{ __html: jsonLdString(data) }}
     />
   );
 }

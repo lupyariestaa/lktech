@@ -16,6 +16,7 @@ import { ArticleShare } from "@/components/blog/article-share";
 import { ArticleViewTracker } from "@/components/blog/article-view-tracker";
 import { ArticleSidebar } from "@/components/blog/article-sidebar";
 import { NewsletterForm } from "@/components/newsletter-form";
+import { jsonLdString } from "@/lib/structured-data-pure";
 import {
   getArticleSlugs,
   getArticles,
@@ -153,11 +154,11 @@ export default async function ArticleDetailPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
 
       <PageHero

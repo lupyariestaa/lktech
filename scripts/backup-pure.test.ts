@@ -152,8 +152,49 @@ test("planImport: admins — OWNER dihitung skipped", () => {
   );
   assert.equal(b.ok, true);
   if (b.ok) {
-    const plan = planImport(b.bundle, OWNER);
+    const plan = planImport(b.bundle, OWNER, { allowAdmins: true });
     assert.equal(plan.operations.length, 1);
+    assert.equal(plan.skipped, 1);
+  }
+});
+
+test("planImport: non-OWNER dilarang menulis admins (fail-closed)", () => {
+  const b = validateBackupBundle(
+    bundle({
+      data: {
+        admins: [
+          { _id: "attacker@example.com" },
+          { _id: "owner@lktech.id" },
+        ],
+      },
+      meta: { version: BACKUP_VERSION, sources: ["admins"] },
+    }),
+  );
+  assert.equal(b.ok, true);
+  if (b.ok) {
+    const plan = planImport(b.bundle, OWNER); // default allowAdmins=false
+    assert.equal(plan.operations.length, 0);
+    assert.equal(plan.skipped, 2);
+    assert.equal(plan.perSource[0].accepted, 0);
+    assert.equal(plan.perSource[0].skipped, 2);
+  }
+});
+
+test("planImport: blokir admins tidak memblokir sumber lain", () => {
+  const b = validateBackupBundle(
+    bundle({
+      data: {
+        products: [{ _id: "p1" }],
+        admins: [{ _id: "attacker@example.com" }],
+      },
+      meta: { version: BACKUP_VERSION, sources: ["products", "admins"] },
+    }),
+  );
+  assert.equal(b.ok, true);
+  if (b.ok) {
+    const plan = planImport(b.bundle, OWNER, { allowAdmins: false });
+    assert.equal(plan.operations.length, 1);
+    assert.equal(plan.operations[0].source, "products");
     assert.equal(plan.skipped, 1);
   }
 });

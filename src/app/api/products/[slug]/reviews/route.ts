@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/admin-guard";
 import { getProductsBySlugs } from "@/lib/products";
 import { findCompletedOrderForProduct } from "@/lib/orders";
 import { createReview, listProductReviews } from "@/lib/reviews";
+import { maskBuyerName } from "@/lib/structured-data-pure";
 import { reviewSubmitSchema } from "@/lib/api-schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { Review } from "@/lib/review-types";
@@ -14,20 +15,12 @@ export const dynamic = "force-dynamic";
 function toPublicReview(r: Review) {
   return {
     id: r.id,
-    buyerName: maskName(r.buyerName),
+    buyerName: maskBuyerName(r.buyerName),
     rating: r.rating,
     title: r.title ?? null,
     body: r.body ?? null,
     createdAtISO: r.createdAtISO,
   };
-}
-
-/** Samarkan nama pembeli (privasi): "Budi Santoso" → "Budi S.". */
-function maskName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "Pembeli";
-  if (parts.length === 1) return parts[0];
-  return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
 }
 
 /**

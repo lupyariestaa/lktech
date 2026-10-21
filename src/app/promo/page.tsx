@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, MessageCircle, Ticket } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
+import { jsonLdString } from "@/lib/structured-data-pure";
 import { PromoList } from "@/components/promo-list";
 import { CtaContact } from "@/components/sections/cta-contact";
 import { TrackedWaButton } from "@/components/tracked-wa-button";
@@ -46,7 +47,7 @@ export default async function PromoPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
       />
 
       <PageHero

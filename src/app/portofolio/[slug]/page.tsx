@@ -23,6 +23,7 @@ import {
   getProjects,
 } from "@/lib/projects";
 import { getPortfolioMediaMap } from "@/lib/portfolio-media";
+import { jsonLdString } from "@/lib/structured-data-pure";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { SITE } from "@/lib/site";
@@ -117,7 +118,7 @@ export default async function ProjectDetailPage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
+          __html: jsonLdString([
             {
               "@context": "https://schema.org",
               "@type": "CreativeWork",

@@ -115,14 +115,41 @@ export function buildItemList(
   };
 }
 
-/** Serialisasi aman untuk `<script type="application/ld+json">`. */
-export function jsonLdString(node: JsonLd): string {
-  return JSON.stringify(node);
+/**
+ * Serialisasi aman untuk `<script type="application/ld+json">`.
+ *
+ * `JSON.stringify` saja tidak cukup: string pengguna yang berisi `</script>`
+ * dapat menutup tag dan mengeksekusi HTML berikutnya (stored XSS). Escape
+ * karakter yang relevan agar hasilnya tetap JSON valid tetapi tidak bisa
+ * keluar dari konteks script.
+ */
+export function jsonLdString(node: JsonLd | JsonLd[]): string {
+  return JSON.stringify(node)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 /* ============================================================
  * Fase S3 — pembangun tambahan (murni & teruji)
  * ============================================================ */
+
+/**
+ * Nama pembeli yang aman untuk tampilan publik: "Budi Santoso" → "Budi S.".
+ * Dipakai bersama oleh API ulasan & JSON-LD agar keduanya tidak membocorkan
+ * nama lengkap. Nama satu kata dipertahankan (perilaku lama API).
+ */
+export function maskBuyerName(
+  name: string | null | undefined,
+  fallback = "Pembeli",
+): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return fallback;
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
+}
 
 /** Satu ulasan minimal untuk node `Review`. */
 export type ReviewInput = {
@@ -143,7 +170,10 @@ export function buildReviewNodes(reviews: readonly ReviewInput[]): JsonLd[] {
     .filter((r) => Number.isFinite(r?.rating) && r.rating >= 1 && r.rating <= 5)
     .map((r) => ({
       "@type": "Review",
-      author: { "@type": "Person", name: r.buyerName?.trim() || "Pembeli LKTech" },
+      author: {
+        "@type": "Person",
+        name: maskBuyerName(r.buyerName, "Pembeli LKTech"),
+      },
       datePublished: r.createdAtISO,
       ...(r.title ? { name: plainText(r.title) } : {}),
       reviewBody: plainText(r.body || r.title || "Ulasan pembeli terverifikasi."),

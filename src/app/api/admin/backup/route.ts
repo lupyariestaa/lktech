@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
+import { isOwnerEmail } from "@/lib/admins";
 import { dryRunImport, exportBackup, importBackup } from "@/lib/backup";
 import { validateBackupBundle, BACKUP_SOURCES, type BackupSource } from "@/lib/backup-pure";
 import { recordAdminAudit } from "@/lib/admin-audit";
@@ -85,14 +86,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
+  // Restore `admins` adalah batas OWNER (ADM-01). Tolak sebelum dry-run agar
+  // non-OWNER tidak bisa memakai endpoint ini untuk menambah/mengaktifkan admin.
+  const owner = isOwnerEmail(check.email);
+  const adminRows = validation.bundle.data.admins;
+  if (!owner && Array.isArray(adminRows) && adminRows.length > 0) {
+    return NextResponse.json(
+      { error: "Hanya OWNER yang dapat memulihkan data admin." },
+      { status: 403 },
+    );
+  }
+  const policy = { allowAdmins: owner };
+
   // Dry-run (G4): hitung dampak tanpa menulis — untuk pratinjau admin.
   const url = new URL(req.url);
   if (url.searchParams.get("dryRun") === "1") {
-    return NextResponse.json({ ok: true, dryRun: true, ...dryRunImport(validation.bundle) });
+    return NextResponse.json({
+      ok: true,
+      dryRun: true,
+      ...dryRunImport(validation.bundle, policy),
+    });
   }
 
   try {
-    const result = await importBackup(validation.bundle);
+    const result = await importBackup(validation.bundle, policy);
     // Restore menulis ulang banyak koleksi → buang SEMUA cache data publik +
     // cache turunan pesanan, lalu segarkan halaman publik.
     for (const tag of ALL_CACHE_TAGS) revalidateTag(tag, REVALIDATE_NOW);

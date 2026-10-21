@@ -8,6 +8,7 @@ import {
   planImport,
   type BackupBundle,
   type BackupSource,
+  type ImportPolicy,
 } from "@/lib/backup-pure";
 
 /**
@@ -114,8 +115,11 @@ export type DryRunResult = {
  * Dry-run impor: hitung apa yang AKAN ditulis tanpa mengubah apa pun (G4).
  * Menerapkan sanitasi & batas yang sama dengan impor nyata.
  */
-export function dryRunImport(bundle: BackupBundle): DryRunResult {
-  const plan = planImport(bundle, getOwnerEmails());
+export function dryRunImport(
+  bundle: BackupBundle,
+  policy: ImportPolicy,
+): DryRunResult {
+  const plan = planImport(bundle, getOwnerEmails(), policy);
   return {
     total: plan.perSource.reduce((sum, p) => sum + p.total, 0),
     willWrite: plan.operations.length,
@@ -150,17 +154,21 @@ async function snapshotCollections(
  * Impor bundle backup (merge). Best-effort + aman.
  *
  * Keamanan (G2/G3/G4):
- * - Sanitasi per-barid (`planImport`): ADMIN **OWNER dilindungi** (tak ditulis),
+ * - Sanitasi per-baris (`planImport`): ADMIN **OWNER dilindungi** (tak ditulis),
  *   admin lain dipaksa `active:true`, `settings` dipaksa ke `SETTINGS_DOC_ID`.
+ * - `admins` hanya ditulis bila `policy.allowAdmins` (route hanya mengizinkan OWNER).
  * - **Snapshot** koleksi yang akan ditimpa (koleksi `_backup_snapshots`) —
  *   memberi jalur "undo" bila restore salah.
  * - Batas total `IMPORT_CAP` baris; kelebihannya dibuang & ditandai `truncated`.
  */
-export async function importBackup(bundle: BackupBundle): Promise<ImportResult> {
+export async function importBackup(
+  bundle: BackupBundle,
+  policy: ImportPolicy,
+): Promise<ImportResult> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
 
-  const plan = planImport(bundle, getOwnerEmails());
+  const plan = planImport(bundle, getOwnerEmails(), policy);
   const total = plan.perSource.reduce((sum, p) => sum + p.total, 0);
 
   // Snapshot koleksi target (kecuali settings, satu dokumen) — best-effort.

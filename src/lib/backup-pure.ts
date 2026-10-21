@@ -180,6 +180,11 @@ export function sanitizeBackupRow(
   return { ok: true, id, data };
 }
 
+/** Kebijakan impor: hanya OWNER yang boleh memulihkan koleksi `admins`. */
+export type ImportPolicy = {
+  allowAdmins: boolean;
+};
+
 /** Hasil rencana impor (murni) — dipakai untuk dry-run & eksekusi. */
 export type ImportPlan = {
   /** Baris yang valid & akan ditulis (sudah tersaring). */
@@ -195,12 +200,14 @@ export type ImportPlan = {
  * Membangun RENCANA impor dari bundle yang sudah tervalidasi (murni).
  *
  * - Menerapkan `sanitizeBackupRow` per baris (keamanan G2/G3).
+ * - `admins` hanya direncanakan bila `policy.allowAdmins` (khusus OWNER).
  * - Batasi total operasi ke `IMPORT_CAP` (G4) & tandai `truncated`.
  * - Menghasilkan `perSource` untuk ringkasan/dry-run.
  */
 export function planImport(
   bundle: BackupBundle,
   ownerEmails: readonly string[],
+  policy: ImportPolicy = { allowAdmins: false },
 ): ImportPlan {
   const operations: ImportPlan["operations"] = [];
   const perSource: ImportPlan["perSource"] = [];
@@ -209,6 +216,15 @@ export function planImport(
 
   for (const [source, rows] of Object.entries(bundle.data) as Array<[BackupSource, unknown[]]>) {
     if (!Array.isArray(rows)) continue;
+
+    // Fail-closed: pemanggil yang tidak secara eksplisit mengizinkan (OWNER)
+    // tidak boleh menulis koleksi `admins`, walau route lupa memeriksa.
+    if (source === "admins" && !policy.allowAdmins) {
+      skipped += rows.length;
+      perSource.push({ source, total: rows.length, accepted: 0, skipped: rows.length });
+      continue;
+    }
+
     let accepted = 0;
     let sourceSkipped = 0;
 

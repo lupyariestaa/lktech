@@ -7,6 +7,7 @@ import { BlogIndex } from "@/components/blog/blog-index";
 import { getArticleCategoryList, getArticlesByCategory } from "@/lib/articles";
 import { parseListQuery } from "@/lib/article-ui";
 import { resolveLabelFromSlug, taxonomySlug } from "@/lib/article-types";
+import { jsonLdString } from "@/lib/structured-data-pure";
 import { SITE } from "@/lib/site";
 
 type Params = { category: string };
@@ -92,11 +93,11 @@ export default async function BlogCategoryPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
 
       <PageHero

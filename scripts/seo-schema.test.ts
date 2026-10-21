@@ -8,6 +8,8 @@ import {
   buildOpeningHours,
   buildSearchAction,
   buildSameAs,
+  jsonLdString,
+  maskBuyerName,
   priceValidUntil,
 } from "../src/lib/structured-data-pure.ts";
 
@@ -118,6 +120,53 @@ test("buildReviewNodes: nama kosong ? fallback", () => {
 
 test("buildReviewNodes: kosong ? []", () => {
   assert.deepEqual(buildReviewNodes([]), []);
+});
+
+test("buildReviewNodes: nama lengkap disamarkan", () => {
+  const nodes = buildReviewNodes([
+    { rating: 5, createdAtISO: "2026-01-01", buyerName: "Budi Santoso" },
+  ]);
+  assert.equal((nodes[0].author as Record<string, unknown>).name, "Budi S.");
+});
+
+test("maskBuyerName: fallback & satu kata", () => {
+  assert.equal(maskBuyerName("  "), "Pembeli");
+  assert.equal(maskBuyerName(undefined, "Pembeli LKTech"), "Pembeli LKTech");
+  assert.equal(maskBuyerName("Budi"), "Budi");
+  assert.equal(maskBuyerName("Budi Santoso Wijaya"), "Budi W.");
+});
+
+test("jsonLdString: escape </script>, &, dan line separator", () => {
+  const payload = {
+    name: "</script><script>alert(1)</script>",
+    note: "a&b\u2028c\u2029d",
+  };
+  const json = jsonLdString(payload);
+
+  assert.equal(json.includes("</script>"), false);
+  assert.equal(json.includes("\u2028"), false);
+  assert.equal(json.includes("\u2029"), false);
+  assert.ok(json.includes("\\u003c/script\\u003e"));
+  assert.deepEqual(JSON.parse(json), payload);
+});
+
+test("jsonLdString: menerima array node", () => {
+  const nodes = [{ "@type": "Thing", name: "A" }, { "@type": "Thing", name: "B" }];
+  const json = jsonLdString(nodes);
+  assert.deepEqual(JSON.parse(json), nodes);
+});
+
+test("jsonLdString: payload buyerName tidak bisa menutup script", () => {
+  const nodes = buildReviewNodes([
+    {
+      rating: 5,
+      createdAtISO: "2026-01-01",
+      buyerName: "</script><script>alert(1)</script>",
+    },
+  ]);
+  const json = jsonLdString(nodes);
+  assert.equal(json.includes("</script>"), false);
+  assert.equal(json.includes("<script>"), false);
 });
 
 /* ---- S3: buildOpeningHours ---- */

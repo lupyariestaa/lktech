@@ -11,6 +11,7 @@ import {
   buildOpeningHours,
   buildSearchAction,
   buildSameAs,
+  jsonLdString,
 } from "@/lib/structured-data-pure";
 import type { SiteSettings } from "@/lib/settings-types";
 
@@ -109,8 +110,8 @@ export function StructuredData({ settings }: { settings: SiteSettings }) {
   return (
     <script
       type="application/ld+json"
-      // Data statis & tepercaya (bukan input pengguna) — aman untuk inline.
-      dangerouslySetInnerHTML={{ __html: JSON.stringify([business, website]) }}
+      // Serializer men-escape `</script>` & karakter pemutus script lainnya.
+      dangerouslySetInnerHTML={{ __html: jsonLdString([business, website]) }}
     />
   );
 }
