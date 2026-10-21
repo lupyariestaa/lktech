@@ -1,6 +1,7 @@
 # Audit Dashboard Admin LKTech — Otorisasi, Integritas Data, UX, Performa & Operasional
 
-> **Status:** 📝 **DOKUMEN TEMUAN (audit) — belum ada perubahan kode.**
+> **Status:** 📝 **DOKUMEN TEMUAN (audit).** **P0 (ADM-01 & ADM-02) sudah
+> diperbaiki 2026-10-21 (commit `a36bf53`); P1–P3 belum.**
 > **Tanggal:** 2026-10-21
 > **Cakupan:** `/admin/**` (33 halaman), 36 route API admin, 80 komponen admin,
 > alur login/sesi, guard server & klien, Firestore, audit log, backup/restore,
@@ -15,6 +16,9 @@
 > **Legenda status:** 🟢 **Terverifikasi** (kode/test/harness/runtime) ·
 > 🟡 **Dugaan** (bukti kuat, butuh data/kredensial/volume nyata) ·
 > ⚪ **Tidak diverifikasi** (di luar sesi ini).
+>
+> **Catatan:** bukti & nomor baris di setiap temuan menggambarkan kondisi **sebelum**
+> perbaikan P0; status implementasi ada di §9.
 
 ---
 
@@ -94,7 +98,7 @@ volume dan beberapa perilaku browser ditandai 🟡/⚪ bila relevan.
 ### ADM-01 · 🔴 Kritis · Restore backup melewati batas OWNER-only
 
 **Status:** 🟢 Terverifikasi — kode + harness `planImport` (tidak dieksekusi ke
-Firestore produksi).
+Firestore produksi). **✅ Diperbaiki 2026-10-21 (`a36bf53`)** — lihat §9.
 
 **Bukti:**
 
@@ -141,6 +145,7 @@ berarti file backup yang diunduh admin berisi daftar email admin.
 ### ADM-02 · 🔴 Kritis · Stored XSS di JSON-LD ulasan (dan bocor nama lengkap)
 
 **Status:** 🟢 Terverifikasi — pembacaan kode + harness serialisasi.
+**✅ Diperbaiki 2026-10-21 (`a36bf53`)** — lihat §9.
 
 **Bukti:**
 
@@ -890,13 +895,28 @@ untuk mereservasi slug, update memakai `expectedVersion`; test dua request bersa
 
 | ID | Tindakan | Ukuran |
 | -- | -------- | ------ |
-| ADM-01 | Batasi restore/backup admin ke OWNER; tolak `admins` untuk non-OWNER; test `planImport` | M |
+| ADM-01 | Batasi restore `admins` ke OWNER; tolak `admins` untuk non-OWNER; test `planImport` (ekspor PII tetap P1/ADM-03) | M |
 | ADM-02 | Escape serializer JSON-LD; mask author; test payload XSS | S |
 | — | Tambahkan regression test untuk ADM-01/02 ke CI | S |
 
 **Definition of done P0:** non-OWNER mendapat 403 saat mencoba menulis `admins`;
 output JSON-LD tidak pernah mengandung `</script>` mentah; nama publik tersamar;
 build + test hijau.
+
+### ✅ Status implementasi P0 — selesai (2026-10-21, `a36bf53`)
+
+- **ADM-01** — `POST /api/admin/backup` menolak bundle yang berisi baris `admins`
+  dari non-OWNER (403). `planImport` kini fail-closed (`allowAdmins: false` secara
+  default), route meneruskan izin hanya untuk OWNER, dan UI berhenti bila dry-run
+  mendapat 403. Non-OWNER masih dapat memulihkan sumber non-admin.
+- **ADM-02** — `jsonLdString` men-escape `<`, `>`, `&`, U+2028, dan U+2029;
+  seluruh renderer JSON-LD memakai serializer ini. `buildReviewNodes` memakai
+  `maskBuyerName`, dan API ulasan memakai helper yang sama agar nama lengkap tidak
+  bocor.
+- **Verifikasi:** `npm run test:backup` 18/18 · `npm run test:seo-schema` 20/20 ·
+  `npm run test:unit` 600/600 · `npm run lint` ✅ · `npm run build` ✅ (161 halaman).
+- **Belum termasuk P0:** ekspor `admins` untuk non-OWNER, revoke sesi, CSP, dan
+  role matrix tetap di P1 (ADM-03/04/05).
 
 ### P1 — hardening otorisasi & data (1–2 sprint)
 
@@ -955,7 +975,8 @@ build + test hijau.
 
 ## 11. Di Luar Cakupan / Belum Diverifikasi
 
-- Tidak ada perubahan kode pada audit ini; semua temuan adalah dokumentasi.
+- Audit awal tidak mengubah kode; P0 (ADM-01/02) diimplementasikan setelah audit
+  dan diverifikasi pada commit `a36bf53`. Temuan P1–P3 masih berupa dokumentasi.
 - E2E admin dengan akun nyata tidak dijalankan karena membutuhkan kredensial dan
   data uji; tidak ada eksploitasi ke Firestore produksi.
 - axe/Lighthouse area admin tidak dijalankan; login terlindungi dan dashboard
@@ -971,10 +992,10 @@ build + test hijau.
 
 ## 12. Langkah Berikutnya
 
-1. Review dokumen ini dan jawab keputusan di §10.
-2. Setelah disetujui, eksekusi **P0** (ADM-01, ADM-02) lebih dulu—tanpa menunggu
-   batch lain.
+1. Review P1–P3 dan jawab keputusan di §10.
+2. ✅ **P0 selesai** (ADM-01/02) pada commit `a36bf53`; jangan regress. Regression
+   test sudah masuk suite unit (`test:backup`, `test:seo-schema`, `test:unit`).
 3. Lanjut P1 (otorisasi/sesi/data), lalu P2 (skala/UX), lalu P3 (polish).
 4. Setiap batch wajib menambah test regresi dan memperbarui
    `docs/README.md` + `TASK-SELANJUTNYA.md`.
-5. Dokumen audit ini **belum di-commit**; commit dilakukan setelah review.
+5. Dokumen audit & status ini sudah di-commit; perbarui status setiap batch.
