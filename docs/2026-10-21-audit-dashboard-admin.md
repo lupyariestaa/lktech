@@ -1,7 +1,8 @@
 # Audit Dashboard Admin LKTech — Otorisasi, Integritas Data, UX, Performa & Operasional
 
 > **Status:** 📝 **DOKUMEN TEMUAN (audit).** **P0 (ADM-01 & ADM-02) sudah
-> diperbaiki 2026-10-21 (commit `a36bf53`); P1–P3 belum.**
+> diperbaiki 2026-10-21 (commit `a36bf53`); P1A (ADM-06 selesai, ADM-05/07
+> sebagian) di commit `69d35b5`; P1 lain–P3 belum.**
 > **Tanggal:** 2026-10-21
 > **Cakupan:** `/admin/**` (33 halaman), 36 route API admin, 80 komponen admin,
 > alur login/sesi, guard server & klien, Firestore, audit log, backup/restore,
@@ -265,6 +266,12 @@ tidak menggantikan pencabutan sesi.
 
 **Status:** 🟢 Terverifikasi — konfigurasi + probe runtime lokal.
 
+**Status implementasi (2026-10-21):** 🟡 **Sebagian** — `X-Frame-Options: DENY`,
+CSP minimal (`frame-ancestors 'none'`, `base-uri 'self'`, `object-src 'none'`),
+dan HSTS produksi sudah terpasang di `next.config.ts`; regression E2E
+`e2e/security-headers.spec.ts` lulus. CSP nonce/hash penuh (report-only →
+enforce) belum; E2E baru mengunci subset header.
+
 **Bukti:**
 
 - `next.config.ts:42-55` hanya memasang `X-Content-Type-Options`,
@@ -286,6 +293,12 @@ memecahkan editor/media/preview.
 ### ADM-06 · 🟡 Sedang · CSV formula injection pada ekspor admin
 
 **Status:** 🟢 Terverifikasi — kode; eksekusi formula di Excel tidak diuji.
+
+**Status implementasi (2026-10-21):** ✅ **Selesai** — util bersama
+`src/lib/csv.ts` menetralkan awalan `=`, `+`, `-`, `@`, tab, dan CR/LF dengan
+apostrof, tetapi mempertahankan angka murni (termasuk negatif). Semua ekspor
+admin (lead, media, user, order, kupon, pemakai kupon, analitik, subscriber)
+memakai util ini. Regression `scripts/csv.test.ts` (3 test) masuk `test:unit`.
 
 **Bukti:**
 
@@ -310,6 +323,12 @@ Pertimbangkan ekspor `.xlsx` dengan sel bertipe teks.
 ### ADM-07 · 🟡 Sedang · Rate-limit sangat jarang; aksi sensitif tanpa re-auth
 
 **Status:** 🟢 Terverifikasi — kode.
+
+**Status implementasi (2026-10-21):** 🟡 **Sebagian** — `POST /api/admin/broadcast`
+kini dibatasi per uid (test 10/10 menit; kirim massal 5/10 menit) dan
+`testEmail` hanya boleh alamat admin aktif (atau email admin yang login);
+`POST /api/admin/email/test` dibatasi 5/10 menit. Idempotency broadcast,
+re-auth/step-up, alarm kuota, dan rate-limit aksi destruktif lain belum.
 
 **Bukti:**
 
@@ -932,6 +951,25 @@ build + test hijau.
 | ADM-12 | Restore sebagai background job/batch; snapshot yang benar |
 | ADM-13 | Tutup coverage audit (project/content/lead/media collection) + alert |
 
+**Status P1:** ADM-06 ✅ selesai; ADM-05 🟡 sebagian (header + CSP minimal;
+CSP nonce penuh belum); ADM-07 🟡 sebagian (rate-limit + batas `testEmail`;
+idempotency/re-auth belum). ADM-03/04/08/09/12/13 ⏳ belum.
+
+### 🟡 Status implementasi P1A — 2026-10-21 (`69d35b5`)
+
+- **ADM-06** — `src/lib/csv.ts` menjadi satu-satunya serializer CSV admin;
+  formula prefix dinetralkan, angka murni dipertahankan, dan semua ekspor
+  (lead/media/user/order/kupon/pemakai kupon/analitik/subscriber) memakai util ini.
+- **ADM-05** — `X-Frame-Options: DENY`, CSP minimal (`frame-ancestors`,
+  `base-uri`, `object-src`), dan HSTS produksi (`max-age=31536000;
+  includeSubDomains`) ditambahkan. E2E header lulus; CSP nonce/report-only
+  penuh tetap pekerjaan P1.
+- **ADM-07** — rate-limit broadcast per uid (test 10/10 menit, kirim 5/10 menit),
+  `testEmail` dibatasi ke admin aktif, dan email test 5/10 menit. Re-auth,
+  idempotency, alarm kuota, dan rate-limit aksi destruktif lain belum.
+- **Verifikasi:** `npm run test:csv` 3/3 · `npm run test:unit` 603/603 ·
+  `npm run lint` ✅ · `npm run build` ✅ · E2E `security-headers` 1/1 ✅.
+
 ### P2 — skala, keandalan, UX inti
 
 - ADM-10 — metrik user hanya order yang valid.
@@ -976,7 +1014,8 @@ build + test hijau.
 ## 11. Di Luar Cakupan / Belum Diverifikasi
 
 - Audit awal tidak mengubah kode; P0 (ADM-01/02) diimplementasikan setelah audit
-  dan diverifikasi pada commit `a36bf53`. Temuan P1–P3 masih berupa dokumentasi.
+  dan diverifikasi pada commit `a36bf53`. P1A (ADM-06 selesai; ADM-05/07 sebagian)
+  diimplementasikan pada commit `69d35b5`; P1 lain–P3 masih berupa dokumentasi.
 - E2E admin dengan akun nyata tidak dijalankan karena membutuhkan kredensial dan
   data uji; tidak ada eksploitasi ke Firestore produksi.
 - axe/Lighthouse area admin tidak dijalankan; login terlindungi dan dashboard
@@ -995,7 +1034,9 @@ build + test hijau.
 1. Review P1–P3 dan jawab keputusan di §10.
 2. ✅ **P0 selesai** (ADM-01/02) pada commit `a36bf53`; jangan regress. Regression
    test sudah masuk suite unit (`test:backup`, `test:seo-schema`, `test:unit`).
-3. Lanjut P1 (otorisasi/sesi/data), lalu P2 (skala/UX), lalu P3 (polish).
-4. Setiap batch wajib menambah test regresi dan memperbarui
+3. 🟡 **P1A selesai sebagian** (`69d35b5`): ADM-06 ✅; ADM-05/07 🟡. Lanjutkan
+   CSP nonce/report-only penuh, idempotency/re-auth, lalu ADM-03/04/08/09/12/13.
+4. Setelah P1, lanjut P2 (skala/UX), lalu P3 (polish).
+5. Setiap batch wajib menambah test regresi dan memperbarui
    `docs/README.md` + `TASK-SELANJUTNYA.md`.
-5. Dokumen audit & status ini sudah di-commit; perbarui status setiap batch.
+6. Dokumen audit & status ini sudah di-commit; perbarui status setiap batch.

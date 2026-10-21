@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumentasi ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Audit Dashboard Admin** (2026-10-21; P0 ADM-01/02 sudah diperbaiki, P1–P3 terbuka).
+> Terakhir diperbarui: sesi **Audit Dashboard Admin** (2026-10-21; P0 ADM-01/02 ✅, P1A ADM-05/06/07 🟡, P1 lain–P3 terbuka).
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -41,11 +41,11 @@
 > 🧩 **F8 selesai (kode, permintaan pemilik):** strip **"Teknologi yang kami gunakan"** dipindah dari bawah Pratinjau ke **antara Layanan Kami & Portofolio**, dan marquee-nya kini **dua baris** — baris atas bergerak ke **kiri** (30 dtk, urutan asli), baris bawah ke **kanan** (36 dtk, urutan dibalik, `animate-marquee-reverse`), dengan satu mask kiri/kanan; baris kedua `aria-hidden` agar screen reader tetap membaca daftar sekali, hover pause per baris. QA: urutan DOM `#layanan → #teknologi → #portofolio` (desktop & mobile), 40 kartu/baris, tx baris 1 −143,8 px/s vs baris 2 +119,8 px/s, tanpa overflow horizontal; tangkapan layar desktop & mobile diperiksa. Gate tsc/eslint/unit(593)/build hijau.
 > 🧪 **F6 selesai (polish & QA, 2026-10-20):** **F6.1** cover produk **16:9** (tidak lagi terpotong) + `imageSizes` per grid + fallback `onError`; kontras nomor proses & tautan footer lolos AA; target sentuh footer **28 px**. **F6.2** tombol **Jeda/Mainkan** untuk marquee teknologi & band Pratinjau (WCAG 2.2.2), disembunyikan saat reduced-motion. **F6.3** intro beranda **sekali per sesi tab** (`sessionStorage`) — reload tidak lagi menunggu 2,13 dtk; entrance hero/navbar dimulai saat `introDone`, bukan delay yang bisa basi. **F6.4** GA4 ditunda ke `lazyOnload`; QA: tsc/eslint/unit(593)/build(161)/E2E(22) hijau, axe **0 violation** (desktop+mobile), Firefox desktop+mobile lolos, tanpa overflow; Lighthouse produksi A11y/BP **100**, SEO **100**, CLS **0**; LCP **19,1 → 16,1 dtk** & TBT **13,4 → 11,3 dtk** setelah F6 — masih didominasi hidrasi app (PSI API 429; WebKit belum terpasang karena timeout unduhan). Optimasi bundle/hidrasi menjadi kandidat berikutnya.
 >
-> 🛡️ **Audit Dashboard Admin — P0 selesai (2026-10-21):** **[`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md)** — 28 temuan (2 kritis · 3 tinggi · 16 sedang · 7 rendah) mencakup otorisasi, integritas data, UX/a11y, performa, test, dan ops. **ADM-01** (restore `admins` melewati batas OWNER) dan **ADM-02** (stored XSS JSON-LD + nama lengkap) sudah diperbaiki di commit `a36bf53`; **P1–P3 terbuka** dan menunggu keputusan pemilik (§10).
+> 🛡️ **Audit Dashboard Admin — P0 selesai (2026-10-21):** **[`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md)** — 28 temuan (2 kritis · 3 tinggi · 16 sedang · 7 rendah) mencakup otorisasi, integritas data, UX/a11y, performa, test, dan ops. **ADM-01** (restore `admins` melewati batas OWNER) dan **ADM-02** (stored XSS JSON-LD + nama lengkap) sudah diperbaiki di commit `a36bf53`; **P1A** (ADM-06 ✅; ADM-05/07 sebagian) di commit `69d35b5`; **P1 lain–P3 terbuka** dan menunggu keputusan pemilik (§10).
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Review P1 audit dashboard admin** — P0 **ADM-01/02** selesai; lanjut P1 (role/capability matrix, revoke sesi, CSP/header, CSV, rate-limit, audit coverage). Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md). Setelah P1, kandidat berikutnya: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · **Optimasi bundle/hidrasi beranda** (LCP/TBT mobile) · langkah manual pemilik (Mayar produksi, domain/Resend). Lihat §"STATUS & PETA SEKARANG".
+> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Lanjutkan P1 audit dashboard admin** — P0 **ADM-01/02** ✅; P1A 🟡 (ADM-06 ✅; ADM-05/07 sebagian). Berikutnya: CSP nonce/report-only penuh, idempotency/re-auth broadcast, ADM-03/04/08/09/12/13, dan jawab keputusan §10. Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md). Setelah P1, kandidat berikutnya: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · **Optimasi bundle/hidrasi beranda** (LCP/TBT mobile) · langkah manual pemilik (Mayar produksi, domain/Resend). Lihat §"STATUS & PETA SEKARANG".
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -64,9 +64,9 @@
 
 ---
 
-## 🛡️ SESI INI — Audit Dashboard Admin (2026-10-21) — P0 SELESAI; P1–P3 TERBUKA
+## 🛡️ SESI INI — Audit Dashboard Admin (2026-10-21) — P0 + P1A SELESAI; P1 LAIN–P3 TERBUKA
 
-**Status: ✅ Audit selesai; ✅ P0 (ADM-01/02) selesai; ⏳ P1–P3 belum.** Dokumen:
+**Status: ✅ Audit selesai; ✅ P0 (ADM-01/02); 🟡 P1A (ADM-06 ✅, ADM-05/07 sebagian); ⏳ P1 lain–P3.** Dokumen:
 [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md).
 
 - **Cakupan:** 33 halaman admin, 36 route API admin, 80 komponen admin; auth/sesi,
@@ -86,10 +86,18 @@
   men-escape `</script>`/U+2028/U+2029 + `maskBuyerName` di API & JSON-LD.
   Gate: `test:backup` 18 ✅ · `test:seo-schema` 20 ✅ · `test:unit` 600 ✅ ·
   lint ✅ · build 161 halaman ✅.
+- **P1A diperbaiki (commit `69d35b5`):** **ADM-06 ✅** util CSV bersama
+  (`src/lib/csv.ts`) menetralkan formula injection dan dipakai semua ekspor admin;
+  **ADM-05 🟡** XFO `DENY`, CSP minimal (`frame-ancestors`/`base-uri`/`object-src`),
+  dan HSTS produksi; **ADM-07 🟡** rate-limit broadcast/email test + `testEmail`
+  hanya admin aktif. Gate: `test:csv` 3 ✅ · `test:unit` 603 ✅ · lint ✅ ·
+  build 161 halaman ✅ · E2E header 1/1 ✅.
+- **Sisa P1:** CSP nonce/report-only penuh, idempotency/re-auth broadcast,
+  rate-limit aksi destruktif lain, ADM-03/04 (role & revoke sesi), ADM-08/09/12/13.
 - **Belum dijalankan:** E2E admin dengan akun nyata, axe/Lighthouse admin, uji
   volume produksi, dan eksploitasi ke Firestore produksi. WebKit masih tertunda.
-- **Berikutnya:** review keputusan §10 untuk P1; lalu **P1** (ADM-03/04/05 dsb.),
-  disusul P2/P3. **Dokumen & status P0 sudah di-commit**; update setiap batch.
+- **Berikutnya:** jawab keputusan §10; lanjutkan P1 (CSP penuh, ADM-03/04/08/09/12/13),
+  disusul P2/P3. **Dokumen & status P0/P1A sudah di-commit**; update setiap batch.
 
 ---
 
