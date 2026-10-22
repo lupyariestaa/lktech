@@ -4,8 +4,9 @@
 > ADM-02) selesai 2026-10-21 (`a36bf53`); P1A (`ADM-06` selesai,
 > `ADM-05/07` sebagian) di `69d35b5`; P1B (`ADM-04` revoke logout) di
 > `f8a7950`; P1C (ADM-03/04/08/12 + re-auth) selesai **kode** 2026-10-22 di
-> `885831c`. Verifikasi runtime ber-kredensial (akun OWNER/ADMIN nyata)
-> masih tertunda; lihat §9.**
+> `885831c`; P1D (ADM-09/13 selesai, ADM-05/07/12 sebagian) di `72bd482`.
+> Verifikasi runtime ber-kredensial (akun OWNER/ADMIN nyata) masih tertunda;
+> lihat §9 dan §11.**
 > **Tanggal:** 2026-10-21
 > **Cakupan:** `/admin/**` (33 halaman), 36 route API admin, 80 komponen admin,
 > alur login/sesi, guard server & klien, Firestore, audit log, backup/restore,
@@ -31,7 +32,7 @@
 Dashboard admin **sudah kaya fitur dan memiliki fondasi otorisasi yang serius**:
 API admin memakai Firebase ID token, halaman `/admin` dijaga dua lapis, dan
 Firestore menolak seluruh akses langsung dari klien. Build, lint, dan 593 unit
-test lulus saat audit; setelah P1C suite bertambah menjadi 615 test.
+test lulus saat audit; setelah P1D suite bertambah menjadi 624 test.
 
 Namun audit menemukan **28 gap** yang perlu ditangani sebelum dashboard dianggap
 aman untuk banyak admin dan data produksi:
@@ -73,14 +74,19 @@ sebelum P1 selesai.
 | ----------- | ----- | --------------- |
 | Build produksi | ✅ Lulus | `npm run build`; 161 halaman statis digenerate; seluruh rute admin dinamis; TypeScript lulus |
 | Lint | ✅ Lulus | `npm run lint` (ESLint) tanpa error |
-| Unit test | ✅ 615 lulus (593 saat audit) | `npm run test:unit` |
-| Test khusus admin | ✅ 13 lulus | `admin-audit`, `admin-nav`, `admin-dashboard-dynamic` |
+| Unit test | ✅ 624 lulus (593 saat audit) | `npm run test:unit` |
+| Test khusus admin | ✅ 13 baseline + suite baru | `admin-audit`, `admin-nav`, `admin-dashboard-dynamic`; P1D menambah `admin-security` 10, `admin-session` 1, `admin-p1` 9, `nav` 9 |
 | Runtime `/admin` tanpa cookie | ✅ 307 | Redirect ke `/admin/login` |
 | Runtime `/api/admin/me` tanpa token | ✅ 401 | Tidak ada kebocoran data |
 | Header keamanan runtime | ⚠️ Terbatas | Hanya `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`; **tidak ada CSP, X-Frame-Options, frame-ancestors, HSTS** |
 | Firestore rules | ✅ Kuat | `firestore.rules:33-35` menolak seluruh baca/tulis langsung klien |
 | Harness JSON-LD | 🔴 Berhasil membuktikan XSS | `</script>` tetap mentah pada output JSON |
 | Harness backup | 🔴 Berhasil membuktikan eskalasi | `planImport` menerima baris `admins/attacker@example.com` dan memaksa `active:true` |
+
+> **Status header setelah P1D:** `X-Frame-Options: DENY`, CSP minimal
+> (`frame-ancestors`/`base-uri`/`object-src`), dan HSTS produksi sudah
+> **enforced**; CSP penuh dikirim sebagai **Report-Only**. Baris baseline di
+> atas adalah kondisi saat audit, bukan kondisi sekarang. Lihat ADM-05.
 
 **Matriks otorisasi (strength):**
 
@@ -324,11 +330,14 @@ tidak menggantikan pencabutan sesi.
 
 **Status:** 🟢 Terverifikasi — konfigurasi + probe runtime lokal.
 
-**Status implementasi (2026-10-21):** 🟡 **Sebagian** — `X-Frame-Options: DENY`,
+**Status implementasi (2026-10-22):** 🟡 **Sebagian** — `X-Frame-Options: DENY`,
 CSP minimal (`frame-ancestors 'none'`, `base-uri 'self'`, `object-src 'none'`),
-dan HSTS produksi sudah terpasang di `next.config.ts`; regression E2E
-`e2e/security-headers.spec.ts` lulus. CSP nonce/hash penuh (report-only →
-enforce) belum; E2E baru mengunci subset header.
+dan HSTS produksi sudah terpasang di `next.config.ts`. **CSP penuh kini dikirim
+sebagai `Content-Security-Policy-Report-Only` di produksi** (default-src,
+script/style/img/connect/frame/worker, origin Firebase/GA/Sentry/Cloudinary),
+dan E2E `e2e/security-headers.spec.ts` mengunci keberadaan header tersebut.
+**Enforce belum aktif** karena masih perlu nonce/hash untuk inline script Next
++ JSON-LD dan verifikasi runtime semua origin (editor/media/preview).
 
 **Bukti:**
 
@@ -382,11 +391,17 @@ Pertimbangkan ekspor `.xlsx` dengan sel bertipe teks.
 
 **Status:** 🟢 Terverifikasi — kode.
 
-**Status implementasi (2026-10-21):** 🟡 **Sebagian** — `POST /api/admin/broadcast`
-kini dibatasi per uid (test 10/10 menit; kirim massal 5/10 menit) dan
-`testEmail` hanya boleh alamat admin aktif (atau email admin yang login);
-`POST /api/admin/email/test` dibatasi 5/10 menit. Idempotency broadcast,
-re-auth/step-up, alarm kuota, dan rate-limit aksi destruktif lain belum.
+**Status implementasi (2026-10-22):** 🟡 **Hampir selesai** — `POST /api/admin/broadcast`
+dibatasi per uid (test 10/10 menit; kirim massal 5/10 menit), `testEmail` hanya
+boleh alamat admin aktif, dan `POST /api/admin/email/test` dibatasi 5/10 menit.
+**Idempotency broadcast** kini memakai reservation `broadcast_requests` sebelum
+kirim (replay hasil / tolak request ganda / tandai `indeterminate` bila hasil
+tidak pasti), **guard kuota email harian** opt-in (`BROADCAST_DAILY_QUOTA`)
+menolak kelebihan + alarm Sentry di 80%, **rate-limit aksi destruktif** per uid
+(hapus order/produk/artikel/ulasan/kupon/lead, blokir user), dan **alarm batas
+backup** dikirim saat ekspor/impor terpotong atau gagal sebagian. Re-auth aksi
+sensitif sudah selesai di P1C. Sisa kecil: kuota backup belum punya angka
+provider (hanya alarm batas internal 5.000 baris).
 
 **Bukti:**
 
@@ -461,7 +476,15 @@ Penghapusan akun + retensi/anonymize order tetap backlog keputusan pemilik.
 
 **Status:** 🟢 Terverifikasi — kode.
 
-**Bukti:**
+**Status implementasi (2026-10-22):** ✅ **Selesai kode** — hapus order tunggal
+dan massal memakai `deleteOrder(id, DELETABLE_STATUSES)` yang menjalankan
+**satu transaksi Firestore**: membaca order + kupon/redemption/daily, menghapus
+order, dan mengembalikan kuota dalam commit yang sama. Status diperiksa ulang di
+dalam transaksi (menutup race), dan audit `order.delete` mencatat
+`couponRestored`. Helper `restoreCouponUsageInTransaction` juga memperbaiki
+urutan baca/tulis Firestore (semua `tx.get` sebelum `tx.set/delete`).
+
+**Bukti sebelum perbaikan:**
 
 - `src/app/api/admin/orders/route.ts:517-535` — bulk delete: `deleteOrder()` dulu,
   `recordAdminAudit` sukses, baru `restoreCouponUsage()`.
@@ -538,8 +561,13 @@ snapshot pada volume produksi (batas dokumen Firestore 1 MiB tidak diuji dengan
 data nyata).
 **Status implementasi (2026-10-22):** 🟡 **Sebagian** — akses sudah OWNER-only,
 restore **merge-only** dipertahankan, dan restore memerlukan re-auth OWNER.
-Background job/batch, snapshot per dokumen, UI restore snapshot, dan uji volume
-belum dikerjakan.
+**Snapshot kini dipecah per sumber menjadi chunk <700 KiB** (manifest
+`_backup_snapshots/{stamp}` + dokumen chunk), sehingga tidak lagi menulis semua
+koleksi ke satu dokumen yang melewati batas 1 MiB. **Impor memakai `WriteBatch`**
+(≤400 operasi) dengan fallback per-dokumen bila batch gagal, dan alarm Sentry
+dikirim saat batas 5.000 baris terlampaui atau hasil parsial. **Belum:**
+background job/worker + checkpoint/resume, UI restore snapshot, dan uji volume
+produksi. Tidak ada klaim point-in-time restore.
 
 **Bukti sebelum perbaikan:**
 
@@ -579,7 +607,14 @@ seperti di atas.
 
 **Status:** 🟢 Terverifikasi — kode.
 
-**Bukti:**
+**Status implementasi (2026-10-22):** ✅ **Selesai kode** — audit ditambahkan
+untuk lead (status/stage/activity/delete), proyek (save/delete), konten situs,
+koleksi media, email test (termasuk test broadcast), serta login/logout admin.
+Aksi baru punya label + warna badge. Kegagalan `recordAdminAudit` kini dikirim
+ke **Sentry** (tag `area=admin-audit`, tanpa actor/target/PII), tidak lagi hanya
+`console.error`.
+
+**Bukti sebelum perbaikan:**
 
 - `src/lib/admin-audit-types.ts:22-23,58-59` mendefinisikan `lead.status` dan
   `lead.delete`, tetapi tidak ada pemanggilan `recordAdminAudit` di
@@ -930,8 +965,9 @@ robots.txt saja.
   - hapus user/hapus order massal,
   - batas/paginasi.
 - Saat audit, 593 unit test lulus tetapi tidak menyentuh route admin secara
-  langsung. P1A–P1C menambahkan test wiring/CSV/backup/SEO dan E2E header/logout
-  (suite kini 615 test), tetapi **belum ada** integration/E2E ber-kredensial.
+  langsung. P1A–P1D menambahkan test wiring/CSV/backup/SEO/kuota dan E2E
+  header/logout (suite kini 624 test), tetapi **belum ada** integration/E2E
+  ber-kredensial.
 
 **Dampak:** regresi keamanan paling berbahaya tidak akan tertangkap CI. Audit ini
 menemukan dua isu kritis yang seharusnya bisa dicegah test murah.
@@ -1036,10 +1072,11 @@ build + test hijau.
 
 **Status P1:** ADM-06 ✅ selesai; ADM-03 ✅ selesai (kode, 2 tier); ADM-04 ✅
 selesai (kode, 12 jam + idle 60 menit + re-auth); ADM-08 ✅ selesai (blokir
-saja); ADM-05 🟡 sebagian (header + CSP minimal; CSP nonce penuh belum); ADM-07
-🟡 sebagian (rate-limit + batas `testEmail`; idempotency belum); ADM-12 🟡
-sebagian (OWNER-only + merge-only + re-auth; background/snapshot belum);
-ADM-09/13 ⏳ belum.
+saja); **ADM-09 ✅ selesai kode (transaksi atomik order+kupon); ADM-13 ✅ selesai
+kode (coverage + Sentry); ADM-07 🟡 hampir selesai (idempotency + kuota +
+rate-limit destruktif; angka kuota backup belum ada); ADM-05 🟡 sebagian (CSP
+penuh report-only; enforce belum); ADM-12 🟡 sebagian (snapshot chunk + batch
+impor; background job/UI restore belum).**
 
 ### 🟡 Status implementasi P1A — 2026-10-21 (`69d35b5`)
 
@@ -1091,8 +1128,52 @@ ADM-09/13 ⏳ belum.
 - **Belum:** E2E ber-kredensial dengan akun OWNER/ADMIN seed (emulator/staging),
   uji idle/absolute expiry nyata, dan uji non-OWNER 403 end-to-end. Jangan klaim
   verifikasi runtime sebelum itu dijalankan.
-- **Sisa P1:** CSP nonce/report-only penuh (ADM-05), idempotency broadcast
-  (ADM-07), audit coverage (ADM-13), dan atomisitas restore kupon (ADM-09).
+- **Sisa P1:** enforce CSP penuh setelah nonce/hash + verifikasi origin
+  (ADM-05), background restore + UI snapshot (ADM-12), angka kuota backup
+  provider (ADM-07), dan verifikasi runtime ber-kredensial.
+
+### 🟡 Status implementasi P1D — 2026-10-22 (`72bd482`)
+
+- **ADM-09 ✅** — `deleteOrder(id, allowedStatuses)` menghapus order dan
+  mengembalikan kuota kupon dalam **satu transaksi Firestore**; jalur bulk dan
+  tunggal memakai helper yang sama. `restoreCouponUsageInTransaction` membaca
+  semua dokumen sebelum menulis, mengembalikan `couponRestored=false` bila
+  dokumen kupon sudah tidak ada, dan cache kupon invalidated setelah commit.
+  Audit `order.delete` mencatat hasil restore.
+- **ADM-13 ✅** — audit coverage ditambah untuk lead (status/stage/activity/
+  delete), proyek (save/delete), konten situs, koleksi media, login/logout
+  admin, dan email test; tipe aksi + label + aksen UI diperbarui. Kegagalan
+  `recordAdminAudit` dikirim ke Sentry (`area=admin-audit`) tanpa PII.
+- **ADM-07 🟡** — broadcast massal wajib `Idempotency-Key`; reservation
+  `broadcast_requests` mencegah kiriman ganda (replay hasil, konflik body,
+  `processing`, dan `indeterminate`). Guard kuota email harian opt-in
+  (`BROADCAST_DAILY_QUOTA`) menolak kelebihan + alarm Sentry di 80%; rate-limit
+  per uid ditambahkan untuk hapus order/produk/artikel/ulasan/kupon/lead dan
+  blokir user. Alarm backup dikirim saat ekspor/impor terpotong atau parsial.
+  Sisa: angka kuota backup dari provider belum tersedia (baru alarm batas
+  internal 5.000 baris).
+- **ADM-05 🟡** — CSP penuh kini dikirim sebagai
+  `Content-Security-Policy-Report-Only` di produksi; CSP minimal yang menahan
+  clickjacking tetap enforced. Enforce penuh belum karena nonce/hash inline
+  Next/JSON-LD dan origin runtime belum diverifikasi.
+- **ADM-12 🟡** — snapshot dipecah per sumber menjadi chunk <700 KiB + manifest
+  `_backup_snapshots/{stamp}`; impor memakai `WriteBatch` ≤400 operasi dengan
+  fallback per-dokumen. Background worker/checkpoint, UI restore snapshot, dan
+  uji volume produksi belum.
+- **Berkas utama:** `src/lib/orders.ts`, `src/lib/coupons.ts`,
+  `src/app/api/admin/orders/route.ts`, `src/lib/broadcast-idempotency*.ts`,
+  `src/lib/broadcast-quota*.ts`, `src/lib/admin-rate-limit.ts`,
+  `src/lib/admin-audit*.ts`, `src/lib/backup.ts`, `src/lib/backup-pure.ts`,
+  `next.config.ts`, `scripts/admin-p1.test.ts`.
+- **Verifikasi:** `npx tsc --noEmit` ✅ · `npm run lint` ✅ ·
+  `npm run test:admin-p1` 9/9 ✅ · `npm run test:unit` 624/624 ✅ ·
+  `npm run build` ✅ (161/161 halaman) · E2E `security-headers` +
+  `admin-session` 2/2 ✅. **Tidak ada** E2E ber-kredensial (emulator/staging
+  belum siap), jadi 403/401/expiry/re-auth runtime belum diklaim.
+- **Catatan risiko:** reservation kuota broadcast bersifat konservatif (email
+  yang gagal setelah dicoba tetap terhitung); key `processing`/`indeterminate`
+  sengaja memblokir kirim ulang otomatis sampai diperiksa manual; `processing`
+  yang basi belum punya auto-recovery.
 
 ### P2 — skala, keandalan, UX inti
 
@@ -1131,8 +1212,9 @@ ADM-09/13 ⏳ belum.
    permanen pada batch ini; label dan semantik UI diselaraskan. Permintaan
    penghapusan data mengikuti kebijakan retensi order yang belum diputuskan.
 4. **Backup:** ✅ **OWNER-only, ekspor/impor; restore merge-only.** Snapshot
-   sebelum impor tetap dibuat, tetapi bukan point-in-time dan belum bisa
-   dipulihkan dari UI. Background job/batch masih backlog.
+   sebelum impor dibuat sebagai chunk <700 KiB + manifest (P1D), tetapi bukan
+   point-in-time dan belum bisa dipulihkan dari UI. Background job/worker masih
+   backlog.
 5. **E2E admin:** ✅ **Diizinkan memakai Firebase emulator/staging + akun seed**
    untuk alur ber-kredensial. Konfigurasi emulator dan seed belum dibuat; ini
    prasyarat sebelum klaim verifikasi runtime.
@@ -1149,7 +1231,8 @@ ADM-09/13 ⏳ belum.
   dan diverifikasi pada commit `a36bf53`. P1A (ADM-06 selesai; ADM-05/07 sebagian)
   diimplementasikan pada commit `69d35b5`. P1B (ADM-04 revoke logout) di commit
   `f8a7950`. P1C (ADM-03/04/08/12 + re-auth) selesai **kode** 2026-10-22 di
-  `885831c`. P1 lain–P3 masih dokumentasi/backlog.
+  `885831c`. P1D (ADM-09/13 selesai; ADM-05/07/12 sebagian) di `72bd482`.
+  P2–P3 masih dokumentasi/backlog.
 - E2E admin dengan akun nyata belum dijalankan karena emulator/staging + akun seed
   belum dikonfigurasi; tidak ada eksploitasi ke Firestore produksi. Semua klaim
   P1C di atas adalah verifikasi kode/test wiring, bukan verifikasi runtime
@@ -1172,8 +1255,10 @@ ADM-09/13 ⏳ belum.
    test sudah masuk suite unit (`test:backup`, `test:seo-schema`, `test:unit`).
 3. ✅ **P1A** (`69d35b5`): ADM-06 selesai; ADM-05/07 sebagian. **P1B**
    (`f8a7950`): ADM-04 revoke logout. **P1C** (2026-10-22): ADM-03/04/08/12
-   selesai kode + re-auth. Lanjutkan sisa P1: CSP nonce/report-only penuh,
-   idempotency broadcast, audit coverage, lalu ADM-09/13.
+   selesai kode + re-auth. **P1D** (`72bd482`): ADM-09/13 selesai; ADM-07
+   idempotency + kuota + rate-limit destruktif; ADM-05 CSP report-only penuh;
+   ADM-12 snapshot chunk + batch impor. Lanjutkan: enforce CSP setelah
+   nonce/hash, background restore/UI, lalu P2.
 4. **Sebelum klaim runtime:** siapkan Firebase emulator/staging + seed akun
    OWNER/ADMIN, lalu uji 403 non-OWNER, 401 sesi kedaluwarsa, idle/absolute
    expiry, dan popup re-auth.
