@@ -77,7 +77,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 | 2026-10-14 | [Perbaikan Build Gagal — `/admin` Ter-prerender + Query Firestore Tanpa Pengaman](2026-10-14-perbaikan-build-admin-prerender.md) | ✅ Selesai (kode) |
 | 2026-10-14 | [Optimasi Cache Firestore — Hemat Kuota Baca (unstable_cache + revalidateTag)](2026-10-14-optimasi-cache-firestore.md) | ✅ Selesai (kode) |
 | 2026-10-15 | [Blueprint — Upgrade UI/UX Halaman Beranda (Storytelling Scroll + Premium Minimalis)](2026-10-15-blueprint-upgrade-homepage-uiux.md) | ✅ Selesai — F0–F8 + F6 (kode + QA, 2026-10-20) |
-| 2026-10-21 | [Audit Dashboard Admin — otorisasi, integritas data, UX, performa, a11y, ops](2026-10-21-audit-dashboard-admin.md) | 🛠️ P0 ✅; P1A 🟡 (ADM-06 ✅, ADM-05/07 sebagian); P1B 🟡 (ADM-04 revoke logout); P1 lain–P3 terbuka |
+| 2026-10-21 | [Audit Dashboard Admin — otorisasi, integritas data, UX, performa, a11y, ops](2026-10-21-audit-dashboard-admin.md) | 🛠️ P0 ✅; P1A 🟡; P1B ✅ (revoke logout); P1C ✅ kode (OWNER/ADMIN, sesi 12j/60m, blokir user, backup OWNER); verifikasi runtime ber-kredensial tertunda |
 
 ### Dokumen pendukung (referensi & setup)
 

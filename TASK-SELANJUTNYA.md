@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumentasi ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Audit Dashboard Admin** (2026-10-22; P0 ADM-01/02 ✅, P1A ADM-05/06/07 🟡, P1B ADM-04 🟡, P1 lain–P3 terbuka).
+> Terakhir diperbarui: sesi **Audit Dashboard Admin** (2026-10-22; P0 ✅, P1A 🟡, P1B ✅, P1C ✅ kode `885831c` — ADM-03/04/08/12; sisa P1 ADM-05/07/09/13, P2–P3 terbuka).
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -41,11 +41,11 @@
 > 🧩 **F8 selesai (kode, permintaan pemilik):** strip **"Teknologi yang kami gunakan"** dipindah dari bawah Pratinjau ke **antara Layanan Kami & Portofolio**, dan marquee-nya kini **dua baris** — baris atas bergerak ke **kiri** (30 dtk, urutan asli), baris bawah ke **kanan** (36 dtk, urutan dibalik, `animate-marquee-reverse`), dengan satu mask kiri/kanan; baris kedua `aria-hidden` agar screen reader tetap membaca daftar sekali, hover pause per baris. QA: urutan DOM `#layanan → #teknologi → #portofolio` (desktop & mobile), 40 kartu/baris, tx baris 1 −143,8 px/s vs baris 2 +119,8 px/s, tanpa overflow horizontal; tangkapan layar desktop & mobile diperiksa. Gate tsc/eslint/unit(593)/build hijau.
 > 🧪 **F6 selesai (polish & QA, 2026-10-20):** **F6.1** cover produk **16:9** (tidak lagi terpotong) + `imageSizes` per grid + fallback `onError`; kontras nomor proses & tautan footer lolos AA; target sentuh footer **28 px**. **F6.2** tombol **Jeda/Mainkan** untuk marquee teknologi & band Pratinjau (WCAG 2.2.2), disembunyikan saat reduced-motion. **F6.3** intro beranda **sekali per sesi tab** (`sessionStorage`) — reload tidak lagi menunggu 2,13 dtk; entrance hero/navbar dimulai saat `introDone`, bukan delay yang bisa basi. **F6.4** GA4 ditunda ke `lazyOnload`; QA: tsc/eslint/unit(593)/build(161)/E2E(22) hijau, axe **0 violation** (desktop+mobile), Firefox desktop+mobile lolos, tanpa overflow; Lighthouse produksi A11y/BP **100**, SEO **100**, CLS **0**; LCP **19,1 → 16,1 dtk** & TBT **13,4 → 11,3 dtk** setelah F6 — masih didominasi hidrasi app (PSI API 429; WebKit belum terpasang karena timeout unduhan). Optimasi bundle/hidrasi menjadi kandidat berikutnya.
 >
-> 🛡️ **Audit Dashboard Admin — P0 selesai (2026-10-21):** **[`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md)** — 28 temuan (2 kritis · 3 tinggi · 16 sedang · 7 rendah) mencakup otorisasi, integritas data, UX/a11y, performa, test, dan ops. **ADM-01** (restore `admins` melewati batas OWNER) dan **ADM-02** (stored XSS JSON-LD + nama lengkap) sudah diperbaiki di commit `a36bf53`; **P1A** (ADM-06 ✅; ADM-05/07 sebagian) di commit `69d35b5`; **P1B** (ADM-04 sebagian: revoke logout) di commit `f8a7950`; **P1 lain–P3 terbuka** dan menunggu keputusan pemilik (§10).
+> 🛡️ **Audit Dashboard Admin — P0/P1B/P1C selesai kode (2026-10-21/22):** **[`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md)** — 28 temuan (2 kritis · 3 tinggi · 16 sedang · 7 rendah). **ADM-01/02** diperbaiki di `a36bf53`; **P1A** (ADM-06 ✅, ADM-05/07 sebagian) di `69d35b5`; **P1B** (revoke logout) di `f8a7950`; **P1C** (2026-10-22, `885831c`) menutup **ADM-03** (OWNER/ADMIN), **ADM-04** (sesi 12 jam + idle 60 menit + re-auth), **ADM-08** (blokir saja), **ADM-12** (backup OWNER-only, merge-only). **Sisa P1** (ADM-05/07/09/13) + P2–P3 terbuka; verifikasi runtime ber-kredensial masih tertunda.
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Lanjutkan P1 audit dashboard admin** — P0 **ADM-01/02** ✅; P1A 🟡 (ADM-06 ✅; ADM-05/07 sebagian); P1B 🟡 (ADM-04 revoke logout). Berikutnya: idle/absolute timeout + re-auth, CSP nonce/report-only penuh, idempotency broadcast, ADM-03/08/09/12/13, dan jawab keputusan §10. Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md). Setelah P1, kandidat berikutnya: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · **Optimasi bundle/hidrasi beranda** (LCP/TBT mobile) · langkah manual pemilik (Mayar produksi, domain/Resend). Lihat §"STATUS & PETA SEKARANG".
+> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Sisa P1 audit dashboard admin** — P0 ✅; P1A 🟡; P1B/P1C ✅ kode. Berikutnya: **siapkan emulator/staging + seed OWNER/ADMIN untuk E2E ber-kredensial**, lalu CSP nonce/report-only penuh (ADM-05), idempotency broadcast (ADM-07), audit coverage (ADM-13), atomisitas kupon (ADM-09), dan background restore/snapshot (ADM-12). Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md). Setelah P1, kandidat berikutnya: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · **Optimasi bundle/hidrasi beranda** (LCP/TBT mobile) · langkah manual pemilik (Mayar produksi, domain/Resend). Lihat §"STATUS & PETA SEKARANG".
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -64,9 +64,9 @@
 
 ---
 
-## 🛡️ SESI INI — Audit Dashboard Admin (2026-10-21/22) — P0 + P1A/P1B SELESAI SEBAGIAN; P1 LAIN–P3 TERBUKA
+## 🛡️ SESI INI — Audit Dashboard Admin (2026-10-21/22) — P0 + P1B/P1C SELESAI KODE; SISA P1 & P2–P3 TERBUKA
 
-**Status: ✅ Audit selesai; ✅ P0 (ADM-01/02); 🟡 P1A (ADM-06 ✅, ADM-05/07 sebagian); 🟡 P1B (ADM-04 revoke logout); ⏳ P1 lain–P3.** Dokumen:
+**Status: ✅ Audit selesai; ✅ P0 (ADM-01/02); 🟡 P1A (ADM-06 ✅, ADM-05/07 sebagian); ✅ P1B (ADM-04 revoke logout); ✅ P1C kode (ADM-03/04/08/12 + re-auth); ⏳ sisa P1/P2–P3.** Dokumen:
 [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md).
 
 - **Cakupan:** 33 halaman admin, 36 route API admin, 80 komponen admin; auth/sesi,
@@ -98,13 +98,27 @@
   dihapus, label UI menjadi “Keluar (semua perangkat)”. Gate:
   `test:admin-session` 1 ✅ · `test:unit` 604 ✅ · lint ✅ · build 161 halaman ✅ ·
   E2E `admin-session` + `security-headers` 2/2 ✅.
-- **Sisa P1:** idle/absolute timeout + re-auth, CSP nonce/report-only penuh,
-  idempotency broadcast, rate-limit aksi destruktif lain, ADM-03/08/09/12/13.
-- **Belum dijalankan:** E2E admin dengan akun nyata, axe/Lighthouse admin, uji
+- **P1C selesai kode (2026-10-22, `885831c`):** **ADM-03 ✅** model 2 tier `OWNER`/`ADMIN`
+  — `/api/admin/me` mengekspos role, menu/palette/pengaturan menyembunyikan
+  backup, backup + ekspor PII massal + mutasi admin ditegakkan di server;
+  **ADM-04 ✅** absolute timeout 12 jam (`auth_time` + cookie
+  `__admin_login` bertanda tangan), idle 60 menit (refresh 5 menit/tick 30
+  detik), re-auth Google 10 menit untuk aksi sensitif; **ADM-08 ✅** hapus user
+  dinonaktifkan (405), UI hanya blokir; **ADM-12 🟡** backup OWNER-only +
+  fresh auth + merge-only, background/snapshot belum. Gate:
+  `test:admin-security` 10 ✅ · `test:nav` 9 ✅ · `test:admin-session` 1 ✅ ·
+  `test:unit` 615 ✅ · lint ✅ · build 161 halaman ✅ · E2E
+  `admin-session` + `security-headers` 2/2 ✅.
+- **Sisa P1:** CSP nonce/report-only penuh (ADM-05), idempotency broadcast
+  (ADM-07), atomisitas restore kupon (ADM-09), background/snapshot restore
+  (ADM-12), audit coverage (ADM-13).
+- **Belum dijalankan:** E2E admin ber-kredensial (403 ADMIN, 401 sesi
+  kedaluwarsa, idle/absolute expiry, popup re-auth), axe/Lighthouse admin, uji
   volume produksi, dan eksploitasi ke Firestore produksi. WebKit masih tertunda.
-- **Berikutnya:** jawab keputusan §10; lanjutkan P1 (timeout/re-auth ADM-04,
-  CSP penuh, ADM-03/08/09/12/13), disusul P2/P3. **Dokumen & status
-  P0/P1A/P1B sudah di-commit**; update setiap batch.
+  **Jangan klaim verifikasi runtime sebelum emulator/staging + seed akun siap.**
+- **Berikutnya:** siapkan Firebase emulator/staging + seed OWNER/ADMIN, lalu
+  lanjutkan sisa P1, disusul P2/P3. **Dokumen & status P0/P1A/P1B/P1C sudah
+  di-commit**; update setiap batch.
 
 ---
 
@@ -1254,6 +1268,18 @@ Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
   ✅ P6  QA/observability + docs (event tracking, konversi pembayaran di analitik, test transisi status)
   ✅ Upgrade Blog B0–B8 (docs/2026-10-09-upgrade-blog.md) — kode selesai, verifikasi manual tersisa
 ```
+
+### AUDIT DASHBOARD ADMIN — P1C selesai kode, verifikasi runtime tertunda
+Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md).
+- ✅ **P0** ADM-01/02; ✅ **P1B** revoke logout.
+- ✅ **P1C (2026-10-22, `885831c`):** ADM-03 role `OWNER`/`ADMIN`; ADM-04 sesi 12 jam
+  absolut + idle 60 menit + re-auth 10 menit; ADM-08 blokir user saja;
+  ADM-12 backup OWNER-only + merge-only + fresh auth.
+- 🟡 **Sisa P1:** ADM-05 CSP penuh, ADM-07 idempotency broadcast, ADM-09
+  atomisitas kupon, ADM-12 background/snapshot, ADM-13 audit coverage.
+- ⏳ **Runtime:** E2E ber-kredensial (emulator/staging + seed OWNER/ADMIN) belum
+  dijalankan; 403 non-OWNER/401 expired/re-auth baru terverifikasi lewat unit
+  wiring + E2E logout/header.
 
 ### FASE KONVERSI & CLOSING — ✅ SELESAI (kode, P0–P6)
 Seluruh fase P0–P6 tuntas di sisi kode.

@@ -24,14 +24,33 @@ Firestore) pada website LKTech.
 
 Setelah akun dibuat, salin email-nya.
 
-## 3. Isi `ADMIN_EMAILS`
+## 3. Isi `ADMIN_EMAILS` (OWNER)
 
-Di `.env.local`, isi daftar email admin (dipisah koma). Hanya email di sini yang
-boleh mengakses dashboard.
+Di `.env.local`, isi daftar email **OWNER** (dipisah koma). Email di sini memiliki
+akses penuh: operasional harian, backup/restore, ekspor PII massal, dan kelola
+admin. Admin operasional (**ADMIN**) ditambahkan dari
+`/admin/settings/keamanan` dan disimpan di koleksi `admins/{email}`.
 
 ```env
-ADMIN_EMAILS=admin@lktech.id,email-lain@domain.com
+ADMIN_EMAILS=admin@lktech.id,owner-lain@domain.com
 ```
+
+Batas role:
+
+| Aksi | OWNER | ADMIN |
+| --- | --- | --- |
+| Order, user, lead, kupon, konten, media, pengaturan | ✅ | ✅ |
+| Blokir / buka blokir user | ✅ | ✅ |
+| Backup ekspor/impor | ✅ | ❌ |
+| Ekspor PII massal (CSV user/order/lead/subscriber) | ✅ | ❌ |
+| Tambah/hapus admin | ✅ | ❌ |
+| Hapus pesanan (tunggal/massal) | ✅ + re-auth | ✅ + re-auth |
+| Broadcast massal | ✅ + re-auth | ✅ + re-auth |
+
+> **Catatan sesi:** dashboard memakai **idle timeout 60 menit** dan **absolute
+> timeout 12 jam**. Aksi sensitif (restore backup, ubah admin, hapus pesanan,
+> broadcast) meminta **verifikasi ulang Google** bila autentikasi terakhir >10
+> menit. Logout mencabut refresh token di semua perangkat.
 
 ## 4. Konfigurasi Firebase Admin SDK
 
@@ -50,6 +69,10 @@ FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVA
 > **Penting:** nilai `private_key` berisi baris baru. Tulis sebagai satu baris
 > dengan `\n` sebagai pengganti baris baru, dan apit dengan tanda kutip ganda.
 > Jangan pernah commit file ini — `.env*.local` sudah di-`.gitignore`.
+
+**Opsional — `ADMIN_SESSION_SECRET`:** kunci HMAC untuk cookie login-window
+(absolute timeout 12 jam). Bila kosong, server memakai `FIREBASE_ADMIN_PRIVATE_KEY`
+sebagai fallback; isi dengan string acak panjang bila ingin memisahkan kunci.
 
 ## 5. Deploy Security Rules
 
@@ -93,9 +116,13 @@ CLOUDINARY_API_SECRET=your-api-secret
 | Bagian | Perilaku |
 | --- | --- |
 | Belum login | `/admin/*` dialihkan ke `/admin/login` |
-| Login tapi email tidak di `ADMIN_EMAILS` | API menolak dengan **403** |
+| Login tapi bukan OWNER/ADMIN | API menolak dengan **403** |
+| Session >12 jam / idle >60 menit | Login ulang (cookie sesi + login-window ditolak) |
+| Aksi sensitif dengan auth >10 menit | Popup verifikasi ulang Google |
 | Admin SDK belum diisi | API mengembalikan **503** dengan pesan jelas |
-| Admin sah | Bisa lihat, ubah status, dan hapus lead |
+| OWNER | Semua aksi, termasuk backup, ekspor PII, kelola admin |
+| ADMIN | Operasional harian; tanpa backup/ekspor PII/kelola admin |
+| Hapus user | **Tidak ada**; gunakan **Blokir** (profil tetap) |
 | Upload gambar | Signature dibuat di server → upload langsung ke Cloudinary |
 
 ## Keamanan

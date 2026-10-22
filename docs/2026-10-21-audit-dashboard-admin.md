@@ -1,9 +1,11 @@
 # Audit Dashboard Admin LKTech — Otorisasi, Integritas Data, UX, Performa & Operasional
 
-> **Status:** 📝 **DOKUMEN TEMUAN (audit).** **P0 (ADM-01 & ADM-02) sudah
-> diperbaiki 2026-10-21 (commit `a36bf53`); P1A (ADM-06 selesai, ADM-05/07
-> sebagian) di commit `69d35b5`; P1B (ADM-04 sebagian) di commit `f8a7950`;
-> P1 lain–P3 belum.**
+> **Status:** 📝 **DOKUMEN TEMUAN + STATUS IMPLEMENTASI.** **P0 (ADM-01 &
+> ADM-02) selesai 2026-10-21 (`a36bf53`); P1A (`ADM-06` selesai,
+> `ADM-05/07` sebagian) di `69d35b5`; P1B (`ADM-04` revoke logout) di
+> `f8a7950`; P1C (ADM-03/04/08/12 + re-auth) selesai **kode** 2026-10-22 di
+> `885831c`. Verifikasi runtime ber-kredensial (akun OWNER/ADMIN nyata)
+> masih tertunda; lihat §9.**
 > **Tanggal:** 2026-10-21
 > **Cakupan:** `/admin/**` (33 halaman), 36 route API admin, 80 komponen admin,
 > alur login/sesi, guard server & klien, Firestore, audit log, backup/restore,
@@ -29,7 +31,7 @@
 Dashboard admin **sudah kaya fitur dan memiliki fondasi otorisasi yang serius**:
 API admin memakai Firebase ID token, halaman `/admin` dijaga dua lapis, dan
 Firestore menolak seluruh akses langsung dari klien. Build, lint, dan 593 unit
-test lulus.
+test lulus saat audit; setelah P1C suite bertambah menjadi 615 test.
 
 Namun audit menemukan **28 gap** yang perlu ditangani sebelum dashboard dianggap
 aman untuk banyak admin dan data produksi:
@@ -71,7 +73,7 @@ sebelum P1 selesai.
 | ----------- | ----- | --------------- |
 | Build produksi | ✅ Lulus | `npm run build`; 161 halaman statis digenerate; seluruh rute admin dinamis; TypeScript lulus |
 | Lint | ✅ Lulus | `npm run lint` (ESLint) tanpa error |
-| Unit test | ✅ 593 lulus | `npm run test:unit` |
+| Unit test | ✅ 615 lulus (593 saat audit) | `npm run test:unit` |
 | Test khusus admin | ✅ 13 lulus | `admin-audit`, `admin-nav`, `admin-dashboard-dynamic` |
 | Runtime `/admin` tanpa cookie | ✅ 307 | Redirect ke `/admin/login` |
 | Runtime `/api/admin/me` tanpa token | ✅ 401 | Tidak ada kebocoran data |
@@ -195,8 +197,13 @@ HTML, meskipun UI publik sudah menyamarkannya.
 ### ADM-03 · 🟠 Tinggi · Satu role untuk semua admin (blast radius besar)
 
 **Status:** 🟢 Terverifikasi (desain) — kode dan matriks route.
+**Status implementasi (2026-10-22):** ✅ **Selesai (kode) untuk 2 tier**. OWNER
+(`ADMIN_EMAILS`) memegang backup/restore, ekspor PII massal, dan kelola admin;
+ADMIN (koleksi `admins`) tetap menjalankan operasional harian. Batas ini
+ditegakkan di server untuk route sensitif dan di UI untuk menu/aksi. Pemisahan
+route baca PII per-field belum dilakukan (lihat sisa risiko).
 
-**Bukti:**
+**Bukti sebelum perbaikan:**
 
 - `src/lib/admins.ts:4-11` — desain eksplisit: satu role `admin`; OWNER hanya
   untuk kelola admin.
@@ -225,6 +232,28 @@ dikompromikan, seluruh bisnis terkena.
 Terapkan capability di server (bukan hanya sidebar), dengan test otorisasi per
 route.
 
+**Implementasi P1C (2026-10-22):**
+
+- `src/app/api/admin/me/route.ts` mengembalikan `isOwner` + `role`
+  (`OWNER`/`ADMIN`); `src/components/admin/admin-access.tsx` menyediakan konteks
+  fail-safe (`isOwner: false` bila belum diketahui).
+- `src/lib/admin-nav.ts`, `src/lib/settings-nav.ts`, sidebar, command palette, dan
+  ringkasan pengaturan menyembunyikan entri `ownerOnly` (backup).
+- `GET/POST /api/admin/backup` memakai `requireFreshOwner` (OWNER + re-auth);
+  halaman `/admin/settings/backup` melakukan redirect server-side untuk
+  non-OWNER.
+- Mutasi admin (`POST`/`DELETE /api/admin/admins`) memakai `requireFreshOwner`.
+- Ekspor massal di UI (user, lead, subscriber, pemakaian kupon, order) hanya
+  dirender untuk OWNER; `GET /api/admin/orders?export=1` menolak non-OWNER (403).
+- Aksi destruktif order/broadcast memakai `requireFreshAdmin`/`assertFreshAuth`.
+
+**Sisa risiko:** API daftar/detail admin lain masih `requireAdmin` dan
+mengembalikan PII yang memang dibutuhkan operasional; pembatasan per-field dan
+pemisahan route baca PII belum selesai. Ekspor user/lead/subscriber/pemakaian
+kupon masih berupa **gating UI** (tidak ada endpoint ekspor server), sedangkan
+order sudah ditegakkan di server (`export=1`). Uji runtime 403 dengan akun ADMIN
+nyata masih menunggu emulator/staging.
+
 ---
 
 ### ADM-04 · 🟠 Tinggi · Sesi 5 hari tidak dapat dicabut; logout hanya menghapus cookie
@@ -232,12 +261,31 @@ route.
 **Status:** 🟢 Terverifikasi — kode; skenario pencurian cookie tidak disimulasikan
 ke produksi.
 
-**Status implementasi (2026-10-22):** 🟡 **Sebagian** — `DELETE /api/admin/session`
-kini memverifikasi Bearer ID token (fallback session cookie), memanggil
-`revokeRefreshTokens(uid)`, lalu menghapus cookie. Verifikasi cookie & ID token
-sudah memakai `checkRevoked = true`, sehingga sesi lama di semua perangkat
-langsung ditolak. Label logout diubah menjadi “Keluar (semua perangkat)”.
-Idle timeout, absolute timeout lebih pendek, dan re-auth aksi destruktif belum.
+**Status implementasi (2026-10-22):** ✅ **Selesai (kode)** untuk kebijakan sesi
+12 jam absolut + idle 60 menit + re-auth 10 menit.
+
+- `src/lib/session-constants.ts` — `ADMIN_ABSOLUTE_TIMEOUT_MS` 12 jam,
+  `ADMIN_IDLE_TIMEOUT_MS` 60 menit, refresh aktif 5 menit, tick 30 detik,
+  jendela re-auth 10 menit.
+- `src/lib/session.ts` — cookie sesi berumur 60 menit; verifikasi menolak
+  `auth_time` lebih tua dari 12 jam dan tetap memakai `checkRevoked = true`.
+- `src/lib/admin-login-cookie.ts` — cookie `__admin_login` bertanda tangan HMAC
+  mengikat uid ke jendela login 12 jam; `AdminServerGuard` mewajibkan cookie ini.
+- `src/components/admin/use-admin-session-keepalive.ts` — idle 60 menit, refresh
+  sesi tiap 5 menit saat aktif, logout paksa saat 401/403 atau idle habis.
+- `src/lib/admin-guard.ts` + `src/lib/admin-reauth.ts` — `requireFreshAdmin`/
+  `requireFreshOwner` menolak `auth_time` >10 menit dengan `reauth_required`;
+  klien memicu popup Google lalu memaksa refresh token.
+- Re-auth dipasang pada restore backup, tambah/hapus admin, hapus order
+  tunggal/massal, dan broadcast massal.
+- `DELETE /api/admin/session` tetap mencabut refresh token semua perangkat dan
+  menghapus kedua cookie; label UI “Keluar (semua perangkat)”.
+
+**Catatan migrasi:** sesi lama tanpa cookie `__admin_login` akan diarahkan ke
+login. Ini disengaja; pengguna cukup login ulang sekali.
+
+**Belum diverifikasi runtime:** idle/absolute expiry dan popup re-auth dengan
+akun OWNER/ADMIN nyata di emulator/staging belum dijalankan.
 
 **Bukti:**
 
@@ -368,8 +416,14 @@ berisiko; alarm saat kuota email/backup mendekati batas.
 
 **Status:** 🟢 Terverifikasi — kode. Perilaku login ulang tidak diuji dengan akun
 nyata.
+**Status implementasi (2026-10-22):** ✅ **Diputuskan & diimplementasikan —
+blokir saja.** `DELETE /api/admin/users` kini mengembalikan `405
+user_delete_disabled`; tidak ada penghapusan profil/Auth. UI hanya menyediakan
+**Blokir**/**Buka blokir**, dan fungsi `deleteUserProfile`/`deleteUser` dihapus.
+Permintaan penghapusan data permanen menunggu kebijakan retensi order
+(lihat §10).
 
-**Bukti:**
+**Bukti sebelum perbaikan:**
 
 - `src/app/api/admin/users/route.ts:118-136` — DELETE menghapus profil.
 - `src/lib/user-profile.ts:273-283` — hanya `users/{uid}` yang dihapus; tidak ada
@@ -394,6 +448,12 @@ permintaan penghapusan data.
   data terkait sesuai kebijakan retensi order.
 - Jika profil dihapus tetapi akun dipertahankan, cegah pembuatan ulang otomatis
   dan tampilkan status “akun dinonaktifkan”.
+
+**Implementasi P1C:** opsi **Blokir** dipilih. Endpoint hapus dinonaktifkan
+(405), tombol hapus permanen di `users-manager.tsx` dihilangkan, dan copy UI
+menjelaskan bahwa blokir mencabut akses tanpa menghapus data. Ini menutup bug
+“akun hidup lagi”, tetapi **bukan** pemenuhan permintaan penghapusan data.
+Penghapusan akun + retensi/anonymize order tetap backlog keputusan pemilik.
 
 ---
 
@@ -476,8 +536,12 @@ audit before/after untuk perubahan besar.
 **Status:** 🟢 Terverifikasi untuk alur merge/loop; 🟡 Dugaan untuk kegagalan
 snapshot pada volume produksi (batas dokumen Firestore 1 MiB tidak diuji dengan
 data nyata).
+**Status implementasi (2026-10-22):** 🟡 **Sebagian** — akses sudah OWNER-only,
+restore **merge-only** dipertahankan, dan restore memerlukan re-auth OWNER.
+Background job/batch, snapshot per dokumen, UI restore snapshot, dan uji volume
+belum dikerjakan.
 
-**Bukti:**
+**Bukti sebelum perbaikan:**
 
 - `src/lib/backup.ts:149-189` — impor berjalan **berurutan** per dokumen
   (`.set` satu per satu), bukan batch/transaksi; maksimal 5.000 baris
@@ -501,6 +565,13 @@ untuk operasi pemulihan insiden.
 N dokumen, checkpoint/resume, idempotency, progress, dan audit per batch. Pisahkan
 mode merge vs overwrite. Simpan snapshot per dokumen atau sebagai file ekspor
 terpisah, sediakan UI restore snapshot, dan uji di staging dengan volume realistis.
+
+**Implementasi P1C:** `GET` dan `POST /api/admin/backup` memakai
+`requireFreshOwner` (OWNER + re-auth), halaman backup melakukan redirect
+server-side, dan entri navigasi/pengaturan disembunyikan untuk ADMIN. Restore
+tetap **merge-only**: dokumen di luar backup tidak dihapus. Re-auth Google
+diminta sebelum ekspor maupun impor. Keterbatasan timeout/snapshot 1 MiB tetap
+seperti di atas.
 
 ---
 
@@ -858,7 +929,9 @@ robots.txt saja.
   - revoke sesi (ADM-04),
   - hapus user/hapus order massal,
   - batas/paginasi.
-- Seluruh 593 unit test lulus, tetapi tidak menyentuh route admin secara langsung.
+- Saat audit, 593 unit test lulus tetapi tidak menyentuh route admin secara
+  langsung. P1A–P1C menambahkan test wiring/CSV/backup/SEO dan E2E header/logout
+  (suite kini 615 test), tetapi **belum ada** integration/E2E ber-kredensial.
 
 **Dampak:** regresi keamanan paling berbahaya tidak akan tertangkap CI. Audit ini
 menemukan dua isu kritis yang seharusnya bisa dicegah test murah.
@@ -961,10 +1034,12 @@ build + test hijau.
 | ADM-12 | Restore sebagai background job/batch; snapshot yang benar |
 | ADM-13 | Tutup coverage audit (project/content/lead/media collection) + alert |
 
-**Status P1:** ADM-06 ✅ selesai; ADM-05 🟡 sebagian (header + CSP minimal;
-CSP nonce penuh belum); ADM-07 🟡 sebagian (rate-limit + batas `testEmail`;
-idempotency/re-auth belum); ADM-04 🟡 sebagian (revoke saat logout; idle/absolute
-timeout + re-auth belum). ADM-03/08/09/12/13 ⏳ belum.
+**Status P1:** ADM-06 ✅ selesai; ADM-03 ✅ selesai (kode, 2 tier); ADM-04 ✅
+selesai (kode, 12 jam + idle 60 menit + re-auth); ADM-08 ✅ selesai (blokir
+saja); ADM-05 🟡 sebagian (header + CSP minimal; CSP nonce penuh belum); ADM-07
+🟡 sebagian (rate-limit + batas `testEmail`; idempotency belum); ADM-12 🟡
+sebagian (OWNER-only + merge-only + re-auth; background/snapshot belum);
+ADM-09/13 ⏳ belum.
 
 ### 🟡 Status implementasi P1A — 2026-10-21 (`69d35b5`)
 
@@ -996,6 +1071,29 @@ timeout + re-auth belum). ADM-03/08/09/12/13 ⏳ belum.
   `npm run lint` ✅ · `npm run build` ✅ (161/161 halaman) · E2E
   `admin-session` + `security-headers` 2/2 ✅.
 
+### ✅ Status implementasi P1C — 2026-10-22 (`885831c`)
+
+- **ADM-03** — model 2 tier `OWNER`/`ADMIN`; `/api/admin/me` mengembalikan
+  `isOwner`/`role`; menu, command palette, dan ringkasan pengaturan menyembunyikan
+  entri OWNER-only; backup, ekspor PII massal, dan mutasi admin ditegakkan di
+  server.
+- **ADM-04** — absolute timeout 12 jam (`auth_time` + cookie login bertanda
+  tangan), idle timeout 60 menit, refresh aktif 5 menit, re-auth 10 menit untuk
+  restore backup/kelola admin/hapus order/broadcast, dan revoke logout tetap
+  aktif. Sesi lama tanpa `__admin_login` diarahkan login ulang (disengaja).
+- **ADM-08** — hapus user dinonaktifkan (405); UI hanya blokir/buka blokir.
+- **ADM-12** — backup ekspor/impor OWNER-only + fresh auth; restore tetap
+  merge-only. Background job/snapshot per dokumen belum.
+- **Verifikasi otomatis:** `npm run test:admin-security` 10/10 ·
+  `npm run test:nav` 9/9 · `npm run test:admin-session` 1/1 ·
+  `npm run test:unit` 615/615 · `npm run lint` ✅ · `npm run build` ✅
+  (161/161 halaman) · E2E `admin-session` + `security-headers` 2/2 ✅.
+- **Belum:** E2E ber-kredensial dengan akun OWNER/ADMIN seed (emulator/staging),
+  uji idle/absolute expiry nyata, dan uji non-OWNER 403 end-to-end. Jangan klaim
+  verifikasi runtime sebelum itu dijalankan.
+- **Sisa P1:** CSP nonce/report-only penuh (ADM-05), idempotency broadcast
+  (ADM-07), audit coverage (ADM-13), dan atomisitas restore kupon (ADM-09).
+
 ### P2 — skala, keandalan, UX inti
 
 - ADM-10 — metrik user hanya order yang valid.
@@ -1020,20 +1118,28 @@ timeout + re-auth belum). ADM-03/08/09/12/13 ⏳ belum.
 
 ---
 
-## 10. Keputusan yang Perlu Diambil Pemilik
+## 10. Keputusan Pemilik (2026-10-22)
 
-1. **Model role:** tetap satu role super-admin (dengan backup/PII hanya OWNER)
-   atau buat capability `owner/operations/content/support`?
-2. **Hapus user:** benar-benar hapus akun Auth + anonymize data, atau cukup
-   “blokir” dan ubah label?
-3. **Backup:** siapa yang boleh ekspor/impor? Apakah restore harus point-in-time
-   (menghapus dokumen yang tidak ada di backup) atau merge saja?
-4. **Retensi audit:** berapa lama disimpan, siapa yang boleh ekspor, dan apakah
-   aksi baca PII (mis. membuka detail user) perlu dicatat?
-5. **E2E admin:** apakah diizinkan membuat akun uji + data seed di Firebase
-   emulator/staging? Ini dibutuhkan untuk test alur nyata.
-6. **Analytics:** apakah pageview admin harus dikecualikan sepenuhnya dari
-   Vercel Analytics/GA?
+1. **Model role:** ✅ **Opsi A — 2 tier `OWNER` + `ADMIN`.** OWNER =
+   `ADMIN_EMAILS`; ADMIN = koleksi `admins`. ADMIN menjalankan operasional harian,
+   tetapi tidak boleh kelola admin, backup/restore, ekspor PII massal, atau hapus
+   permanen user.
+2. **Sesi:** ✅ **Absolute timeout 12 jam + idle timeout 60 menit + re-auth
+   Google 10 menit** untuk aksi sensitif. Logout mencabut refresh token semua
+   perangkat.
+3. **Hapus user:** ✅ **Blokir saja.** Tidak ada penghapusan akun Auth/profil
+   permanen pada batch ini; label dan semantik UI diselaraskan. Permintaan
+   penghapusan data mengikuti kebijakan retensi order yang belum diputuskan.
+4. **Backup:** ✅ **OWNER-only, ekspor/impor; restore merge-only.** Snapshot
+   sebelum impor tetap dibuat, tetapi bukan point-in-time dan belum bisa
+   dipulihkan dari UI. Background job/batch masih backlog.
+5. **E2E admin:** ✅ **Diizinkan memakai Firebase emulator/staging + akun seed**
+   untuk alur ber-kredensial. Konfigurasi emulator dan seed belum dibuat; ini
+   prasyarat sebelum klaim verifikasi runtime.
+6. **Retensi audit:** ⏳ **Belum diputuskan** — berapa lama disimpan, siapa yang
+   boleh ekspor, dan apakah aksi baca PII perlu dicatat.
+7. **Analytics admin:** ⏳ **Belum diputuskan** — apakah pageview admin
+   dikecualikan sepenuhnya dari Vercel Analytics/GA.
 
 ---
 
@@ -1041,10 +1147,13 @@ timeout + re-auth belum). ADM-03/08/09/12/13 ⏳ belum.
 
 - Audit awal tidak mengubah kode; P0 (ADM-01/02) diimplementasikan setelah audit
   dan diverifikasi pada commit `a36bf53`. P1A (ADM-06 selesai; ADM-05/07 sebagian)
-  diimplementasikan pada commit `69d35b5`. P1B (ADM-04 sebagian) di commit
-  `f8a7950`; P1 lain–P3 masih berupa dokumentasi.
-- E2E admin dengan akun nyata tidak dijalankan karena membutuhkan kredensial dan
-  data uji; tidak ada eksploitasi ke Firestore produksi.
+  diimplementasikan pada commit `69d35b5`. P1B (ADM-04 revoke logout) di commit
+  `f8a7950`. P1C (ADM-03/04/08/12 + re-auth) selesai **kode** 2026-10-22 di
+  `885831c`. P1 lain–P3 masih dokumentasi/backlog.
+- E2E admin dengan akun nyata belum dijalankan karena emulator/staging + akun seed
+  belum dikonfigurasi; tidak ada eksploitasi ke Firestore produksi. Semua klaim
+  P1C di atas adalah verifikasi kode/test wiring, bukan verifikasi runtime
+  ber-kredensial.
 - axe/Lighthouse area admin tidak dijalankan; login terlindungi dan dashboard
   membutuhkan sesi.
 - Playwright WebKit masih tertunda karena unduhan timeout; fokus QA browser
@@ -1061,11 +1170,14 @@ timeout + re-auth belum). ADM-03/08/09/12/13 ⏳ belum.
 1. Review P1–P3 dan jawab keputusan di §10.
 2. ✅ **P0 selesai** (ADM-01/02) pada commit `a36bf53`; jangan regress. Regression
    test sudah masuk suite unit (`test:backup`, `test:seo-schema`, `test:unit`).
-3. 🟡 **P1A selesai sebagian** (`69d35b5`): ADM-06 ✅; ADM-05/07 🟡.
-   **P1B** (`f8a7950`): ADM-04 🟡 (revoke logout selesai; timeout/re-auth belum).
-   Lanjutkan CSP nonce/report-only penuh, idempotency/re-auth, timeout, lalu
-   ADM-03/08/09/12/13.
-4. Setelah P1, lanjut P2 (skala/UX), lalu P3 (polish).
-5. Setiap batch wajib menambah test regresi dan memperbarui
+3. ✅ **P1A** (`69d35b5`): ADM-06 selesai; ADM-05/07 sebagian. **P1B**
+   (`f8a7950`): ADM-04 revoke logout. **P1C** (2026-10-22): ADM-03/04/08/12
+   selesai kode + re-auth. Lanjutkan sisa P1: CSP nonce/report-only penuh,
+   idempotency broadcast, audit coverage, lalu ADM-09/13.
+4. **Sebelum klaim runtime:** siapkan Firebase emulator/staging + seed akun
+   OWNER/ADMIN, lalu uji 403 non-OWNER, 401 sesi kedaluwarsa, idle/absolute
+   expiry, dan popup re-auth.
+5. Setelah P1, lanjut P2 (skala/UX), lalu P3 (polish).
+6. Setiap batch wajib menambah test regresi dan memperbarui
    `docs/README.md` + `TASK-SELANJUTNYA.md`.
-6. Dokumen audit & status ini sudah di-commit; perbarui status setiap batch.
+7. Dokumen audit & status ini sudah di-commit; perbarui status setiap batch.
