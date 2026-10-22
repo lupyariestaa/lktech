@@ -60,8 +60,8 @@ export function CommandPalette({
       },
       {
         id: "action:logout",
-        label: "Keluar",
-        hint: "Akhiri sesi admin",
+        label: "Keluar (semua perangkat)",
+        hint: "Cabut sesi admin di semua perangkat",
         icon: LogOut,
         action: "logout",
       },

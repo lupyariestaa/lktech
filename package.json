@@ -26,6 +26,7 @@
     "test:nav": "node --experimental-strip-types --test scripts/admin-nav.test.ts",
     "test:backup": "node --experimental-strip-types --test scripts/backup-pure.test.ts",
     "test:csv": "node --experimental-strip-types --test scripts/csv.test.ts",
+    "test:admin-session": "node --experimental-strip-types --test scripts/admin-session-wiring.test.ts",
     "test:seo": "node --experimental-strip-types --test scripts/seo-pure.test.ts",
     "test:trusted-url": "node --experimental-strip-types --test scripts/trusted-url.test.ts",
     "test:settings-form": "node --experimental-strip-types --test scripts/settings-form-pure.test.ts",

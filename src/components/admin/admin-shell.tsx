@@ -83,7 +83,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }, [toggleRail]);
 
   const onLogout = useCallback(async () => {
-    await clearAdminSession();
+    await clearAdminSession({ revoke: true });
     await signOutUser();
     router.replace("/admin/login");
   }, [router]);

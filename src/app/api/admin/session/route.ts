@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { bearerToken, requireAdmin } from "@/lib/admin-guard";
+import { getAdminAuth } from "@/lib/firebase-admin";
 import {
+  ADMIN_SESSION_COOKIE,
   createAdminSessionCookie,
   setSessionCookie,
   clearSessionCookie,
+  revokeAdminSessions,
+  verifyAdminSessionCookie,
 } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -46,9 +50,41 @@ export async function POST(req: Request) {
   }
 }
 
-/** DELETE /api/admin/session — hapus session cookie (logout). */
-export async function DELETE() {
-  const res = NextResponse.json({ ok: true });
+/**
+ * Menentukan uid yang akan dicabut saat logout.
+ *
+ * Prioritas: Bearer ID token (dikirim klien) → session cookie (fallback bila
+ * token sudah kedaluwarsa/tidak tersedia). Keduanya diverifikasi dengan
+ * `checkRevoked = true`.
+ */
+async function resolveLogoutUid(req: NextRequest): Promise<string | null> {
+  const token = bearerToken(req);
+  const auth = getAdminAuth();
+  if (token && auth) {
+    try {
+      const decoded = await auth.verifyIdToken(token, true);
+      return decoded.uid;
+    } catch {
+      /* lanjut ke fallback cookie */
+    }
+  }
+
+  const cookie = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+  const session = await verifyAdminSessionCookie(cookie);
+  return session?.uid ?? null;
+}
+
+/**
+ * DELETE /api/admin/session — logout admin.
+ *
+ * Mencabut seluruh refresh token user (semua perangkat) lalu menghapus cookie.
+ * Cookie tetap dihapus meski pencabutan gagal agar sesi lokal tidak tertinggal;
+ * respons memuat `revoked` untuk observability.
+ */
+export async function DELETE(req: NextRequest) {
+  const uid = await resolveLogoutUid(req);
+  const revoked = uid ? await revokeAdminSessions(uid) : false;
+  const res = NextResponse.json({ ok: true, revoked });
   clearSessionCookie(res);
   return res;
 }

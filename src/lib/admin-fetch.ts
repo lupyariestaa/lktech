@@ -1,9 +1,31 @@
 import { getIdToken } from "@/lib/auth";
 
-/** Menghapus session cookie admin (dipanggil saat logout). Best-effort. */
-export async function clearAdminSession(): Promise<void> {
+/**
+ * Logout admin: cabut sesi server (refresh token) lalu hapus cookie.
+ *
+ * `revoke: true` mengirim Bearer ID token agar server dapat memanggil
+ * `revokeRefreshTokens`. Bila token tidak tersedia, endpoint masih memakai
+ * session cookie sebagai fallback. Best-effort: kegagalan jaringan tidak
+ * menghalangi `signOutUser` di klien.
+ */
+export async function clearAdminSession(
+  opts: { revoke?: boolean } = {},
+): Promise<void> {
+  let token: string | null = null;
+  if (opts.revoke) {
+    try {
+      token = await getIdToken();
+    } catch {
+      /* lanjut tanpa Bearer; server memakai cookie */
+    }
+  }
+
   try {
-    await fetch("/api/admin/session", { method: "DELETE" });
+    await fetch("/api/admin/session", {
+      method: "DELETE",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      cache: "no-store",
+    });
   } catch {
     /* abaikan */
   }

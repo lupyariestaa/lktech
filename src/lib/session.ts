@@ -52,6 +52,25 @@ export async function verifyAdminSessionCookie(
   }
 }
 
+/**
+ * Mencabut seluruh refresh token milik user (logout semua perangkat).
+ *
+ * Session cookie & ID token yang masih beredar akan ditolak karena verifikasi
+ * Firebase memakai `checkRevoked = true`. Mengembalikan `false` bila Admin SDK
+ * tidak tersedia atau pencabutan gagal; pemanggil tetap harus menghapus cookie.
+ */
+export async function revokeAdminSessions(uid: string): Promise<boolean> {
+  const auth = getAdminAuth();
+  if (!auth) return false;
+  try {
+    await auth.revokeRefreshTokens(uid);
+    return true;
+  } catch (err) {
+    console.error("[session] gagal mencabut refresh token admin:", err);
+    return false;
+  }
+}
+
 /** Menyimpan session cookie (HttpOnly) pada respons. */
 export function setSessionCookie(
   res: NextResponse,

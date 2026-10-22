@@ -50,6 +50,7 @@
     "scripts/admin-nav.test.ts",
     "scripts/backup-pure.test.ts",
     "scripts/csv.test.ts",
+    "scripts/admin-session-wiring.test.ts",
     "scripts/seo-pure.test.ts",
     "scripts/trusted-url.test.ts",
     "scripts/settings-form-pure.test.ts",
