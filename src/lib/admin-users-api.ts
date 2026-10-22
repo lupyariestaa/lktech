@@ -64,14 +64,6 @@ export async function setUserBlocked(
   });
 }
 
-/** Hapus user (profil). */
-export async function deleteUser(id: string): Promise<void> {
-  await adminFetch<{ ok: boolean }>(
-    `/api/admin/users?id=${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  );
-}
-
 /** Ekspor daftar user ke CSV (menghormati urutan yang sedang tampil). */
 export function exportUsersToCsv(users: AdminUserRow[], filename?: string) {
   const headers = [

@@ -8,6 +8,14 @@
 export type NavChildLike = { label: string; title: string; href: string };
 export type NavItemLike = { label: string; title: string; href: string; children?: NavChildLike[] };
 
+/** Filter item yang ditandai `ownerOnly` berdasarkan role 2 tingkat. */
+export function canViewOwnerOnly(
+  item: { ownerOnly?: boolean },
+  isOwner: boolean,
+): boolean {
+  return !item.ownerOnly || isOwner;
+}
+
 /** Item aktif bila pathname sama persis ATAU prefix path anaknya. */
 export function isNavActive(href: string, pathname: string): boolean {
   return href === "/admin"

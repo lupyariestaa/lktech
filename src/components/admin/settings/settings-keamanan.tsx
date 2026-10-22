@@ -16,6 +16,7 @@ import {
   removeAdmin,
   type AdminMember,
 } from "@/lib/admin-settings-api";
+import { ensureRecentAdminAuth } from "@/lib/admin-reauth";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 
@@ -61,6 +62,7 @@ export function SettingsKeamanan() {
     if (!email.trim()) return;
     setAdding(true);
     try {
+      await ensureRecentAdminAuth();
       await addAdmin({ email: email.trim(), name: name.trim() || undefined });
       toast.success(`Admin ${email.trim()} ditambahkan.`);
       setEmail("");
@@ -77,6 +79,7 @@ export function SettingsKeamanan() {
     if (!toRemove) return;
     setRemoving(true);
     try {
+      await ensureRecentAdminAuth();
       await removeAdmin(toRemove.email);
       toast.success("Admin dihapus.");
       setToRemove(null);
@@ -93,8 +96,10 @@ export function SettingsKeamanan() {
       <div className="flex items-start gap-2.5 rounded-2xl border border-primary/20 bg-primary-50/60 px-4 py-3 text-sm text-primary">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
-          Akun admin dapat masuk ke dashboard ini dengan Google. <strong>OWNER</strong> (dari env)
-          tidak dapat dihapus. Hanya OWNER yang dapat menambah/menghapus admin.
+          Model akses 2 tingkat: <strong>OWNER</strong> (env) memegang backup,
+          ekspor PII massal, dan kelola admin; <strong>ADMIN</strong> (daftar di
+          bawah) menjalankan operasional harian tanpa hak tersebut. OWNER tidak
+          dapat dihapus. Hanya OWNER yang dapat menambah/menghapus admin.
         </span>
       </div>
 
@@ -132,9 +137,13 @@ export function SettingsKeamanan() {
                           Anda
                         </span>
                       )}
-                      {a.isOwner && (
+                      {a.isOwner ? (
                         <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                           OWNER
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          ADMIN
                         </span>
                       )}
                     </p>

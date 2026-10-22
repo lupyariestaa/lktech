@@ -1,8 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { bearerToken, requireAdmin } from "@/lib/admin-guard";
+import {
+  clearAdminLoginCookie,
+  createAdminLoginToken,
+  setAdminLoginCookie,
+  verifyAdminLoginToken,
+} from "@/lib/admin-login-cookie";
 import { getAdminAuth } from "@/lib/firebase-admin";
 import {
+  ADMIN_IDLE_TIMEOUT_MS,
+  ADMIN_LOGIN_COOKIE,
   ADMIN_SESSION_COOKIE,
+} from "@/lib/session-constants";
+import {
   createAdminSessionCookie,
   setSessionCookie,
   clearSessionCookie,
@@ -13,7 +23,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const FIVE_DAYS_SECONDS = 5 * 24 * 60 * 60;
+const SESSION_MAX_AGE_SECONDS = Math.floor(ADMIN_IDLE_TIMEOUT_MS / 1000);
 
 /**
  * POST /api/admin/session
@@ -21,13 +31,30 @@ const FIVE_DAYS_SECONDS = 5 * 24 * 60 * 60;
  * benar-benar admin. Cookie ini dipakai middleware untuk gate `/admin/*`
  * (defense-in-depth; verifikasi kriptografis tetap di API).
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
   const idToken = bearerToken(req);
   if (!idToken) {
     return NextResponse.json({ error: "Token tidak ditemukan." }, { status: 401 });
+  }
+
+  // Pertahankan login window awal bila cookie masih valid. Bila belum ada
+  // (login baru), mulai window 12 jam sekarang. Cookie yang sudah kedaluwarsa
+  // tidak dianggap valid; namun `requireAdmin` di atas sudah menolak token
+  // dengan `auth_time` > 12 jam kecuali admin baru saja re-auth.
+  const existingLogin = verifyAdminLoginToken(
+    req.cookies.get(ADMIN_LOGIN_COOKIE)?.value,
+    check.uid,
+  );
+  const loginAt = existingLogin?.loginAt ?? Date.now();
+  const loginToken = createAdminLoginToken(check.uid, loginAt);
+  if (!loginToken) {
+    return NextResponse.json(
+      { error: "Session tidak dapat dibuat (secret sesi belum tersedia)." },
+      { status: 503 },
+    );
   }
 
   try {
@@ -39,7 +66,8 @@ export async function POST(req: Request) {
       );
     }
     const res = NextResponse.json({ ok: true });
-    setSessionCookie(res, sessionCookie, FIVE_DAYS_SECONDS);
+    setSessionCookie(res, sessionCookie, SESSION_MAX_AGE_SECONDS);
+    setAdminLoginCookie(res, loginToken, loginAt);
     return res;
   } catch (err) {
     console.error("[api/admin/session] gagal membuat sesi:", err);
@@ -86,5 +114,6 @@ export async function DELETE(req: NextRequest) {
   const revoked = uid ? await revokeAdminSessions(uid) : false;
   const res = NextResponse.json({ ok: true, revoked });
   clearSessionCookie(res);
+  clearAdminLoginCookie(res);
   return res;
 }

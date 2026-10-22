@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { deleteUserProfile, setUserBlocked } from "@/lib/user-profile";
+import { setUserBlocked } from "@/lib/user-profile";
 import { getAdminUsersSummary, listAdminUsers, type AdminUsersFilter } from "@/lib/admin-users";
 import { userBlockSchema } from "@/lib/api-schemas";
 import { recordAdminAudit } from "@/lib/admin-audit";
@@ -116,34 +116,23 @@ export async function PATCH(req: Request) {
 }
 
 /**
- * DELETE /api/admin/users?id=xxx — hapus dokumen user (profil).
- * Catatan: pesanan user TIDAK dihapus (menjaga integritas riwayat penjualan).
+ * DELETE /api/admin/users — DINONAKTIFKAN.
+ *
+ * Keputusan pemilik (ADM-08): semantik yang dipakai adalah **blokir**, bukan
+ * hapus permanen. Menghapus profil saja membuat akun Auth tetap hidup dan bisa
+ * membuat profil baru, sehingga menyesatkan. Penghapusan akun + retensi order
+ * baru akan dipertimbangkan setelah kebijakan retensi ditetapkan.
  */
 export async function DELETE(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  const id = new URL(req.url).searchParams.get("id")?.trim();
-  if (!id) {
-    return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
-  }
-
-  try {
-    const ok = await deleteUserProfile(id);
-    if (!ok) {
-      return NextResponse.json(
-        { error: "User tidak ditemukan." },
-        { status: 404 },
-      );
-    }
-    await recordAdminAudit({
-      action: "user.delete",
-      actor: check.email,
-      target: id,
-    });
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("[api/admin/users] DELETE gagal:", err);
-    return NextResponse.json({ error: "Gagal menghapus user." }, { status: 500 });
-  }
+  return NextResponse.json(
+    {
+      error:
+        "Penghapusan permanen user dinonaktifkan. Gunakan Blokir (PATCH) agar profil tetap ada dan akses dicabut.",
+      code: "user_delete_disabled",
+    },
+    { status: 405, headers: { Allow: "GET, PATCH" } },
+  );
 }

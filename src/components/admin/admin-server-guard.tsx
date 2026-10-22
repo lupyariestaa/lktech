@@ -1,7 +1,11 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { ADMIN_SESSION_COOKIE } from "@/lib/session-constants";
+import { verifyAdminLoginToken } from "@/lib/admin-login-cookie";
+import {
+  ADMIN_LOGIN_COOKIE,
+  ADMIN_SESSION_COOKIE,
+} from "@/lib/session-constants";
 import { verifyAdminSessionCookie } from "@/lib/session";
 import { isAdminEmail } from "@/lib/admins";
 
@@ -25,6 +29,16 @@ export async function AdminServerGuard({
 
   const session = await verifyAdminSessionCookie(cookie);
   if (!session || !session.emailVerified) {
+    redirect("/admin/login");
+  }
+
+  // Absolute timeout 12 jam: `__session` saja tidak cukup. Cookie login
+  // bertanda tangan harus ada, cocok uid, dan belum lewat 12 jam.
+  const loginWindow = verifyAdminLoginToken(
+    store.get(ADMIN_LOGIN_COOKIE)?.value,
+    session.uid,
+  );
+  if (!loginWindow) {
     redirect("/admin/login");
   }
 

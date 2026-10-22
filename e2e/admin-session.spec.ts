@@ -16,5 +16,6 @@ test("logout tanpa sesi menghapus cookie dan mengembalikan revoked=false", async
 
   const setCookie = res.headers()["set-cookie"] ?? "";
   expect(setCookie).toContain("__session=");
+  expect(setCookie).toContain("__admin_login=");
   expect(setCookie.toLowerCase()).toContain("max-age=0");
 });

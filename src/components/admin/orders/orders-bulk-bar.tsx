@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/order-types";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { cn } from "@/lib/utils";
 
 export type BulkAction =
@@ -44,6 +45,7 @@ export function OrdersBulkBar({
 }) {
   const [statusOpen, setStatusOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { isOwner } = useAdminAccess();
 
   // Tutup dropdown saat klik di luar / Escape (F-G19).
   useEffect(() => {
@@ -118,12 +120,14 @@ export function OrdersBulkBar({
           </div>
         )}
 
-        <BulkButton
-          icon={<Download className="h-4 w-4" />}
-          label="Ekspor terpilih"
-          busy={busy}
-          onClick={() => onAction({ action: "export" })}
-        />
+        {isOwner && (
+          <BulkButton
+            icon={<Download className="h-4 w-4" />}
+            label="Ekspor terpilih"
+            busy={busy}
+            onClick={() => onAction({ action: "export" })}
+          />
+        )}
 
         <BulkButton
           icon={<RefreshCw className="h-4 w-4" />}

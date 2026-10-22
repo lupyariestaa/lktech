@@ -270,19 +270,6 @@ export async function setUserBlocked(
   return true;
 }
 
-/** Hapus dokumen profil user (dipakai admin). */
-export async function deleteUserProfile(uid: string): Promise<boolean> {
-  const db = getAdminDb();
-  if (!db) return false;
-
-  const ref = db.collection(COLLECTION).doc(uid);
-  const existing = await ref.get();
-  if (!existing.exists) return false;
-
-  await ref.delete();
-  return true;
-}
-
 // ===== Wishlist =====
 
 /**

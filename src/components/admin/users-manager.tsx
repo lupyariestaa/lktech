@@ -10,12 +10,10 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
-  Trash2,
   UserRound,
   Users,
 } from "lucide-react";
 import {
-  deleteUser,
   exportUsersToCsv,
   fetchUsers,
   fetchUsersSummary,
@@ -26,7 +24,7 @@ import type { AdminUserRow, AdminUsersSummary } from "@/lib/user-types";
 import { waLink } from "@/lib/whatsapp";
 import { formatDateTime, formatRupiah } from "@/lib/format";
 import { useToast } from "@/components/admin/toast";
-import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { UserDetailDialog } from "@/components/admin/user-detail-dialog";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +42,7 @@ function useDebounced<T>(value: T, delay = 300): T {
 
 export function UsersManager() {
   const toast = useToast();
+  const { isOwner } = useAdminAccess();
 
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [summary, setSummary] = useState<AdminUsersSummary | null>(null);
@@ -56,8 +55,6 @@ export function UsersManager() {
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [toDelete, setToDelete] = useState<AdminUserRow | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const debouncedQuery = useDebounced(query);
 
@@ -92,6 +89,10 @@ export function UsersManager() {
   }, []);
 
   const onExport = () => {
+    if (!isOwner) {
+      toast.error("Ekspor PII hanya dapat dilakukan OWNER.");
+      return;
+    }
     if (users.length === 0) {
       toast.error("Tidak ada data untuk diekspor.");
       return;
@@ -116,22 +117,6 @@ export function UsersManager() {
       );
     } finally {
       setBusyId(null);
-    }
-  };
-
-  const onDelete = async () => {
-    if (!toDelete) return;
-    setDeleting(true);
-    try {
-      await deleteUser(toDelete.uid);
-      setUsers((prev) => prev.filter((u) => u.uid !== toDelete.uid));
-      toast.success("User dihapus.");
-      setToDelete(null);
-      refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal menghapus user.");
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -210,13 +195,15 @@ export function UsersManager() {
           >
             <RefreshCw className="h-4 w-4" />
           </button>
-          <button
-            onClick={onExport}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
-          >
-            <Download className="h-4 w-4" />
-            Ekspor CSV
-          </button>
+          {isOwner && (
+            <button
+              onClick={onExport}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              <Download className="h-4 w-4" />
+              Ekspor CSV
+            </button>
+          )}
         </div>
       </div>
 
@@ -324,7 +311,6 @@ export function UsersManager() {
                         busy={busyId === u.uid}
                         onDetail={() => setDetailId(u.uid)}
                         onToggleBlock={() => onToggleBlock(u)}
-                        onDelete={() => setToDelete(u)}
                       />
                     </td>
                   </tr>
@@ -399,7 +385,6 @@ export function UsersManager() {
                     busy={busyId === u.uid}
                     onDetail={() => setDetailId(u.uid)}
                     onToggleBlock={() => onToggleBlock(u)}
-                    onDelete={() => setToDelete(u)}
                   />
                 </div>
               </li>
@@ -417,20 +402,6 @@ export function UsersManager() {
         />
       )}
 
-      {/* Hapus user */}
-      <ConfirmDialog
-        open={Boolean(toDelete)}
-        title="Hapus pengguna ini?"
-        description={
-          toDelete
-            ? `Data profil "${toDelete.displayName}" (${toDelete.email}) akan dihapus. Pesanannya tetap tersimpan di daftar Pesanan.`
-            : undefined
-        }
-        confirmLabel="Hapus"
-        busy={deleting}
-        onConfirm={onDelete}
-        onCancel={() => setToDelete(null)}
-      />
     </div>
   );
 }
@@ -505,19 +476,17 @@ function WhatsappCell({
   );
 }
 
-/** Tombol aksi baris (detail, blokir, hapus). */
+/** Tombol aksi baris (detail, blokir/buka blokir). */
 function RowActions({
   user,
   busy,
   onDetail,
   onToggleBlock,
-  onDelete,
 }: {
   user: AdminUserRow;
   busy: boolean;
   onDetail: () => void;
   onToggleBlock: () => void;
-  onDelete: () => void;
 }) {
   return (
     <div className="flex items-center justify-end gap-1.5">
@@ -532,6 +501,7 @@ function RowActions({
         onClick={onToggleBlock}
         disabled={busy}
         aria-label={user.blocked ? "Buka blokir" : "Blokir user"}
+        title={user.blocked ? "Buka blokir" : "Blokir user (akun tetap ada)"}
         className={cn(
           "grid h-8 w-8 place-items-center rounded-full border transition-colors disabled:opacity-50",
           user.blocked
@@ -544,14 +514,6 @@ function RowActions({
         ) : (
           <Ban className="h-3.5 w-3.5" />
         )}
-      </button>
-      <button
-        onClick={onDelete}
-        disabled={busy}
-        aria-label="Hapus user"
-        className="grid h-8 w-8 place-items-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-rose-200 hover:text-rose-500 disabled:opacity-50"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
       </button>
     </div>
   );

@@ -1,9 +1,13 @@
 import "server-only";
 import { NextResponse } from "next/server";
+import {
+  ADMIN_ABSOLUTE_TIMEOUT_MS,
+  ADMIN_REAUTH_WINDOW_MS,
+} from "@/lib/session-constants";
 import { getAdminAuth, isAdminConfigured } from "@/lib/firebase-admin";
 
 export type AdminCheck =
-  | { ok: true; uid: string; email: string }
+  | { ok: true; uid: string; email: string; authTime: number }
   | { ok: false; response: NextResponse };
 
 /** Sama bentuknya dengan `AdminCheck`, dipakai untuk user biasa (bukan admin). */
@@ -24,6 +28,7 @@ async function verifyToken(req: Request): Promise<{
   uid: string;
   email: string;
   emailVerified: boolean;
+  authTime: number;
 } | null> {
   const token = bearerToken(req);
   if (!token) return null;
@@ -35,6 +40,7 @@ async function verifyToken(req: Request): Promise<{
       uid: decoded.uid,
       email: (decoded.email ?? "").toLowerCase(),
       emailVerified: decoded.email_verified === true,
+      authTime: Number(decoded.auth_time ?? 0),
     };
   } catch {
     return null;
@@ -81,7 +87,12 @@ export async function requireUser(req: Request): Promise<UserCheck> {
     };
   }
 
-  return { ok: true, uid: verified.uid, email: verified.email };
+  return {
+    ok: true,
+    uid: verified.uid,
+    email: verified.email,
+    authTime: verified.authTime,
+  };
 }
 
 /**
@@ -126,6 +137,27 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
     };
   }
 
+  // Absolute timeout admin (12 jam). ID token boleh di-refresh Firebase,
+  // tetapi `auth_time` tetap waktu autentikasi kuat terakhir. Re-auth Google
+  // untuk aksi sensitif memang memperbarui waktu ini.
+  if (
+    !verified.authTime ||
+    Date.now() / 1000 - verified.authTime >
+      ADMIN_ABSOLUTE_TIMEOUT_MS / 1000
+  ) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error:
+            "Sesi admin sudah mencapai batas 12 jam. Silakan login ulang.",
+          code: "admin_session_expired",
+        },
+        { status: 401 },
+      ),
+    };
+  }
+
   // G5 — tolak admin bila email belum diverifikasi (klaim `email_verified`).
   // Mencegah email yang belum terbukti dimiliki lolos sebagai admin.
   if (!verified.emailVerified) {
@@ -155,7 +187,12 @@ export async function requireAdmin(req: Request): Promise<AdminCheck> {
     };
   }
 
-  return { ok: true, uid: verified.uid, email };
+  return {
+    ok: true,
+    uid: verified.uid,
+    email,
+    authTime: verified.authTime,
+  };
 }
 
 /**
@@ -176,6 +213,50 @@ export async function requireOwner(req: Request): Promise<AdminCheck> {
     };
   }
   return check;
+}
+
+/**
+ * Memastikan autentikasi kuat (Google sign-in / re-auth) masih baru.
+ * Dipakai untuk aksi berisiko tinggi: backup restore, ubah admin, hapus
+ * massal, dan kirim broadcast. Respons 401 `reauth_required` memicu popup
+ * re-auth di klien.
+ */
+export function assertFreshAuth(
+  check: AdminCheck,
+  maxAgeMs = ADMIN_REAUTH_WINDOW_MS,
+): AdminCheck {
+  if (!check.ok) return check;
+  const ageMs = Date.now() - check.authTime * 1000;
+  if (ageMs > maxAgeMs) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error:
+            "Verifikasi ulang dengan Google diperlukan untuk aksi sensitif ini.",
+          code: "reauth_required",
+        },
+        { status: 401 },
+      ),
+    };
+  }
+  return check;
+}
+
+/** Seperti `requireAdmin`, tetapi wajib autentikasi kuat yang masih baru. */
+export async function requireFreshAdmin(
+  req: Request,
+  maxAgeMs = ADMIN_REAUTH_WINDOW_MS,
+): Promise<AdminCheck> {
+  return assertFreshAuth(await requireAdmin(req), maxAgeMs);
+}
+
+/** Seperti `requireOwner`, tetapi wajib autentikasi kuat yang masih baru. */
+export async function requireFreshOwner(
+  req: Request,
+  maxAgeMs = ADMIN_REAUTH_WINDOW_MS,
+): Promise<AdminCheck> {
+  return assertFreshAuth(await requireOwner(req), maxAgeMs);
 }
 
 /**

@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, ShieldX } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import {
+  AdminAccessProvider,
+  type AdminAccess,
+} from "@/components/admin/admin-access";
+import { useAdminSessionKeepalive } from "@/components/admin/use-admin-session-keepalive";
 import { getIdToken, signOutUser } from "@/lib/auth";
 import { clearAdminSession } from "@/lib/admin-fetch";
 
@@ -13,12 +18,26 @@ type CheckState = "checking" | "allowed" | "denied";
  * Melindungi halaman dashboard:
  * 1. Bila belum login → redirect ke /admin/login.
  * 2. Bila login tapi bukan admin → tampilkan pesan "tidak punya akses".
+ * 3. Bila sesi absolut 12 jam habis → logout & login ulang.
  * Menampilkan indikator loading selama status auth/keanggotaan belum diketahui.
+ *
+ * Hasil `/api/admin/me` (termasuk role OWNER/ADMIN) dibagikan lewat
+ * `AdminAccessProvider` agar sidebar/aksi sensitif bisa menyesuaikan.
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [check, setCheck] = useState<CheckState>("checking");
+  const [access, setAccess] = useState<AdminAccess>({
+    email: "",
+    isOwner: false,
+  });
+
+  const onSessionExpired = useCallback(() => {
+    router.replace("/admin/login");
+  }, [router]);
+
+  useAdminSessionKeepalive(check === "allowed", onSessionExpired);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -27,8 +46,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [loading, user, router]);
 
   // Verifikasi keanggotaan admin via API (endpoint memvalidasi token ke
-  // Firebase & mencocokkan dengan whitelist ADMIN_EMAILS). Bila lolos, mint
-  // session cookie (HttpOnly) agar middleware `/admin/*` bisa menggate.
+  // Firebase & mencocokkan dengan whitelist env/DB). Bila lolos, mint session
+  // cookie (HttpOnly) + login-window cookie agar middleware `/admin/*` bisa
+  // menggate dan absolute timeout 12 jam berlaku.
   useEffect(() => {
     if (loading || !user) return;
     let active = true;
@@ -40,17 +60,40 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           cache: "no-store",
         });
         if (!active) return;
-        if (res.ok) {
-          setCheck("allowed");
-          // Best-effort: buat session cookie untuk gate middleware.
-          if (token) {
-            await fetch("/api/admin/session", {
-              method: "POST",
-              headers: { Authorization: `Bearer ${token}` },
-            }).catch(() => {});
-          }
-        } else {
+
+        if (res.status === 401) {
+          await clearAdminSession({ revoke: true });
+          await signOutUser();
+          router.replace("/admin/login");
+          return;
+        }
+        if (!res.ok) {
           setCheck("denied");
+          return;
+        }
+
+        const data = (await res.json().catch(() => null)) as {
+          email?: string;
+          isOwner?: boolean;
+        } | null;
+        setAccess({
+          email: data?.email ?? user.email ?? "",
+          isOwner: data?.isOwner === true,
+        });
+        setCheck("allowed");
+
+        if (token) {
+          const sessionRes = await fetch("/api/admin/session", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          }).catch(() => null);
+          if (!active) return;
+          if (sessionRes?.status === 401) {
+            await clearAdminSession({ revoke: true });
+            await signOutUser();
+            router.replace("/admin/login");
+          }
         }
       } catch {
         if (active) setCheck("denied");
@@ -59,7 +102,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [loading, user]);
+  }, [loading, user, router]);
 
   if (loading || (user && check === "checking")) {
     return (
@@ -104,5 +147,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <AdminAccessProvider value={access}>{children}</AdminAccessProvider>
+  );
 }

@@ -41,11 +41,13 @@ import { LeadScoreBadge } from "@/components/admin/lead-score-badge";
 import { waLink } from "@/lib/whatsapp";
 import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 export function LeadsManager() {
   const toast = useToast();
+  const { isOwner } = useAdminAccess();
   const {
     data: leads,
     setData: setLeads,
@@ -108,6 +110,10 @@ export function LeadsManager() {
   };
 
   const onExport = () => {
+    if (!isOwner) {
+      setError("Ekspor PII hanya dapat dilakukan OWNER.");
+      return;
+    }
     if (filtered.length === 0) {
       setError("Tidak ada lead untuk diekspor.");
       return;
@@ -225,15 +231,17 @@ export function LeadsManager() {
           </button>
         </div>
 
-        <button
-          onClick={onExport}
-          disabled={loading || leads.length === 0}
-          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
-          title="Ekspor hasil yang tampil ke CSV"
-        >
-          <Download className="h-4 w-4" />
-          Ekspor CSV
-        </button>
+        {isOwner && (
+          <button
+            onClick={onExport}
+            disabled={loading || leads.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
+            title="Ekspor hasil yang tampil ke CSV"
+          >
+            <Download className="h-4 w-4" />
+            Ekspor CSV
+          </button>
+        )}
 
         <button
           onClick={refresh}

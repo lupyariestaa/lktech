@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-guard";
+import { assertFreshAuth, requireAdmin } from "@/lib/admin-guard";
 import { isAdminEmail } from "@/lib/admins";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
@@ -70,6 +70,12 @@ export async function POST(req: Request) {
   }
 
   const action = body.action === "test" ? "test" : "send";
+
+  // Broadcast massal = aksi sensitif → wajib re-auth Google yang masih baru.
+  if (action === "send") {
+    const fresh = assertFreshAuth(check);
+    if (!fresh.ok) return fresh.response;
+  }
 
   // ADM-07: batasi spam/kuota email. Broadcast massal lebih ketat daripada uji.
   const rl = await checkRateLimit(

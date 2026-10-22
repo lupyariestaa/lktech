@@ -32,6 +32,7 @@ import { effectiveFulfillment } from "@/lib/order-fulfillment";
 import { PAYMENT_STATUS_LABEL, PAYMENT_STATUS_STYLE } from "@/lib/payment-types";
 import { formatRupiah, formatDateTime, shortOrderCode } from "@/lib/format";
 import { waLink } from "@/lib/whatsapp";
+import { ensureRecentAdminAuth } from "@/lib/admin-reauth";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
@@ -487,6 +488,7 @@ export function OrderActionsBar({
   const onDelete = async () => {
     setBusy("delete");
     try {
+      await ensureRecentAdminAuth();
       await deleteOrderAdmin(order.id);
       toast.success("Pesanan dihapus.");
       setConfirmDelete(false);

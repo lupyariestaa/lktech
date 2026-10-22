@@ -9,6 +9,7 @@ import {
 import type { Subscriber } from "@/lib/newsletter-types";
 import { formatDateTime } from "@/lib/format";
 import { useToast } from "@/components/admin/toast";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = "semua" | "aktif" | "berhenti";
@@ -16,6 +17,7 @@ type StatusFilter = "semua" | "aktif" | "berhenti";
 /** Panel daftar subscriber (F-N3) — cari, filter status, ekspor CSV. */
 export function SubscribersPanel() {
   const toast = useToast();
+  const { isOwner } = useAdminAccess();
   const [subs, setSubs] = useState<Subscriber[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -55,6 +57,10 @@ export function SubscribersPanel() {
   }, [subs, query, status]);
 
   const onExport = () => {
+    if (!isOwner) {
+      toast.error("Ekspor PII hanya dapat dilakukan OWNER.");
+      return;
+    }
     if (filtered.length === 0) {
       toast.error("Tidak ada pelanggan untuk diekspor.");
       return;
@@ -67,14 +73,16 @@ export function SubscribersPanel() {
     <div className="rounded-3xl border border-slate-200 bg-white p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-bold text-secondary">Daftar Pelanggan</h2>
-        <button
-          type="button"
-          onClick={onExport}
-          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
-        >
-          <Download className="h-3.5 w-3.5" />
-          Ekspor CSV
-        </button>
+        {isOwner && (
+          <button
+            type="button"
+            onClick={onExport}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Ekspor CSV
+          </button>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">

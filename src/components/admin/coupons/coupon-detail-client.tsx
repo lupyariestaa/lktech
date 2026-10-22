@@ -31,6 +31,7 @@ import {
 } from "@/lib/coupon-analytics-pure";
 import { formatRupiah, formatDateTime } from "@/lib/format";
 import { useToast } from "@/components/admin/toast";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,7 @@ function exportRedemptions(coupon: Coupon, rows: CouponDetailResult["redemptions
 /** Halaman detail kupon (FASE C5) — dua kolom: rincian/statistik + pemakai/timeline. */
 export function CouponDetailClient({ coupon: initial }: { coupon: Coupon }) {
   const toast = useToast();
+  const { isOwner } = useAdminAccess();
   const [data, setData] = useState<CouponDetailResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -332,7 +334,7 @@ export function CouponDetailClient({ coupon: initial }: { coupon: Coupon }) {
             <h2 className="flex items-center gap-1.5 text-sm font-bold text-secondary">
               <Users className="h-4 w-4" /> Pemakai ({data?.redemptions.length ?? 0})
             </h2>
-            {(data?.redemptions.length ?? 0) > 0 && (
+            {isOwner && (data?.redemptions.length ?? 0) > 0 && (
               <button
                 type="button"
                 onClick={() => exportRedemptions(coupon, data!.redemptions)}

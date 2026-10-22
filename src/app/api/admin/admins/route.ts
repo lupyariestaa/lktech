@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, requireOwner } from "@/lib/admin-guard";
+import { requireAdmin, requireFreshOwner } from "@/lib/admin-guard";
 import { addAdmin, listAdmins, removeAdmin, isOwnerEmail } from "@/lib/admins";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { recordAdminAudit } from "@/lib/admin-audit";
@@ -28,7 +28,7 @@ const addSchema = z.object({
  * POST /api/admin/admins — tambah admin. HANYA OWNER.
  */
 export async function POST(req: Request) {
-  const check = await requireOwner(req);
+  const check = await requireFreshOwner(req);
   if (!check.ok) return check.response;
 
   const rl = await checkRateLimit(`admins:${check.uid}`, 20, 10 * 60 * 1000);
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
  * DELETE /api/admin/admins?email= — hapus admin. HANYA OWNER. OWNER tak bisa dihapus.
  */
 export async function DELETE(req: Request) {
-  const check = await requireOwner(req);
+  const check = await requireFreshOwner(req);
   if (!check.ok) return check.response;
 
   const email = new URL(req.url).searchParams.get("email")?.trim().toLowerCase() ?? "";

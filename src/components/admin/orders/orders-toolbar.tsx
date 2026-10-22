@@ -19,6 +19,7 @@ import {
   type OrdersFilter,
   type OrdersSort,
 } from "@/lib/orders-filter-pure";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { cn } from "@/lib/utils";
 
 const DATE_PRESETS: Array<{ value: DatePreset; label: string }> = [
@@ -59,6 +60,7 @@ export function OrdersToolbar({
   exportDisabled: boolean;
 }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const { isOwner } = useAdminAccess();
   const active = hasActiveFilter(filter);
 
   // Pencarian: input lokal + debounce agar tidak memicu navigasi tiap ketikan
@@ -155,20 +157,22 @@ export function OrdersToolbar({
           )}
         </button>
 
-        <button
-          type="button"
-          onClick={onExport}
-          disabled={loading || exporting || exportDisabled}
-          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
-          title="Ekspor hasil filter ke CSV"
-        >
-          {exporting ? (
-            <RefreshCw className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
-          )}
-          Ekspor
-        </button>
+        {isOwner && (
+          <button
+            type="button"
+            onClick={onExport}
+            disabled={loading || exporting || exportDisabled}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
+            title="Ekspor hasil filter ke CSV"
+          >
+            {exporting ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Ekspor
+          </button>
+        )}
 
         <button
           type="button"

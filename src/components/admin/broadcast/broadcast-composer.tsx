@@ -13,6 +13,7 @@ import {
   BROADCAST_SEGMENTS,
   type BroadcastSegment,
 } from "@/lib/newsletter-types";
+import { ensureRecentAdminAuth } from "@/lib/admin-reauth";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { cn } from "@/lib/utils";
@@ -139,6 +140,7 @@ export function BroadcastComposer() {
   const doSend = async () => {
     setSending(true);
     try {
+      await ensureRecentAdminAuth();
       const res = await sendBroadcastRequest(payload());
       toast.success(
         `Terkirim: ${res.sent}${res.failed ? ` · gagal ${res.failed}` : ""}` +

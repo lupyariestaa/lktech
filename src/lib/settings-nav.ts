@@ -27,6 +27,8 @@ export type SettingsNavEntry = {
   title: string;
   desc: string;
   icon: LucideIcon;
+  /** Hanya OWNER yang boleh melihat/mengakses bagian ini. */
+  ownerOnly?: boolean;
 };
 
 export const SETTINGS_NAV: SettingsNavEntry[] = [
@@ -93,8 +95,9 @@ export const SETTINGS_NAV: SettingsNavEntry[] = [
     href: "/admin/settings/backup",
     label: "Backup & Restore",
     title: "Backup & Restore",
-    desc: "Ekspor & impor data terpilih (pengaturan, produk, kupon, pesanan, dst).",
+    desc: "Ekspor & impor data terpilih (pengaturan, produk, kupon, pesanan, dst). Khusus OWNER.",
     icon: DatabaseBackup,
+    ownerOnly: true,
   },
   {
     slug: "lanjutan",

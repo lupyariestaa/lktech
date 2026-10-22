@@ -10,6 +10,7 @@ import {
   type BackupSource,
 } from "@/lib/backup-pure";
 import { adminFetch, ApiError } from "@/lib/admin-fetch";
+import { ensureRecentAdminAuth } from "@/lib/admin-reauth";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ export function SettingsBackup() {
     }
     setExporting(true);
     try {
+      await ensureRecentAdminAuth();
       const list = [...selected].join(",");
       const res = await fetch(`/api/admin/backup?sources=${encodeURIComponent(list)}`, {
         headers: await (await import("@/lib/admin-fetch")).authHeaders(),
@@ -114,6 +116,7 @@ export function SettingsBackup() {
     if (!pending) return;
     setImporting(true);
     try {
+      await ensureRecentAdminAuth();
       const res = await adminFetch<{
         ok: boolean;
         written: number;

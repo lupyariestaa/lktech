@@ -6,11 +6,14 @@ import { AlertTriangle, ArrowRight, CheckCircle2, RefreshCw } from "lucide-react
 import { fetchSettingsWithHealth, type EmailHealth } from "@/lib/admin-api";
 import { fetchIntegrations, type IntegrationsStatus } from "@/lib/admin-settings-api";
 import { SETTINGS_NAV } from "@/lib/settings-nav";
+import { canViewOwnerOnly } from "@/lib/admin-nav-pure";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import type { SiteSettings } from "@/lib/settings-types";
 import { cn } from "@/lib/utils";
 
 /** Halaman induk Pengaturan — ringkasan status nyata + pintasan. */
 export function SettingsOverview() {
+  const { isOwner } = useAdminAccess();
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [email, setEmail] = useState<EmailHealth | null>(null);
   const [integrations, setIntegrations] = useState<IntegrationsStatus | null>(null);
@@ -112,7 +115,9 @@ export function SettingsOverview() {
     backup: { value: "Ekspor / impor", note: "Backup data terpilih (JSON)" },
   };
 
-  const cards = SETTINGS_NAV.filter((n) => n.slug !== "").map((n) => {
+  const cards = SETTINGS_NAV.filter(
+    (n) => n.slug !== "" && canViewOwnerOnly(n, isOwner),
+  ).map((n) => {
     const s = statusBySlug[n.slug] ?? {
       value: staticNote[n.slug]?.value ?? "Kelola",
       note: staticNote[n.slug]?.note ?? n.desc,

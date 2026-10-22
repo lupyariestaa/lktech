@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, CornerDownLeft, ExternalLink, LogOut, Search } from "lucide-react";
 import { ADMIN_NAV_ALL_TARGETS } from "@/lib/admin-nav";
+import { canViewOwnerOnly } from "@/lib/admin-nav-pure";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { cn } from "@/lib/utils";
 
 type PaletteAction = {
@@ -41,10 +43,13 @@ export function CommandPalette({
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const { isOwner } = useAdminAccess();
 
   const actions = useMemo<PaletteAction[]>(
     () => [
-      ...ADMIN_NAV_ALL_TARGETS.map((item) => ({
+      ...ADMIN_NAV_ALL_TARGETS.filter((item) =>
+        canViewOwnerOnly(item, isOwner),
+      ).map((item) => ({
         id: `nav:${item.href}`,
         label: item.title,
         hint: `Buka ${item.label}`,
@@ -66,7 +71,7 @@ export function CommandPalette({
         action: "logout",
       },
     ],
-    [],
+    [isOwner],
   );
 
   const filtered = useMemo(() => {

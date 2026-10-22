@@ -1,12 +1,20 @@
 import "server-only";
 import type { NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase-admin";
-import { ADMIN_SESSION_COOKIE } from "@/lib/session-constants";
+import {
+  ADMIN_ABSOLUTE_TIMEOUT_MS,
+  ADMIN_IDLE_TIMEOUT_MS,
+  ADMIN_SESSION_COOKIE,
+} from "@/lib/session-constants";
 
 export { ADMIN_SESSION_COOKIE };
 
-/** Durasi sesi (5 hari, dalam milidetik). Firebase membatasi 5–14 hari. */
-const SESSION_MAX_AGE_MS = 5 * 24 * 60 * 60 * 1000;
+/**
+ * Cookie sesi Firebase memakai idle timeout 60 menit. Klien admin yang aktif
+ * me-refresh-nya tiap 5 menit; tanpa aktivitas, cookie kedaluwarsa sendiri.
+ * Absolute timeout 12 jam diperiksa dari klaim `auth_time` + cookie login.
+ */
+const SESSION_MAX_AGE_MS = ADMIN_IDLE_TIMEOUT_MS;
 
 /**
  * Membuat session cookie Firebase dari ID token yang sudah terverifikasi.
@@ -42,6 +50,13 @@ export async function verifyAdminSessionCookie(
   if (!auth) return null;
   try {
     const decoded = await auth.verifySessionCookie(token, true);
+    const authTime = Number(decoded.auth_time ?? 0);
+    if (
+      !authTime ||
+      Date.now() / 1000 - authTime > ADMIN_ABSOLUTE_TIMEOUT_MS / 1000
+    ) {
+      return null;
+    }
     return {
       uid: decoded.uid,
       email: (decoded.email ?? "").toLowerCase(),

@@ -31,7 +31,9 @@ import {
   type OrdersSort,
 } from "@/lib/orders-filter-pure";
 import { formatRupiah } from "@/lib/format";
+import { ensureRecentAdminAuth } from "@/lib/admin-reauth";
 import { useToast } from "@/components/admin/toast";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { OrdersToolbar } from "@/components/admin/orders/orders-toolbar";
 import { OrdersTable } from "@/components/admin/orders/orders-table";
@@ -69,6 +71,7 @@ const SUMMARY_CARDS: Array<{ key: keyof OrdersSummary; label: string; accent: st
 
 export function OrdersManager() {
   const toast = useToast();
+  const { isOwner } = useAdminAccess();
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -218,6 +221,10 @@ export function OrdersManager() {
   );
 
   const onExport = async () => {
+    if (!isOwner) {
+      toast.error("Ekspor PII pesanan hanya dapat dilakukan OWNER.");
+      return;
+    }
     // Bila ada yang terpilih → ekspor hanya yang terpilih (halaman ini).
     if (selected.size > 0) {
       const rows = orders.filter((o) => selected.has(o.id));
@@ -254,7 +261,11 @@ export function OrdersManager() {
   const runBulk = async (action: BulkAction) => {
     if (selectedIds.length === 0) return;
     if (action.action === "export") {
-      onExport();
+      if (!isOwner) {
+        toast.error("Ekspor PII pesanan hanya dapat dilakukan OWNER.");
+        return;
+      }
+      await onExport();
       return;
     }
     if (action.action === "delete") {
@@ -291,6 +302,7 @@ export function OrdersManager() {
     if (!confirm) return;
     setBulkBusy(true);
     try {
+      await ensureRecentAdminAuth();
       const res = await bulkOrders({ ids: confirm.ids, op: "delete" });
       toast.success(
         `${res.applied} pesanan dihapus${res.skipped.length ? `, ${res.skipped.length} dilewati` : ""}.`,

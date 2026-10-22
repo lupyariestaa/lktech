@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { after } from "next/server";
-import { requireAdmin } from "@/lib/admin-guard";
+import {
+  assertFreshAuth,
+  requireAdmin,
+  requireFreshAdmin,
+} from "@/lib/admin-guard";
+import { isOwnerEmail } from "@/lib/admins";
 import { getAdminDb } from "@/lib/firebase-admin";
 import {
   deleteOrder,
@@ -136,6 +141,15 @@ export async function GET(req: Request) {
   if (!check.ok) return check.response;
 
   const url = new URL(req.url);
+
+  // Ekspor massal PII (seluruh hasil filter) khusus OWNER (ADM-03).
+  // Daftar halaman tetap bisa dibaca ADMIN untuk operasional.
+  if (url.searchParams.get("export") === "1" && !isOwnerEmail(check.email)) {
+    return NextResponse.json(
+      { error: "Ekspor data pelanggan massal hanya dapat dilakukan OWNER." },
+      { status: 403 },
+    );
+  }
 
   // Riwayat email sebuah order (`EM-P1`) — tanpa mengunduh daftar.
   const emailsFor = url.searchParams.get("emails");
@@ -417,6 +431,11 @@ export async function POST(req: Request) {
     }
     if (body.op !== "status" && body.op !== "delete" && body.op !== "resend") {
       return NextResponse.json({ error: "op tidak valid." }, { status: 400 });
+    }
+
+    if (body.op === "delete") {
+      const fresh = assertFreshAuth(check);
+      if (!fresh.ok) return fresh.response;
     }
 
     const orders = await getOrdersByIds(ids);
@@ -730,7 +749,7 @@ const DELETABLE_STATUSES: readonly OrderStatus[] = [
 ];
 
 export async function DELETE(req: Request) {
-  const check = await requireAdmin(req);
+  const check = await requireFreshAdmin(req);
   if (!check.ok) return check.response;
 
   const id = new URL(req.url).searchParams.get("id");

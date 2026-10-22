@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, ExternalLink, Loader2, LogOut } from "lucide-react";
 import type { User } from "firebase/auth";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { cn } from "@/lib/utils";
 
 /**
@@ -202,13 +203,24 @@ function UserMenuBody({
   onLogout: () => Promise<void>;
   onAfterNavigate: () => void;
 }) {
+  const { isOwner } = useAdminAccess();
   return (
     <div>
       <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
         <AdminAvatar user={user} size="h-9 w-9" />
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-secondary">
+          <p className="flex items-center gap-2 truncate text-sm font-semibold text-secondary">
             {user?.displayName ?? "Admin"}
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                isOwner
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-primary-50 text-primary",
+              )}
+            >
+              {isOwner ? "OWNER" : "ADMIN"}
+            </span>
           </p>
           <p className="truncate text-xs text-muted">{user?.email ?? "—"}</p>
         </div>

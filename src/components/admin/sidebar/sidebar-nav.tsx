@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ADMIN_NAV, isAdminItemActive } from "@/lib/admin-nav";
+import { canViewOwnerOnly } from "@/lib/admin-nav-pure";
+import { useAdminAccess } from "@/components/admin/admin-access";
 import { SidebarItem, type SidebarBadges, type SidebarVariant } from "./sidebar-item";
 import { SidebarAccordionItem } from "./sidebar-accordion-item";
 import { useNavAccordion } from "./use-nav-accordion";
@@ -32,10 +34,28 @@ export function SidebarNav({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [edge, setEdge] = useState({ top: false, bottom: false });
   const { open, toggle, openItem } = useNavAccordion();
+  const { isOwner } = useAdminAccess();
+
+  // Sembunyikan menu khusus OWNER (mis. Backup) untuk role ADMIN.
+  const visibleGroups = useMemo(
+    () =>
+      ADMIN_NAV.map((group) => ({
+        ...group,
+        items: group.items
+          .filter((item) => canViewOwnerOnly(item, isOwner))
+          .map((item) => ({
+            ...item,
+            children: item.children?.filter((child) =>
+              canViewOwnerOnly(child, isOwner),
+            ),
+          })),
+      })).filter((group) => group.items.length > 0),
+    [isOwner],
+  );
 
   // Auto-buka accordion yang memiliki anak aktif (dipaksa tampil, tanpa tulis storage).
   useEffect(() => {
-    for (const group of ADMIN_NAV) {
+    for (const group of visibleGroups) {
       for (const item of group.items) {
         if (!item.children) continue;
         if (item.children.some((c) => isAdminItemActive(c.href, pathname))) {
@@ -43,7 +63,7 @@ export function SidebarNav({
         }
       }
     }
-  }, [pathname, openItem]);
+  }, [pathname, openItem, visibleGroups]);
 
   const updateEdge = useCallback(() => {
     const el = scrollRef.current;
@@ -87,7 +107,7 @@ export function SidebarNav({
         onScroll={updateEdge}
         className="flex h-full flex-col gap-1 overflow-y-auto px-4 pb-4"
       >
-        {ADMIN_NAV.map((group, gi) => (
+        {visibleGroups.map((group, gi) => (
           <div key={group.id} className={cn("flex flex-col gap-1", gi > 0 && "mt-3")}>
             {group.label ? (
               variant === "rail" ? (

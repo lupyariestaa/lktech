@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { requireAdmin } from "@/lib/admin-guard";
-import { isOwnerEmail } from "@/lib/admins";
+import { requireFreshOwner } from "@/lib/admin-guard";
 import { dryRunImport, exportBackup, importBackup } from "@/lib/backup";
 import { validateBackupBundle, BACKUP_SOURCES, type BackupSource } from "@/lib/backup-pure";
 import { recordAdminAudit } from "@/lib/admin-audit";
@@ -18,7 +17,8 @@ export const dynamic = "force-dynamic";
  * memicu I/O besar & dicatat di audit, jadi cegah penyalahgunaan/flood.
  */
 export async function GET(req: Request) {
-  const check = await requireAdmin(req);
+  // Ekspor backup memuat PII massal — OWNER + autentikasi kuat yang masih baru.
+  const check = await requireFreshOwner(req);
   if (!check.ok) return check.response;
 
   const rl = await checkRateLimit(`backup-export:${check.uid}`, 10, 10 * 60 * 1000);
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
  * POST /api/admin/backup — impor backup (body = bundle JSON). Validasi ketat + audit.
  */
 export async function POST(req: Request) {
-  const check = await requireAdmin(req);
+  const check = await requireFreshOwner(req);
   if (!check.ok) return check.response;
 
   const rl = await checkRateLimit(`backup:${check.uid}`, 5, 10 * 60 * 1000);
@@ -86,17 +86,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  // Restore `admins` adalah batas OWNER (ADM-01). Tolak sebelum dry-run agar
-  // non-OWNER tidak bisa memakai endpoint ini untuk menambah/mengaktifkan admin.
-  const owner = isOwnerEmail(check.email);
-  const adminRows = validation.bundle.data.admins;
-  if (!owner && Array.isArray(adminRows) && adminRows.length > 0) {
-    return NextResponse.json(
-      { error: "Hanya OWNER yang dapat memulihkan data admin." },
-      { status: 403 },
-    );
-  }
-  const policy = { allowAdmins: owner };
+  // Seluruh endpoint impor kini OWNER-only (ADM-01 + ADM-03). Restore
+  // `admins` tetap diizinkan karena pemanggil sudah OWNER terverifikasi.
+  const policy = { allowAdmins: true };
 
   // Dry-run (G4): hitung dampak tanpa menulis — untuk pratinjau admin.
   const url = new URL(req.url);

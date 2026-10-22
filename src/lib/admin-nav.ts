@@ -45,6 +45,8 @@ export type AdminNavChild = {
   title: string;
   href: string;
   icon?: LucideIcon;
+  /** Hanya OWNER yang boleh melihat/mengakses item ini. */
+  ownerOnly?: boolean;
 };
 
 export type AdminNavItem = {
@@ -56,6 +58,8 @@ export type AdminNavItem = {
   icon: LucideIcon;
   /** Badge dinamis yang dirender di item ini. */
   badge?: NavBadgeKind;
+  /** Hanya OWNER yang boleh melihat/mengakses item ini. */
+  ownerOnly?: boolean;
   /**
    * Anak menu (accordion). Bila ada, item dirender sebagai accordion; `href`
    * tetap halaman induk/ringkasan. Generik — dapat dipakai menu apa pun.
@@ -213,6 +217,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
           title: s.slug === "" ? "Ringkasan Pengaturan" : s.title,
           href: s.href,
           icon: s.icon,
+          ownerOnly: s.ownerOnly,
         })),
       },
       {
@@ -239,18 +244,21 @@ export const ADMIN_NAV_ALL_TARGETS: Array<{
   title: string;
   href: string;
   icon: LucideIcon;
+  ownerOnly?: boolean;
 }> = [
   ...ADMIN_NAV_ITEMS.map((i) => ({
     label: i.label,
     title: i.title,
     href: i.href,
     icon: i.icon,
+    ownerOnly: i.ownerOnly,
   })),
   ...ADMIN_NAV_CHILDREN.map((c) => ({
     label: c.label,
     title: c.title,
     href: c.href,
     icon: c.icon ?? Settings,
+    ownerOnly: c.ownerOnly,
   })),
 ];
 

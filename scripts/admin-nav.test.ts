@@ -6,6 +6,7 @@ import {
   matchNavChild,
   titleForNavPath,
   parentsToExpand,
+  canViewOwnerOnly,
   type NavItemLike,
 } from "../src/lib/admin-nav-pure.ts";
 
@@ -68,4 +69,11 @@ test("parentsToExpand: induk yang punya anak aktif", () => {
 
 test("matchNavItem: item tanpa children tetap cocok", () => {
   assert.equal(matchNavItem(ITEMS, "/admin/orders/abc")?.href, "/admin/orders");
+});
+
+test("canViewOwnerOnly: item OWNER hanya untuk OWNER", () => {
+  assert.equal(canViewOwnerOnly({}, false), true);
+  assert.equal(canViewOwnerOnly({ ownerOnly: false }, false), true);
+  assert.equal(canViewOwnerOnly({ ownerOnly: true }, false), false);
+  assert.equal(canViewOwnerOnly({ ownerOnly: true }, true), true);
 });
