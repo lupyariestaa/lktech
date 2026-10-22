@@ -2,7 +2,8 @@
 
 > **Status:** 📝 **DOKUMEN TEMUAN (audit).** **P0 (ADM-01 & ADM-02) sudah
 > diperbaiki 2026-10-21 (commit `a36bf53`); P1A (ADM-06 selesai, ADM-05/07
-> sebagian) di commit `69d35b5`; P1 lain–P3 belum.**
+> sebagian) di commit `69d35b5`; P1B (ADM-04 sebagian) di commit `f8a7950`;
+> P1 lain–P3 belum.**
 > **Tanggal:** 2026-10-21
 > **Cakupan:** `/admin/**` (33 halaman), 36 route API admin, 80 komponen admin,
 > alur login/sesi, guard server & klien, Firestore, audit log, backup/restore,
@@ -59,7 +60,8 @@ aman untuk banyak admin dan data produksi:
 
 **Kesimpulan:** dashboard **layak dipakai internal saat ini**, tetapi **belum
 layak untuk delegasi admin yang lebih luas atau data ribuan dokumen** tanpa
-menutup P0 dan P1. Jangan menambah admin baru sebelum ADM-01 dan ADM-02 selesai.
+menutup P0 dan P1. P0 sudah ditutup; jangan memperluas delegasi admin
+sebelum P1 selesai.
 
 ---
 
@@ -85,7 +87,8 @@ menutup P0 dan P1. Jangan menambah admin baru sebelum ADM-01 dan ADM-02 selesai.
 - Halaman `/admin` memakai proxy (cek cookie), `AdminServerGuard` (verifikasi
   kriptografis cookie), lalu `AuthGuard` (`/api/admin/me`).
 - Hanya `POST/DELETE /api/admin/admins` yang memakai `requireOwner`.
-- `DELETE /api/admin/session` sengaja publik (hanya menghapus cookie).
+- `DELETE /api/admin/session` tetap dapat dipanggil tanpa sesi untuk membersihkan
+  cookie; bila Bearer/cookie valid, endpoint mencabut refresh token (ADM-04).
 - `firestore.rules` menolak semua akses klien; seluruh data lewat Admin SDK.
 
 **Yang tidak dijalankan:** E2E admin dengan akun nyata, axe/Lighthouse admin,
@@ -228,6 +231,13 @@ route.
 
 **Status:** 🟢 Terverifikasi — kode; skenario pencurian cookie tidak disimulasikan
 ke produksi.
+
+**Status implementasi (2026-10-22):** 🟡 **Sebagian** — `DELETE /api/admin/session`
+kini memverifikasi Bearer ID token (fallback session cookie), memanggil
+`revokeRefreshTokens(uid)`, lalu menghapus cookie. Verifikasi cookie & ID token
+sudah memakai `checkRevoked = true`, sehingga sesi lama di semua perangkat
+langsung ditolak. Label logout diubah menjadi “Keluar (semua perangkat)”.
+Idle timeout, absolute timeout lebih pendek, dan re-auth aksi destruktif belum.
 
 **Bukti:**
 
@@ -953,7 +963,8 @@ build + test hijau.
 
 **Status P1:** ADM-06 ✅ selesai; ADM-05 🟡 sebagian (header + CSP minimal;
 CSP nonce penuh belum); ADM-07 🟡 sebagian (rate-limit + batas `testEmail`;
-idempotency/re-auth belum). ADM-03/04/08/09/12/13 ⏳ belum.
+idempotency/re-auth belum); ADM-04 🟡 sebagian (revoke saat logout; idle/absolute
+timeout + re-auth belum). ADM-03/08/09/12/13 ⏳ belum.
 
 ### 🟡 Status implementasi P1A — 2026-10-21 (`69d35b5`)
 
@@ -969,6 +980,21 @@ idempotency/re-auth belum). ADM-03/04/08/09/12/13 ⏳ belum.
   idempotency, alarm kuota, dan rate-limit aksi destruktif lain belum.
 - **Verifikasi:** `npm run test:csv` 3/3 · `npm run test:unit` 603/603 ·
   `npm run lint` ✅ · `npm run build` ✅ · E2E `security-headers` 1/1 ✅.
+
+### 🟡 Status implementasi P1B — 2026-10-22 (`f8a7950`)
+
+- **ADM-04** — logout admin kini memanggil `revokeRefreshTokens(uid)` di server
+  setelah memverifikasi Bearer ID token (fallback session cookie). Cookie tetap
+  dihapus meski pencabutan gagal; respons memuat `revoked` untuk observability.
+  `verifyIdToken`/`verifySessionCookie` memakai `checkRevoked = true`, jadi ID
+  token & cookie lama di semua perangkat langsung ditolak. Label UI menjadi
+  “Keluar (semua perangkat)”.
+- **Belum:** idle/absolute timeout lebih pendek dan re-auth/step-up untuk aksi
+  destruktif. Uji runtime “cookie lama → 401” dengan akun admin nyata masih
+  terblokir kredensial; yang otomatis diuji adalah wiring + logout tanpa sesi.
+- **Verifikasi:** `npm run test:admin-session` 1/1 · `npm run test:unit` 604/604 ·
+  `npm run lint` ✅ · `npm run build` ✅ (161/161 halaman) · E2E
+  `admin-session` + `security-headers` 2/2 ✅.
 
 ### P2 — skala, keandalan, UX inti
 
@@ -1015,7 +1041,8 @@ idempotency/re-auth belum). ADM-03/04/08/09/12/13 ⏳ belum.
 
 - Audit awal tidak mengubah kode; P0 (ADM-01/02) diimplementasikan setelah audit
   dan diverifikasi pada commit `a36bf53`. P1A (ADM-06 selesai; ADM-05/07 sebagian)
-  diimplementasikan pada commit `69d35b5`; P1 lain–P3 masih berupa dokumentasi.
+  diimplementasikan pada commit `69d35b5`. P1B (ADM-04 sebagian) di commit
+  `f8a7950`; P1 lain–P3 masih berupa dokumentasi.
 - E2E admin dengan akun nyata tidak dijalankan karena membutuhkan kredensial dan
   data uji; tidak ada eksploitasi ke Firestore produksi.
 - axe/Lighthouse area admin tidak dijalankan; login terlindungi dan dashboard
@@ -1034,8 +1061,10 @@ idempotency/re-auth belum). ADM-03/04/08/09/12/13 ⏳ belum.
 1. Review P1–P3 dan jawab keputusan di §10.
 2. ✅ **P0 selesai** (ADM-01/02) pada commit `a36bf53`; jangan regress. Regression
    test sudah masuk suite unit (`test:backup`, `test:seo-schema`, `test:unit`).
-3. 🟡 **P1A selesai sebagian** (`69d35b5`): ADM-06 ✅; ADM-05/07 🟡. Lanjutkan
-   CSP nonce/report-only penuh, idempotency/re-auth, lalu ADM-03/04/08/09/12/13.
+3. 🟡 **P1A selesai sebagian** (`69d35b5`): ADM-06 ✅; ADM-05/07 🟡.
+   **P1B** (`f8a7950`): ADM-04 🟡 (revoke logout selesai; timeout/re-auth belum).
+   Lanjutkan CSP nonce/report-only penuh, idempotency/re-auth, timeout, lalu
+   ADM-03/08/09/12/13.
 4. Setelah P1, lanjut P2 (skala/UX), lalu P3 (polish).
 5. Setiap batch wajib menambah test regresi dan memperbarui
    `docs/README.md` + `TASK-SELANJUTNYA.md`.
