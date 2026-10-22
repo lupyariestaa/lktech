@@ -20,6 +20,10 @@ import {
 } from "@/lib/orders-filter-pure";
 import { dayKeyInTz as analyticsDayKey, dropDayAggregate } from "@/lib/analytics-daily";
 import { invalidateSalesAnalyticsCache } from "@/lib/sales-analytics";
+import {
+  invalidateCouponStatsCache,
+  restoreCouponUsageInTransaction,
+} from "@/lib/coupons";
 
 const COLLECTION = "orders";
 
@@ -812,17 +816,76 @@ export async function getOrdersForDay(dateKey: string): Promise<Order[]> {
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
-/** Menghapus pesanan (permanen). */
-export async function deleteOrder(id: string): Promise<void> {
+export type DeleteOrderResult =
+  | {
+      ok: true;
+      status: OrderStatus;
+      couponRestored: boolean;
+      /** Hanya untuk invalidasi agregat harian; tidak dikirim ke klien. */
+      createdAtISO: string;
+    }
+  | {
+      ok: false;
+      reason: "not_found" | "delete_blocked";
+      status?: OrderStatus;
+    };
+
+/**
+ * Menghapus pesanan (permanen) secara ATOMIK dengan pengembalian kuota kupon
+ * (ADM-09). Order dan dokumen kupon/redemption/daily ditulis dalam satu
+ * transaksi Firestore: tidak ada lagi state "order terhapus tetapi kuota belum
+ * kembali" atau sebaliknya.
+ *
+ * `allowedStatuses` diperiksa ulang di dalam transaksi agar perubahan status
+ * yang bersamaan tidak bisa melewati aturan hard-delete.
+ */
+export async function deleteOrder(
+  id: string,
+  allowedStatuses: readonly OrderStatus[],
+): Promise<DeleteOrderResult> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
-  const doc = await db.collection(COLLECTION).doc(id).get();
-  const createdAtISO = doc.exists
-    ? String((doc.data() as Record<string, unknown>).createdAtISO ?? "")
-    : "";
-  await db.collection(COLLECTION).doc(id).delete();
-  invalidateOrderDerivedCaches();
-  invalidateAnalyticsForOrder(createdAtISO);
+
+  const result = await db.runTransaction(async (tx) => {
+    const ref = db.collection(COLLECTION).doc(id);
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      return { ok: false, reason: "not_found" } as const;
+    }
+
+    const order = normalizeOrder({
+      id,
+      ...(snap.data() as Record<string, unknown>),
+    });
+    if (!allowedStatuses.includes(order.status)) {
+      return {
+        ok: false,
+        reason: "delete_blocked",
+        status: order.status,
+      } as const;
+    }
+
+    const couponId = order.coupon?.couponId;
+    const couponRestored = couponId
+      ? // Semua baca kupon dilakukan di dalam transaksi yang sama, sebelum
+        // `tx.delete(order)` ditulis.
+        await restoreCouponUsageInTransaction(tx, couponId, order.uid)
+      : false;
+    tx.delete(ref);
+    return {
+      ok: true,
+      status: order.status,
+      couponRestored,
+      createdAtISO: order.createdAt,
+    } as const;
+  });
+
+  if (result.ok) {
+    invalidateOrderDerivedCaches();
+    invalidateAnalyticsForOrder(result.createdAtISO);
+    if (result.couponRestored) invalidateCouponStatsCache();
+  }
+  return result;
 }
 
 // ===== Kedaluwarsa otomatis (FASE P2) =====

@@ -118,6 +118,51 @@ export function summarizeBackup(bundle: BackupBundle): Array<{ source: BackupSou
 /** Batas jumlah dokumen yang boleh ditulis saat IMPOR (anti-overload). */
 export const IMPORT_CAP = 5000;
 
+/**
+ * Batas aman satu dokumen snapshot (ADM-12). Firestore membatasi 1 MiB per
+ * dokumen; sisakan ruang untuk field metadata dan overhead encoding.
+ */
+export const SNAPSHOT_MAX_CHUNK_BYTES = 700 * 1024;
+export const SNAPSHOT_MAX_CHUNK_ROWS = 400;
+
+/**
+ * Pecah baris snapshot menjadi beberapa chunk yang aman ditulis sebagai
+ * dokumen Firestore terpisah. Baris tunggal yang lebih besar dari `maxBytes`
+ * tetap menjadi chunk sendiri (tidak bisa dipecah tanpa mengubah data).
+ */
+export function chunkSnapshotRows<T>(
+  rows: readonly T[],
+  opts: { maxBytes?: number; maxRows?: number } = {},
+): T[][] {
+  const maxBytes = Math.max(1, opts.maxBytes ?? SNAPSHOT_MAX_CHUNK_BYTES);
+  const maxRows = Math.max(1, opts.maxRows ?? SNAPSHOT_MAX_CHUNK_ROWS);
+  const encoder = new TextEncoder();
+  const chunks: T[][] = [];
+  let current: T[] = [];
+  let bytes = 0;
+
+  for (const row of rows) {
+    let rowBytes = maxBytes;
+    try {
+      rowBytes = encoder.encode(JSON.stringify(row) ?? "").length + 1;
+    } catch {
+      // Nilai yang tidak bisa diserialisasi tetap dicoba; snapshot best-effort.
+    }
+    if (
+      current.length > 0 &&
+      (current.length >= maxRows || bytes + rowBytes > maxBytes)
+    ) {
+      chunks.push(current);
+      current = [];
+      bytes = 0;
+    }
+    current.push(row);
+    bytes += rowBytes;
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
 /** ID dokumen pengaturan (harus cocok dengan `SETTINGS_DOC_ID`). */
 export const SETTINGS_DOC_ID = "site";
 

@@ -7,6 +7,7 @@ import {
   saveSiteContent,
 } from "@/lib/site-content";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +54,11 @@ export async function PUT(req: Request) {
 
   try {
     await saveSiteContent(content, check.email);
+    await recordAdminAudit({
+      action: "content.update",
+      actor: check.email,
+      target: "site-content",
+    });
 
     // Invalidasi cache halaman publik agar konten baru langsung tampil.
     revalidateTag(CACHE_TAGS.content, REVALIDATE_NOW);

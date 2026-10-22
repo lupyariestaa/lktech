@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
+import * as Sentry from "@sentry/nextjs";
 import { requireFreshOwner } from "@/lib/admin-guard";
 import { dryRunImport, exportBackup, importBackup } from "@/lib/backup";
 import { validateBackupBundle, BACKUP_SOURCES, type BackupSource } from "@/lib/backup-pure";
@@ -10,6 +11,22 @@ import { invalidateSalesAnalyticsCache } from "@/lib/sales-analytics";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * Alarm operasional saat backup menyentuh batas ekspor/impor atau gagal
+ * sebagian (ADM-07/ADM-12). Tanpa DSN Sentry ini no-op.
+ */
+function alertBackupLimit(kind: "export" | "import", detail: Record<string, unknown>) {
+  try {
+    Sentry.captureMessage(`Backup ${kind} mendekati/melewati batas atau parsial.`, {
+      level: "warning",
+      tags: { area: "backup-limit", kind },
+      extra: detail,
+    });
+  } catch {
+    /* alarm tidak boleh menggagalkan backup */
+  }
+}
 
 /**
  * GET /api/admin/backup?sources=settings,products,… — ekspor backup (JSON).
@@ -40,11 +57,20 @@ export async function GET(req: Request) {
 
   try {
     const bundle = await exportBackup(sources, check.email);
+    if (bundle.meta.truncated) {
+      alertBackupLimit("export", {
+        sources: sources.join(","),
+        truncatedSources: bundle.meta.truncatedSources ?? [],
+      });
+    }
     await recordAdminAudit({
       action: "settings.backup_export",
       actor: check.email,
       target: "backup",
-      meta: { sources: sources.join(",") },
+      meta: {
+        sources: sources.join(","),
+        truncated: Boolean(bundle.meta.truncated),
+      },
     });
     return new NextResponse(JSON.stringify(bundle, null, 2), {
       headers: {
@@ -102,6 +128,14 @@ export async function POST(req: Request) {
 
   try {
     const result = await importBackup(validation.bundle, policy);
+    if (result.truncated || result.failed > 0) {
+      alertBackupLimit("import", {
+        written: result.written,
+        failed: result.failed,
+        skipped: result.skipped,
+        truncated: result.truncated,
+      });
+    }
     // Restore menulis ulang banyak koleksi → buang SEMUA cache data publik +
     // cache turunan pesanan, lalu segarkan halaman publik.
     for (const tag of ALL_CACHE_TAGS) revalidateTag(tag, REVALIDATE_NOW);

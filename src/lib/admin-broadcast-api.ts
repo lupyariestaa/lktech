@@ -52,7 +52,9 @@ export async function sendBroadcastRequest(input: {
   segment: BroadcastSegment;
   ctaLabel?: string;
   ctaUrl?: string;
-}): Promise<SendBroadcastResult> {
+  /** ADM-07: key stabil selama satu percobaan; retry tidak mengirim ganda. */
+  idempotencyKey: string;
+}): Promise<SendBroadcastResult & { replayed?: boolean }> {
   return adminFetch("/api/admin/broadcast", {
     method: "POST",
     body: JSON.stringify({ action: "send", ...input }),

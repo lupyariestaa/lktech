@@ -5,6 +5,7 @@ import { getOwnerEmails } from "@/lib/admins";
 import {
   BACKUP_SOURCES,
   BACKUP_VERSION,
+  chunkSnapshotRows,
   planImport,
   type BackupBundle,
   type BackupSource,
@@ -34,6 +35,11 @@ const COLLECTION_SOURCES: BackupSource[] = [
 
 /** Batas dokumen per sumber saat ekspor (anti-overload). */
 const EXPORT_CAP = 5000;
+
+/** Batas operasi per WriteBatch saat impor (Firestore maks 500). */
+const IMPORT_BATCH_SIZE = 400;
+
+const SNAPSHOT_COLLECTION = "_backup_snapshots";
 
 type Row = { _id: string; [k: string]: unknown };
 
@@ -129,24 +135,85 @@ export function dryRunImport(
   };
 }
 
-/** Snapshot koleksi ke koleksi `_backup_snapshots/{stamp}` sebelum overwrite. */
+/**
+ * Snapshot koleksi sebelum impor (ADM-12).
+ *
+ * Sebelumnya semua koleksi ditulis ke SATU dokumen `{ [name]: rows }`, yang
+ * hampir pasti melewati batas 1 MiB Firestore untuk orders/users. Sekarang
+ * setiap sumber dipecah menjadi chunk dokumen terpisah + manifest:
+ * `_backup_snapshots/{stamp}` (manifest)
+ * `_backup_snapshots/{stamp}__{source}__{n}` (rows).
+ *
+ * Best-effort: kegagalan snapshot tidak menggagalkan restore, tetapi dicatat
+ * di manifest/log agar terlihat (bukan senyap).
+ */
 async function snapshotCollections(
   sources: string[],
   stamp: string,
 ): Promise<void> {
   const db = getAdminDb();
   if (!db) return;
+
+  const createdAtISO = new Date().toISOString();
+  const manifest: {
+    stamp: string;
+    manifest: true;
+    createdAtISO: string;
+    sources: Record<
+      string,
+      { rows: number; chunks: number; failedChunks?: number }
+    >;
+  } = {
+    stamp,
+    manifest: true,
+    createdAtISO,
+    sources: {},
+  };
+
   for (const name of sources) {
+    const entry: { rows: number; chunks: number; failedChunks?: number } = {
+      rows: 0,
+      chunks: 0,
+    };
     try {
       const rows = await readCollection(name, [], name as BackupSource);
-      await db
-        .collection("_backup_snapshots")
-        .doc(stamp)
-        .set({ [name]: rows }, { merge: true });
+      const chunks = chunkSnapshotRows(rows);
+      entry.rows = rows.length;
+      entry.chunks = chunks.length;
+
+      for (let i = 0; i < chunks.length; i += 1) {
+        try {
+          await db
+            .collection(SNAPSHOT_COLLECTION)
+            .doc(`${stamp}__${name}__${i}`)
+            .set({
+              stamp,
+              source: name,
+              chunk: i,
+              rows: chunks[i],
+              createdAtISO,
+            });
+        } catch (err) {
+          entry.failedChunks = (entry.failedChunks ?? 0) + 1;
+          console.error(
+            `[backup] snapshot "${name}" chunk ${i} gagal:`,
+            err,
+          );
+        }
+      }
     } catch (err) {
-      // Snapshot bersifat best-effort; jangan gagalkan restore karena ini.
+      entry.failedChunks = (entry.failedChunks ?? 0) + 1;
       console.error(`[backup] snapshot "${name}" gagal:`, err);
     }
+    manifest.sources[name] = entry;
+  }
+
+  try {
+    await db.collection(SNAPSHOT_COLLECTION).doc(stamp).set(manifest, {
+      merge: true,
+    });
+  } catch (err) {
+    console.error("[backup] manifest snapshot gagal ditulis:", err);
   }
 }
 
@@ -187,12 +254,34 @@ export async function importBackup(
   let written = 0;
   let failed = 0;
 
-  for (const op of plan.operations) {
+  // ADM-12: commit per N dokumen, bukan satu request per dokumen. Bila satu
+  // batch gagal (mis. satu nilai tidak valid), fallback per-dokumen agar baris
+  // lain tetap tersimpan dan hasil parsial tetap terukur.
+  for (let i = 0; i < plan.operations.length; i += IMPORT_BATCH_SIZE) {
+    const chunk = plan.operations.slice(i, i + IMPORT_BATCH_SIZE);
+    const batch = db.batch();
+    for (const op of chunk) {
+      batch.set(db.collection(op.source).doc(op.id), op.data, { merge: true });
+    }
     try {
-      await db.collection(op.source).doc(op.id).set(op.data, { merge: true });
-      written += 1;
-    } catch {
-      failed += 1;
+      await batch.commit();
+      written += chunk.length;
+    } catch (batchErr) {
+      console.warn(
+        "[backup] batch impor gagal, fallback per-dokumen:",
+        batchErr,
+      );
+      for (const op of chunk) {
+        try {
+          await db
+            .collection(op.source)
+            .doc(op.id)
+            .set(op.data, { merge: true });
+          written += 1;
+        } catch {
+          failed += 1;
+        }
+      }
     }
   }
 

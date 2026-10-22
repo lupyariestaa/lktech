@@ -20,8 +20,13 @@ const apiKey = getResendApiKey();
 const fromEmail = getFromEmail();
 const replyTo = getReplyTo();
 
-/** Batas kirim per pemanggilan (cegah timeout serverless) — F-N7. */
+/** Batas kirim per pemanggilan (cegah timeout serverless) - F-N7. */
 export const BROADCAST_MAX_PER_RUN = 200;
+
+/** Apakah provider email broadcast dikonfigurasi (untuk guard sebelum kirim). */
+export function isBroadcastConfigured(): boolean {
+  return Boolean(apiKey);
+}
 
 export type BroadcastResult = {
   ok: boolean;

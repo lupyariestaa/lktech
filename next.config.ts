@@ -3,6 +3,32 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 
 const isProd = process.env.NODE_ENV === "production";
 
+/**
+ * CSP lengkap dalam mode REPORT-ONLY (ADM-05).
+ *
+ * Sengaja belum di-enforce: Next.js menyisipkan inline bootstrap script,
+ * JSON-LD dirender manual, dan Firebase/GA/Sentry memakai origin tambahan.
+ * Report-only memberi sinyal tanpa mematahkan dashboard/editor. Setelah
+ * pelanggaran dibersihkan (nonce/hash), header ini bisa dipromosikan menjadi
+ * `Content-Security-Policy`.
+ */
+const REPORT_ONLY_CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "manifest-src 'self'",
+  "worker-src 'self' blob:",
+  "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://lh3.googleusercontent.com https://www.google-analytics.com https://www.googletagmanager.com",
+  "media-src 'self' https://res.cloudinary.com",
+  "font-src 'self' data:",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.gstatic.com https://apis.google.com https://va.vercel-scripts.com https://*.sentry.io",
+  "style-src 'self' 'unsafe-inline'",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://www.google-analytics.com https://region1.google-analytics.com https://vitals.vercel-insights.com https://*.ingest.sentry.io https://api.cloudinary.com",
+  "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://www.youtube.com https://www.youtube-nocookie.com",
+].join("; ");
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
@@ -60,6 +86,16 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
           },
+          // Full policy dalam report-only (tidak memblokir). Enforce menunggu
+          // nonce/hash + verifikasi runtime semua origin.
+          ...(isProd
+            ? [
+                {
+                  key: "Content-Security-Policy-Report-Only",
+                  value: REPORT_ONLY_CSP,
+                },
+              ]
+            : []),
           // HSTS hanya di produksi; header pada HTTP diabaikan browser.
           ...(isProd
             ? [

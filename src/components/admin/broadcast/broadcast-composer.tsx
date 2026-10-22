@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Eye, Loader2, Send, SendHorizonal } from "lucide-react";
 import {
   fetchBroadcastOverview,
@@ -14,6 +14,7 @@ import {
   type BroadcastSegment,
 } from "@/lib/newsletter-types";
 import { ensureRecentAdminAuth } from "@/lib/admin-reauth";
+import { createBroadcastIdempotencyKey } from "@/lib/broadcast-idempotency-pure";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { cn } from "@/lib/utils";
@@ -74,6 +75,15 @@ export function BroadcastComposer() {
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+  // Satu key untuk satu percobaan. Key dipertahankan saat retry agar server
+  // mengembalikan hasil yang sama, bukan mengirim email dua kali (ADM-07).
+  const idempotencyKeyRef = useRef(createBroadcastIdempotencyKey());
+
+  // Konten berubah = percobaan baru. Tanpa ini, retry setelah edit akan
+  // ditolak server sebagai `idempotency_conflict`.
+  useEffect(() => {
+    idempotencyKeyRef.current = createBroadcastIdempotencyKey();
+  }, [subject, body, segment, ctaLabel, ctaUrl]);
 
   const loadCounts = () => {
     fetchBroadcastOverview()
@@ -141,12 +151,17 @@ export function BroadcastComposer() {
     setSending(true);
     try {
       await ensureRecentAdminAuth();
-      const res = await sendBroadcastRequest(payload());
+      const res = await sendBroadcastRequest({
+        ...payload(),
+        idempotencyKey: idempotencyKeyRef.current,
+      });
       toast.success(
-        `Terkirim: ${res.sent}${res.failed ? ` · gagal ${res.failed}` : ""}` +
+        `${res.replayed ? "Sudah terkirim sebelumnya" : "Terkirim"}: ${res.sent}` +
+          (res.failed ? ` · gagal ${res.failed}` : "") +
           (res.truncated ? " · dibatasi per-batch" : "") +
           ".",
       );
+      idempotencyKeyRef.current = createBroadcastIdempotencyKey();
       setSubject("");
       setBody("");
       setCtaLabel("");

@@ -11,6 +11,7 @@ import { estimateReadingTime } from "@/lib/article-logic";
 import { buildSlugHistory, decideAuditAction, revalidationPaths } from "@/lib/article-api-logic";
 import { findHistoryConflict, findOverwriteConflict } from "@/lib/slug-conflict";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { guardAdminMutation } from "@/lib/admin-rate-limit";
 import { articleSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
@@ -174,6 +175,11 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  const limited = await guardAdminMutation(check.uid, "article.delete", {
+    limit: 20,
+  });
+  if (limited) return limited;
 
   const slug = new URL(req.url).searchParams.get("slug");
   if (!slug) {

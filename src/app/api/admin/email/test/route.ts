@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isEmailConfigured, sendTestEmail } from "@/lib/email";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +42,12 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
+
+  await recordAdminAudit({
+    action: "email.test",
+    actor: check.email,
+    target: to,
+  });
 
   return NextResponse.json({ ok: true, to });
 }

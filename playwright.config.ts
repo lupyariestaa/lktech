@@ -31,7 +31,10 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: `npm run start -- -p ${PORT}`,
+        // Panggil CLI langsung: npm 11 dapat menelan flag `-p` setelah `--`
+        // sehingga Next menerima angka port sebagai direktori proyek.
+        // `-H 127.0.0.1` menghindari bind IPv6-only di Windows (baseURL IPv4).
+        command: `npx next start -H 127.0.0.1 -p ${PORT}`,
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

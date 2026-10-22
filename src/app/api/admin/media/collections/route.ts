@@ -12,6 +12,7 @@ import {
   mediaCollectionCreateSchema,
   mediaCollectionUpdateSchema,
 } from "@/lib/api-schemas";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,6 +76,12 @@ export async function POST(req: Request) {
 
   try {
     const collection = await createCollection(db, parsed.data);
+    await recordAdminAudit({
+      action: "media.collection",
+      actor: check.email,
+      target: collection.id,
+      meta: { op: "create", name: collection.name },
+    });
     return NextResponse.json({ ok: true, collection });
   } catch (err) {
     console.error("[api/admin/media/collections] POST gagal:", err);
@@ -117,6 +124,12 @@ export async function PATCH(req: Request) {
     if (!collection) {
       return NextResponse.json({ error: "Koleksi tidak ditemukan." }, { status: 404 });
     }
+    await recordAdminAudit({
+      action: "media.collection",
+      actor: check.email,
+      target: id,
+      meta: { op: "update", name: collection.name },
+    });
     return NextResponse.json({ ok: true, collection });
   } catch (err) {
     console.error("[api/admin/media/collections] PATCH gagal:", err);
@@ -147,6 +160,12 @@ export async function DELETE(req: Request) {
     if (!removed) {
       return NextResponse.json({ error: "Koleksi tidak ditemukan." }, { status: 404 });
     }
+    await recordAdminAudit({
+      action: "media.collection",
+      actor: check.email,
+      target: id,
+      meta: { op: "delete" },
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/media/collections] DELETE gagal:", err);

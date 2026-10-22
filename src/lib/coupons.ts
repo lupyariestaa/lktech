@@ -1,6 +1,6 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, type Transaction } from "firebase-admin/firestore";
 import {
   COUPON_TYPES,
   MAX_COUPON_USED_BY,
@@ -641,55 +641,80 @@ export async function restoreCouponUsage(
   const db = getAdminDb();
   if (!db) return false;
 
-  const ref = db.collection(COLLECTION).doc(id);
-  const redemptionRef = ref.collection(REDEMPTIONS).doc(uid);
-  const dayKey = jakartaDateKey();
-  const dailyRef = ref.collection(DAILY).doc(dayKey);
-
   try {
-    await db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) return;
-      const coupon = normalizeCoupon(id, snap.data() as Record<string, unknown>);
-
-      const redemption = await tx.get(redemptionRef);
-      const used = redemption.exists ? num(redemption.get("count")) : 0;
-
-      tx.update(ref, {
-        usageCount: Math.max(0, coupon.usageCount - 1),
-        usedBy: coupon.usedBy.filter((u) => u !== uid),
-        updatedAtISO: new Date().toISOString(),
-      });
-      if (used <= 1) {
-        tx.delete(redemptionRef);
-      } else {
-        tx.set(
-          redemptionRef,
-          { uid, count: used - 1, lastRedeemedAtISO: new Date().toISOString() },
-          { merge: true },
-        );
-      }
-
-      // C2/K7: turunkan counter harian (bila ada) agar kuota harian kembali.
-      if (coupon.perDayLimit && coupon.perDayLimit > 0) {
-        const daily = await tx.get(dailyRef);
-        const dayUsed = daily.exists ? num(daily.get("count")) : 0;
-        if (dayUsed <= 1) {
-          tx.delete(dailyRef);
-        } else {
-          tx.set(
-            dailyRef,
-            { date: dayKey, count: dayUsed - 1, updatedAtISO: new Date().toISOString() },
-            { merge: true },
-          );
-        }
-      }
-    });
+    await db.runTransaction((tx) =>
+      restoreCouponUsageInTransaction(tx, id, uid),
+    );
+    invalidateCouponStatsCache();
     return true;
   } catch (err) {
     console.error("[coupons] gagal mengembalikan kuota kupon:", err);
     return false;
   }
+}
+
+/**
+ * Versi transaksi dari `restoreCouponUsage` (ADM-09).
+ *
+ * Dipakai oleh penghapusan order atomik: order + kuota kupon ditulis dalam
+ * SATU transaksi Firestore. Semua pembacaan dilakukan sebelum penulisan (wajib
+ * untuk transaksi Firestore). Bila dokumen kupon sudah tidak ada, tidak ada
+ * yang perlu dikembalikan.
+ */
+export async function restoreCouponUsageInTransaction(
+  tx: Transaction,
+  id: string,
+  uid: string,
+): Promise<boolean> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+
+  const ref = db.collection(COLLECTION).doc(id);
+  const redemptionRef = ref.collection(REDEMPTIONS).doc(uid);
+  const dayKey = jakartaDateKey();
+  const dailyRef = ref.collection(DAILY).doc(dayKey);
+
+  const snap = await tx.get(ref);
+  if (!snap.exists) return false;
+  const coupon = normalizeCoupon(id, snap.data() as Record<string, unknown>);
+
+  const redemption = await tx.get(redemptionRef);
+  const used = redemption.exists ? num(redemption.get("count")) : 0;
+
+  // Baca counter harian SEBELUM penulisan apa pun (aturan transaksi).
+  const needsDaily = Boolean(coupon.perDayLimit && coupon.perDayLimit > 0);
+  const daily = needsDaily ? await tx.get(dailyRef) : null;
+  const dayUsed = daily?.exists ? num(daily.get("count")) : 0;
+
+  const nowISO = new Date().toISOString();
+  tx.update(ref, {
+    usageCount: Math.max(0, coupon.usageCount - 1),
+    usedBy: coupon.usedBy.filter((u) => u !== uid),
+    updatedAtISO: nowISO,
+  });
+  if (used <= 1) {
+    tx.delete(redemptionRef);
+  } else {
+    tx.set(
+      redemptionRef,
+      { uid, count: used - 1, lastRedeemedAtISO: nowISO },
+      { merge: true },
+    );
+  }
+
+  // C2/K7: turunkan counter harian (bila ada) agar kuota harian kembali.
+  if (daily) {
+    if (dayUsed <= 1) {
+      tx.delete(dailyRef);
+    } else {
+      tx.set(
+        dailyRef,
+        { date: dayKey, count: dayUsed - 1, updatedAtISO: nowISO },
+        { merge: true },
+      );
+    }
+  }
+  return true;
 }
 
 /** Jumlah pemakaian kupon oleh seorang user (dari subkoleksi `redemptions`). */

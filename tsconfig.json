@@ -89,6 +89,7 @@
     "scripts/product-related.test.ts",
     "scripts/nav-menu.test.ts",
     "scripts/admin-dashboard-dynamic.test.ts",
-    "scripts/cache-wiring.test.ts"
+    "scripts/cache-wiring.test.ts",
+    "scripts/admin-p1.test.ts"
   ]
 }

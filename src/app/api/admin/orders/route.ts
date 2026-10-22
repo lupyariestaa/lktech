@@ -33,6 +33,7 @@ import { shouldRestoreCoupon, isTransitionAllowed } from "@/lib/order-status-pur
 import { getSiteSettings } from "@/lib/settings";
 import { releaseOrderDownload, createManualOrderInvoice } from "@/lib/order-payment";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { guardAdminMutation } from "@/lib/admin-rate-limit";
 import { addOrderActivity } from "@/lib/order-activities";
 
 export const runtime = "nodejs";
@@ -436,6 +437,10 @@ export async function POST(req: Request) {
     if (body.op === "delete") {
       const fresh = assertFreshAuth(check);
       if (!fresh.ok) return fresh.response;
+      const limited = await guardAdminMutation(check.uid, "order.delete", {
+        limit: 30,
+      });
+      if (limited) return limited;
     }
 
     const orders = await getOrdersByIds(ids);
@@ -529,31 +534,23 @@ export async function POST(req: Request) {
       }
     } else {
       for (const order of orders) {
-        if (!DELETABLE_STATUSES.includes(order.status)) {
-          skipped.push({ id: order.id, reason: "delete_blocked" });
+        // ADM-09: hapus order + kembalikan kuota kupon dalam SATU transaksi.
+        // Tidak ada lagi jalur parsial "order hilang, kuota tertinggal".
+        const deleted = await deleteOrder(order.id, DELETABLE_STATUSES);
+        if (!deleted.ok) {
+          skipped.push({ id: order.id, reason: deleted.reason });
           continue;
         }
-        // F-G9: HAPUS dulu, baru kembalikan kuota. Dengan urutan ini, bila
-        // `deleteOrder` gagal, kuota kupon BELUM tersentuh (tak bocor). Kebalikan
-        // dari urutan lama yang bisa mengembalikan kuota untuk order yang tetap ada.
-        await deleteOrder(order.id);
         await recordAdminAudit({
           action: "order.delete",
           actor: check.email,
           target: order.id,
-          meta: { status: order.status, bulk: true },
+          meta: {
+            status: deleted.status,
+            couponRestored: deleted.couponRestored,
+            bulk: true,
+          },
         });
-        if (order.coupon?.couponId) {
-          const restored = await restoreCouponUsage(order.coupon.couponId, order.uid);
-          if (!restored) {
-            // Order sudah terhapus; catat agar admin bisa perbaiki manual.
-            console.warn(
-              `[api/admin/orders] bulk delete: kuota kupon gagal dikembalikan untuk order ${order.id}`,
-            );
-            skipped.push({ id: order.id, reason: "coupon_restore_failed" });
-            continue;
-          }
-        }
         applied.push(order.id);
       }
     }
@@ -752,6 +749,11 @@ export async function DELETE(req: Request) {
   const check = await requireFreshAdmin(req);
   if (!check.ok) return check.response;
 
+  const limited = await guardAdminMutation(check.uid, "order.delete", {
+    limit: 30,
+  });
+  if (limited) return limited;
+
   const id = new URL(req.url).searchParams.get("id");
   if (!id) {
     return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
@@ -773,31 +775,34 @@ export async function DELETE(req: Request) {
       );
     }
 
-    // OR-A5: kembalikan kuota kupon SEBELUM menghapus order. Bila restore gagal,
-    // order belum terhapus sehingga masih bisa dicoba ulang (cegah kebocoran kuota
-    // permanen). `restoreCouponUsage` sendiri tidak melempar (best-effort), jadi
-    // kita periksa hasilnya secara eksplisit.
-    if (order.coupon?.couponId) {
-      const restored = await restoreCouponUsage(order.coupon.couponId, order.uid);
-      if (!restored) {
+    // ADM-09: order + kuota kupon dihapus/dikembalikan dalam SATU transaksi.
+    // Status diperiksa ulang di dalam transaksi untuk menutup race condition.
+    const deleted = await deleteOrder(id, DELETABLE_STATUSES);
+    if (!deleted.ok) {
+      if (deleted.reason === "not_found") {
         return NextResponse.json(
-          {
-            error:
-              "Gagal mengembalikan kuota kupon. Pesanan belum dihapus — coba lagi.",
-            code: "coupon_restore_failed",
-          },
-          { status: 502 },
+          { error: "Pesanan tidak ditemukan." },
+          { status: 404 },
         );
       }
+      return NextResponse.json(
+        {
+          error:
+            "Pesanan yang sudah diproses tidak dapat dihapus. Ubah status menjadi “Dibatalkan” agar kuota kupon dikembalikan & pembeli diberi tahu.",
+          code: "delete_blocked",
+        },
+        { status: 409 },
+      );
     }
-
-    await deleteOrder(id);
 
     await recordAdminAudit({
       action: "order.delete",
       actor: check.email,
       target: id,
-      meta: { status: order.status },
+      meta: {
+        status: deleted.status,
+        couponRestored: deleted.couponRestored,
+      },
     });
 
     return NextResponse.json({ ok: true });

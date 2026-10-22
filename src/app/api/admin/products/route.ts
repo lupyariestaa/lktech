@@ -15,6 +15,7 @@ import {
 import { productSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { guardAdminMutation } from "@/lib/admin-rate-limit";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
@@ -191,6 +192,11 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  const limited = await guardAdminMutation(check.uid, "product.delete", {
+    limit: 20,
+  });
+  if (limited) return limited;
 
   const slug = new URL(req.url).searchParams.get("slug");
   if (!slug) {

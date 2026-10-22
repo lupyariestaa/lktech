@@ -7,6 +7,8 @@ import {
   verifyAdminLoginToken,
 } from "@/lib/admin-login-cookie";
 import { getAdminAuth } from "@/lib/firebase-admin";
+import { isAdminEmail } from "@/lib/admins";
+import { recordAdminAudit } from "@/lib/admin-audit";
 import {
   ADMIN_IDLE_TIMEOUT_MS,
   ADMIN_LOGIN_COOKIE,
@@ -68,6 +70,15 @@ export async function POST(req: NextRequest) {
     const res = NextResponse.json({ ok: true });
     setSessionCookie(res, sessionCookie, SESSION_MAX_AGE_SECONDS);
     setAdminLoginCookie(res, loginToken, loginAt);
+    // Hanya login baru yang dicatat; refresh keepalive tidak membanjiri audit.
+    if (!existingLogin) {
+      await recordAdminAudit({
+        action: "admin.login",
+        actor: check.email,
+        target: check.uid,
+        meta: { method: "google" },
+      });
+    }
     return res;
   } catch (err) {
     console.error("[api/admin/session] gagal membuat sesi:", err);
@@ -85,13 +96,15 @@ export async function POST(req: NextRequest) {
  * token sudah kedaluwarsa/tidak tersedia). Keduanya diverifikasi dengan
  * `checkRevoked = true`.
  */
-async function resolveLogoutUid(req: NextRequest): Promise<string | null> {
+async function resolveLogoutIdentity(
+  req: NextRequest,
+): Promise<{ uid: string; email: string } | null> {
   const token = bearerToken(req);
   const auth = getAdminAuth();
   if (token && auth) {
     try {
       const decoded = await auth.verifyIdToken(token, true);
-      return decoded.uid;
+      return { uid: decoded.uid, email: (decoded.email ?? "").toLowerCase() };
     } catch {
       /* lanjut ke fallback cookie */
     }
@@ -99,7 +112,7 @@ async function resolveLogoutUid(req: NextRequest): Promise<string | null> {
 
   const cookie = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   const session = await verifyAdminSessionCookie(cookie);
-  return session?.uid ?? null;
+  return session ? { uid: session.uid, email: session.email } : null;
 }
 
 /**
@@ -110,8 +123,16 @@ async function resolveLogoutUid(req: NextRequest): Promise<string | null> {
  * respons memuat `revoked` untuk observability.
  */
 export async function DELETE(req: NextRequest) {
-  const uid = await resolveLogoutUid(req);
+  const identity = await resolveLogoutIdentity(req);
+  const uid = identity?.uid ?? null;
   const revoked = uid ? await revokeAdminSessions(uid) : false;
+  if (identity?.email && (await isAdminEmail(identity.email))) {
+    await recordAdminAudit({
+      action: "admin.logout",
+      actor: identity.email,
+      target: identity.uid,
+    });
+  }
   const res = NextResponse.json({ ok: true, revoked });
   clearSessionCookie(res);
   clearAdminLoginCookie(res);

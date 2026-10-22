@@ -5,6 +5,7 @@ import { setUserBlocked } from "@/lib/user-profile";
 import { getAdminUsersSummary, listAdminUsers, type AdminUsersFilter } from "@/lib/admin-users";
 import { userBlockSchema } from "@/lib/api-schemas";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { guardAdminMutation } from "@/lib/admin-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,6 +76,11 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  const limited = await guardAdminMutation(check.uid, "user.block", {
+    limit: 30,
+  });
+  if (limited) return limited;
 
   let body: unknown;
   try {

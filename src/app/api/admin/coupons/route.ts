@@ -22,6 +22,7 @@ import { generateBatchCodes } from "@/lib/coupon-pure";
 import { couponCreateSchema, couponUpdateSchema } from "@/lib/api-schemas";
 import { COUPON_TYPES } from "@/lib/coupon-types";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { guardAdminMutation } from "@/lib/admin-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -360,6 +361,11 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  const limited = await guardAdminMutation(check.uid, "coupon.delete", {
+    limit: 20,
+  });
+  if (limited) return limited;
 
   const url = new URL(req.url);
   const id = url.searchParams.get("id")?.trim();

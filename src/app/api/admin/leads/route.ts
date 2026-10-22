@@ -4,6 +4,8 @@ import { getAdminDb } from "@/lib/firebase-admin";
 import { LEAD_STATUSES, type LeadStatus, type StoredLead, type LeadActivity } from "@/lib/lead-types";
 import { isPipelineStage, statusToStage } from "@/lib/lead-scoring-pure";
 import { updateLeadStage, addLeadActivity } from "@/lib/lead-crm";
+import { recordAdminAudit } from "@/lib/admin-audit";
+import { guardAdminMutation } from "@/lib/admin-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -140,6 +142,12 @@ export async function PATCH(req: Request) {
     if (!stage) {
       return NextResponse.json({ error: "Lead tidak ditemukan." }, { status: 404 });
     }
+    await recordAdminAudit({
+      action: "lead.status",
+      actor: check.email,
+      target: id,
+      meta: { stage: body.stage, via: "stage" },
+    });
     return NextResponse.json({ ok: true, stage });
   }
 
@@ -157,6 +165,12 @@ export async function PATCH(req: Request) {
     if (!ok) {
       return NextResponse.json({ error: "Lead tidak ditemukan." }, { status: 404 });
     }
+    await recordAdminAudit({
+      action: "lead.activity",
+      actor: check.email,
+      target: id,
+      meta: { type },
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -180,6 +194,12 @@ export async function PATCH(req: Request) {
       updatedAtISO: new Date().toISOString(),
       updatedBy: check.email,
     });
+    await recordAdminAudit({
+      action: "lead.status",
+      actor: check.email,
+      target: id,
+      meta: { status, via: "status" },
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/leads] PATCH gagal:", err);
@@ -197,6 +217,11 @@ export async function DELETE(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
+  const limited = await guardAdminMutation(check.uid, "lead.delete", {
+    limit: 20,
+  });
+  if (limited) return limited;
+
   const db = getAdminDb();
   if (!db) {
     return NextResponse.json(
@@ -212,6 +237,11 @@ export async function DELETE(req: Request) {
 
   try {
     await db.collection("leads").doc(id).delete();
+    await recordAdminAudit({
+      action: "lead.delete",
+      actor: check.email,
+      target: id,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/leads] DELETE gagal:", err);

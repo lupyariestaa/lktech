@@ -1,4 +1,5 @@
 import "server-only";
+import * as Sentry from "@sentry/nextjs";
 import { getAdminDb } from "@/lib/firebase-admin";
 import type { AdminAuditAction, AdminAuditEntry } from "@/lib/admin-audit-types";
 
@@ -45,6 +46,11 @@ export async function recordAdminAudit(entry: {
     });
   } catch (err) {
     console.error("[admin-audit] gagal mencatat audit:", err);
+    // ADM-13: kegagalan audit tidak boleh senyap. Kirim ke Sentry tanpa PII
+    // (tanpa actor/target) agar ops bisa mendeteksi gap audit.
+    Sentry.captureException(err, {
+      tags: { area: "admin-audit", action: entry.action },
+    });
   }
 }
 

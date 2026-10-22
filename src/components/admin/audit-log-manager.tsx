@@ -23,6 +23,18 @@ function accentFor(action: string): string {
       return "bg-purple-50 text-purple-600";
     case "user":
       return "bg-amber-50 text-amber-600";
+    case "lead":
+      return "bg-cyan-50 text-cyan-600";
+    case "project":
+      return "bg-indigo-50 text-indigo-600";
+    case "content":
+      return "bg-teal-50 text-teal-600";
+    case "media":
+      return "bg-fuchsia-50 text-fuchsia-600";
+    case "admin":
+      return "bg-orange-50 text-orange-600";
+    case "email":
+      return "bg-sky-50 text-sky-600";
     case "settings":
       return "bg-slate-100 text-slate-600";
     case "review":

@@ -10,6 +10,7 @@ import {
 import { REVIEW_STATUSES, type ReviewStatus } from "@/lib/review-types";
 import { reviewModerateSchema } from "@/lib/api-schemas";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { guardAdminMutation } from "@/lib/admin-rate-limit";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
@@ -101,6 +102,11 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  const limited = await guardAdminMutation(check.uid, "review.delete", {
+    limit: 20,
+  });
+  if (limited) return limited;
 
   const id = new URL(req.url).searchParams.get("id");
   if (!id) {

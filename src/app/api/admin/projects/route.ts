@@ -11,6 +11,7 @@ import type { Project } from "@/lib/project-types";
 import { projectSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,7 +86,14 @@ export async function POST(req: Request) {
   };
 
   try {
+    const existed = await isSlugTaken(slug);
     await saveProject(project, check.email);
+    await recordAdminAudit({
+      action: "project.save",
+      actor: check.email,
+      target: slug,
+      meta: { title, created: !existed },
+    });
     revalidateTag(CACHE_TAGS.projects, REVALIDATE_NOW);
     revalidatePath("/portofolio");
     revalidatePath(`/portofolio/${slug}`);
@@ -112,6 +120,11 @@ export async function DELETE(req: Request) {
 
   try {
     await deleteProjectBySlug(slug);
+    await recordAdminAudit({
+      action: "project.delete",
+      actor: check.email,
+      target: slug,
+    });
     revalidateTag(CACHE_TAGS.projects, REVALIDATE_NOW);
     revalidatePath("/portofolio");
     revalidatePath("/");
