@@ -18,17 +18,35 @@ const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(
 ).trim();
 
 /**
- * Apakah kredensial Admin SDK lengkap tersedia.
- * Bila tidak, route API admin akan mengembalikan error yang jelas
- * (bukan crash) dan fitur pengelolaan lead dinonaktifkan.
+ * Mode emulator KHUSUS test/E2E. Sengaja opt-in lewat env terpisah agar
+ * deployment produksi tidak pernah jatuh ke emulator hanya karena salah set
+ * `FIRESTORE_EMULATOR_HOST`.
  */
-export const isAdminConfigured = Boolean(
-  projectId && clientEmail && privateKey,
-);
+const useEmulator =
+  process.env.ADMIN_USE_FIREBASE_EMULATOR === "1" &&
+  Boolean(
+    process.env.FIREBASE_AUTH_EMULATOR_HOST ||
+      process.env.FIRESTORE_EMULATOR_HOST,
+  );
+const emulatorProjectId =
+  projectId || process.env.GCLOUD_PROJECT || "lktech-emulator";
+
+/**
+ * Apakah kredensial Admin SDK tersedia. Di mode emulator, project id saja
+ * cukup karena Firebase Admin SDK otomatis memakai host emulator dari env.
+ * Bila tidak, route API admin akan mengembalikan error yang jelas (bukan crash)
+ * dan fitur pengelolaan lead dinonaktifkan.
+ */
+export const isAdminConfigured =
+  useEmulator || Boolean(projectId && clientEmail && privateKey);
 
 function getAdminApp(): App | null {
   if (!isAdminConfigured) return null;
   if (getApps().length) return getApps()[0];
+
+  if (useEmulator) {
+    return initializeApp({ projectId: emulatorProjectId });
+  }
 
   return initializeApp({
     credential: cert({
