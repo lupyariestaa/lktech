@@ -5,7 +5,8 @@
 > `ADM-05/07` sebagian) di `69d35b5`; P1B (`ADM-04` revoke logout) di
 > `f8a7950`; P1C (ADM-03/04/08/12 + re-auth) selesai **kode** 2026-10-22 di
 > `885831c`; P1D (ADM-09/13 selesai, ADM-05/07/12 sebagian) di `72bd482`;
-> P1E harness E2E auth Firebase Emulator di `73a8609` (7/7 lulus).
+> P1E harness E2E auth Firebase Emulator di `73a8609` (7/7 lulus; isolasi smoke
+> publik `5b6af93`, 24/24 lulus).
 > Verifikasi runtime ber-kredensial kini **terverifikasi di emulator**;
 > staging/produksi, popup re-auth Google, dan WebKit masih tertunda.
 > Lihat §9 dan §11.**
@@ -34,7 +35,7 @@
 Dashboard admin **sudah kaya fitur dan memiliki fondasi otorisasi yang serius**:
 API admin memakai Firebase ID token, halaman `/admin` dijaga dua lapis, dan
 Firestore menolak seluruh akses langsung dari klien. Build, lint, dan 593 unit
-test lulus saat audit; setelah P1D suite 624 test, lalu P1E menjadi 629 test.
+test lulus saat audit; setelah P1D suite 624 test, lalu P1E menjadi 630 test.
 
 Namun audit menemukan **28 gap** yang perlu ditangani sebelum dashboard dianggap
 aman untuk banyak admin dan data produksi:
@@ -76,11 +77,12 @@ sebelum P1 selesai.
 | ----------- | ----- | --------------- |
 | Build produksi | ✅ Lulus | `npm run build`; batch emulator menghasilkan 150/150 halaman statis; seluruh rute admin dinamis; TypeScript lulus |
 | Lint | ✅ Lulus | `npm run lint` (ESLint) tanpa error |
-| Unit test | ✅ 629 lulus (593 saat audit) | `npm run test:unit`; 5 test wiring emulator |
-| Test khusus admin | ✅ 13 baseline + suite baru | `admin-audit`, `admin-nav`, `admin-dashboard-dynamic`; P1D menambah `admin-security` 10, `admin-session` 1, `admin-p1` 9, `nav` 9; P1E menambah 5 wiring + 7 E2E auth |
+| Unit test | ✅ 630 lulus (593 saat audit) | `npm run test:unit`; 6 test wiring emulator |
+| Test khusus admin | ✅ 13 baseline + suite baru | `admin-audit`, `admin-nav`, `admin-dashboard-dynamic`; P1D menambah `admin-security` 10, `admin-session` 1, `admin-p1` 9, `nav` 9; P1E menambah 6 wiring + 7 E2E auth |
 | Runtime `/admin` tanpa cookie | ✅ 307 | Redirect ke `/admin/login` |
 | Runtime `/api/admin/me` tanpa token | ✅ 401 | Tidak ada kebocoran data |
 | E2E auth emulator | ✅ 7/7 | `npm run test:e2e:auth`; OWNER/ADMIN/user seed, 401/403, OWNER-only, cookie `/admin`, absolute/idle expiry, logout revoke |
+| E2E publik | ✅ 24/24 | `npm run test:e2e`; `e2e/auth/**` dikecualikan agar smoke tidak butuh emulator (`5b6af93`) |
 | Header keamanan runtime | ⚠️ Terbatas | Hanya `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`; **tidak ada CSP, X-Frame-Options, frame-ancestors, HSTS** |
 | Firestore rules | ✅ Kuat | `firestore.rules:33-35` menolak seluruh baca/tulis langsung klien |
 | Harness JSON-LD | 🔴 Berhasil membuktikan XSS | `</script>` tetap mentah pada output JSON |
@@ -1198,7 +1200,8 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
 - **Konfigurasi:** `firebase.json`; `playwright.auth.config.ts`; seed
   fail-closed `scripts/seed-emulator.ts` (menolak berjalan tanpa host emulator);
   fixture bersama `scripts/emulator-fixtures.ts`; cleanup port Windows
-  `scripts/cleanup-emulator-ports.mjs`.
+  `scripts/cleanup-emulator-ports.mjs`. Smoke publik mengecualikan
+  `e2e/auth/**` (`5b6af93`) agar `npm run test:e2e` tidak butuh emulator.
 - **Isolasi produksi:** Admin SDK hanya memakai emulator bila
   `ADMIN_USE_FIREBASE_EMULATOR=1` **dan** host emulator di-set. Tidak ada
   fallback otomatis dari `FIRESTORE_EMULATOR_HOST` yang nyasar di produksi.
@@ -1211,9 +1214,8 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
   memakai REST sign-in, bukan popup Google. `test:e2e:auth` membersihkan proses
   emulator yang tertinggal sebelum run berikutnya.
 - **Gate batch ini:** `npx tsc --noEmit` ✅ · `npm run lint` ✅ ·
-  `npm run test:unit` 629/629 ✅ · `npm run build` ✅ (150/150 halaman statis) ·
-  E2E `security-headers` + `admin-session` 2/2 ✅ ·
-  `npm run test:e2e:auth` 7/7 ✅.
+  `npm run test:unit` 630/630 ✅ · `npm run build` ✅ (150/150 halaman statis) ·
+  E2E publik 24/24 ✅ · `npm run test:e2e:auth` 7/7 ✅.
 - **Batas yang jujur:** ini verifikasi **emulator**, bukan staging/produksi.
   Popup re-auth Google, `AuthGuard` klien dengan login Firebase browser, dan
   WebKit belum diuji. Cookie sesi `Secure` diuji lewat HTTP mentah; cookie idle

@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumentasi ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Audit Dashboard Admin** (2026-10-23; P0 ✅, P1A 🟡, P1B ✅, P1C ✅ kode `885831c` — ADM-03/04/08/12, P1D 🟡 kode `72bd482` — ADM-09/13 ✅, P1E ✅ E2E auth Firebase Emulator 7/7 `73a8609`; sisa P1 ADM-05/07/12, P2–P3 terbuka).
+> Terakhir diperbarui: sesi **Audit Dashboard Admin** (2026-10-23; P0 ✅, P1A 🟡, P1B ✅, P1C ✅ kode `885831c` — ADM-03/04/08/12, P1D 🟡 kode `72bd482` — ADM-09/13 ✅, P1E ✅ E2E auth Firebase Emulator 7/7 `73a8609` + isolasi smoke `5b6af93`; sisa P1 ADM-05/07/12, P2–P3 terbuka).
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -122,8 +122,9 @@
   Emulator Auth/Firestore + seed fail-closed `owner/admin/user@lktech.test`;
   `npm run test:e2e:auth` **7/7** — 401 tanpa token, 403 user biasa, ADMIN +
   OWNER-only 403, OWNER gate 400, cookie `/admin`, absolute timeout, idle
-  expiry, logout revoke. Gate: `tsc` ✅ · lint ✅ · `test:unit` 629 ✅ ·
-  build 150/150 halaman statis ✅ · E2E lama 2/2 ✅ · auth E2E 7/7 ✅.
+  expiry, logout revoke. Smoke publik mengecualikan `e2e/auth/**` (`5b6af93`).
+  Gate: `tsc` ✅ · lint ✅ · `test:unit` 630 ✅ · build 150/150 halaman statis ✅ ·
+  E2E publik 24/24 ✅ · auth E2E 7/7 ✅.
 - **Sisa P1:** enforce CSP setelah nonce/hash + verifikasi origin (ADM-05),
   background restore/worker + UI snapshot (ADM-12), angka kuota backup provider
   (ADM-07), dan verifikasi staging/produksi + popup re-auth Google.
@@ -1294,8 +1295,9 @@ Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dash
   coverage + Sentry; **ADM-07 🟡** idempotency broadcast + kuota + rate-limit
   destruktif; **ADM-05 🟡** CSP report-only penuh; **ADM-12 🟡** snapshot chunk
   + batch impor.
-- ✅ **P1E (`73a8609`):** harness Firebase Emulator + 7 E2E auth — 401/403,
-  OWNER-only, cookie `/admin`, absolute/idle expiry, logout revoke.
+- ✅ **P1E (`73a8609`, smoke `5b6af93`):** harness Firebase Emulator + 7 E2E
+  auth — 401/403, OWNER-only, cookie `/admin`, absolute/idle expiry, logout
+  revoke; smoke publik 24/24 tanpa emulator.
 - 🟡 **Sisa P1:** enforce CSP, background restore/UI, angka kuota backup.
 - ⏳ **Runtime:** E2E **emulator** ✅ 7/7; project staging/produksi nyata dan
   popup re-auth Google belum diuji. Jangan klaim alur Google/produksi sudah
