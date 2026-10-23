@@ -24,6 +24,11 @@ test("emulator E2E: Playwright auth memakai host & akun emulator", () => {
   assert.match(config, /testDir: "\.\/e2e\/auth"/);
 });
 
+test("emulator E2E: smoke publik tidak menjalankan auth E2E", () => {
+  const config = read("playwright.config.ts");
+  assert.match(config, /testIgnore: \["auth\/\*\*"\]/);
+});
+
 test("emulator E2E: seed fail-closed dan membuat admin DB aktif", () => {
   const seed = read("scripts/seed-emulator.ts");
   assert.match(seed, /assertEmulatorEnv/);

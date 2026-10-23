@@ -15,6 +15,8 @@ const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
+  // Auth E2E butuh Firebase Emulator + build khusus; jangan ikut smoke publik.
+  testIgnore: ["auth/**"],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
