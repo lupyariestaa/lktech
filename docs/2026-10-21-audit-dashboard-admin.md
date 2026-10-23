@@ -4,9 +4,11 @@
 > ADM-02) selesai 2026-10-21 (`a36bf53`); P1A (`ADM-06` selesai,
 > `ADM-05/07` sebagian) di `69d35b5`; P1B (`ADM-04` revoke logout) di
 > `f8a7950`; P1C (ADM-03/04/08/12 + re-auth) selesai **kode** 2026-10-22 di
-> `885831c`; P1D (ADM-09/13 selesai, ADM-05/07/12 sebagian) di `72bd482`.
-> Verifikasi runtime ber-kredensial (akun OWNER/ADMIN nyata) masih tertunda;
-> lihat §9 dan §11.**
+> `885831c`; P1D (ADM-09/13 selesai, ADM-05/07/12 sebagian) di `72bd482`;
+> P1E harness E2E auth Firebase Emulator di `73a8609` (7/7 lulus).
+> Verifikasi runtime ber-kredensial kini **terverifikasi di emulator**;
+> staging/produksi, popup re-auth Google, dan WebKit masih tertunda.
+> Lihat §9 dan §11.**
 > **Tanggal:** 2026-10-21
 > **Cakupan:** `/admin/**` (33 halaman), 36 route API admin, 80 komponen admin,
 > alur login/sesi, guard server & klien, Firestore, audit log, backup/restore,
@@ -32,7 +34,7 @@
 Dashboard admin **sudah kaya fitur dan memiliki fondasi otorisasi yang serius**:
 API admin memakai Firebase ID token, halaman `/admin` dijaga dua lapis, dan
 Firestore menolak seluruh akses langsung dari klien. Build, lint, dan 593 unit
-test lulus saat audit; setelah P1D suite bertambah menjadi 624 test.
+test lulus saat audit; setelah P1D suite 624 test, lalu P1E menjadi 629 test.
 
 Namun audit menemukan **28 gap** yang perlu ditangani sebelum dashboard dianggap
 aman untuk banyak admin dan data produksi:
@@ -72,12 +74,13 @@ sebelum P1 selesai.
 
 | Pemeriksaan | Hasil | Bukti / catatan |
 | ----------- | ----- | --------------- |
-| Build produksi | ✅ Lulus | `npm run build`; 161 halaman statis digenerate; seluruh rute admin dinamis; TypeScript lulus |
+| Build produksi | ✅ Lulus | `npm run build`; batch emulator menghasilkan 150/150 halaman statis; seluruh rute admin dinamis; TypeScript lulus |
 | Lint | ✅ Lulus | `npm run lint` (ESLint) tanpa error |
-| Unit test | ✅ 624 lulus (593 saat audit) | `npm run test:unit` |
-| Test khusus admin | ✅ 13 baseline + suite baru | `admin-audit`, `admin-nav`, `admin-dashboard-dynamic`; P1D menambah `admin-security` 10, `admin-session` 1, `admin-p1` 9, `nav` 9 |
+| Unit test | ✅ 629 lulus (593 saat audit) | `npm run test:unit`; 5 test wiring emulator |
+| Test khusus admin | ✅ 13 baseline + suite baru | `admin-audit`, `admin-nav`, `admin-dashboard-dynamic`; P1D menambah `admin-security` 10, `admin-session` 1, `admin-p1` 9, `nav` 9; P1E menambah 5 wiring + 7 E2E auth |
 | Runtime `/admin` tanpa cookie | ✅ 307 | Redirect ke `/admin/login` |
 | Runtime `/api/admin/me` tanpa token | ✅ 401 | Tidak ada kebocoran data |
+| E2E auth emulator | ✅ 7/7 | `npm run test:e2e:auth`; OWNER/ADMIN/user seed, 401/403, OWNER-only, cookie `/admin`, absolute/idle expiry, logout revoke |
 | Header keamanan runtime | ⚠️ Terbatas | Hanya `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`; **tidak ada CSP, X-Frame-Options, frame-ancestors, HSTS** |
 | Firestore rules | ✅ Kuat | `firestore.rules:33-35` menolak seluruh baca/tulis langsung klien |
 | Harness JSON-LD | 🔴 Berhasil membuktikan XSS | `</script>` tetap mentah pada output JSON |
@@ -99,9 +102,11 @@ sebelum P1 selesai.
   cookie; bila Bearer/cookie valid, endpoint mencabut refresh token (ADM-04).
 - `firestore.rules` menolak semua akses klien; seluruh data lewat Admin SDK.
 
-**Yang tidak dijalankan:** E2E admin dengan akun nyata, axe/Lighthouse admin,
-uji volume produksi, dan eksploitasi ke Firestore produksi. Karena itu dampak
-volume dan beberapa perilaku browser ditandai 🟡/⚪ bila relevan.
+**Yang tidak dijalankan:** E2E admin terhadap project staging/produksi nyata,
+popup re-auth Google di browser, axe/Lighthouse admin, uji volume produksi, dan
+eksploitasi ke Firestore produksi. E2E auth **di emulator** sudah dijalankan
+(7/7, `73a8609`); dampak volume dan beberapa perilaku browser tetap ditandai
+🟡/⚪ bila relevan.
 
 ---
 
@@ -258,7 +263,8 @@ mengembalikan PII yang memang dibutuhkan operasional; pembatasan per-field dan
 pemisahan route baca PII belum selesai. Ekspor user/lead/subscriber/pemakaian
 kupon masih berupa **gating UI** (tidak ada endpoint ekspor server), sedangkan
 order sudah ditegakkan di server (`export=1`). Uji runtime 403 dengan akun ADMIN
-nyata masih menunggu emulator/staging.
+sudah lulus di Firebase Emulator (`e2e/auth/admin-rbac.spec.ts`, `73a8609`);
+staging/produksi belum diuji.
 
 ---
 
@@ -290,8 +296,11 @@ ke produksi.
 **Catatan migrasi:** sesi lama tanpa cookie `__admin_login` akan diarahkan ke
 login. Ini disengaja; pengguna cukup login ulang sekali.
 
-**Belum diverifikasi runtime:** idle/absolute expiry dan popup re-auth dengan
-akun OWNER/ADMIN nyata di emulator/staging belum dijalankan.
+**Verifikasi runtime emulator (2026-10-23, `73a8609`):** absolute timeout 12 jam
+(cookie login basi → redirect login), idle expiry (session cookie 1 detik →
+redirect), dan logout revoke (Bearer lama → 401) lulus di Firebase Emulator.
+**Belum:** popup re-auth Google di browser dan perilaku terhadap project
+staging/produksi.
 
 **Bukti:**
 
@@ -868,7 +877,8 @@ background) ke semua dialog; tambahkan test keyboard.
   atau `id="konten"`, sehingga skip link di halaman login tidak punya target.
 - `src/components/admin/login-form.tsx:132-137` — pesan error login tidak memakai
   `role="alert"`/`aria-live`, sehingga tidak diumumkan screen reader.
-- Belum ada axe/E2E a11y untuk area admin; test E2E hanya halaman publik.
+- Belum ada axe/E2E a11y untuk area admin. E2E auth emulator menguji
+  otorisasi/sesi, bukan aksesibilitas.
 
 **Dampak:** pengalaman keyboard/screen reader di titik masuk admin kurang baik,
 dan regresi a11y tidak tertangkap.
@@ -966,8 +976,13 @@ robots.txt saja.
   - batas/paginasi.
 - Saat audit, 593 unit test lulus tetapi tidak menyentuh route admin secara
   langsung. P1A–P1D menambahkan test wiring/CSV/backup/SEO/kuota dan E2E
-  header/logout (suite kini 624 test), tetapi **belum ada** integration/E2E
-  ber-kredensial.
+  header/logout; P1E (`73a8609`) menambahkan **7 E2E auth Firebase Emulator**:
+  `401` tanpa token, `403` user biasa, role ADMIN + OWNER-only `403`, role
+  OWNER + gate OWNER-only `400`, session cookie `/admin`, absolute timeout,
+  idle expiry (cookie pendek), dan logout revoke. Suite unit kini 629 test.
+- **Masih belum:** E2E terhadap project staging/produksi nyata, popup re-auth
+  Google di browser, dan matrix seluruh route admin. Jadi ADM-26 belum ditutup
+  penuh.
 
 **Dampak:** regresi keamanan paling berbahaya tidak akan tertangkap CI. Audit ini
 menemukan dua isu kritis yang seharusnya bisa dicegah test murah.
@@ -1076,7 +1091,7 @@ saja); **ADM-09 ✅ selesai kode (transaksi atomik order+kupon); ADM-13 ✅ sele
 kode (coverage + Sentry); ADM-07 🟡 hampir selesai (idempotency + kuota +
 rate-limit destruktif; angka kuota backup belum ada); ADM-05 🟡 sebagian (CSP
 penuh report-only; enforce belum); ADM-12 🟡 sebagian (snapshot chunk + batch
-impor; background job/UI restore belum).**
+impor; background job/UI restore belum). **P1E (E2E auth emulator) ✅ 7/7.**
 
 ### 🟡 Status implementasi P1A — 2026-10-21 (`69d35b5`)
 
@@ -1125,12 +1140,12 @@ impor; background job/UI restore belum).**
   `npm run test:nav` 9/9 · `npm run test:admin-session` 1/1 ·
   `npm run test:unit` 615/615 · `npm run lint` ✅ · `npm run build` ✅
   (161/161 halaman) · E2E `admin-session` + `security-headers` 2/2 ✅.
-- **Belum:** E2E ber-kredensial dengan akun OWNER/ADMIN seed (emulator/staging),
-  uji idle/absolute expiry nyata, dan uji non-OWNER 403 end-to-end. Jangan klaim
-  verifikasi runtime sebelum itu dijalankan.
+- **E2E emulator (P1E, `73a8609`):** 403 non-OWNER, OWNER-only, cookie `/admin`,
+  absolute/idle expiry, dan logout revoke sudah lulus di Firebase Emulator.
+  **Belum:** project staging/produksi nyata dan popup re-auth Google.
 - **Sisa P1:** enforce CSP penuh setelah nonce/hash + verifikasi origin
   (ADM-05), background restore + UI snapshot (ADM-12), angka kuota backup
-  provider (ADM-07), dan verifikasi runtime ber-kredensial.
+  provider (ADM-07), dan verifikasi staging/produksi + popup re-auth.
 
 ### 🟡 Status implementasi P1D — 2026-10-22 (`72bd482`)
 
@@ -1168,12 +1183,44 @@ impor; background job/UI restore belum).**
 - **Verifikasi:** `npx tsc --noEmit` ✅ · `npm run lint` ✅ ·
   `npm run test:admin-p1` 9/9 ✅ · `npm run test:unit` 624/624 ✅ ·
   `npm run build` ✅ (161/161 halaman) · E2E `security-headers` +
-  `admin-session` 2/2 ✅. **Tidak ada** E2E ber-kredensial (emulator/staging
-  belum siap), jadi 403/401/expiry/re-auth runtime belum diklaim.
+  `admin-session` 2/2 ✅. E2E ber-kredensial menyusul di P1E.
 - **Catatan risiko:** reservation kuota broadcast bersifat konservatif (email
   yang gagal setelah dicoba tetap terhitung); key `processing`/`indeterminate`
   sengaja memblokir kirim ulang otomatis sampai diperiksa manual; `processing`
   yang basi belum punya auto-recovery.
+
+### ✅ Status implementasi P1E — 2026-10-23 (`73a8609`)
+
+Harness E2E auth ber-kredensial memakai **Firebase Emulator** (Auth `9099`,
+Firestore `8080`, project `lktech-emulator`) dan akun seed
+`owner@lktech.test` / `admin@lktech.test` / `user@lktech.test`.
+
+- **Konfigurasi:** `firebase.json`; `playwright.auth.config.ts`; seed
+  fail-closed `scripts/seed-emulator.ts` (menolak berjalan tanpa host emulator);
+  fixture bersama `scripts/emulator-fixtures.ts`; cleanup port Windows
+  `scripts/cleanup-emulator-ports.mjs`.
+- **Isolasi produksi:** Admin SDK hanya memakai emulator bila
+  `ADMIN_USE_FIREBASE_EMULATOR=1` **dan** host emulator di-set. Tidak ada
+  fallback otomatis dari `FIRESTORE_EMULATOR_HOST` yang nyasar di produksi.
+- **E2E 7/7:** `401` tanpa token; `403` user biasa; ADMIN mendapat role
+  `ADMIN` dan ditolak `403` pada aksi OWNER-only; OWNER lolos gate (body kosong
+  → `400`); session cookie membuka `/admin`; absolute timeout 12 jam menolak
+  cookie login basi; idle expiry menolak session cookie pendek; logout
+  mencabut Bearer lama (`401`).
+- **Cara jalan:** `npm run build` lalu `npm run test:e2e:auth`. Auth emulator
+  memakai REST sign-in, bukan popup Google. `test:e2e:auth` membersihkan proses
+  emulator yang tertinggal sebelum run berikutnya.
+- **Gate batch ini:** `npx tsc --noEmit` ✅ · `npm run lint` ✅ ·
+  `npm run test:unit` 629/629 ✅ · `npm run build` ✅ (150/150 halaman statis) ·
+  E2E `security-headers` + `admin-session` 2/2 ✅ ·
+  `npm run test:e2e:auth` 7/7 ✅.
+- **Batas yang jujur:** ini verifikasi **emulator**, bukan staging/produksi.
+  Popup re-auth Google, `AuthGuard` klien dengan login Firebase browser, dan
+  WebKit belum diuji. Cookie sesi `Secure` diuji lewat HTTP mentah; cookie idle
+  dibuat dengan menulis ulang `exp` karena emulator membatasi umur minimum
+  5 menit. Tidak ada klaim bahwa alur Google asli sudah runtime-verified.
+- **Tidak menyentuh homepage:** seluruh perubahan P1E hanya test/harness,
+  konfigurasi emulator, dan helper Admin SDK; F0–F8 + F6 tidak diubah.
 
 ### P2 — skala, keandalan, UX inti
 
@@ -1216,8 +1263,8 @@ impor; background job/UI restore belum).**
    point-in-time dan belum bisa dipulihkan dari UI. Background job/worker masih
    backlog.
 5. **E2E admin:** ✅ **Diizinkan memakai Firebase emulator/staging + akun seed**
-   untuk alur ber-kredensial. Konfigurasi emulator dan seed belum dibuat; ini
-   prasyarat sebelum klaim verifikasi runtime.
+   untuk alur ber-kredensial. Emulator + seed sudah dibuat dan E2E 7/7 lulus
+   (`73a8609`); staging/produksi dan popup Google tetap pekerjaan lanjutan.
 6. **Retensi audit:** ⏳ **Belum diputuskan** — berapa lama disimpan, siapa yang
    boleh ekspor, dan apakah aksi baca PII perlu dicatat.
 7. **Analytics admin:** ⏳ **Belum diputuskan** — apakah pageview admin
@@ -1232,11 +1279,11 @@ impor; background job/UI restore belum).**
   diimplementasikan pada commit `69d35b5`. P1B (ADM-04 revoke logout) di commit
   `f8a7950`. P1C (ADM-03/04/08/12 + re-auth) selesai **kode** 2026-10-22 di
   `885831c`. P1D (ADM-09/13 selesai; ADM-05/07/12 sebagian) di `72bd482`.
-  P2–P3 masih dokumentasi/backlog.
-- E2E admin dengan akun nyata belum dijalankan karena emulator/staging + akun seed
-  belum dikonfigurasi; tidak ada eksploitasi ke Firestore produksi. Semua klaim
-  P1C di atas adalah verifikasi kode/test wiring, bukan verifikasi runtime
-  ber-kredensial.
+  P1E (harness E2E auth emulator) di `73a8609`. P2–P3 masih dokumentasi/backlog.
+- E2E admin **di Firebase Emulator** sudah dijalankan (7/7, `73a8609`) dengan
+  akun seed OWNER/ADMIN/user. Ini bukan verifikasi staging/produksi; popup
+  re-auth Google dan `AuthGuard` klien dengan login Firebase browser belum diuji.
+  Tidak ada eksploitasi ke Firestore produksi.
 - axe/Lighthouse area admin tidak dijalankan; login terlindungi dan dashboard
   membutuhkan sesi.
 - Playwright WebKit masih tertunda karena unduhan timeout; fokus QA browser
@@ -1257,11 +1304,12 @@ impor; background job/UI restore belum).**
    (`f8a7950`): ADM-04 revoke logout. **P1C** (2026-10-22): ADM-03/04/08/12
    selesai kode + re-auth. **P1D** (`72bd482`): ADM-09/13 selesai; ADM-07
    idempotency + kuota + rate-limit destruktif; ADM-05 CSP report-only penuh;
-   ADM-12 snapshot chunk + batch impor. Lanjutkan: enforce CSP setelah
-   nonce/hash, background restore/UI, lalu P2.
-4. **Sebelum klaim runtime:** siapkan Firebase emulator/staging + seed akun
-   OWNER/ADMIN, lalu uji 403 non-OWNER, 401 sesi kedaluwarsa, idle/absolute
-   expiry, dan popup re-auth.
+   ADM-12 snapshot chunk + batch impor. **P1E** (`73a8609`): E2E auth emulator
+   7/7. Lanjutkan: enforce CSP setelah nonce/hash, background restore/UI, lalu P2.
+4. **Runtime emulator ✅:** seed OWNER/ADMIN/user, 401/403 non-OWNER, OWNER-only,
+   cookie `/admin`, absolute/idle expiry, dan logout revoke sudah lulus
+   (`npm run test:e2e:auth`). **Sisa:** ulangi di staging/produksi dan uji popup
+   re-auth Google di browser.
 5. Setelah P1, lanjut P2 (skala/UX), lalu P3 (polish).
 6. Setiap batch wajib menambah test regresi dan memperbarui
    `docs/README.md` + `TASK-SELANJUTNYA.md`.

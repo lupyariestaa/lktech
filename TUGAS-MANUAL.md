@@ -26,6 +26,12 @@
 
 Legenda status: ⬜ Belum · 🔄 Sedang · ✅ Selesai · ⏭️ Ditunda
 
+> **Catatan teknis (2026-10-23):** E2E auth admin sudah berjalan di **Firebase
+> Emulator** (7/7, `73a8609`) memakai akun seed lokal. Ini **tidak** membutuhkan
+> akun/dashboard pemilik dan **bukan** verifikasi produksi. Sisa verifikasi
+> staging/produksi + popup Google adalah backlog teknis, bukan tugas manual di
+> halaman ini.
+
 ---
 
 ## M1 — Google Search Console: verifikasi + submit sitemap
