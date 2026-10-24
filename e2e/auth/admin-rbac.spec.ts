@@ -1,7 +1,10 @@
 import { expect, test, request as playwrightRequest } from "@playwright/test";
+import { getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 import {
   E2E_ACCOUNTS,
   E2E_ADMIN_SESSION_SECRET,
+  EMULATOR_PROJECT_ID,
 } from "../../scripts/emulator-fixtures";
 import {
   bearer,
@@ -29,6 +32,17 @@ function expectLoginRedirect(res: {
   expect(res.status).toBe(200);
   expect(res.body).toContain("NEXT_REDIRECT");
   expect(res.body).toContain("/admin/login");
+}
+
+/** Firestore emulator untuk assertion data setelah restore. Fail-closed. */
+function emulatorDb() {
+  if (!process.env.FIRESTORE_EMULATOR_HOST) {
+    throw new Error("FIRESTORE_EMULATOR_HOST kosong; E2E bukan mode emulator.");
+  }
+  const app =
+    getApps().find((candidate) => candidate.name === "lktech-e2e-auth-test") ??
+    initializeApp({ projectId: EMULATOR_PROJECT_ID }, "lktech-e2e-auth-test");
+  return getFirestore(app);
 }
 
 test("tanpa token: /api/admin/me → 401", async ({ request }) => {
@@ -86,6 +100,88 @@ test("OWNER: role OWNER dan lolos gate OWNER-only", async ({ request }) => {
     data: {},
   });
   expect(badBody.status()).toBe(400);
+});
+
+test("backup snapshot: 401/403 dan OWNER boleh melihat daftar", async ({
+  request,
+}) => {
+  const noToken = await request.get("/api/admin/backup/snapshots");
+  expect(noToken.status()).toBe(401);
+
+  const user = await signInEmulator(request, E2E_ACCOUNTS.user);
+  const userDenied = await request.get("/api/admin/backup/snapshots", {
+    headers: bearer(user.idToken),
+  });
+  expect(userDenied.status()).toBe(403);
+
+  const admin = await signInEmulator(request, E2E_ACCOUNTS.admin);
+  const adminDenied = await request.get("/api/admin/backup/snapshots", {
+    headers: bearer(admin.idToken),
+  });
+  expect(adminDenied.status()).toBe(403);
+  const adminStartDenied = await request.post("/api/admin/backup/snapshots", {
+    headers: bearer(admin.idToken),
+    data: { stamp: "pre-restore-test" },
+  });
+  expect(adminStartDenied.status()).toBe(403);
+
+  const owner = await signInEmulator(request, E2E_ACCOUNTS.owner);
+  const ownerList = await request.get("/api/admin/backup/snapshots", {
+    headers: bearer(owner.idToken),
+  });
+  expect(ownerList.status()).toBe(200);
+  const body = (await ownerList.json()) as {
+    ok: boolean;
+    snapshots: unknown[];
+    activeJob: unknown;
+  };
+  expect(body.ok).toBe(true);
+  expect(Array.isArray(body.snapshots)).toBe(true);
+
+  // Body kosong → 400 (bukan 403): guard fresh OWNER lolos.
+  const badStart = await request.post("/api/admin/backup/snapshots", {
+    headers: bearer(owner.idToken),
+    data: {},
+  });
+  expect(badStart.status()).toBe(400);
+});
+
+test("OWNER: restore snapshot bertahap benar-benar menulis data", async ({
+  request,
+}) => {
+  const owner = await signInEmulator(request, E2E_ACCOUNTS.owner);
+
+  const start = await request.post("/api/admin/backup/snapshots", {
+    headers: bearer(owner.idToken),
+    data: { stamp: "pre-restore-e2e" },
+  });
+  expect(start.status()).toBe(200);
+  let job = ((await start.json()) as {
+    job: { id: string; status: string; written: number; failed: number };
+  }).job;
+
+  for (let i = 0; i < 12; i += 1) {
+    if (job.status === "completed" || job.status === "failed") break;
+    const step = await request.post(
+      `/api/admin/backup/snapshots/${job.id}`,
+      { headers: bearer(owner.idToken) },
+    );
+    expect(step.status()).toBe(200);
+    job = ((await step.json()) as {
+      job: { id: string; status: string; written: number; failed: number };
+    }).job;
+  }
+
+  expect(job.status).toBe("completed");
+  expect(job.failed).toBe(0);
+  expect(job.written).toBeGreaterThanOrEqual(1);
+
+  const doc = await emulatorDb()
+    .collection("products")
+    .doc("e2e-restore-product")
+    .get();
+  expect(doc.exists).toBe(true);
+  expect(doc.data()?.price).toBe(1000);
 });
 
 test("session cookie: login, gate /admin, dan absolute timeout", async () => {

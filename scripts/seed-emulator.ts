@@ -90,6 +90,52 @@ async function main(): Promise<void> {
       { merge: true },
     );
 
+  // Fixture ADM-12: snapshot produk dengan harga lama, sedangkan dokumen
+  // saat ini memakai harga baru. E2E restore harus mengembalikan harga lama.
+  const stamp = "pre-restore-e2e";
+  const productId = "e2e-restore-product";
+  const createdAtISO = new Date().toISOString();
+  const snapshotRow = {
+    _id: productId,
+    name: "Produk E2E Restore",
+    slug: "produk-e2e-restore",
+    price: 1000,
+    active: true,
+  };
+
+  await db
+    .collection("products")
+    .doc(productId)
+    .set(
+      {
+        name: snapshotRow.name,
+        slug: snapshotRow.slug,
+        price: 2000,
+        active: true,
+        updatedAtISO: createdAtISO,
+      },
+      { merge: true },
+    );
+
+  await db.collection("_backup_snapshots").doc(stamp).set({
+    stamp,
+    manifest: true,
+    createdAtISO,
+    sources: {
+      products: { rows: 1, chunks: 1 },
+    },
+  });
+  await db
+    .collection("_backup_snapshots")
+    .doc(`${stamp}__products__0`)
+    .set({
+      stamp,
+      source: "products",
+      chunk: 0,
+      rows: [snapshotRow],
+      createdAtISO,
+    });
+
   console.log(
     `[seed-emulator] siap: OWNER=${owner.email} ADMIN=${admin.email} USER=${user.email}`,
   );

@@ -49,6 +49,7 @@
     "scripts/coupon-schema.test.ts",
     "scripts/admin-nav.test.ts",
     "scripts/backup-pure.test.ts",
+    "scripts/backup-restore.test.ts",
     "scripts/csv.test.ts",
     "scripts/admin-session-wiring.test.ts",
     "scripts/seo-pure.test.ts",

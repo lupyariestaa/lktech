@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { SETTINGS_DOC_ID } from "@/lib/settings";
 import { getOwnerEmails } from "@/lib/admins";
@@ -9,6 +10,7 @@ import {
   planImport,
   type BackupBundle,
   type BackupSource,
+  type ImportPlan,
   type ImportPolicy,
 } from "@/lib/backup-pure";
 
@@ -109,6 +111,52 @@ export type ImportResult = {
   perSource: Array<{ source: BackupSource; count: number }>;
 };
 
+export type BackupWriteResult = { written: number; failed: number };
+
+/**
+ * Tulis operasi impor per batch (ADM-12). Fallback per-dokumen bila batch
+ * gagal agar baris lain tetap tersimpan dan hasil parsial terukur.
+ */
+export async function writeBackupOperations(
+  operations: ImportPlan["operations"],
+): Promise<BackupWriteResult> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+
+  let written = 0;
+  let failed = 0;
+
+  for (let i = 0; i < operations.length; i += IMPORT_BATCH_SIZE) {
+    const chunk = operations.slice(i, i + IMPORT_BATCH_SIZE);
+    const batch = db.batch();
+    for (const op of chunk) {
+      batch.set(db.collection(op.source).doc(op.id), op.data, { merge: true });
+    }
+    try {
+      await batch.commit();
+      written += chunk.length;
+    } catch (batchErr) {
+      console.warn(
+        "[backup] batch impor gagal, fallback per-dokumen:",
+        batchErr,
+      );
+      for (const op of chunk) {
+        try {
+          await db
+            .collection(op.source)
+            .doc(op.id)
+            .set(op.data, { merge: true });
+          written += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+    }
+  }
+
+  return { written, failed };
+}
+
 export type DryRunResult = {
   total: number;
   willWrite: number;
@@ -135,12 +183,110 @@ export function dryRunImport(
   };
 }
 
+/** Metadata satu sumber di manifest snapshot. */
+export type SnapshotSourceEntry = {
+  rows: number;
+  chunks: number;
+  failedChunks?: number;
+  truncated?: boolean;
+};
+
+/**
+ * Buat/pertahankan manifest kosong. Dipanggil sebelum chunk pertama agar job
+ * restore dapat menulis progres per sumber (ADM-12).
+ */
+async function ensureSnapshotManifest(
+  stamp: string,
+  createdAtISO: string,
+): Promise<void> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  await db
+    .collection(SNAPSHOT_COLLECTION)
+    .doc(stamp)
+    .set(
+      {
+        stamp,
+        manifest: true,
+        createdAtISO,
+        sources: {},
+      },
+      { merge: true },
+    );
+}
+
+/**
+ * Snapshot SATU koleksi ke chunk + kembalikan metadata sumber.
+ *
+ * Best-effort per chunk: kegagalan ditandai `failedChunks`, bukan
+ * menggagalkan seluruh job. `truncated` menandai sumber yang lebih besar dari
+ * `EXPORT_CAP` (belum ada pagination penuh; lihat catatan ADM-12).
+ */
+export async function snapshotOneSource(
+  name: BackupSource,
+  stamp: string,
+  createdAtISO: string,
+): Promise<SnapshotSourceEntry> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+
+  const cappedSources: BackupSource[] = [];
+  let rows: Row[];
+  if (name === "settings") {
+    // Settings adalah satu dokumen (`settings/site`), bukan koleksi penuh.
+    const doc = await db.collection("settings").doc(SETTINGS_DOC_ID).get();
+    rows = doc.exists
+      ? [{ _id: SETTINGS_DOC_ID, ...(doc.data() as Record<string, unknown>) }]
+      : [];
+  } else {
+    rows = await readCollection(name, cappedSources, name);
+  }
+  const chunks = chunkSnapshotRows(rows);
+  const entry: SnapshotSourceEntry = {
+    rows: rows.length,
+    chunks: chunks.length,
+    ...(cappedSources.includes(name) ? { truncated: true } : {}),
+  };
+
+  for (let i = 0; i < chunks.length; i += 1) {
+    try {
+      await db
+        .collection(SNAPSHOT_COLLECTION)
+        .doc(`${stamp}__${name}__${i}`)
+        .set({
+          stamp,
+          source: name,
+          chunk: i,
+          rows: chunks[i],
+          createdAtISO,
+        });
+    } catch (err) {
+      entry.failedChunks = (entry.failedChunks ?? 0) + 1;
+      console.error(`[backup] snapshot "${name}" chunk ${i} gagal:`, err);
+    }
+  }
+
+  return entry;
+}
+
+/** Simpan metadata satu sumber ke manifest (merge, tidak menghapus sumber lain). */
+export async function recordSnapshotSource(
+  stamp: string,
+  source: BackupSource,
+  entry: SnapshotSourceEntry,
+): Promise<void> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  await db
+    .collection(SNAPSHOT_COLLECTION)
+    .doc(stamp)
+    .set({ sources: { [source]: entry } }, { merge: true });
+}
+
 /**
  * Snapshot koleksi sebelum impor (ADM-12).
  *
- * Sebelumnya semua koleksi ditulis ke SATU dokumen `{ [name]: rows }`, yang
- * hampir pasti melewati batas 1 MiB Firestore untuk orders/users. Sekarang
- * setiap sumber dipecah menjadi chunk dokumen terpisah + manifest:
+ * Setiap sumber dipecah menjadi chunk dokumen terpisah + manifest:
  * `_backup_snapshots/{stamp}` (manifest)
  * `_backup_snapshots/{stamp}__{source}__{n}` (rows).
  *
@@ -151,70 +297,85 @@ async function snapshotCollections(
   sources: string[],
   stamp: string,
 ): Promise<void> {
-  const db = getAdminDb();
-  if (!db) return;
-
   const createdAtISO = new Date().toISOString();
-  const manifest: {
-    stamp: string;
-    manifest: true;
-    createdAtISO: string;
-    sources: Record<
-      string,
-      { rows: number; chunks: number; failedChunks?: number }
-    >;
-  } = {
-    stamp,
-    manifest: true,
-    createdAtISO,
-    sources: {},
-  };
+  try {
+    await ensureSnapshotManifest(stamp, createdAtISO);
+  } catch (err) {
+    console.error("[backup] manifest snapshot gagal dibuat:", err);
+  }
 
   for (const name of sources) {
-    const entry: { rows: number; chunks: number; failedChunks?: number } = {
-      rows: 0,
-      chunks: 0,
-    };
+    let entry: SnapshotSourceEntry = { rows: 0, chunks: 0 };
     try {
-      const rows = await readCollection(name, [], name as BackupSource);
-      const chunks = chunkSnapshotRows(rows);
-      entry.rows = rows.length;
-      entry.chunks = chunks.length;
-
-      for (let i = 0; i < chunks.length; i += 1) {
-        try {
-          await db
-            .collection(SNAPSHOT_COLLECTION)
-            .doc(`${stamp}__${name}__${i}`)
-            .set({
-              stamp,
-              source: name,
-              chunk: i,
-              rows: chunks[i],
-              createdAtISO,
-            });
-        } catch (err) {
-          entry.failedChunks = (entry.failedChunks ?? 0) + 1;
-          console.error(
-            `[backup] snapshot "${name}" chunk ${i} gagal:`,
-            err,
-          );
-        }
-      }
+      entry = await snapshotOneSource(
+        name as BackupSource,
+        stamp,
+        createdAtISO,
+      );
     } catch (err) {
       entry.failedChunks = (entry.failedChunks ?? 0) + 1;
       console.error(`[backup] snapshot "${name}" gagal:`, err);
     }
-    manifest.sources[name] = entry;
+    try {
+      await recordSnapshotSource(stamp, name as BackupSource, entry);
+    } catch (err) {
+      console.error(`[backup] metadata snapshot "${name}" gagal:`, err);
+    }
   }
+}
 
-  try {
-    await db.collection(SNAPSHOT_COLLECTION).doc(stamp).set(manifest, {
-      merge: true,
-    });
-  } catch (err) {
-    console.error("[backup] manifest snapshot gagal ditulis:", err);
+/** Baca dokumen manifest mentah (validasi bentuk dilakukan modul murni). */
+export async function readSnapshotManifestData(
+  stamp: string,
+): Promise<Record<string, unknown> | null> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const doc = await db.collection(SNAPSHOT_COLLECTION).doc(stamp).get();
+  return doc.exists ? (doc.data() as Record<string, unknown>) : null;
+}
+
+/**
+ * Daftar manifest terbaru. Query hanya field `manifest` (index otomatis),
+ * lalu urutkan di memori agar tidak memerlukan composite index.
+ */
+export async function listSnapshotManifestData(
+  limit = 50,
+): Promise<Array<Record<string, unknown>>> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const snap = await db
+    .collection(SNAPSHOT_COLLECTION)
+    .where("manifest", "==", true)
+    .limit(Math.max(1, Math.min(limit, 100)))
+    .get();
+  return snap.docs
+    .map((doc) => doc.data() as Record<string, unknown>)
+    .sort((a, b) => String(b.createdAtISO ?? "").localeCompare(String(a.createdAtISO ?? "")));
+}
+
+/** Baca satu chunk snapshot untuk restore bertahap. */
+export async function readSnapshotChunk(
+  stamp: string,
+  source: BackupSource,
+  chunk: number,
+): Promise<unknown[]> {
+  if (!Number.isInteger(chunk) || chunk < 0) {
+    throw new Error("Nomor chunk snapshot tidak valid.");
   }
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const doc = await db
+    .collection(SNAPSHOT_COLLECTION)
+    .doc(`${stamp}__${source}__${chunk}`)
+    .get();
+  if (!doc.exists) {
+    throw new Error(`Chunk snapshot "${source}" #${chunk} tidak ditemukan.`);
+  }
+  const rows = doc.data()?.rows;
+  if (!Array.isArray(rows)) {
+    throw new Error(`Chunk snapshot "${source}" #${chunk} rusak.`);
+  }
+  return rows;
 }
 
 /**
@@ -232,58 +393,23 @@ export async function importBackup(
   bundle: BackupBundle,
   policy: ImportPolicy,
 ): Promise<ImportResult> {
-  const db = getAdminDb();
-  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  if (!getAdminDb()) throw new Error("Admin SDK tidak tersedia.");
 
   const plan = planImport(bundle, getOwnerEmails(), policy);
   const total = plan.perSource.reduce((sum, p) => sum + p.total, 0);
 
-  // Snapshot koleksi target (kecuali settings, satu dokumen) — best-effort.
+  // Snapshot koleksi target (termasuk settings/site) — best-effort.
   const targetCollections = Array.from(
-    new Set(
-      plan.operations
-        .filter((op) => op.source !== "settings")
-        .map((op) => op.source as string),
-    ),
+    new Set(plan.operations.map((op) => op.source as string)),
   );
-  const stamp = `pre-restore-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+  const stamp = `pre-restore-${new Date()
+    .toISOString()
+    .replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
   if (targetCollections.length > 0) {
     await snapshotCollections(targetCollections, stamp);
   }
 
-  let written = 0;
-  let failed = 0;
-
-  // ADM-12: commit per N dokumen, bukan satu request per dokumen. Bila satu
-  // batch gagal (mis. satu nilai tidak valid), fallback per-dokumen agar baris
-  // lain tetap tersimpan dan hasil parsial tetap terukur.
-  for (let i = 0; i < plan.operations.length; i += IMPORT_BATCH_SIZE) {
-    const chunk = plan.operations.slice(i, i + IMPORT_BATCH_SIZE);
-    const batch = db.batch();
-    for (const op of chunk) {
-      batch.set(db.collection(op.source).doc(op.id), op.data, { merge: true });
-    }
-    try {
-      await batch.commit();
-      written += chunk.length;
-    } catch (batchErr) {
-      console.warn(
-        "[backup] batch impor gagal, fallback per-dokumen:",
-        batchErr,
-      );
-      for (const op of chunk) {
-        try {
-          await db
-            .collection(op.source)
-            .doc(op.id)
-            .set(op.data, { merge: true });
-          written += 1;
-        } catch {
-          failed += 1;
-        }
-      }
-    }
-  }
+  const { written, failed } = await writeBackupOperations(plan.operations);
 
   return {
     total,

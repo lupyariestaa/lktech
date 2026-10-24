@@ -24,7 +24,7 @@
     "test:promo": "node --experimental-strip-types --test scripts/promo-pure.test.ts",
     "test:coupon-schema": "node --experimental-strip-types --test scripts/coupon-schema.test.ts",
     "test:nav": "node --experimental-strip-types --test scripts/admin-nav.test.ts",
-    "test:backup": "node --experimental-strip-types --test scripts/backup-pure.test.ts",
+    "test:backup": "node --experimental-strip-types --test scripts/backup-pure.test.ts scripts/backup-restore.test.ts",
     "test:csv": "node --experimental-strip-types --test scripts/csv.test.ts",
     "test:admin-session": "node --experimental-strip-types --test scripts/admin-session-wiring.test.ts",
     "test:admin-security": "node --experimental-strip-types --test scripts/admin-rbac-session.test.ts",
