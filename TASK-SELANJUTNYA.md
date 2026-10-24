@@ -1,7 +1,7 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumentasi ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Audit Dashboard Admin** (2026-10-23; P0 ✅, P1A 🟡, P1B ✅, P1C ✅ kode `885831c` — ADM-03/04/08/12, P1D 🟡 kode `72bd482` — ADM-09/13 ✅, P1E ✅ E2E auth Firebase Emulator 7/7 `73a8609` + isolasi smoke `5b6af93`; sisa P1 ADM-05/07/12, P2–P3 terbuka).
+> Terakhir diperbarui: sesi **Audit Dashboard Admin** (2026-10-24; P0 ✅, P1A 🟡, P1B ✅, P1C ✅ kode `885831c`, P1D 🟡 kode `72bd482`, ADM-12 ✅ UI+job restore `6f8bba1`, P1E ✅ E2E auth Firebase Emulator 9/9; sisa P1 ADM-05/07, P2–P3 terbuka).
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -41,11 +41,11 @@
 > 🧩 **F8 selesai (kode, permintaan pemilik):** strip **"Teknologi yang kami gunakan"** dipindah dari bawah Pratinjau ke **antara Layanan Kami & Portofolio**, dan marquee-nya kini **dua baris** — baris atas bergerak ke **kiri** (30 dtk, urutan asli), baris bawah ke **kanan** (36 dtk, urutan dibalik, `animate-marquee-reverse`), dengan satu mask kiri/kanan; baris kedua `aria-hidden` agar screen reader tetap membaca daftar sekali, hover pause per baris. QA: urutan DOM `#layanan → #teknologi → #portofolio` (desktop & mobile), 40 kartu/baris, tx baris 1 −143,8 px/s vs baris 2 +119,8 px/s, tanpa overflow horizontal; tangkapan layar desktop & mobile diperiksa. Gate tsc/eslint/unit(593)/build hijau.
 > 🧪 **F6 selesai (polish & QA, 2026-10-20):** **F6.1** cover produk **16:9** (tidak lagi terpotong) + `imageSizes` per grid + fallback `onError`; kontras nomor proses & tautan footer lolos AA; target sentuh footer **28 px**. **F6.2** tombol **Jeda/Mainkan** untuk marquee teknologi & band Pratinjau (WCAG 2.2.2), disembunyikan saat reduced-motion. **F6.3** intro beranda **sekali per sesi tab** (`sessionStorage`) — reload tidak lagi menunggu 2,13 dtk; entrance hero/navbar dimulai saat `introDone`, bukan delay yang bisa basi. **F6.4** GA4 ditunda ke `lazyOnload`; QA: tsc/eslint/unit(593)/build(161)/E2E(22) hijau, axe **0 violation** (desktop+mobile), Firefox desktop+mobile lolos, tanpa overflow; Lighthouse produksi A11y/BP **100**, SEO **100**, CLS **0**; LCP **19,1 → 16,1 dtk** & TBT **13,4 → 11,3 dtk** setelah F6 — masih didominasi hidrasi app (PSI API 429; WebKit belum terpasang karena timeout unduhan). Optimasi bundle/hidrasi menjadi kandidat berikutnya.
 >
-> 🛡️ **Audit Dashboard Admin — P0/P1B/P1C/P1D selesai kode (2026-10-21/22):** **[`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md)** — 28 temuan (2 kritis · 3 tinggi · 16 sedang · 7 rendah). **ADM-01/02** diperbaiki di `a36bf53`; **P1A** (ADM-06 ✅, ADM-05/07 sebagian) di `69d35b5`; **P1B** (revoke logout) di `f8a7950`; **P1C** (2026-10-22, `885831c`) menutup **ADM-03** (OWNER/ADMIN), **ADM-04** (sesi 12 jam + idle 60 menit + re-auth), **ADM-08** (blokir saja), **ADM-12** (backup OWNER-only, merge-only); **P1D** (`72bd482`) menutup **ADM-09** (hapus order + kupon atomik) dan **ADM-13** (audit coverage + Sentry), serta sebagian **ADM-05** (CSP report-only penuh), **ADM-07** (idempotency + kuota + rate-limit destruktif), **ADM-12** (snapshot chunk + batch impor). **P1E** (`73a8609`) menambahkan harness Firebase Emulator + **7 E2E auth** (401/403, OWNER-only, cookie `/admin`, absolute/idle expiry, logout revoke). **Sisa P1:** enforce CSP, background restore/UI, angka kuota backup. P2–P3 terbuka; E2E emulator ✅, staging/produksi + popup Google masih tertunda.
+> 🛡️ **Audit Dashboard Admin — P0/P1B/P1C/P1D selesai kode (2026-10-21/24):** **[`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md)** — 28 temuan (2 kritis · 3 tinggi · 16 sedang · 7 rendah). **ADM-01/02** diperbaiki di `a36bf53`; **P1A** (ADM-06 ✅, ADM-05/07 sebagian) di `69d35b5`; **P1B** (revoke logout) di `f8a7950`; **P1C** (2026-10-22, `885831c`) menutup **ADM-03** (OWNER/ADMIN), **ADM-04** (sesi 12 jam + idle 60 menit + re-auth), **ADM-08** (blokir saja), **ADM-12** (backup OWNER-only, merge-only); **P1D** (`72bd482`) menutup **ADM-09** (hapus order + kupon atomik) dan **ADM-13** (audit coverage + Sentry), serta sebagian **ADM-05** (CSP report-only penuh), **ADM-07** (idempotency + kuota + rate-limit destruktif), **ADM-12** (snapshot chunk + batch impor). **P1E** (`73a8609`) menambahkan harness Firebase Emulator + **E2E auth** (401/403, OWNER-only, cookie `/admin`, absolute/idle expiry, logout revoke); **ADM-12** dilanjutkan di `6f8bba1` dengan **UI daftar snapshot + job restore bertahap/checkpoint + worker cron**, diuji restore nyata di emulator (**9/9**). **Sisa P1:** enforce CSP, angka kuota backup. P2–P3 terbuka; E2E emulator ✅, staging/produksi + popup Google masih tertunda.
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Tutup sisa P1 audit dashboard admin** — P0 ✅; P1A 🟡; P1B/P1C ✅ kode; P1D 🟡 kode (ADM-09/13 ✅); P1E ✅ E2E auth emulator 7/7. Berikutnya: **ulangi E2E di staging/produksi + popup re-auth Google**, lalu enforce CSP setelah nonce/hash (ADM-05), background restore + UI snapshot (ADM-12), dan angka kuota backup (ADM-07). Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md). Setelah P1, kandidat berikutnya: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · **Optimasi bundle/hidrasi beranda** (LCP/TBT mobile) · langkah manual pemilik (Mayar produksi, domain/Resend). Lihat §"STATUS & PETA SEKARANG".
+> 🎯 **TASK AKTIF (berikutnya):** ⏭️ **Tutup sisa P1 audit dashboard admin** — P0 ✅; P1A 🟡; P1B/P1C ✅ kode; P1D 🟡 kode (ADM-09/13 ✅); ADM-12 ✅ kode UI + job restore/worker `6f8bba1`; P1E ✅ E2E auth emulator 9/9 + publik 24/24. Berikutnya: **ulangi E2E di staging/produksi + popup re-auth Google**, lalu enforce CSP setelah nonce/hash (ADM-05) dan angka kuota backup (ADM-07). Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md). Setelah P1, kandidat berikutnya: **Multi-bahasa (ID/EN)** · **Web Push** (butuh VAPID) · **Webhook Resend** (butuh domain) · **Optimasi bundle/hidrasi beranda** (LCP/TBT mobile) · langkah manual pemilik (Mayar produksi, domain/Resend). Lihat §"STATUS & PETA SEKARANG".
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -64,9 +64,9 @@
 
 ---
 
-## 🛡️ SESI INI — Audit Dashboard Admin (2026-10-21/23) — P0 + P1B/P1C/P1D SELESAI KODE; P1E E2E EMULATOR ✅; SISA P1 & P2–P3 TERBUKA
+## 🛡️ SESI INI — Audit Dashboard Admin (2026-10-21/24) — P0 + P1B/P1C/P1D SELESAI KODE; ADM-12 ✅; P1E E2E EMULATOR ✅; SISA P1 & P2–P3 TERBUKA
 
-**Status: ✅ Audit selesai; ✅ P0 (ADM-01/02); 🟡 P1A (ADM-06 ✅, ADM-05/07 sebagian); ✅ P1B (ADM-04 revoke logout); ✅ P1C kode (ADM-03/04/08/12 + re-auth); 🟡 P1D kode (ADM-09/13 ✅, ADM-05/07/12 sebagian); ✅ P1E E2E auth Firebase Emulator 7/7; ⏳ sisa P1/P2–P3 + staging/produksi.** Dokumen:
+**Status: ✅ Audit selesai; ✅ P0 (ADM-01/02); 🟡 P1A (ADM-06 ✅, ADM-05/07 sebagian); ✅ P1B (ADM-04 revoke logout); ✅ P1C kode (ADM-03/04/08/12 + re-auth); 🟡 P1D kode (ADM-09/13 ✅, ADM-05/07 sebagian); ✅ ADM-12 UI+job restore/worker `6f8bba1`; ✅ P1E E2E auth Firebase Emulator 9/9; ⏳ sisa P1 (CSP/kuota) + staging/produksi + P2–P3.** Dokumen:
 [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md).
 
 - **Cakupan:** 33 halaman admin, 36 route API admin, 80 komponen admin; auth/sesi,
@@ -104,8 +104,9 @@
   **ADM-04 ✅** absolute timeout 12 jam (`auth_time` + cookie
   `__admin_login` bertanda tangan), idle 60 menit (refresh 5 menit/tick 30
   detik), re-auth Google 10 menit untuk aksi sensitif; **ADM-08 ✅** hapus user
-  dinonaktifkan (405), UI hanya blokir; **ADM-12 🟡** backup OWNER-only +
-  fresh auth + merge-only, background/snapshot belum. Gate:
+  dinonaktifkan (405), UI hanya blokir; **ADM-12 🟡 saat itu** backup OWNER-only +
+  fresh auth + merge-only; ✅ dilanjutkan 2026-10-24 (`6f8bba1`) dengan UI
+  snapshot + job restore/worker. Gate:
   `test:admin-security` 10 ✅ · `test:nav` 9 ✅ · `test:admin-session` 1 ✅ ·
   `test:unit` 615 ✅ · lint ✅ · build 161 halaman ✅ · E2E
   `admin-session` + `security-headers` 2/2 ✅.
@@ -118,16 +119,24 @@
   **ADM-12 🟡** snapshot chunk <700 KiB + manifest + impor `WriteBatch`.
   Gate: `tsc` ✅ · lint ✅ · `test:admin-p1` 9 ✅ · `test:unit` 624 ✅ ·
   build 161 halaman ✅ · E2E `admin-session` + `security-headers` 2/2 ✅.
-- **P1E E2E auth emulator ✅ (2026-10-23, `73a8609`):** harness Firebase
+- **P1E E2E auth emulator ✅ (2026-10-23, `73a8609`; suite kini 9/9):** harness Firebase
   Emulator Auth/Firestore + seed fail-closed `owner/admin/user@lktech.test`;
-  `npm run test:e2e:auth` **7/7** — 401 tanpa token, 403 user biasa, ADMIN +
+  `npm run test:e2e:auth` — 401 tanpa token, 403 user biasa, ADMIN +
   OWNER-only 403, OWNER gate 400, cookie `/admin`, absolute timeout, idle
   expiry, logout revoke. Smoke publik mengecualikan `e2e/auth/**` (`5b6af93`).
-  Gate: `tsc` ✅ · lint ✅ · `test:unit` 630 ✅ · build 150/150 halaman statis ✅ ·
+  Gate saat P1E: `tsc` ✅ · lint ✅ · `test:unit` 630 ✅ · build 150/150 halaman statis ✅ ·
   E2E publik 24/24 ✅ · auth E2E 7/7 ✅.
+- **ADM-12 selesai kode (2026-10-24, `6f8bba1`):** UI `/admin/settings/backup`
+  menampilkan snapshot + status lengkap/terpotong, restore OWNER-only dengan
+  re-auth, job `_backup_restore_jobs` bercheckpoint, lock, progres, pre-snapshot
+  termasuk `settings/site`, dan worker cron `/api/cron/backup-restore` tiap 10
+  menit (fail-closed `CRON_SECRET`). Restore tetap merge-only. Gate: `tsc` ✅ ·
+  lint ✅ · `test:backup` 25 ✅ · `test:unit` 637 ✅ · build bersih 161/161 ✅ ·
+  E2E publik 24/24 ✅ · auth E2E **9/9** (termasuk restore nyata produk di
+  emulator) ✅.
 - **Sisa P1:** enforce CSP setelah nonce/hash + verifikasi origin (ADM-05),
-  background restore/worker + UI snapshot (ADM-12), angka kuota backup provider
-  (ADM-07), dan verifikasi staging/produksi + popup re-auth Google.
+  angka kuota backup provider (ADM-07), dan verifikasi staging/produksi + popup
+  re-auth Google. ADM-12 tersisa uji volume produksi/pagination penuh, bukan UI.
 - **Belum dijalankan:** E2E admin terhadap project staging/produksi nyata,
   popup re-auth Google di browser, axe/Lighthouse admin, uji volume produksi,
   dan eksploitasi ke Firestore produksi. WebKit masih tertunda. E2E emulator
@@ -1285,7 +1294,7 @@ Fase Konversi & Closing (docs/2026-10-06-fase-konversi-closing.md)
   ✅ Upgrade Blog B0–B8 (docs/2026-10-09-upgrade-blog.md) — kode selesai, verifikasi manual tersisa
 ```
 
-### AUDIT DASHBOARD ADMIN — P1C/P1D selesai kode; P1E E2E emulator ✅; staging/produksi tertunda
+### AUDIT DASHBOARD ADMIN — ADM-12 ✅; P1E E2E emulator ✅; staging/produksi tertunda
 Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md).
 - ✅ **P0** ADM-01/02; ✅ **P1B** revoke logout.
 - ✅ **P1C (2026-10-22, `885831c`):** ADM-03 role `OWNER`/`ADMIN`; ADM-04 sesi 12 jam
@@ -1294,12 +1303,18 @@ Dokumen: [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dash
 - 🟡 **P1D (`72bd482`):** **ADM-09 ✅** order+kupon atomik; **ADM-13 ✅** audit
   coverage + Sentry; **ADM-07 🟡** idempotency broadcast + kuota + rate-limit
   destruktif; **ADM-05 🟡** CSP report-only penuh; **ADM-12 🟡** snapshot chunk
-  + batch impor.
-- ✅ **P1E (`73a8609`, smoke `5b6af93`):** harness Firebase Emulator + 7 E2E
+  + batch impor → ✅ dilanjutkan di `6f8bba1`.
+- ✅ **ADM-12 (`6f8bba1`):** UI daftar snapshot + restore OWNER-only dengan
+  re-auth; job `_backup_restore_jobs` bercheckpoint/lock/progres; pre-snapshot
+  termasuk `settings/site`; worker cron fail-closed `CRON_SECRET`; merge-only.
+  Gate: `test:backup` 25 ✅ · `test:unit` 637 ✅ · build 161/161 ✅ · publik
+  24/24 ✅ · auth E2E 9/9 ✅ (restore nyata di emulator). Sisa: uji volume
+  produksi/pagination penuh.
+- ✅ **P1E (`73a8609`, smoke `5b6af93`):** harness Firebase Emulator + E2E
   auth — 401/403, OWNER-only, cookie `/admin`, absolute/idle expiry, logout
-  revoke; smoke publik 24/24 tanpa emulator.
-- 🟡 **Sisa P1:** enforce CSP, background restore/UI, angka kuota backup.
-- ⏳ **Runtime:** E2E **emulator** ✅ 7/7; project staging/produksi nyata dan
+  revoke; suite kini **9/9**; smoke publik 24/24 tanpa emulator.
+- 🟡 **Sisa P1:** enforce CSP dan angka kuota backup.
+- ⏳ **Runtime:** E2E **emulator** ✅ 9/9; project staging/produksi nyata dan
   popup re-auth Google belum diuji. Jangan klaim alur Google/produksi sudah
   terverifikasi.
 

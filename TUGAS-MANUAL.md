@@ -26,11 +26,11 @@
 
 Legenda status: ⬜ Belum · 🔄 Sedang · ✅ Selesai · ⏭️ Ditunda
 
-> **Catatan teknis (2026-10-23):** E2E auth admin sudah berjalan di **Firebase
-> Emulator** (7/7, `73a8609`) memakai akun seed lokal. Ini **tidak** membutuhkan
-> akun/dashboard pemilik dan **bukan** verifikasi produksi. Sisa verifikasi
-> staging/produksi + popup Google adalah backlog teknis, bukan tugas manual di
-> halaman ini.
+> **Catatan teknis (2026-10-24):** E2E auth admin sudah berjalan di **Firebase
+> Emulator** (9/9, `73a8609` + `6f8bba1`, termasuk restore snapshot nyata)
+> memakai akun seed lokal. Ini **tidak** membutuhkan akun/dashboard pemilik dan
+> **bukan** verifikasi produksi. Sisa verifikasi staging/produksi + popup Google
+> adalah backlog teknis, bukan tugas manual di halaman ini.
 
 ---
 
@@ -102,7 +102,9 @@ Pilih sesuai kebutuhan. Isi → Vercel → **Redeploy**.
 - [ ] `WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` - notifikasi WhatsApp (Meta Business).
 
 **Status:** 🔄 Sebagian — GA4 ✅ + Upstash ✅ terpasang; GSC API ditunda; WhatsApp belum.
-**Catatan:** daftar lengkap env + komentar ada di `.env.example`.
+**Catatan:** daftar lengkap env + komentar ada di `.env.example`. `CRON_SECRET`
+yang sudah dipakai cron analitik juga mengamankan worker restore ADM-12
+(`/api/cron/backup-restore`); bila kosong, route menolak dengan fail-closed.
 
 ---
 

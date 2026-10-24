@@ -4,9 +4,10 @@
 > ADM-02) selesai 2026-10-21 (`a36bf53`); P1A (`ADM-06` selesai,
 > `ADM-05/07` sebagian) di `69d35b5`; P1B (`ADM-04` revoke logout) di
 > `f8a7950`; P1C (ADM-03/04/08/12 + re-auth) selesai **kode** 2026-10-22 di
-> `885831c`; P1D (ADM-09/13 selesai, ADM-05/07/12 sebagian) di `72bd482`;
-> P1E harness E2E auth Firebase Emulator di `73a8609` (7/7 lulus; isolasi smoke
-> publik `5b6af93`, 24/24 lulus).
+> `885831c`; P1D (ADM-09/13 selesai, ADM-05/07 sebagian) di `72bd482`;
+> **ADM-12 dilanjutkan** dengan UI snapshot + job restore/checkpoint + worker
+> cron di `6f8bba1`; P1E harness E2E auth Firebase Emulator di `73a8609`
+> (suite kini 9/9; isolasi smoke publik `5b6af93`, 24/24 lulus).
 > Verifikasi runtime ber-kredensial kini **terverifikasi di emulator**;
 > staging/produksi, popup re-auth Google, dan WebKit masih tertunda.
 > Lihat §9 dan §11.**
@@ -35,7 +36,8 @@
 Dashboard admin **sudah kaya fitur dan memiliki fondasi otorisasi yang serius**:
 API admin memakai Firebase ID token, halaman `/admin` dijaga dua lapis, dan
 Firestore menolak seluruh akses langsung dari klien. Build, lint, dan 593 unit
-test lulus saat audit; setelah P1D suite 624 test, lalu P1E menjadi 630 test.
+test lulus saat audit; setelah P1D suite 624 test, P1E 630 test, dan ADM-12
+(2026-10-24) menjadi **637 test**.
 
 Namun audit menemukan **28 gap** yang perlu ditangani sebelum dashboard dianggap
 aman untuk banyak admin dan data produksi:
@@ -92,6 +94,12 @@ sebelum P1 selesai.
 > (`frame-ancestors`/`base-uri`/`object-src`), dan HSTS produksi sudah
 > **enforced**; CSP penuh dikirim sebagai **Report-Only**. Baris baseline di
 > atas adalah kondisi saat audit, bukan kondisi sekarang. Lihat ADM-05.
+>
+> **Verifikasi terkini (2026-10-24, `6f8bba1`):** build bersih **161/161**
+> halaman; `test:unit` **637/637**; E2E auth emulator **9/9** (termasuk gate
+> snapshot + restore nyata produk); E2E publik **24/24**; `tsc` dan lint lulus.
+> Snapshot per sumber tetap dibatasi 5.000 baris dan uji volume produksi belum
+> dilakukan.
 
 **Matriks otorisasi (strength):**
 
@@ -107,8 +115,8 @@ sebelum P1 selesai.
 **Yang tidak dijalankan:** E2E admin terhadap project staging/produksi nyata,
 popup re-auth Google di browser, axe/Lighthouse admin, uji volume produksi, dan
 eksploitasi ke Firestore produksi. E2E auth **di emulator** sudah dijalankan
-(7/7, `73a8609`); dampak volume dan beberapa perilaku browser tetap ditandai
-🟡/⚪ bila relevan.
+(**9/9**, `73a8609` + ADM-12 `6f8bba1`, termasuk restore nyata); dampak volume
+dan beberapa perilaku browser tetap ditandai 🟡/⚪ bila relevan.
 
 ---
 
@@ -565,20 +573,24 @@ audit before/after untuk perubahan besar.
 
 ---
 
-### ADM-12 · 🟡 Sedang · Restore backup tidak point-in-time, rawan timeout, snapshot berisiko >1 MiB
+### ADM-12 · 🟡 Sedang · ✅ Selesai kode · Restore backup tidak point-in-time, rawan timeout, snapshot berisiko >1 MiB
 
-**Status:** 🟢 Terverifikasi untuk alur merge/loop; 🟡 Dugaan untuk kegagalan
-snapshot pada volume produksi (batas dokumen Firestore 1 MiB tidak diuji dengan
-data nyata).
+**Status:** 🟢 Terverifikasi kode + E2E emulator untuk alur snapshot→job→restore
+bertahap; 🟡 Dugaan untuk skala/volume produksi (batas baca 5.000 baris/sumber
+dan batas 1 MiB belum diuji dengan data produksi nyata).
 **Status implementasi (2026-10-22):** 🟡 **Sebagian** — akses sudah OWNER-only,
 restore **merge-only** dipertahankan, dan restore memerlukan re-auth OWNER.
 **Snapshot kini dipecah per sumber menjadi chunk <700 KiB** (manifest
 `_backup_snapshots/{stamp}` + dokumen chunk), sehingga tidak lagi menulis semua
 koleksi ke satu dokumen yang melewati batas 1 MiB. **Impor memakai `WriteBatch`**
 (≤400 operasi) dengan fallback per-dokumen bila batch gagal, dan alarm Sentry
-dikirim saat batas 5.000 baris terlampaui atau hasil parsial. **Belum:**
-background job/worker + checkpoint/resume, UI restore snapshot, dan uji volume
-produksi. Tidak ada klaim point-in-time restore.
+dikirim saat batas 5.000 baris terlampaui atau hasil parsial.
+**Status implementasi (2026-10-24, `6f8bba1`):** ✅ **Selesai kode** untuk UI
+daftar snapshot + restore job bertahap/checkpoint, worker cron, dan resume.
+**Sisa:** uji volume produksi, kapasitas snapshot 5.000 baris/sumber (sumber
+yang terpotong ditandai `truncated`), belum ada point-in-time/overwrite, retensi
+dokumen job belum TTL, dan worker cron bergantung pada `CRON_SECRET` + workflow
+yang aktif. Tidak ada klaim point-in-time restore.
 
 **Bukti sebelum perbaikan:**
 
@@ -611,6 +623,50 @@ server-side, dan entri navigasi/pengaturan disembunyikan untuk ADMIN. Restore
 tetap **merge-only**: dokumen di luar backup tidak dihapus. Re-auth Google
 diminta sebelum ekspor maupun impor. Keterbatasan timeout/snapshot 1 MiB tetap
 seperti di atas.
+
+**Implementasi ADM-12 (2026-10-24, `6f8bba1`):**
+
+- **UI `/admin/settings/backup`** menampilkan maksimal 50 manifest snapshot
+  terbaru, jumlah dokumen/chunk/sumber, status **Tidak lengkap** (ada chunk
+  gagal) dan **Terpotong** (melewati batas baca), serta dialog konfirmasi.
+  Snapshot yang tidak lengkap tidak dapat direstore.
+- **Job restore tersimpan** di `_backup_restore_jobs/{uuid}` (metadata progres
+  saja; isi baris/PII tidak disalin ke job). Setiap unit memproses **satu sumber
+  snapshot pengaman** atau **satu chunk target ≤400 operasi**, lalu menyimpan
+  checkpoint `sourceIndex`/`chunkIndex`/`processedUnits`/`written`/`failed`.
+  Lock 2 menit mencegah dua worker memproses unit yang sama; retry aman karena
+  penulisan tetap merge/idempoten.
+- **Snapshot pengaman dibuat lebih dulu**, termasuk `settings/site`, sebelum
+  data target ditulis. Snapshot target tetap berasal dari `_backup_snapshots`;
+  restore tidak pernah menghapus dokumen di luar snapshot.
+- **Otorisasi:** mulai restore = OWNER + `requireFreshOwner` + rate-limit
+  3 permintaan/10 menit. Daftar, status, dan langkah job = OWNER; langkah tidak
+  mewajibkan ulang fresh-auth agar job panjang tidak terputus, karena job hanya
+  dapat dimulai setelah re-auth dan ID job berupa UUID.
+- **Resume/background:** UI memanggil langkah berurutan dan menampilkan progres;
+  `POST/GET /api/cron/backup-restore` menjalankan worker maksimal 20 unit/20 dtk,
+  dijadwalkan tiap 10 menit di `.github/workflows/cron.yml` (fail-closed
+  `CRON_SECRET`). Efek akhir (revalidate cache/tag + audit `settings.restore`)
+  idempoten lewat `effectsApplied`, dengan sapu efek pending bila proses berhenti
+  setelah checkpoint terakhir.
+- **Batas jujur:** snapshot per sumber masih dibaca maksimal 5.000 baris dan
+  ditandai `truncated`; belum ada pagination penuh, uji volume produksi,
+  point-in-time, atau overwrite/delete. Job lama belum punya TTL otomatis.
+- **File utama:** `src/lib/backup.ts` (snapshot chunk, `snapshotOneSource`,
+  `readSnapshotChunk`, `writeBackupOperations`), `src/lib/backup-restore-pure.ts`
+  (validasi manifest/progres), `src/lib/backup-restore.ts` (job/lock/worker),
+  `src/app/api/admin/backup/snapshots/route.ts`,
+  `src/app/api/admin/backup/snapshots/[jobId]/route.ts`,
+  `src/app/api/cron/backup-restore/route.ts`,
+  `src/components/admin/settings/settings-backup.tsx`, dan
+  `.github/workflows/cron.yml`.
+
+**Bukti/verifikasi ADM-12:** `scripts/backup-restore.test.ts` (7 test manifest,
+urutan sumber, deteksi chunk gagal/kosong, progres, wiring), `test:unit`
+**637/637**, `test:e2e` publik **24/24**, `test:e2e:auth` **9/9** (termasuk
+restore nyata produk di emulator: job selesai dan harga kembali dari 2.000 ke
+1.000), `tsc`, lint, dan build bersih **161/161** halaman. Ini verifikasi
+emulator, bukan staging/produksi.
 
 ---
 
@@ -978,10 +1034,11 @@ robots.txt saja.
   - batas/paginasi.
 - Saat audit, 593 unit test lulus tetapi tidak menyentuh route admin secara
   langsung. P1A–P1D menambahkan test wiring/CSV/backup/SEO/kuota dan E2E
-  header/logout; P1E (`73a8609`) menambahkan **7 E2E auth Firebase Emulator**:
-  `401` tanpa token, `403` user biasa, role ADMIN + OWNER-only `403`, role
-  OWNER + gate OWNER-only `400`, session cookie `/admin`, absolute timeout,
-  idle expiry (cookie pendek), dan logout revoke. Suite unit kini 629 test.
+  header/logout; P1E (`73a8609`) + ADM-12 (`6f8bba1`) menambahkan **9 E2E auth
+  Firebase Emulator**: `401` tanpa token, `403` user biasa, role ADMIN +
+  OWNER-only `403`, role OWNER + gate OWNER-only `400`, session cookie `/admin`,
+  absolute timeout, idle expiry (cookie pendek), logout revoke, gate
+  snapshot/restore, dan restore nyata. Suite unit kini 637 test.
 - **Masih belum:** E2E terhadap project staging/produksi nyata, popup re-auth
   Google di browser, dan matrix seluruh route admin. Jadi ADM-26 belum ditutup
   penuh.
@@ -1092,8 +1149,9 @@ selesai (kode, 12 jam + idle 60 menit + re-auth); ADM-08 ✅ selesai (blokir
 saja); **ADM-09 ✅ selesai kode (transaksi atomik order+kupon); ADM-13 ✅ selesai
 kode (coverage + Sentry); ADM-07 🟡 hampir selesai (idempotency + kuota +
 rate-limit destruktif; angka kuota backup belum ada); ADM-05 🟡 sebagian (CSP
-penuh report-only; enforce belum); ADM-12 🟡 sebagian (snapshot chunk + batch
-impor; background job/UI restore belum). **P1E (E2E auth emulator) ✅ 7/7.**
+penuh report-only; enforce belum); **ADM-12 ✅ selesai kode (snapshot chunk +
+batch impor + UI snapshot + job restore/checkpoint/worker `6f8bba1`)**. **P1E
+(E2E auth emulator) ✅ 9/9** (7 gate awal + gate snapshot + restore nyata).
 
 ### 🟡 Status implementasi P1A — 2026-10-21 (`69d35b5`)
 
@@ -1136,8 +1194,9 @@ impor; background job/UI restore belum). **P1E (E2E auth emulator) ✅ 7/7.**
   restore backup/kelola admin/hapus order/broadcast, dan revoke logout tetap
   aktif. Sesi lama tanpa `__admin_login` diarahkan login ulang (disengaja).
 - **ADM-08** — hapus user dinonaktifkan (405); UI hanya blokir/buka blokir.
-- **ADM-12** — backup ekspor/impor OWNER-only + fresh auth; restore tetap
-  merge-only. Background job/snapshot per dokumen belum.
+- **ADM-12 (saat P1C)** — backup ekspor/impor OWNER-only + fresh auth; restore
+  tetap merge-only. Background job/snapshot per dokumen belum saat itu; ✅
+  dilanjutkan di `6f8bba1` (lihat §ADM-12).
 - **Verifikasi otomatis:** `npm run test:admin-security` 10/10 ·
   `npm run test:nav` 9/9 · `npm run test:admin-session` 1/1 ·
   `npm run test:unit` 615/615 · `npm run lint` ✅ · `npm run build` ✅
@@ -1146,8 +1205,9 @@ impor; background job/UI restore belum). **P1E (E2E auth emulator) ✅ 7/7.**
   absolute/idle expiry, dan logout revoke sudah lulus di Firebase Emulator.
   **Belum:** project staging/produksi nyata dan popup re-auth Google.
 - **Sisa P1:** enforce CSP penuh setelah nonce/hash + verifikasi origin
-  (ADM-05), background restore + UI snapshot (ADM-12), angka kuota backup
-  provider (ADM-07), dan verifikasi staging/produksi + popup re-auth.
+  (ADM-05), angka kuota backup provider (ADM-07), dan verifikasi
+  staging/produksi + popup re-auth. ADM-12 sudah selesai kode di `6f8bba1`;
+  sisanya uji volume produksi/pagination penuh.
 
 ### 🟡 Status implementasi P1D — 2026-10-22 (`72bd482`)
 
@@ -1173,10 +1233,11 @@ impor; background job/UI restore belum). **P1E (E2E auth emulator) ✅ 7/7.**
   `Content-Security-Policy-Report-Only` di produksi; CSP minimal yang menahan
   clickjacking tetap enforced. Enforce penuh belum karena nonce/hash inline
   Next/JSON-LD dan origin runtime belum diverifikasi.
-- **ADM-12 🟡** — snapshot dipecah per sumber menjadi chunk <700 KiB + manifest
-  `_backup_snapshots/{stamp}`; impor memakai `WriteBatch` ≤400 operasi dengan
-  fallback per-dokumen. Background worker/checkpoint, UI restore snapshot, dan
-  uji volume produksi belum.
+- **ADM-12 🟡 (saat P1D)** — snapshot dipecah per sumber menjadi chunk <700 KiB
+  + manifest `_backup_snapshots/{stamp}`; impor memakai `WriteBatch` ≤400
+  operasi dengan fallback per-dokumen. Background worker/checkpoint, UI restore
+  snapshot, dan uji volume produksi belum saat itu; ✅ dilanjutkan di
+  `6f8bba1` (lihat §ADM-12).
 - **Berkas utama:** `src/lib/orders.ts`, `src/lib/coupons.ts`,
   `src/app/api/admin/orders/route.ts`, `src/lib/broadcast-idempotency*.ts`,
   `src/lib/broadcast-quota*.ts`, `src/lib/admin-rate-limit.ts`,
@@ -1191,7 +1252,7 @@ impor; background job/UI restore belum). **P1E (E2E auth emulator) ✅ 7/7.**
   sengaja memblokir kirim ulang otomatis sampai diperiksa manual; `processing`
   yang basi belum punya auto-recovery.
 
-### ✅ Status implementasi P1E — 2026-10-23 (`73a8609`)
+### ✅ Status implementasi P1E — 2026-10-23 (`73a8609`; suite kini 9/9)
 
 Harness E2E auth ber-kredensial memakai **Firebase Emulator** (Auth `9099`,
 Firestore `8080`, project `lktech-emulator`) dan akun seed
@@ -1205,17 +1266,21 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
 - **Isolasi produksi:** Admin SDK hanya memakai emulator bila
   `ADMIN_USE_FIREBASE_EMULATOR=1` **dan** host emulator di-set. Tidak ada
   fallback otomatis dari `FIRESTORE_EMULATOR_HOST` yang nyasar di produksi.
-- **E2E 7/7:** `401` tanpa token; `403` user biasa; ADMIN mendapat role
+- **E2E 9/9:** `401` tanpa token; `403` user biasa; ADMIN mendapat role
   `ADMIN` dan ditolak `403` pada aksi OWNER-only; OWNER lolos gate (body kosong
   → `400`); session cookie membuka `/admin`; absolute timeout 12 jam menolak
   cookie login basi; idle expiry menolak session cookie pendek; logout
-  mencabut Bearer lama (`401`).
+  mencabut Bearer lama (`401`); gate daftar/mulai snapshot OWNER-only; dan
+  **restore nyata di emulator** (job selesai, harga produk kembali 2.000 →
+  1.000).
 - **Cara jalan:** `npm run build` lalu `npm run test:e2e:auth`. Auth emulator
   memakai REST sign-in, bukan popup Google. `test:e2e:auth` membersihkan proses
   emulator yang tertinggal sebelum run berikutnya.
 - **Gate batch ini:** `npx tsc --noEmit` ✅ · `npm run lint` ✅ ·
-  `npm run test:unit` 630/630 ✅ · `npm run build` ✅ (150/150 halaman statis) ·
-  E2E publik 24/24 ✅ · `npm run test:e2e:auth` 7/7 ✅.
+  `npm run test:unit` 637/637 ✅ · `npm run test:backup` 25/25 ✅ · `npm run
+  build` ✅ (build bersih 161/161 halaman statis) · E2E publik 24/24 ✅ ·
+  `npm run test:e2e:auth` **9/9** ✅. Saat P1E murni angkanya 630/150/7; angka
+  sekarang sudah termasuk ADM-12.
 - **Batas yang jujur:** ini verifikasi **emulator**, bukan staging/produksi.
   Popup re-auth Google, `AuthGuard` klien dengan login Firebase browser, dan
   WebKit belum diuji. Cookie sesi `Secure` diuji lewat HTTP mentah; cookie idle
@@ -1261,12 +1326,14 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
    permanen pada batch ini; label dan semantik UI diselaraskan. Permintaan
    penghapusan data mengikuti kebijakan retensi order yang belum diputuskan.
 4. **Backup:** ✅ **OWNER-only, ekspor/impor; restore merge-only.** Snapshot
-   sebelum impor dibuat sebagai chunk <700 KiB + manifest (P1D), tetapi bukan
-   point-in-time dan belum bisa dipulihkan dari UI. Background job/worker masih
-   backlog.
+   sebelum impor dibuat sebagai chunk <700 KiB + manifest (P1D); ADM-12
+   (`6f8bba1`) menambahkan daftar snapshot, restore dari UI, job
+   checkpoint/worker, dan resume. Bukan point-in-time; uji volume produksi dan
+   pagination penuh masih backlog.
 5. **E2E admin:** ✅ **Diizinkan memakai Firebase emulator/staging + akun seed**
-   untuk alur ber-kredensial. Emulator + seed sudah dibuat dan E2E 7/7 lulus
-   (`73a8609`); staging/produksi dan popup Google tetap pekerjaan lanjutan.
+   untuk alur ber-kredensial. Emulator + seed sudah dibuat dan suite E2E auth
+   **9/9** lulus (`73a8609` + `6f8bba1`); staging/produksi dan popup Google tetap
+   pekerjaan lanjutan.
 6. **Retensi audit:** ⏳ **Belum diputuskan** — berapa lama disimpan, siapa yang
    boleh ekspor, dan apakah aksi baca PII perlu dicatat.
 7. **Analytics admin:** ⏳ **Belum diputuskan** — apakah pageview admin
@@ -1281,11 +1348,12 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
   diimplementasikan pada commit `69d35b5`. P1B (ADM-04 revoke logout) di commit
   `f8a7950`. P1C (ADM-03/04/08/12 + re-auth) selesai **kode** 2026-10-22 di
   `885831c`. P1D (ADM-09/13 selesai; ADM-05/07/12 sebagian) di `72bd482`.
-  P1E (harness E2E auth emulator) di `73a8609`. P2–P3 masih dokumentasi/backlog.
-- E2E admin **di Firebase Emulator** sudah dijalankan (7/7, `73a8609`) dengan
-  akun seed OWNER/ADMIN/user. Ini bukan verifikasi staging/produksi; popup
-  re-auth Google dan `AuthGuard` klien dengan login Firebase browser belum diuji.
-  Tidak ada eksploitasi ke Firestore produksi.
+  ADM-12 dilanjutkan di `6f8bba1` (UI snapshot + job restore/worker). P1E
+  (harness E2E auth emulator) di `73a8609`. P2–P3 masih dokumentasi/backlog.
+- E2E admin **di Firebase Emulator** sudah dijalankan (suite **9/9**, termasuk
+  restore nyata) dengan akun seed OWNER/ADMIN/user. Ini bukan verifikasi
+  staging/produksi; popup re-auth Google dan `AuthGuard` klien dengan login
+  Firebase browser belum diuji. Tidak ada eksploitasi ke Firestore produksi.
 - axe/Lighthouse area admin tidak dijalankan; login terlindungi dan dashboard
   membutuhkan sesi.
 - Playwright WebKit masih tertunda karena unduhan timeout; fokus QA browser
@@ -1306,12 +1374,14 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
    (`f8a7950`): ADM-04 revoke logout. **P1C** (2026-10-22): ADM-03/04/08/12
    selesai kode + re-auth. **P1D** (`72bd482`): ADM-09/13 selesai; ADM-07
    idempotency + kuota + rate-limit destruktif; ADM-05 CSP report-only penuh;
-   ADM-12 snapshot chunk + batch impor. **P1E** (`73a8609`): E2E auth emulator
-   7/7. Lanjutkan: enforce CSP setelah nonce/hash, background restore/UI, lalu P2.
+   ADM-12 snapshot chunk + batch impor. **ADM-12 lengkap** (`6f8bba1`): UI
+   snapshot + job restore/checkpoint/worker. **P1E** (`73a8609`): E2E auth
+   emulator, suite kini 9/9. Lanjutkan: enforce CSP setelah nonce/hash, angka
+   kuota backup, verifikasi staging/produksi, lalu P2.
 4. **Runtime emulator ✅:** seed OWNER/ADMIN/user, 401/403 non-OWNER, OWNER-only,
-   cookie `/admin`, absolute/idle expiry, dan logout revoke sudah lulus
-   (`npm run test:e2e:auth`). **Sisa:** ulangi di staging/produksi dan uji popup
-   re-auth Google di browser.
+   cookie `/admin`, absolute/idle expiry, logout revoke, gate snapshot, dan
+   restore nyata sudah lulus (`npm run test:e2e:auth`, 9/9). **Sisa:** ulangi di
+   staging/produksi dan uji popup re-auth Google di browser.
 5. Setelah P1, lanjut P2 (skala/UX), lalu P3 (polish).
 6. Setiap batch wajib menambah test regresi dan memperbarui
    `docs/README.md` + `TASK-SELANJUTNYA.md`.
