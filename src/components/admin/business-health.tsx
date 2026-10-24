@@ -58,8 +58,10 @@ function DeltaBadge({ value }: { value: number | null }) {
 export async function BusinessHealth() {
   // 30 hari terakhir, mode "completed" (omzet pesanan selesai) — konsisten
   // dengan definisi metrik resmi (metrics-spec).
-  const analytics = await getSalesAnalytics({ days: 30, mode: "completed" });
-  const summary = await getOrdersSummary().catch(() => null);
+  const [analytics, summary] = await Promise.all([
+    getSalesAnalytics({ days: 30, mode: "completed" }),
+    getOrdersSummary().catch(() => null),
+  ]);
 
   const t = analytics.totals;
   const p = analytics.payment;

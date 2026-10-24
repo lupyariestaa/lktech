@@ -1,6 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { verifyAdminLoginToken } from "@/lib/admin-login-cookie";
 import {
   ADMIN_LOGIN_COOKIE,
@@ -24,12 +24,19 @@ import { isAdminEmail } from "@/lib/admins";
 export async function AdminServerGuard({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const store = await cookies();
+  const [store, requestHeaders] = await Promise.all([cookies(), headers()]);
   const cookie = store.get(ADMIN_SESSION_COOKIE)?.value;
+  const requestedPath = requestHeaders.get("x-admin-request-path");
+  const loginPath =
+    requestedPath &&
+    requestedPath.startsWith("/admin") &&
+    !requestedPath.startsWith("/admin/login")
+      ? `/admin/login?next=${encodeURIComponent(requestedPath)}`
+      : "/admin/login";
 
   const session = await verifyAdminSessionCookie(cookie);
   if (!session || !session.emailVerified) {
-    redirect("/admin/login");
+    redirect(loginPath);
   }
 
   // Absolute timeout 12 jam: `__session` saja tidak cukup. Cookie login
@@ -39,12 +46,12 @@ export async function AdminServerGuard({
     session.uid,
   );
   if (!loginWindow) {
-    redirect("/admin/login");
+    redirect(loginPath);
   }
 
   const allowed = await isAdminEmail(session.email);
   if (!allowed) {
-    redirect("/admin/login");
+    redirect(loginPath);
   }
 
   return <>{children}</>;

@@ -1,5 +1,7 @@
-﻿import { DashboardOverview } from "@/components/admin/dashboard-overview";
+﻿import { Suspense } from "react";
+import { DashboardOverview } from "@/components/admin/dashboard-overview";
 import { BusinessHealth } from "@/components/admin/business-health";
+import { BusinessHealthSkeleton } from "@/components/admin/business-health-skeleton";
 
 import type { Metadata } from "next";
 
@@ -18,7 +20,9 @@ export default function AdminHomePage() {
         </p>
       </div>
       <div className="flex flex-col gap-6">
-        <BusinessHealth />
+        <Suspense fallback={<BusinessHealthSkeleton />}>
+          <BusinessHealth />
+        </Suspense>
         <DashboardOverview />
       </div>
     </div>

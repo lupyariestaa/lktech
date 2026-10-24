@@ -35,6 +35,8 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [dirty, setDirtyState] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [pendingBack, setPendingBack] = useState(false);
+  const pendingBackRef = useRef(false);
 
   const setDirty = useCallback((value: boolean) => {
     setDirtyState(value);
@@ -50,6 +52,28 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
+
+  // Tombol Back browser: tambahkan satu entry penjaga saat form dirty. Bila
+  // popstate terjadi, entry penjaga dipasang kembali dan dialog konfirmasi
+  // ditampilkan. Konfirmasi membuang perubahan lalu mundur dua entry (penjaga
+  // + halaman saat ini) menuju halaman sebelumnya (ADM-23).
+  useEffect(() => {
+    if (!dirty) return;
+    const marker = {
+      ...(window.history.state ?? {}),
+      __adminUnsavedGuard: true,
+    };
+    window.history.pushState(marker, "", window.location.href);
+
+    const onPopState = () => {
+      if (pendingBackRef.current) return;
+      window.history.pushState(marker, "", window.location.href);
+      pendingBackRef.current = true;
+      setPendingBack(true);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, [dirty]);
 
   const requestNavigation = useCallback(
@@ -86,6 +110,25 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
         }}
         onCancel={() => setPendingHref(null)}
       />
+      <ConfirmDialog
+        open={pendingBack}
+        title="Perubahan belum disimpan"
+        description="Ada perubahan yang belum disimpan. Yakin ingin kembali dan membuang perubahan tersebut?"
+        confirmLabel="Buang & kembali"
+        cancelLabel="Tetap di sini"
+        tone="danger"
+        onConfirm={() => {
+          pendingBackRef.current = false;
+          setPendingBack(false);
+          setDirtyState(false);
+          // Entry saat ini adalah penjaga; lewati penjaga + halaman asal.
+          window.history.go(-2);
+        }}
+        onCancel={() => {
+          pendingBackRef.current = false;
+          setPendingBack(false);
+        }}
+      />
     </UnsavedContext.Provider>
   );
 }
@@ -94,6 +137,11 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
 export function useUnsavedNavigation() {
   const ctx = useContext(UnsavedContext);
   return ctx?.requestNavigation ?? ((href: string) => void href);
+}
+
+/** True bila form aktif punya perubahan yang belum disimpan. */
+export function useUnsavedStatus(): boolean {
+  return useContext(UnsavedContext)?.dirty ?? false;
 }
 
 const noop = () => {};

@@ -29,6 +29,7 @@ import { UserDetailDialog } from "@/components/admin/user-detail-dialog";
 import { cn } from "@/lib/utils";
 
 const PAGE_LIMIT = 100;
+const PAGE_SEARCH_CAP = 5_000;
 
 /** Debounce sederhana untuk pencarian. */
 function useDebounced<T>(value: T, delay = 300): T {
@@ -45,8 +46,11 @@ export function UsersManager() {
   const { isOwner } = useAdminAccess();
 
   const [users, setUsers] = useState<AdminUserRow[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
   const [summary, setSummary] = useState<AdminUsersSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -65,12 +69,15 @@ export function UsersManager() {
       try {
         setLoading(true);
         setError(null);
-        const [list, sum] = await Promise.all([
+        const [page, sum] = await Promise.all([
           fetchUsers({ q: debouncedQuery, filter, limit: PAGE_LIMIT }),
-          fetchUsersSummary().catch(() => null),
+          reloadKey === 0 ? fetchUsersSummary().catch(() => null) : Promise.resolve(null),
         ]);
         if (!active) return;
-        setUsers(list);
+        setUsers(page.users);
+        setNextCursor(page.nextCursor);
+        setTruncated(page.truncated);
+        setError(null);
         if (sum) setSummary(sum);
       } catch (err) {
         if (!active) return;
@@ -83,6 +90,25 @@ export function UsersManager() {
       active = false;
     };
   }, [debouncedQuery, filter, reloadKey]);
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    try {
+      setLoadingMore(true);
+      const page = await fetchUsers({
+        q: debouncedQuery,
+        filter,
+        limit: PAGE_LIMIT,
+        cursor: nextCursor,
+      });
+      setUsers((current) => [...current, ...page.users]);
+      setNextCursor(page.nextCursor);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal memuat halaman berikutnya.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [debouncedQuery, filter, loadingMore, nextCursor, toast]);
 
   const refresh = useCallback(() => {
     setReloadKey((k) => k + 1);
@@ -98,7 +124,9 @@ export function UsersManager() {
       return;
     }
     exportUsersToCsv(users);
-    toast.success(`${users.length} pengguna diekspor ke CSV.`);
+    toast.success(
+      `${users.length} pengguna diekspor ke CSV${nextCursor ? " (halaman termuat saja)" : ""}.`,
+    );
   };
 
   const onToggleBlock = async (user: AdminUserRow) => {
@@ -124,8 +152,8 @@ export function UsersManager() {
     () => [
       { label: "Total Pengguna", value: summary?.total ?? 0, accent: "bg-primary-50 text-primary", icon: Users },
       { label: "Baru (30 hari)", value: summary?.newLast30Days ?? 0, accent: "bg-blue-50 text-blue-600", icon: UserRound },
-      { label: "Sudah Pesan", value: summary?.withOrders ?? 0, accent: "bg-emerald-50 text-emerald-600", icon: ShieldCheck },
-      { label: "Belum Pesan", value: summary?.withoutOrders ?? 0, accent: "bg-amber-50 text-amber-600", icon: AlertCircle },
+      { label: "Sudah Bayar", value: summary?.withOrders ?? 0, accent: "bg-emerald-50 text-emerald-600", icon: ShieldCheck },
+      { label: "Belum Bayar", value: summary?.withoutOrders ?? 0, accent: "bg-amber-50 text-amber-600", icon: AlertCircle },
     ],
     [summary],
   );
@@ -155,6 +183,7 @@ export function UsersManager() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari nama, email, atau WhatsApp…"
+            aria-label="Cari pengguna berdasarkan nama, email, atau WhatsApp"
             className="w-full rounded-full border border-slate-200 bg-white py-2.5 pr-4 pl-10 text-sm text-secondary placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -167,8 +196,8 @@ export function UsersManager() {
           {(
             [
               { key: "semua", label: "Semua" },
-              { key: "sudah", label: "Sudah Pesan" },
-              { key: "belum", label: "Belum Pesan" },
+              { key: "sudah", label: "Sudah Bayar" },
+              { key: "belum", label: "Belum Bayar" },
             ] as { key: UsersFilter; label: string }[]
           ).map((f) => (
             <button
@@ -209,7 +238,7 @@ export function UsersManager() {
 
       {/* Konten */}
       {error ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600">
+        <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600">
           {error}
         </div>
       ) : loading ? (
@@ -226,7 +255,9 @@ export function UsersManager() {
             Tidak ada pengguna.
           </p>
           <p className="mt-1 text-xs text-muted">
-            {query || filter !== "semua"
+            {nextCursor
+              ? "Belum ada kecocokan pada halaman ini; lanjutkan pemuatan untuk mencari berikutnya."
+              : query || filter !== "semua"
               ? "Coba ubah kata kunci atau filter."
               : "Belum ada user yang login di website."}
           </p>
@@ -242,8 +273,8 @@ export function UsersManager() {
                   <th scope="col" className="px-4 py-3 font-semibold">WhatsApp</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Terdaftar</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Login Terakhir</th>
-                  <th scope="col" className="px-4 py-3 text-center font-semibold">Pesanan</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Total Belanja</th>
+                  <th scope="col" className="px-4 py-3 text-center font-semibold" title="Pesanan dengan status dibayar/diproses/selesai">Pesanan Dibayar</th>
+                  <th scope="col" className="px-4 py-3 font-semibold" title="Hanya pesanan berbayar">Total Belanja (dibayar)</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Status</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Aksi</th>
                 </tr>
@@ -287,8 +318,11 @@ export function UsersManager() {
                     <td className="px-4 py-3 text-xs text-muted">
                       {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-center text-sm font-semibold text-secondary tabular-nums">
-                      {u.orderCount}
+                    <td
+                      className="px-4 py-3 text-center text-sm font-semibold text-secondary tabular-nums"
+                      title={`${u.orderCount} total pesanan`}
+                    >
+                      {u.paidOrderCount}
                     </td>
                     <td className="px-4 py-3 text-sm text-secondary">
                       {u.totalSpent > 0 ? formatRupiah(u.totalSpent) : "—"}
@@ -302,7 +336,7 @@ export function UsersManager() {
                             : "bg-slate-100 text-slate-500",
                         )}
                       >
-                        {u.hasOrders ? "Sudah pesan" : "Belum pesan"}
+                        {u.hasOrders ? "Sudah bayar" : "Belum bayar"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -347,7 +381,7 @@ export function UsersManager() {
                         : "bg-slate-100 text-slate-500",
                     )}
                   >
-                    {u.hasOrders ? "Sudah pesan" : "Belum"}
+                    {u.hasOrders ? "Sudah bayar" : "Belum bayar"}
                   </span>
                 </div>
 
@@ -359,13 +393,16 @@ export function UsersManager() {
                     </span>
                   </div>
                   <div className="text-muted">
-                    Pesanan:{" "}
-                    <span className="font-medium text-secondary">
-                      {u.orderCount}
+                    Pesanan dibayar:{" "}
+                    <span
+                      className="font-medium text-secondary"
+                      title={`${u.orderCount} total pesanan`}
+                    >
+                      {u.paidOrderCount}
                     </span>
                   </div>
                   <div className="text-muted">
-                    Belanja:{" "}
+                    Belanja (dibayar):{" "}
                     <span className="font-medium text-secondary">
                       {u.totalSpent > 0 ? formatRupiah(u.totalSpent) : "—"}
                     </span>
@@ -391,6 +428,36 @@ export function UsersManager() {
             ))}
           </ul>
         </>
+      )}
+
+      {!loading &&
+        (nextCursor || truncated ||
+          (filter === "semua" && !debouncedQuery && summary && users.length < summary.total)) && (
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-xs text-muted">
+            Menampilkan {users.length} pengguna
+            {summary ? ` dari ${summary.total}` : ""}.
+          </p>
+          {(truncated ||
+            (filter === "semua" && !debouncedQuery && summary && users.length < summary.total && !nextCursor)) && (
+            <p role="status" className="max-w-xl text-center text-xs text-amber-700">
+              {debouncedQuery
+                ? `Hasil pencarian dibatasi ${PAGE_SEARCH_CAP.toLocaleString("id-ID")} profil.`
+                : "Profil tanpa createdAtISO mungkin tidak muncul dalam daftar. Backfill profil lama untuk kelengkapan."}
+            </p>
+          )}
+          {nextCursor && (
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-50"
+            >
+              <RefreshCw className={cn("h-4 w-4", loadingMore && "animate-spin")} />
+              {loadingMore ? "Memuat…" : "Muat lebih banyak"}
+            </button>
+          )}
+        </div>
       )}
 
       {/* Detail user */}

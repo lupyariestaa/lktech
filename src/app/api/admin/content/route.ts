@@ -6,6 +6,11 @@ import {
   readSiteContent,
   saveSiteContent,
 } from "@/lib/site-content";
+import {
+  firstSiteContentIssue,
+  MAX_SITE_CONTENT_BYTES,
+  siteContentSchema,
+} from "@/lib/site-content-schema";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 import { recordAdminAudit } from "@/lib/admin-audit";
 
@@ -43,14 +48,48 @@ export async function PUT(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  let body: Record<string, unknown>;
+  const declaredLength = Number(req.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_SITE_CONTENT_BYTES) {
+    return NextResponse.json(
+      { error: "Payload konten terlalu besar." },
+      { status: 413 },
+    );
+  }
+
+  let rawText: string;
   try {
-    body = (await req.json()) as Record<string, unknown>;
+    rawText = await req.text();
+  } catch {
+    return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
+  }
+  if (Buffer.byteLength(rawText, "utf8") > MAX_SITE_CONTENT_BYTES) {
+    return NextResponse.json(
+      { error: "Payload konten terlalu besar." },
+      { status: 413 },
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = JSON.parse(rawText);
   } catch {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const content = normalizeSiteContent(body);
+  const parsed = siteContentSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: firstSiteContentIssue(parsed.error),
+        details: parsed.error.issues.slice(0, 8),
+      },
+      { status: 400 },
+    );
+  }
+
+  const content = normalizeSiteContent(
+    parsed.data as Record<string, unknown>,
+  );
 
   try {
     await saveSiteContent(content, check.email);

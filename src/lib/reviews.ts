@@ -1,5 +1,5 @@
 import "server-only";
-import { FieldValue } from "firebase-admin/firestore";
+import { AggregateField, FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import {
   buildModerationPatch,
@@ -161,20 +161,37 @@ export type ReviewsSummary = {
 };
 
 export async function getReviewsSummary(): Promise<ReviewsSummary> {
-  const all = await listAllReviews("semua");
-  const approved = all.filter((r) => r.status === "approved");
-  const avg =
-    approved.length > 0
-      ? Math.round(
-          (approved.reduce((s, r) => s + r.rating, 0) / approved.length) * 10,
-        ) / 10
+  const db = getAdminDb();
+  if (!db) {
+    return { total: 0, pending: 0, approved: 0, rejected: 0, avgRating: 0 };
+  }
+
+  // Hitung di server (count + average) agar tidak berhenti akurat di 500
+  // dokumen pertama (ADM-17).
+  const collection = db.collection(COLLECTION);
+  const [total, pending, approved, rejected, average] = await Promise.all([
+    collection.count().get(),
+    collection.where("status", "==", "pending").count().get(),
+    collection.where("status", "==", "approved").count().get(),
+    collection.where("status", "==", "rejected").count().get(),
+    collection
+      .where("status", "==", "approved")
+      .aggregate({ average: AggregateField.average("rating") })
+      .get(),
+  ]);
+
+  const avgRaw = average.data().average;
+  const avgRating =
+    typeof avgRaw === "number" && Number.isFinite(avgRaw)
+      ? Math.round(avgRaw * 10) / 10
       : 0;
+
   return {
-    total: all.length,
-    pending: all.filter((r) => r.status === "pending").length,
-    approved: approved.length,
-    rejected: all.filter((r) => r.status === "rejected").length,
-    avgRating: avg,
+    total: total.data().count,
+    pending: pending.data().count,
+    approved: approved.data().count,
+    rejected: rejected.data().count,
+    avgRating,
   };
 }
 

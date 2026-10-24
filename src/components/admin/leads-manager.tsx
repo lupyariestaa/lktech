@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Download,
@@ -39,23 +39,20 @@ import { LeadPipelineBoard } from "@/components/admin/lead-pipeline-board";
 import { LeadTimeline } from "@/components/admin/lead-timeline";
 import { LeadScoreBadge } from "@/components/admin/lead-score-badge";
 import { waLink } from "@/lib/whatsapp";
-import { useAsyncList } from "@/components/admin/use-async-list";
 import { useToast } from "@/components/admin/toast";
 import { useAdminAccess } from "@/components/admin/admin-access";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import { cn } from "@/lib/utils";
 
 export function LeadsManager() {
   const toast = useToast();
   const { isOwner } = useAdminAccess();
-  const {
-    data: leads,
-    setData: setLeads,
-    loading,
-    error,
-    setError,
-    reload: load,
-  } = useAsyncList<StoredLead>(fetchLeads, "Gagal memuat lead.");
+  const [leads, setLeads] = useState<StoredLead[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<LeadStatus | "semua">("semua");
   /** Tampilan: daftar (list) atau papan pipeline (kanban). */
@@ -67,9 +64,57 @@ export function LeadsManager() {
   const [toDelete, setToDelete] = useState<StoredLead | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const refresh = async () => {
-    await load();
-  };
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const page = await fetchLeads({ limit: 50 });
+      setLeads(page.leads);
+      setNextCursor(page.nextCursor);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat lead.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void fetchLeads({ limit: 50 })
+      .then((page) => {
+        if (!active) return;
+        setLeads(page.leads);
+        setNextCursor(page.nextCursor);
+      })
+      .catch((err: unknown) => {
+        if (active) setError(err instanceof Error ? err.message : "Gagal memuat lead.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await fetchLeads({ limit: 50, cursor: nextCursor });
+      setLeads((current) => [...current, ...page.leads]);
+      setNextCursor(page.nextCursor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat lead berikutnya.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, nextCursor]);
+
+  const activeMatchCount = useMemo(() => {
+    if (query.trim() || filter === "semua" || !nextCursor) return null;
+    return leads.filter((lead) => lead.status === filter).length;
+  }, [filter, leads, nextCursor, query]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -133,10 +178,18 @@ export function LeadsManager() {
       await updateLeadStage(id, stage);
       toast.success(`Tahap: ${PIPELINE_STAGE_LABEL[stage]}.`);
       // Segarkan agar skor (dihitung ulang server) ikut terbarui.
-      fetchLeads()
-        .then((list) => {
-          setLeads(list);
-          setDetail((d) => (d ? list.find((l) => l.id === d.id) ?? d : d));
+      fetchLeads({ limit: 50 })
+        .then((page) => {
+          setLeads((current) =>
+            current.map((lead) =>
+              lead.id === id
+                ? page.leads.find((fresh) => fresh.id === id) ?? lead
+                : lead,
+            ),
+          );
+          setDetail((d) =>
+            d ? page.leads.find((lead) => lead.id === d.id) ?? d : d,
+          );
         })
         .catch(() => {});
     } catch (err) {
@@ -231,12 +284,12 @@ export function LeadsManager() {
           </button>
         </div>
 
-        {isOwner && (
+      {isOwner && (
           <button
             onClick={onExport}
             disabled={loading || leads.length === 0}
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
-            title="Ekspor hasil yang tampil ke CSV"
+            title="Ekspor lead dari halaman yang sudah dimuat ke CSV"
           >
             <Download className="h-4 w-4" />
             Ekspor CSV
@@ -254,7 +307,11 @@ export function LeadsManager() {
       </div>
 
       <p className="mt-3 text-xs text-muted">
-        Menampilkan {filtered.length} dari {leads.length} lead.
+        Menampilkan {filtered.length} dari {leads.length} lead yang termuat.
+        {activeMatchCount !== null
+          ? ` ${activeMatchCount} cocok pada halaman termuat.`
+          : ""}
+        {nextCursor ? " Gunakan Muat lagi untuk halaman berikutnya." : ""}
       </p>
 
       {error && (
@@ -274,12 +331,16 @@ export function LeadsManager() {
           <p className="text-sm font-medium text-secondary">
             {leads.length === 0
               ? "Belum ada lead masuk."
-              : "Tidak ada lead yang cocok dengan pencarian."}
+              : nextCursor
+                ? "Tidak ada kecocokan di halaman termuat; muat halaman berikutnya untuk melanjutkan pencarian."
+                : "Tidak ada lead yang cocok dengan pencarian."}
           </p>
           <p className="mt-1 text-xs text-muted">
             {leads.length === 0
               ? "Lead dari form kontak akan muncul di sini."
-              : "Coba ubah kata kunci atau filter."}
+              : nextCursor
+                ? "Kata kunci/filter berlaku pada lead yang sudah dimuat."
+                : "Coba ubah kata kunci atau filter."}
           </p>
         </div>
       ) : view === "pipeline" ? (
@@ -395,6 +456,20 @@ export function LeadsManager() {
         </div>
       )}
 
+      {!loading && nextCursor && (
+        <div className="mt-5 flex justify-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-50"
+          >
+            <RefreshCw className={cn("h-4 w-4", loadingMore && "animate-spin")} />
+            {loadingMore ? "Memuat…" : "Muat lagi"}
+          </button>
+        </div>
+      )}
+
       {detail && (
         <LeadDetailDialog
           lead={detail}
@@ -430,6 +505,7 @@ function LeadDetailDialog({
 }) {
   const currentStage =
     (lead.stage as PipelineStage) || statusToStage(lead.status);
+  const { ref } = useDrawerFocus<HTMLDivElement>(true, { onEscape: onClose });
 
   return (
     <div
@@ -443,7 +519,10 @@ function LeadDetailDialog({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-xl sm:rounded-3xl">
+      <div
+        ref={ref}
+        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-xl sm:rounded-3xl"
+      >
         <header className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-secondary">{lead.name}</h2>
@@ -454,6 +533,7 @@ function LeadDetailDialog({
           <div className="flex shrink-0 items-center gap-2">
             <LeadScoreBadge score={lead.score} />
             <button
+              data-autofocus
               type="button"
               onClick={onClose}
               aria-label="Tutup detail"

@@ -6,6 +6,7 @@ import { ArrowRight, CornerDownLeft, ExternalLink, LogOut, Search } from "lucide
 import { ADMIN_NAV_ALL_TARGETS } from "@/lib/admin-nav";
 import { canViewOwnerOnly } from "@/lib/admin-nav-pure";
 import { useAdminAccess } from "@/components/admin/admin-access";
+import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import { cn } from "@/lib/utils";
 
 type PaletteAction = {
@@ -41,8 +42,8 @@ export function CommandPalette({
 }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const { ref } = useDrawerFocus<HTMLDivElement>(open);
   const { isOwner } = useAdminAccess();
 
   const actions = useMemo<PaletteAction[]>(
@@ -98,12 +99,6 @@ export function CommandPalette({
   if (safeActive !== active) setActive(safeActive);
 
   // Fokus input & scroll item aktif ke terlihat (sinkronisasi DOM — boleh effect).
-  useEffect(() => {
-    if (!open) return;
-    const t = window.setTimeout(() => inputRef.current?.focus(), 0);
-    return () => window.clearTimeout(t);
-  }, [open]);
-
   useEffect(() => {
     listRef.current
       ?.querySelector('[data-active="true"]')
@@ -168,6 +163,7 @@ export function CommandPalette({
             aria-hidden="true"
           />
           <motion.div
+            ref={ref}
             className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15"
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -179,7 +175,7 @@ export function CommandPalette({
             <div className="flex items-center gap-3 border-b border-slate-100 px-4">
               <Search className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
               <input
-                ref={inputRef}
+                data-autofocus
                 type="text"
                 role="combobox"
                 aria-expanded="true"

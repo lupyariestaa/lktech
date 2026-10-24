@@ -58,11 +58,15 @@ export type AdminUserRow = {
   blocked: boolean;
   createdAt: string;
   lastLoginAt: string;
-  /** Jumlah pesanan nyata (dihitung dari order). */
+  /** Jumlah seluruh pesanan (termasuk belum bayar/batal). */
   orderCount: number;
-  /** Total belanja (Rp) — Σ total order. */
+  /** Jumlah pesanan berbayar (dibayar/diproses/selesai). */
+  paidOrderCount: number;
+  /** Total belanja (Rp) — hanya pesanan berbayar. */
   totalSpent: number;
-  /** Apakah user pernah memesan. */
+  /** Alias eksplisit untuk total belanja berbayar. */
+  paidTotal: number;
+  /** Apakah user punya minimal satu pesanan berbayar. */
   hasOrders: boolean;
 };
 
@@ -71,8 +75,8 @@ export type AdminUsersSummary = {
   total: number;
   /** User yang mendaftar dalam 30 hari terakhir. */
   newLast30Days: number;
-  /** User yang punya minimal 1 pesanan. */
+  /** User yang punya minimal 1 pesanan berbayar. */
   withOrders: number;
-  /** User yang belum pernah memesan. */
+  /** User yang belum punya pesanan berbayar. */
   withoutOrders: number;
 };

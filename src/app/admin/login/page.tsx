@@ -1,7 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { LoginForm } from "@/components/admin/login-form";
 import { isSafeInternalPath } from "@/lib/redirect";
+
+export const metadata: Metadata = {
+  title: "Masuk Admin",
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminLoginPage({
   searchParams,
@@ -17,7 +23,11 @@ export default async function AdminLoginPage({
       : "/admin/leads";
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-surface px-6 py-16">
+    <main
+      id="konten"
+      aria-labelledby="admin-login-title"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-surface px-6 py-16"
+    >
       <div className="grid-lines absolute inset-0 opacity-60" />
       <div className="pointer-events-none absolute -top-24 -left-24 h-[26rem] w-[26rem] animate-aurora rounded-full bg-primary/15 blur-[120px]" />
       <div className="pointer-events-none absolute -right-24 bottom-0 h-[22rem] w-[22rem] animate-aurora rounded-full bg-primary-light/15 blur-[120px] [animation-delay:-6s]" />
@@ -32,6 +42,6 @@ export default async function AdminLoginPage({
           Kembali ke website
         </Link>
       </div>
-    </div>
+    </main>
   );
 }

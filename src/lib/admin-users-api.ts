@@ -15,6 +15,13 @@ export type UsersListQuery = {
   q?: string;
   filter?: UsersFilter;
   limit?: number;
+  cursor?: string;
+};
+
+export type UsersListPage = {
+  users: AdminUserRow[];
+  nextCursor: string | null;
+  truncated: boolean;
 };
 
 function buildQuery(query: UsersListQuery = {}): string {
@@ -22,6 +29,7 @@ function buildQuery(query: UsersListQuery = {}): string {
   if (query.q) params.set("q", query.q);
   if (query.filter && query.filter !== "semua") params.set("filter", query.filter);
   if (query.limit) params.set("limit", String(query.limit));
+  if (query.cursor) params.set("cursor", query.cursor);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -29,11 +37,10 @@ function buildQuery(query: UsersListQuery = {}): string {
 /** Daftar user (admin). */
 export async function fetchUsers(
   query: UsersListQuery = {},
-): Promise<AdminUserRow[]> {
-  const data = await adminFetch<{ users: AdminUserRow[] }>(
+): Promise<UsersListPage> {
+  return adminFetch<UsersListPage>(
     `/api/admin/users${buildQuery(query)}`,
   );
-  return data.users;
 }
 
 /** Ringkasan statistik user. */
@@ -70,9 +77,10 @@ export function exportUsersToCsv(users: AdminUserRow[], filename?: string) {
     "Nama",
     "Email",
     "WhatsApp",
-    "Jumlah Pesanan",
-    "Total Belanja",
-    "Status",
+    "Total Pesanan",
+    "Pesanan Dibayar",
+    "Total Belanja (dibayar)",
+    "Status Pembayaran",
     "Diblokir",
     "Terdaftar",
     "Login Terakhir",
@@ -84,8 +92,9 @@ export function exportUsersToCsv(users: AdminUserRow[], filename?: string) {
       u.email,
       u.whatsapp,
       u.orderCount,
+      u.paidOrderCount,
       u.totalSpent,
-      u.hasOrders ? "Sudah pesan" : "Belum pesan",
+      u.hasOrders ? "Sudah bayar" : "Belum bayar",
       u.blocked ? "Ya" : "Tidak",
       u.createdAt,
       u.lastLoginAt,

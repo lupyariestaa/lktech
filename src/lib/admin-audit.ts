@@ -63,13 +63,28 @@ export type AdminAuditQuery = {
   limit?: number;
 };
 
-/** Ambil daftar audit (admin), terbaru lebih dulu, dengan filter di memori. */
+/**
+ * Ambil daftar audit (admin), terbaru lebih dulu.
+ *
+ * - Tanpa filter aksi: `orderBy(atISO desc)` didorong ke Firestore agar event
+ *   terbaru tidak hilang setelah >1.000 event.
+ * - Dengan filter aksi: query equality pada `action` (single-field index),
+ *   lalu urutkan di memori; batas 1.000 per aksi tetap mencegah scan penuh.
+ */
 export async function listAdminAudit(
   query: AdminAuditQuery = {},
 ): Promise<AdminAuditEntry[]> {
   const db = getAdminDb();
   if (!db) return [];
-  const snap = await db.collection(COLLECTION).limit(1000).get();
+  const action = query.action && query.action !== "semua" ? query.action : null;
+  const cap = Math.min(Math.max(query.limit ?? 200, 1), 500);
+  const snap = action
+    ? await db.collection(COLLECTION).where("action", "==", action).limit(1000).get()
+    : await db
+        .collection(COLLECTION)
+        .orderBy("atISO", "desc")
+        .limit(cap)
+        .get();
   let items = snap.docs
     .map((doc) => {
       const d = doc.data() as Record<string, unknown>;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { FieldPath } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { LEAD_STATUSES, type LeadStatus, type StoredLead, type LeadActivity } from "@/lib/lead-types";
@@ -11,7 +12,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/admin/leads — daftar semua lead (terbaru lebih dulu).
+ * GET /api/admin/leads — halaman lead terbaru.
  * GET /api/admin/leads?summary=1 — ringkasan jumlah per status (untuk
  * badge sidebar; jangan tarik semua dokumen).
  */
@@ -41,8 +42,52 @@ export async function GET(req: Request) {
       LEAD_STATUSES.forEach((status, i) => {
         counts[status] = byStatus[i].data().count;
       });
+      // Summary lama tetap kompatibel: trend diambil oleh route dashboard
+      // terpisah agar endpoint badge tidak perlu 14 count tambahan.
+      if (new URL(req.url).searchParams.get("trend") !== "1") {
+        return NextResponse.json(
+          { summary: counts },
+          { headers: { "Cache-Control": "no-store" } },
+        );
+      }
+      const today = new Date();
+      const trendTimeZone = "Asia/Jakarta";
+      const todayKey = new Intl.DateTimeFormat("en-CA", {
+        timeZone: trendTimeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(today);
+      const [year, month, dayOfMonth] = todayKey.split("-").map(Number);
+      const days = Array.from({ length: 14 }, (_, i) => {
+        const date = new Date(Date.UTC(
+          year,
+          month - 1,
+          dayOfMonth - (13 - i),
+        ));
+        const key = date.toISOString().slice(0, 10);
+        const start = new Date(`${key}T00:00:00+07:00`).toISOString();
+        const end = new Date(`${new Date(date.getTime() + 86_400_000)
+          .toISOString().slice(0, 10)}T00:00:00+07:00`).toISOString();
+        return { key, start, end };
+      });
+      const trendCounts = await Promise.all(
+        days.map(({ start, end }) =>
+          db.collection("leads")
+            .where("createdAtISO", ">=", start)
+            .where("createdAtISO", "<", end)
+            .count()
+            .get(),
+        ),
+      );
       return NextResponse.json(
-        { summary: counts },
+        {
+          summary: counts,
+          trend: days.map((day, i) => ({
+            date: day.key,
+            count: trendCounts[i].data().count,
+          })),
+        },
         { headers: { "Cache-Control": "no-store" } },
       );
     } catch (err) {
@@ -55,12 +100,30 @@ export async function GET(req: Request) {
   }
 
   try {
-    const snap = await db
+    const url = new URL(req.url);
+    const limitRaw = Number(url.searchParams.get("limit"));
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0
+      ? Math.min(Math.floor(limitRaw), 100)
+      : 50;
+    const cursor = url.searchParams.get("cursor");
+    if (cursor && (cursor.length > 1500 || cursor.includes("/"))) {
+      return NextResponse.json({ error: "Cursor tidak valid." }, { status: 400 });
+    }
+    const query = db
       .collection("leads")
       .orderBy("createdAtISO", "desc")
-      .get();
+      .orderBy(FieldPath.documentId(), "desc");
+    const cursorDoc = cursor ? await db.collection("leads").doc(cursor).get() : null;
+    if (cursor && !cursorDoc?.exists) {
+      return NextResponse.json({ error: "Cursor tidak valid." }, { status: 400 });
+    }
+    const pagedQuery = cursorDoc?.exists
+      ? query.startAfter(cursorDoc).limit(limit + 1)
+      : query.limit(limit + 1);
+    const snap = await pagedQuery.get();
+    const pageDocs = snap.docs.slice(0, limit);
 
-    const leads: StoredLead[] = snap.docs.map((doc) => {
+    const leads: StoredLead[] = pageDocs.map((doc) => {
       const d = doc.data();
       return {
         id: doc.id,
@@ -87,7 +150,14 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({ leads });
+    return NextResponse.json({
+      leads,
+      nextCursor:
+        snap.docs.length > limit && pageDocs.length > 0
+          ? pageDocs[pageDocs.length - 1].id
+          : null,
+      truncated: false,
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     console.error("[api/admin/leads] GET gagal:", err);
     return NextResponse.json(

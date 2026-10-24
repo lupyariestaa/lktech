@@ -33,17 +33,22 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     isOwner: false,
   });
 
+  const loginPath = useCallback(() => {
+    const next = `${window.location.pathname}${window.location.search}`;
+    return `/admin/login?next=${encodeURIComponent(next)}`;
+  }, []);
+
   const onSessionExpired = useCallback(() => {
-    router.replace("/admin/login");
-  }, [router]);
+    router.replace(loginPath());
+  }, [router, loginPath]);
 
   useAdminSessionKeepalive(check === "allowed", onSessionExpired);
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace("/admin/login");
+      router.replace(loginPath());
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, loginPath]);
 
   // Verifikasi keanggotaan admin via API (endpoint memvalidasi token ke
   // Firebase & mencocokkan dengan whitelist env/DB). Bila lolos, mint session
@@ -64,7 +69,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         if (res.status === 401) {
           await clearAdminSession({ revoke: true });
           await signOutUser();
-          router.replace("/admin/login");
+          router.replace(loginPath());
           return;
         }
         if (!res.ok) {
@@ -92,7 +97,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           if (sessionRes?.status === 401) {
             await clearAdminSession({ revoke: true });
             await signOutUser();
-            router.replace("/admin/login");
+            router.replace(loginPath());
           }
         }
       } catch {
@@ -102,7 +107,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [loading, user, router]);
+  }, [loading, user, router, loginPath]);
 
   if (loading || (user && check === "checking")) {
     return (

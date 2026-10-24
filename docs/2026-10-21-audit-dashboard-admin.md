@@ -527,7 +527,7 @@ parsial yang jelas.
 
 ### ADM-10 · 🟡 Sedang · “Sudah Pesan” dan “Total Belanja” menghitung order belum bayar/batal
 
-**Status:** 🟢 Terverifikasi — kode dan label UI.
+**Status:** ✅ Diperbaiki dan terverifikasi — regression test; belum diuji pada data production.
 
 **Bukti:**
 
@@ -544,9 +544,10 @@ parsial yang jelas.
 terhitung sebagai pembeli/omzet. Angka ini bisa berbeda dari dashboard analitik
 yang memakai definisi “completed”, sehingga keputusan support/CRM salah.
 
-**Rekomendasi:** definisikan status yang dihitung (mis. `dibayar`/`selesai`),
-sertakan `paidOrderCount` dan `paidTotal`; tampilkan juga “semua order” bila
-perlu. Gunakan agregasi/count yang konsisten dengan metrik resmi.
+**Perbaikan:** `src/lib/admin-users-pure.ts` menyelaraskan status berbayar dengan
+`metrics-spec`; daftar, CSV, ringkasan, filter dan detail user memakai
+`paidOrderCount`/`paidTotal`; `orderCount` tetap seluruh order.
+**Uji:** `scripts/admin-users.test.ts`.
 
 ---
 
@@ -706,7 +707,7 @@ sertakan statusnya di respons bila perlu.
 
 ### ADM-14 · 🔵 Rendah · `PUT /api/admin/content` tanpa skema/batas ukuran
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** ✅ Diperbaiki dan terverifikasi — schema tests; production belum diuji.
 
 **Bukti:**
 
@@ -720,8 +721,10 @@ sertakan statusnya di respons bila perlu.
 **Dampak:** admin (atau tokennya) dapat menyebabkan kegagalan simpan; input yang
 salah tipe dinormalisasi diam-diam sehingga admin tidak tahu ada data yang hilang.
 
-**Rekomendasi:** Zod schema + batas panjang string/jumlah item, body size limit,
-dan error 400 yang menjelaskan field bermasalah.
+**Perbaikan:** `src/lib/site-content-schema.ts` memvalidasi body dengan Zod;
+`PUT /api/admin/content` menolak payload di atas 900 KB dan mengembalikan 400
+untuk schema invalid / 413 untuk body terlalu besar.
+**Uji:** `scripts/site-content-schema.test.ts`.
 
 ---
 
@@ -729,8 +732,8 @@ dan error 400 yang menjelaskan field bermasalah.
 
 ### ADM-15 · 🟠 Tinggi · Daftar user: full scan, ringkasan berulang, batas 100 tersembunyi, ekspor parsial
 
-**Status:** 🟢 Terverifikasi untuk alur; 🟡 Dugaan untuk dampak biaya/UX pada
-volume besar.
+**Status:** 🟡 Sebagian diperbaiki dan terverifikasi lewat kode/tests; search
+substring tetap dibatasi 5.000 profil dan dampak volume masih dugaan.
 
 **Bukti:**
 
@@ -755,16 +758,20 @@ volume besar.
 naik seiring jumlah user/order. Admin tidak tahu bahwa hanya 100 dari total yang
 tampil/diekspor, sehingga tindakan massal (blokir/ekspor) bisa salah sasaran.
 
-**Rekomendasi:** paginasi server (`orderBy(createdAtISO)` + cursor), total count
-terpisah, summary di-cache/agregasi, ekspor server mengikuti filter dengan
-progres, tampilkan “menampilkan X dari Y” dan tombol muat lagi. Index/pencarian
-server-side untuk nama/email/WhatsApp.
+**Perbaikan:** daftar reguler memakai cursor Firestore dan hanya mengagregasi
+order milik uid halaman; UI punya “Muat lebih banyak”; summary cache 60 detik
+dan tidak dipanggil ulang tiap pencarian. Pencarian substring dibatasi 5.000
+profil yang dipindai; API menandai `truncated`. **Sisa:** daftar reguler Firestore
+tidak mengurutkan profil tanpa `createdAtISO`; UI memberi peringatan bila summary
+menunjukkan selisih. Ekspor masih hanya baris termuat; backfill/index pencarian
+dan uji dataset besar belum dilakukan.
 
 ---
 
 ### ADM-16 · 🟡 Sedang · Lead dimuat seluruhnya; dashboard menggandakan query
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** 🟡 Sebagian diperbaiki — pagination/list dan agregat dashboard sudah
+ada; filter pencarian lead masih lokal pada halaman termuat.
 
 **Bukti:**
 
@@ -783,15 +790,24 @@ server-side untuk nama/email/WhatsApp.
 menghabiskan kuota baca. Data lead berisi PII dan activities; mengirim semuanya
 setiap kali dashboard dibuka tidak perlu.
 
-**Rekomendasi:** paginasi/filter/count server-side untuk lead; dashboard cukup
-memakai summary + 5 terbaru; satukan query summary order/user; cache singkat
-dengan invalidasi saat mutasi.
+**Perbaikan:** `GET /api/admin/leads` mengembalikan 50 lead dengan cursor;
+`LeadsManager` memuat halaman berikutnya. Dashboard meminta 5 lead terbaru dan
+summary count/trend melalui query agregat Firestore paralel.
+**Sisa:** pencarian/filter dan ekspor masih terbatas pada lead yang dimuat; UI
+menyatakan batas itu dan tombol muat berikutnya tetap tersedia. Summary lead
+menjalankan count per hari/status tanpa cache.
+
+**Bukti implementasi:** `src/app/api/admin/leads/route.ts` memakai cursor dokumen
+dan `createdAtISO` bersama document ID sebagai tie-breaker; `src/components/admin/leads-manager.tsx`
+memuat halaman berikutnya dan memberi label batas pencarian/ekspor; dashboard
+meminta `summary=1&trend=1`, sedangkan badge memakai summary count saja.
 
 ---
 
 ### ADM-17 · 🟡 Sedang · Kontrak daftar tidak konsisten: batas tersembunyi & filter audit mengecil
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** 🟡 Sebagian diperbaiki — agregat ulasan dan urutan audit dibenahi;
+subscriber/media masih perlu paging/flag batas.
 
 **Bukti:**
 
@@ -812,10 +828,10 @@ dengan invalidasi saat mutasi.
 terbaru, atau mengira daftar sudah lengkap. Filter audit juga berubah-ubah
 sehingga sulit dipakai untuk investigasi.
 
-**Rekomendasi:** satu pola paginasi kursor + total count + flag `truncated` untuk
-semua daftar; audit memakai `orderBy("atISO","desc")` + cursor; opsi filter audit
-berasal dari konstanta aksi, bukan entri yang termuat; hitung ringkasan di server
-dengan count/agregasi.
+**Perbaikan:** summary ulasan memakai Firestore count/average aggregate; audit
+memakai `orderBy("atISO", "desc")` dan opsi filter stabil.
+**Sisa:** paging/penanda pemotongan subscriber dan media masih terbuka; filter
+audit per aksi tetap dibatasi 1.000 dokumen.
 
 ---
 
@@ -871,7 +887,7 @@ Ukur bundle admin sebelum/sesudah.
 
 ### ADM-20 · 🟡 Sedang · Tidak ada loading/error boundary admin; dashboard menunggu dua query server
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** ✅ Diperbaiki dan terverifikasi — TypeScript, lint, build.
 
 **Bukti:**
 
@@ -898,7 +914,7 @@ independen, timeout/fallback, dan tombol retry.
 
 ### ADM-21 · 🟡 Sedang · Dialog tidak konsisten mengunci/mengembalikan fokus
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** 🟡 Diperbaiki di dialog admin utama; keyboard/screen-reader E2E belum dijalankan.
 
 **Bukti:**
 
@@ -923,7 +939,7 @@ background) ke semua dialog; tambahkan test keyboard.
 
 ### ADM-22 · 🟡 Sedang · Gap a11y di login dan pencarian user
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** 🟡 Perbaikan kode selesai; audit axe/E2E aksesibilitas masih manual.
 
 **Bukti:**
 
@@ -949,7 +965,7 @@ akun uji, dan audit kontras/fokus.
 
 ### ADM-23 · 🔵 Rendah · Unsaved changes tidak dijaga saat logout/back
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** 🟡 Guard logout/Back ditambahkan; perilaku browser history perlu verifikasi manual.
 
 **Bukti:**
 
@@ -971,7 +987,7 @@ test skenario edit → logout/back.
 
 ### ADM-24 · 🔵 Rendah · Redirect sesi kedaluwarsa kehilangan tujuan awal
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** ✅ Diperbaiki di proxy/server/client guard; deep-link expiry belum diuji production.
 
 **Bukti:**
 
@@ -992,7 +1008,7 @@ dengan `isSafeInternalPath`), dan test expiry → login → kembali ke halaman a
 
 ### ADM-25 · 🔵 Rendah · `noindex` admin tidak terpusat
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** ✅ Diperkuat dengan metadata admin dan `X-Robots-Tag`; crawl eksternal belum diverifikasi.
 
 **Bukti:**
 
@@ -1281,6 +1297,11 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
   build` ✅ (build bersih 161/161 halaman statis) · E2E publik 24/24 ✅ ·
   `npm run test:e2e:auth` **9/9** ✅. Saat P1E murni angkanya 630/150/7; angka
   sekarang sudah termasuk ADM-12.
+- **Verifikasi perubahan admin 2026-10-24:** `npm run test:unit` 646/646 ✅;
+  `test:admin-users` 4/4 ✅; `test:content-schema` 5/5 ✅;
+  `test:admin-p1` 9/9 ✅; lint ✅; `npx tsc --noEmit` ✅; build 161/161 ✅
+  (SSG selesai; `SITE_URL` memakai fallback `https://lktech.id`). Staging/
+  production belum diverifikasi.
 - **Batas yang jujur:** ini verifikasi **emulator**, bukan staging/produksi.
   Popup re-auth Google, `AuthGuard` klien dengan login Firebase browser, dan
   WebKit belum diuji. Cookie sesi `Secure` diuji lewat HTTP mentah; cookie idle
@@ -1291,23 +1312,23 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
 
 ### P2 — skala, keandalan, UX inti
 
-- ADM-10 — metrik user hanya order yang valid.
+- ✅ ADM-10 — metrik user hanya order berstatus berbayar; regression tests tersedia.
 - ADM-11 — version/If-Match untuk settings/content/produk/proyek.
-- ADM-15 — paginasi + count + ekspor server untuk user.
-- ADM-16 — paginasi lead; dashboard memakai summary.
-- ADM-17 — kontrak paginasi/truncated/count seragam; audit orderBy.
+- 🟡 ADM-15 — paging user + cached summary; sisa search index/backfill dan ekspor server.
+- 🟡 ADM-16 — paging lead + dashboard summary; sisa filter server-side.
+- 🟡 ADM-17 — review aggregate + audit order; sisa paging newsletter/media dan filter audit cap.
 - ADM-18 — queue broadcast + idempotency.
-- ADM-20 — loading/error/suspense admin.
-- ADM-21/22 — focus trap, label, main/skip target, live region.
+- ✅ ADM-20 — loading/error/suspense admin.
+- 🟡 ADM-21/22 — focus/label/main/live region diperbaiki; verifikasi aksesibilitas manual masih perlu.
 - ADM-26 — test otorisasi/route/E2E admin.
 
 ### P3 — polish & operasional
 
-- ADM-14 — validasi/batas konten.
+- ✅ ADM-14 — schema Zod dan batas 900 KB; tests tersedia.
 - ADM-19 — pisahkan provider publik dari admin.
-- ADM-23 — guard logout/back.
-- ADM-24 — pertahankan `next` saat sesi kedaluwarsa.
-- ADM-25 — noindex terpusat.
+- 🟡 ADM-23 — guard logout/back; browser history perlu uji.
+- ✅ ADM-24 — pertahankan `next` saat sesi kedaluwarsa.
+- ✅ ADM-25 — noindex admin + `X-Robots-Tag`; crawl eksternal belum diuji.
 - ADM-27 — dokumentasi/runbook/copy login.
 - ADM-28 — reservasi slug.
 

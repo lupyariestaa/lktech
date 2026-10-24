@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
-import { useUnsavedNavigation } from "@/components/admin/unsaved-changes";
+import {
+  useUnsavedNavigation,
+  useUnsavedStatus,
+} from "@/components/admin/unsaved-changes";
 import { signOutUser } from "@/lib/auth";
 import { clearAdminSession } from "@/lib/admin-fetch";
 import { matchAdminItem, titleForPathname } from "@/lib/admin-nav";
@@ -14,6 +17,7 @@ import { SidebarContent } from "@/components/admin/sidebar/sidebar-content";
 import { useSidebarState } from "@/components/admin/use-sidebar-state";
 import { useAdminBadges } from "@/components/admin/use-admin-badges";
 import { CommandPalette } from "@/components/admin/command-palette";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 
 /**
  * Shell dashboard admin: sidebar (desktop rail/expanded + drawer mobile),
@@ -28,11 +32,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const navigate = useUnsavedNavigation();
+  const isDirty = useUnsavedStatus();
 
   const [open, setOpen] = useState(false); // drawer mobile
   const { collapsed, toggle: toggleRail } = useSidebarState();
   const { newLeads, newOrders } = useAdminBadges();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [pendingLogout, setPendingLogout] = useState(false);
 
   // Tutup drawer otomatis saat route berubah (mobile). Dibandingkan saat render
   // (bukan di effect) agar tidak memicu cascading render â€” pola yang disarankan
@@ -82,11 +88,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleRail]);
 
-  const onLogout = useCallback(async () => {
+  const performLogout = useCallback(async () => {
     await clearAdminSession({ revoke: true });
     await signOutUser();
     router.replace("/admin/login");
   }, [router]);
+
+  // Logout juga melewati guard dirty (ADM-23), bukan hanya navigasi menu.
+  const onLogout = useCallback(async () => {
+    if (isDirty) {
+      setPendingLogout(true);
+      return;
+    }
+    await performLogout();
+  }, [isDirty, performLogout]);
 
   /**
    * Navigasi internal: tutup drawer lalu lewat guard unsaved.
@@ -208,6 +223,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         onClose={closePalette}
         onNavigate={onNavigate}
         onLogout={onLogout}
+      />
+
+      <ConfirmDialog
+        open={pendingLogout}
+        title="Perubahan belum disimpan"
+        description="Ada perubahan yang belum disimpan. Logout sekarang akan membuang perubahan tersebut. Lanjutkan?"
+        confirmLabel="Buang & logout"
+        cancelLabel="Tetap di sini"
+        tone="danger"
+        onConfirm={() => {
+          setPendingLogout(false);
+          void performLogout();
+        }}
+        onCancel={() => setPendingLogout(false)}
       />
     </div>
   );

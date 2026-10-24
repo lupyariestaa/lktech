@@ -14,7 +14,7 @@ const VALID_FILTERS: AdminUsersFilter[] = ["semua", "sudah", "belum"];
 
 /**
  * GET /api/admin/users — daftar user (dashboard admin).
- *   Query: ?q=<cari nama/email/whatsapp> ?filter=semua|sudah|belum ?limit=<1..200>
+ *   Query: ?q=<cari nama/email/whatsapp> ?filter=semua|sudah|belum ?limit=<1..200> ?cursor=<opaque>
  * GET /api/admin/users?summary=1 — statistik ringkas (kartu & badge).
  */
 export async function GET(req: Request) {
@@ -49,15 +49,35 @@ export async function GET(req: Request) {
     ? (filterRaw as AdminUsersFilter)
     : "semua";
   const limitRaw = Number(url.searchParams.get("limit"));
+  const cursor = url.searchParams.get("cursor");
+  if (cursor && (cursor.length > 1500 || !/^[\w-]+$/.test(cursor))) {
+    return NextResponse.json({ error: "Cursor tidak valid." }, { status: 400 });
+  }
+  if (cursor) {
+    const decoded = Buffer.from(cursor, "base64url").toString("utf8");
+    const separator = decoded.indexOf("\n");
+    const createdAt = decoded.slice(0, separator);
+    const uid = decoded.slice(separator + 1);
+    const hasSearch = Boolean(url.searchParams.get("q")?.trim());
+    if (
+      separator < 0 ||
+      !uid ||
+      (!hasSearch && !createdAt) ||
+      Buffer.from(decoded).toString("base64url") !== cursor
+    ) {
+      return NextResponse.json({ error: "Cursor tidak valid." }, { status: 400 });
+    }
+  }
 
   try {
-    const users = await listAdminUsers({
+    const page = await listAdminUsers({
       q: url.searchParams.get("q") ?? undefined,
       filter,
       limit: Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : undefined,
+      cursor: cursor ?? undefined,
     });
     return NextResponse.json(
-      { users },
+      page,
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (err) {

@@ -92,6 +92,8 @@
     "scripts/admin-dashboard-dynamic.test.ts",
     "scripts/cache-wiring.test.ts",
     "scripts/admin-p1.test.ts",
+    "scripts/admin-users.test.ts",
+    "scripts/site-content-schema.test.ts",
     "scripts/admin-auth-e2e.test.ts",
     "scripts/seed-emulator.ts"
   ]

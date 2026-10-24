@@ -11,9 +11,33 @@ import type { Product, StoredProduct } from "@/lib/product-types";
 import type { Article, StoredArticle } from "@/lib/article-types";
 import type { SiteSettings } from "@/lib/settings-types";
 
-export async function fetchLeads(): Promise<StoredLead[]> {
-  const data = await adminFetch<{ leads: StoredLead[] }>("/api/admin/leads");
-  return data.leads;
+export type LeadListPage = {
+  leads: StoredLead[];
+  nextCursor: string | null;
+  truncated: boolean;
+};
+
+export async function fetchLeads(query: {
+  limit?: number;
+  cursor?: string;
+} = {}): Promise<LeadListPage> {
+  const params = new URLSearchParams();
+  if (query.limit) params.set("limit", String(query.limit));
+  if (query.cursor) params.set("cursor", query.cursor);
+  const suffix = params.size ? `?${params.toString()}` : "";
+  return adminFetch<LeadListPage>(`/api/admin/leads${suffix}`);
+}
+
+export type LeadDashboardSummary = {
+  summary: Record<string, number>;
+  trend: { date: string; count: number }[];
+};
+
+export async function fetchLeadsSummary(): Promise<LeadDashboardSummary> {
+  const data = await adminFetch<LeadDashboardSummary>(
+    "/api/admin/leads?summary=1&trend=1",
+  );
+  return data;
 }
 
 export async function updateLeadStatus(id: string, status: LeadStatus) {

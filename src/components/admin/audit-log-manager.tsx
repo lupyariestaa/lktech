@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, RefreshCw, ScrollText, Search } from "lucide-react";
 import { fetchAdminAudit } from "@/lib/admin-audit-api";
 import {
+  ADMIN_AUDIT_ACTIONS,
   ADMIN_AUDIT_ACTION_LABEL,
   type AdminAuditAction,
   type AdminAuditEntry,
@@ -85,10 +86,9 @@ export function AuditLogManager() {
     );
   }, [entries, query]);
 
-  const actionOptions = useMemo(() => {
-    const set = new Set(entries.map((e) => e.action));
-    return Array.from(set).sort();
-  }, [entries]);
+  // Opsi filter berasal dari konstanta aksi, bukan entri yang termuat, agar
+  // dropdown tidak mengecil saat filter aktif/daftar dibatasi (ADM-17).
+  const actionOptions = ADMIN_AUDIT_ACTIONS;
 
   return (
     <div>

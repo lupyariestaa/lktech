@@ -79,7 +79,10 @@ export function LoginForm({ redirectTo = "/admin/leads" }: { redirectTo?: string
         <div className="mx-auto flex justify-center">
           <Logo variant="full" href={null} height={40} />
         </div>
-        <h1 className="mt-5 text-xl font-bold text-secondary">
+        <h1
+          id="admin-login-title"
+          className="mt-5 text-xl font-bold text-secondary"
+        >
           Dashboard Admin
         </h1>
         <p className="mt-1.5 text-sm text-muted">
@@ -130,8 +133,12 @@ export function LoginForm({ redirectTo = "/admin/leads" }: { redirectTo?: string
         </label>
 
         {error && (
-          <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             {error}
           </div>
         )}

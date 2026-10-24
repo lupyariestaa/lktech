@@ -16,8 +16,10 @@ import type { UserProfile } from "@/lib/user-types";
 import type { Order, OrderStatus } from "@/lib/order-types";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_STYLE } from "@/lib/order-types";
 import { formatRupiah, formatDateTime, shortOrderCode } from "@/lib/format";
+import { isPaidOrderStatus } from "@/lib/admin-users-pure";
 import { waLink } from "@/lib/whatsapp";
 import { useToast } from "@/components/admin/toast";
+import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,6 +37,7 @@ export function UserDetailDialog({
   onChanged?: () => void;
 }) {
   const toast = useToast();
+  const { ref } = useDrawerFocus<HTMLDivElement>(true, { onEscape: onClose });
   const [user, setUser] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,16 +65,8 @@ export function UserDetailDialog({
     };
   }, [uid]);
 
-  // Escape menutup dialog.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const totalSpent = orders.reduce((sum, o) => sum + o.total, 0);
+  const paidOrders = orders.filter((o) => isPaidOrderStatus(o.status));
+  const totalSpent = paidOrders.reduce((sum, o) => sum + o.total, 0);
 
   const onToggleBlock = async () => {
     if (!user) return;
@@ -100,11 +95,15 @@ export function UserDetailDialog({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 sm:rounded-3xl">
+      <div
+        ref={ref}
+        className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 sm:rounded-3xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-6 py-4">
           <h2 className="text-sm font-bold text-secondary">Detail Pengguna</h2>
           <button
+            data-autofocus
             onClick={onClose}
             aria-label="Tutup"
             className="grid h-8 w-8 place-items-center rounded-full text-slate-400 transition-colors hover:text-secondary"
@@ -190,8 +189,13 @@ export function UserDetailDialog({
                 />
                 <InfoItem
                   icon={ShoppingBag}
-                  label="Total Belanja"
-                  value={orders.length > 0 ? formatRupiah(totalSpent) : "—"}
+                  label="Pesanan Dibayar"
+                  value={`${paidOrders.length}`}
+                />
+                <InfoItem
+                  icon={ShoppingBag}
+                  label="Total Belanja (dibayar)"
+                  value={paidOrders.length > 0 ? formatRupiah(totalSpent) : "—"}
                 />
                 <InfoItem
                   icon={ShieldCheck}

@@ -23,7 +23,11 @@ export async function proxy(req: NextRequest) {
 
   // ===== 1. Gate admin =====
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-    if (pathname === "/admin/login") return NextResponse.next();
+    if (pathname === "/admin/login") {
+      const res = NextResponse.next();
+      res.headers.set("X-Robots-Tag", "noindex, nofollow");
+      return res;
+    }
     const hasSession = Boolean(req.cookies.get(ADMIN_SESSION_COOKIE)?.value);
     if (!hasSession) {
       const url = req.nextUrl.clone();
@@ -34,7 +38,14 @@ export async function proxy(req: NextRequest) {
       }
       return NextResponse.redirect(url);
     }
-    return NextResponse.next();
+
+    // Cookie ada tetapi bisa kedaluwarsa/tidak valid. Teruskan path awal agar
+    // guard server bisa mengarahkan login dengan `next` yang benar (ADM-24).
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-admin-request-path", `${pathname}${search}`);
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return res;
   }
 
   // ===== 2. Mode pemeliharaan (rute publik) =====

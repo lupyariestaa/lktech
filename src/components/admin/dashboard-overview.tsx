@@ -15,22 +15,42 @@ import {
   UserPlus,
   Wallet,
 } from "lucide-react";
-import { fetchLeads } from "@/lib/admin-api";
+import { fetchLeads, fetchLeadsSummary } from "@/lib/admin-api";
 import { fetchOrdersSummary } from "@/lib/admin-orders-api";
 import { fetchUsersSummary } from "@/lib/admin-users-api";
 import type { OrdersSummary } from "@/lib/orders";
 import type { AdminUsersSummary } from "@/lib/user-types";
 import { formatRupiah } from "@/lib/format";
 import { LEAD_STATUS_LABEL, type StoredLead } from "@/lib/lead-types";
-import { useAsyncList } from "@/components/admin/use-async-list";
 import { LineChart } from "@/components/admin/line-chart";
 import { cn } from "@/lib/utils";
 
 export function DashboardOverview() {
-  const { data: leads, loading, error } = useAsyncList<StoredLead>(
-    fetchLeads,
-    "Gagal memuat ringkasan.",
-  );
+  const [leads, setLeads] = useState<StoredLead[]>([]);
+  const [summary, setSummary] = useState<Record<string, number> | null>(null);
+  const [trend, setTrend] = useState<{ date: string; count: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([fetchLeads({ limit: 5 }), fetchLeadsSummary()])
+      .then(([page, counts]) => {
+        if (!active) return;
+        setLeads(page.leads);
+        setSummary(counts.summary);
+        setTrend(counts.trend);
+      })
+      .catch((err: unknown) => {
+        if (active) setError(err instanceof Error ? err.message : "Gagal memuat ringkasan.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -44,19 +64,19 @@ export function DashboardOverview() {
   // Saat gagal memuat, tampilkan pesan jelas alih-alih angka 0 yang menyesatkan.
   if (error) {
     return (
-      <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
+      <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
         {error}
       </div>
     );
   }
 
-  const count = (s: string) => leads.filter((l) => l.status === s).length;
-  const latest = leads.slice(0, 5);
+  const count = (status: string) => summary?.[status] ?? 0;
+  const latest = leads;
 
   const stats = [
     {
       label: "Total Lead",
-      value: leads.length,
+      value: summary?.total ?? 0,
       icon: Inbox,
       color: "bg-primary-50 text-primary",
     },
@@ -156,7 +176,7 @@ export function DashboardOverview() {
         )}
       </div>
 
-      <LeadTrendChart leads={leads} />
+      <LeadTrendChart points={trend} />
     </div>
   );
 }
@@ -167,46 +187,24 @@ const TREND_DAYS = 14;
 type TrendPoint = { key: string; label: string; full: string; count: number };
 
 /** Susun data tren lead harian untuk `TREND_DAYS` hari terakhir. */
-function buildTrend(leads: StoredLead[]): TrendPoint[] {
-  const days: TrendPoint[] = [];
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  const byDay = new Map<string, number>();
-  for (const l of leads) {
-    if (!l.createdAt) continue;
-    const d = new Date(l.createdAt);
-    if (Number.isNaN(d.getTime())) continue;
-    const key = dayKey(d);
-    byDay.set(key, (byDay.get(key) ?? 0) + 1);
-  }
-
-  for (let i = TREND_DAYS - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    const key = dayKey(d);
-    days.push({
-      key,
+function buildTrend(points: { date: string; count: number }[]): TrendPoint[] {
+  return points.map((point) => {
+    const d = new Date(`${point.date}T00:00:00`);
+    return {
+      key: point.date,
       label: d.toLocaleDateString("id-ID", { day: "numeric" }),
       full: d.toLocaleDateString("id-ID", {
         weekday: "short",
         day: "numeric",
         month: "short",
       }),
-      count: byDay.get(key) ?? 0,
-    });
-  }
-  return days;
+      count: point.count,
+    };
+  });
 }
 
-function dayKey(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
-}
-
-function LeadTrendChart({ leads }: { leads: StoredLead[] }) {
-  const data = buildTrend(leads);
+function LeadTrendChart({ points }: { points: { date: string; count: number }[] }) {
+  const data = buildTrend(points);
   const total = data.reduce((sum, d) => sum + d.count, 0);
 
   return (
@@ -333,8 +331,8 @@ function UserSnapshot() {
   const cards = [
     { label: "Total Pengguna", value: String(summary.total), icon: Users, color: "bg-primary-50 text-primary" },
     { label: "Baru (30 hari)", value: String(summary.newLast30Days), icon: UserPlus, color: "bg-blue-50 text-blue-600" },
-    { label: "Sudah Pesan", value: String(summary.withOrders), icon: UserCheck, color: "bg-emerald-50 text-emerald-600" },
-    { label: "Belum Pesan", value: String(summary.withoutOrders), icon: Clock, color: "bg-amber-50 text-amber-600" },
+    { label: "Sudah Bayar", value: String(summary.withOrders), icon: UserCheck, color: "bg-emerald-50 text-emerald-600" },
+    { label: "Belum Bayar", value: String(summary.withoutOrders), icon: Clock, color: "bg-amber-50 text-amber-600" },
   ];
 
   return (
