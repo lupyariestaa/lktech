@@ -219,6 +219,13 @@ export async function createOrderInvoiceManual(id: string) {
   });
 }
 
+export async function reconcileOrderInvoice(id: string, input: { invoiceId?: string; transactionId?: string; payUrl?: string; expiresAt?: string; confirmNoInvoice?: boolean }) {
+  return adminFetch<{ ok: boolean }>("/api/admin/orders", {
+    method: "POST",
+    body: JSON.stringify({ id, action: "invoice-reconcile", ...input }),
+  });
+}
+
 /**
  * Ubah daftar pesanan menjadi CSV dan unduh di browser.
  * Item dirangkum jadi satu kolom (nama ×qty; dipisah ";").

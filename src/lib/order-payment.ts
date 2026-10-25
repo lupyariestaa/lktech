@@ -14,7 +14,7 @@ import {
 } from "@/lib/email-order";
 import { sendOrderAwaitingConfirmationToAdmin } from "@/lib/email";
 import { recordStatusEmail, logOrderEmail } from "@/lib/email-status";
-import { getOrderById, setOrderDownloadToken, updateOrderPayment } from "@/lib/orders";
+import { clearFailedInvoiceRecovery, getOrderById, recordInvoiceRecovery, setOrderDownloadToken, updateOrderPayment } from "@/lib/orders";
 import { createInvoice, isMayarConfigured } from "@/lib/mayar";
 import type { Order } from "@/lib/order-types";
 
@@ -291,6 +291,9 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
   const order = await getOrderById(orderId);
   if (!order) return { ok: false, reason: "not_found" };
   const mixedService = order.items.some((item) => item.fulfillment === "jasa") && order.items.some((item) => item.fulfillment !== "jasa");
+  if (order.invoiceRecovery?.state === "creating" || order.invoiceRecovery?.state === "orphaned") {
+    return { ok: false, reason: "invoice_reconciliation_required" };
+  }
   const component: "goods" | "service" | "order" = mixedService
     ? order.payment?.status === "dibayar" ? "service" : "goods"
     : "order";
@@ -317,6 +320,9 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
       reused: true,
     };
   }
+  if (order.invoiceRecovery?.state === "failed") {
+    await clearFailedInvoiceRecovery(orderId);
+  }
   const isGoodsComponent = component === "goods";
   const baseAmount = mixedService
     ? order.items.filter((item) => (item.fulfillment !== "jasa") === isGoodsComponent).reduce((sum, item) => sum + item.subtotal, 0)
@@ -333,7 +339,17 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
   // fallback karena invoice manual dipicu admin, bukan pembeli.
   const settings = await getSiteSettings();
   const mobile = settings.whatsapp || "";
-
+  const recovery = {
+    state: "creating" as const,
+    component,
+    amountExpected,
+    correlationId: order.id,
+    startedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  await recordInvoiceRecovery(order.id, recovery);
+  let invoiceEvidence: { invoiceId: string; transactionId: string; payUrl: string; expiresAt: string } | undefined;
+  try {
   const invoice = await createInvoice({
     name: order.buyerName || "Pembeli LKTech",
     email: order.buyerEmail,
@@ -352,6 +368,17 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
   });
 
   const expiresAt = new Date(invoice.expiredAt).toISOString();
+  invoiceEvidence = {
+    invoiceId: invoice.invoiceId,
+    transactionId: invoice.transactionId,
+    payUrl: invoice.payUrl,
+    expiresAt,
+  };
+  await recordInvoiceRecovery(order.id, {
+    ...recovery,
+    ...invoiceEvidence,
+    updatedAt: new Date().toISOString(),
+  });
   await updateOrderPayment(order.id, {
     provider: "mayar",
     status: "menunggu",
@@ -365,6 +392,7 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
     discountAmount,
     amountExpected,
   } as NonNullable<Order["payment"]>, component);
+  await recordInvoiceRecovery(order.id, { ...recovery, ...invoiceEvidence, state: "linked", updatedAt: new Date().toISOString() });
 
   return {
     ok: true,
@@ -372,4 +400,14 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
     invoiceId: invoice.invoiceId,
     expiresAt,
   };
+  } catch (error) {
+    await recordInvoiceRecovery(order.id, {
+      ...recovery,
+      state: "orphaned",
+      updatedAt: new Date().toISOString(),
+      error: error instanceof Error ? error.message.slice(0, 300) : "unknown_error",
+      ...(invoiceEvidence ?? {}),
+    }).catch((recoveryError) => console.error("[order-payment] gagal mencatat invoice manual orphan:", order.id, recoveryError));
+    return { ok: false, reason: "invoice_reconciliation_required" };
+  }
 }

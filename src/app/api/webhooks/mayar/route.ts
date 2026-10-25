@@ -7,6 +7,8 @@ import { obs } from "@/lib/observability";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { OrderStatus } from "@/lib/order-types";
 import { validateMayarPayment } from "@/lib/mayar-webhook-pure";
+import { timingSafeEqual } from "node:crypto";
+import { webhookTokenConfiguration } from "@/lib/webhook-security-pure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,11 +17,9 @@ export const dynamic = "force-dynamic";
  * POST /api/webhooks/mayar — menerima notifikasi `payment.received` dari Mayar.
  *
  * Keamanan & keandalan:
- * 1. **Verifikasi shared-secret (KUAT, OR-A4)**: bila `MAYAR_WEBHOOK_TOKEN`
- *    diisi, token WAJIB cocok (query `?token=` ATAU header `x-webhook-token`,
- *    toleran URL-encoding) — bila TIDAK cocok → **401, tidak diproses**. Bila env
- *    KOSONG, verifikasi dinonaktifkan tapi dicatat peringatan (keamanan fallback:
- *    korelasi order + nominal). Disarankan mengisi token di produksi.
+ * 1. **Verifikasi shared-secret (fail-closed di production)**: token wajib cocok
+ *    (query `?token=` ATAU header `x-webhook-token`); tanpa konfigurasi production
+ *    endpoint menolak event pembayaran dengan 503.
  *    (Event uji "Test URL" Mayar dikecualikan — lihat `isTestingEvent`.)
  * 2. **Korelasi order**: dari `data.extraData.orderId` (di-echo Mayar). Bila
  *    tidak ada, coba `data.productId` sebagai fallback (order id kita).
@@ -64,6 +64,11 @@ export async function POST(req: Request) {
   }
 
   // ===== 1. Verifikasi shared-secret (KUAT — blok bila token diisi & salah) =====
+  const webhookConfig = webhookTokenConfiguration(process.env.NODE_ENV, process.env.MAYAR_WEBHOOK_TOKEN);
+  if (!webhookConfig.configured && webhookConfig.required) {
+    console.error("[webhook/mayar] konfigurasi token wajib di production belum tersedia.");
+    return NextResponse.json({ ok: false, error: "webhook_not_configured" }, { status: 503 });
+  }
   if (!verifyToken(req)) {
     console.warn("[webhook/mayar] token webhook tidak cocok — request ditolak.");
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
@@ -193,9 +198,6 @@ function isTestingEvent(body: unknown): boolean {
 function verifyToken(req: Request): boolean {
   const secret = process.env.MAYAR_WEBHOOK_TOKEN?.trim();
   if (!secret) {
-    console.warn(
-      "[webhook/mayar] MAYAR_WEBHOOK_TOKEN kosong — verifikasi token dinonaktifkan (disarankan diisi di produksi).",
-    );
     return true;
   }
 
@@ -213,8 +215,11 @@ function verifyToken(req: Request): boolean {
       return s.trim();
     }
   };
-  const expected = normalize(secret);
-  return candidates.some((c) => normalize(c) === expected);
+  const expected = Buffer.from(normalize(secret));
+  return candidates.some((candidate) => {
+    const received = Buffer.from(normalize(candidate));
+    return received.length === expected.length && timingSafeEqual(received, expected);
+  });
 }
 
 /** Hasil ekstraksi event pembayaran dari payload Mentah. */

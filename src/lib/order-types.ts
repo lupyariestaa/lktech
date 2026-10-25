@@ -2,15 +2,17 @@ import {
   PAYMENT_STATUSES,
   type FulfillmentType,
   type OrderPayment,
+  type InvoiceRecovery,
   type PaymentStatus,
 } from "@/lib/payment-types";
 import { coerceISODate } from "@/lib/order-time-pure";
 import { ORDER_STATUS_LIST } from "@/lib/order-status-pure";
 import type { PrintPricing } from "@/lib/product-types";
 import { normalizePrintFinishing } from "@/lib/order-item-display";
+import { normalizeInvoiceRecovery } from "@/lib/invoice-recovery-pure";
 
 // Re-export agar konsumen order cukup impor dari satu tempat.
-export type { FulfillmentType, OrderPayment };
+export type { FulfillmentType, OrderPayment, InvoiceRecovery };
 
 /**
  * STATUS pesanan (OR-E3): diturunkan dari daftar kanonik di `order-status-pure`
@@ -125,6 +127,7 @@ uid: string;
   payment?: OrderPayment;
   /** Additional invoice for the service component of a mixed order. */
   servicePayment?: OrderPayment;
+  invoiceRecovery?: InvoiceRecovery;
   /**
    * Catatan kurang bayar (OR-A6): nominal webhook < total order. Order tetap
    * `menunggu_bayar`; ini penanda agar admin melihatnya di panel "butuh perhatian".
@@ -250,6 +253,7 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
 
   const payment = normalizeOrderPayment(data.payment);
   const servicePayment = normalizeOrderPayment(data.servicePayment);
+  const invoiceRecovery: InvoiceRecovery | undefined = normalizeInvoiceRecovery(data.invoiceRecovery);
   const fulfillment =
     data.fulfillment === "instan" || data.fulfillment === "jasa" || data.fulfillment === "cetak"
       ? (data.fulfillment as FulfillmentType)
@@ -287,6 +291,7 @@ buyerName: str(data.buyerName),
 status,
     payment,
     servicePayment,
+    invoiceRecovery,
     paymentMismatch:
       data.paymentMismatch && typeof data.paymentMismatch === "object"
         ? (() => {

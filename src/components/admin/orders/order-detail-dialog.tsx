@@ -22,6 +22,7 @@ import {
   fetchOrderEmails,
   fulfillOrderDownload,
   resendOrderEmail,
+  reconcileOrderInvoice,
   updateOrderStatusAdmin,
   type OrderEmailLog,
 } from "@/lib/admin-orders-api";
@@ -379,6 +380,8 @@ export function OrderActionsBar({
   const [copied, setCopied] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [manualPayUrl, setManualPayUrl] = useState<string | null>(null);
+  const [recoveredInvoiceId, setRecoveredInvoiceId] = useState("");
+  const [recoveredInvoiceUrl, setRecoveredInvoiceUrl] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingFinal, setPendingFinal] = useState<OrderStatus | null>(null);
 
@@ -487,6 +490,22 @@ export function OrderActionsBar({
     }
   };
 
+  const onReconcileInvoice = async (link: boolean) => {
+    if (!link && !window.confirm("Pastikan Anda sudah mencari invoice ini di dashboard Mayar dan memastikan invoice TIDAK ADA. Setelah dikonfirmasi, admin dapat membuat invoice baru. Lanjutkan?")) return;
+    setBusy("invoice");
+    try {
+      await reconcileOrderInvoice(order.id, link ? { invoiceId: recoveredInvoiceId, payUrl: recoveredInvoiceUrl } : { confirmNoInvoice: true });
+      toast.success(link ? "Invoice ditautkan ke pesanan." : "Invoice tidak ditemukan; pembuatan invoice baru kini dapat dicoba.");
+      setRecoveredInvoiceId("");
+      setRecoveredInvoiceUrl("");
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Rekonsiliasi gagal.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const copyMessage = async () => {
     try {
       await navigator.clipboard.writeText(order.message);
@@ -528,6 +547,20 @@ export function OrderActionsBar({
           {manualPayUrl && (
             <CopyField label="Invoice manual dibuat" value={manualPayUrl} tone="primary" />
           )}
+        </div>
+      )}
+
+      {order.invoiceRecovery && (order.invoiceRecovery.state === "creating" || order.invoiceRecovery.state === "orphaned") && (
+        <div className="my-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+          <p className="font-semibold">Invoice perlu rekonsiliasi ({order.invoiceRecovery.state})</p>
+          <p className="mt-1">Nominal: {formatRupiah(order.invoiceRecovery.amountExpected)} · Ref: {order.invoiceRecovery.correlationId}</p>
+          {order.invoiceRecovery.payUrl && <a className="mt-1 block underline" href={order.invoiceRecovery.payUrl} target="_blank" rel="noreferrer">Buka invoice tercatat</a>}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <input aria-label="ID invoice Mayar terverifikasi" placeholder="ID invoice Mayar (opsional)" value={recoveredInvoiceId} onChange={(e) => setRecoveredInvoiceId(e.target.value)} className="rounded border px-2 py-1" />
+            <input aria-label="URL invoice Mayar terverifikasi" placeholder="URL invoice (opsional)" value={recoveredInvoiceUrl} onChange={(e) => setRecoveredInvoiceUrl(e.target.value)} className="min-w-52 rounded border px-2 py-1" />
+            <button type="button" disabled={busy !== null} onClick={() => void onReconcileInvoice(Boolean(recoveredInvoiceId.trim()))} className="rounded bg-amber-700 px-3 py-1 font-semibold text-white">{recoveredInvoiceId.trim() ? "Tautkan invoice terverifikasi" : "Verifikasi: invoice tidak ada"}</button>
+          </div>
+          <p className="mt-1">Jangan tautkan sebelum mencocokkan invoice dan nominal di Mayar.</p>
         </div>
       )}
 

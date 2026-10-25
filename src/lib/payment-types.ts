@@ -76,6 +76,21 @@ export type OrderPayment = {
   amountExpected?: number;
 };
 
+export type InvoiceRecovery = {
+  state: "creating" | "orphaned" | "linked" | "failed";
+  component: "goods" | "service" | "order";
+  amountExpected: number;
+  correlationId: string;
+  startedAt: string;
+  updatedAt: string;
+  error?: string;
+  invoiceId?: string;
+  transactionId?: string;
+  payUrl?: string;
+  expiresAt?: string;
+  attemptCount?: number;
+};
+
 /** Jenis fulfillment order: INSTAN (unduh) atau JASA (konsultasi). */
 export type FulfillmentType = "instan" | "jasa" | "cetak";
 

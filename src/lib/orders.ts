@@ -633,6 +633,105 @@ export async function updateOrderPayment(
   });
 }
 
+export async function recordInvoiceRecovery(
+  id: string,
+  recovery: NonNullable<Order["invoiceRecovery"]>,
+): Promise<void> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const ref = db.collection(COLLECTION).doc(id);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new Error("Pesanan tidak ditemukan.");
+    const existing = snap.get("invoiceRecovery") as Record<string, unknown> | undefined;
+    if (
+      recovery.state === "creating" &&
+      existing?.state === "creating" &&
+      existing.startedAt !== recovery.startedAt
+    ) {
+      throw new Error("Invoice sedang dibuat atau status sebelumnya belum direkonsiliasi.");
+    }
+    if (recovery.state === "creating" && existing?.state === "orphaned") {
+      throw new Error("Invoice orphan harus direkonsiliasi sebelum membuat invoice baru.");
+    }
+    tx.update(ref, {
+      invoiceRecovery: recovery.state === "creating"
+        ? {
+            ...recovery,
+            attemptCount: recovery.startedAt === existing?.startedAt
+              ? Number(existing?.attemptCount ?? 1)
+              : Number(existing?.attemptCount ?? 0) + 1,
+          }
+        : recovery,
+      updatedAtISO: new Date().toISOString(),
+    });
+  });
+}
+
+export async function resolveInvoiceRecovery(id: string): Promise<void> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const ref = db.collection(COLLECTION).doc(id);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new Error("Pesanan tidak ditemukan.");
+    const data = snap.data() as Record<string, unknown>;
+    const recovery = data.invoiceRecovery as Record<string, unknown> | undefined;
+    if (!recovery || !["orphaned", "creating"].includes(String(recovery.state))) throw new Error("Tidak ada invoice yang perlu direkonsiliasi.");
+    tx.update(ref, {
+      invoiceRecovery: { ...recovery, state: "failed", updatedAt: new Date().toISOString(), error: "Admin mengonfirmasi invoice tidak ditemukan di Mayar." },
+      updatedAtISO: new Date().toISOString(),
+    });
+  });
+}
+
+export async function relinkRecoveredInvoice(id: string, input: {
+  invoiceId: string;
+  transactionId?: string;
+  payUrl?: string;
+  expiresAt?: string;
+}): Promise<void> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const ref = db.collection(COLLECTION).doc(id);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new Error("Pesanan tidak ditemukan.");
+    const data = snap.data() as Record<string, unknown>;
+    const recovery = data.invoiceRecovery as Record<string, unknown> | undefined;
+    if (!recovery || !["orphaned", "creating"].includes(String(recovery.state))) throw new Error("Tidak ada invoice orphan yang perlu diselesaikan.");
+    if (recovery.invoiceId && recovery.invoiceId !== input.invoiceId) throw new Error("ID invoice tidak cocok dengan bukti invoice yang sudah tercatat.");
+    const field = recovery.component === "service" ? "servicePayment" : "payment";
+    const oldPayment = (data[field] && typeof data[field] === "object" ? data[field] : {}) as Record<string, unknown>;
+    tx.update(ref, {
+      [field]: {
+        ...oldPayment,
+        provider: "mayar",
+        status: "menunggu",
+        component: recovery.component,
+        amountExpected: recovery.amountExpected,
+        invoiceId: input.invoiceId,
+        ...(input.transactionId ? { transactionId: input.transactionId } : {}),
+        ...(input.payUrl ? { payUrl: input.payUrl } : {}),
+        ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
+      },
+      invoiceRecovery: { ...recovery, state: "linked", ...input, updatedAt: new Date().toISOString() },
+      updatedAtISO: new Date().toISOString(),
+    });
+  });
+}
+
+export async function clearFailedInvoiceRecovery(id: string): Promise<void> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const ref = db.collection(COLLECTION).doc(id);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists || snap.get("invoiceRecovery.state") !== "failed") throw new Error("Status rekonsiliasi belum mengizinkan retry.");
+    tx.update(ref, { invoiceRecovery: null, updatedAtISO: new Date().toISOString() });
+  });
+}
+
 /**
  * Menyimpan id token unduhan pada order (setelah fulfillment, FASE P1).
  */

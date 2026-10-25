@@ -32,6 +32,7 @@ import { restoreCouponUsage } from "@/lib/coupons";
 import { shouldRestoreCoupon } from "@/lib/order-status-pure";
 import { getSiteSettings } from "@/lib/settings";
 import { releaseOrderDownload, createManualOrderInvoice } from "@/lib/order-payment";
+import { relinkRecoveredInvoice, resolveInvoiceRecovery } from "@/lib/orders";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { guardAdminMutation } from "@/lib/admin-rate-limit";
 import { addOrderActivity } from "@/lib/order-activities";
@@ -410,6 +411,11 @@ export async function POST(req: Request) {
     ids?: string[];
     status?: string;
     op?: "status" | "delete" | "resend";
+    invoiceId?: string;
+    transactionId?: string;
+    payUrl?: string;
+    expiresAt?: string;
+    confirmNoInvoice?: boolean;
   };
   try {
     body = await req.json();
@@ -571,6 +577,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
   }
 
+  if (body.action === "invoice-reconcile") {
+    const fresh = assertFreshAuth(check);
+    if (!fresh.ok) return fresh.response;
+    const limited = await guardAdminMutation(check.uid, "order.invoice.reconcile", { limit: 10 });
+    if (limited) return limited;
+    try {
+      if (body.invoiceId?.trim()) {
+        if (!body.payUrl?.trim()) {
+          return NextResponse.json({ error: "URL invoice Mayar wajib diisi untuk mengaktifkan pembayaran." }, { status: 400 });
+        }
+        await relinkRecoveredInvoice(id, {
+          invoiceId: body.invoiceId.trim(),
+          ...(body.transactionId ? { transactionId: body.transactionId.trim() } : {}),
+          ...(body.payUrl ? { payUrl: body.payUrl.trim() } : {}),
+          ...(body.expiresAt ? { expiresAt: body.expiresAt.trim() } : {}),
+        });
+      } else {
+        if (body.confirmNoInvoice !== true) {
+          return NextResponse.json({ error: "Konfirmasi eksplisit bahwa invoice tidak ditemukan di Mayar wajib diisi." }, { status: 400 });
+        }
+        await resolveInvoiceRecovery(id);
+      }
+      await addOrderActivity(id, {
+        type: "invoice",
+        note: body.invoiceId ? "Invoice Mayar yatim ditautkan manual setelah verifikasi." : "Status invoice yatim diperiksa; tidak ada invoice baru yang dibuat.",
+        actor: check.email,
+      });
+      await recordAdminAudit({ action: "order.invoice.reconcile", actor: check.email, target: id, meta: { linked: Boolean(body.invoiceId) } });
+      return NextResponse.json({ ok: true });
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "Rekonsiliasi gagal." }, { status: 409 });
+    }
+  }
+
   // ===== Aksi: buat invoice manual (Mayar) — FASE P2 (umumnya JASA) =====
   if (body.action === "invoice") {
     try {
@@ -587,8 +627,8 @@ export async function POST(req: Request) {
                   ? "Pesanan sudah final (dibatalkan/kedaluwarsa/selesai) — tidak bisa dibuat invoice."
               : res.reason === "no_amount"
                     ? "Total pesanan 0 — tidak bisa dibuat invoice."
-                    : res.reason === "goods_payment_pending"
-                      ? "Invoice barang harus dibayar terlebih dahulu sebelum membuat invoice jasa."
+                    : res.reason === "invoice_reconciliation_required"
+                      ? "Invoice sebelumnya perlu direkonsiliasi dahulu. Jangan buat invoice baru sebelum status Mayar diperiksa."
                     : "Gagal membuat invoice manual.";
         const status = res.reason === "not_found" ? 404 : 409;
         return NextResponse.json({ error: msg, code: res.reason }, { status });

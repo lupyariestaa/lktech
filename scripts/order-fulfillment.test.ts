@@ -42,6 +42,12 @@ test("alokasi diskon proporsional menjaga jumlah Rupiah tepat dan deterministik"
   assert.throws(() => allocateDiscountByItem([100], 101));
 });
 
+test("largest remainder mengalokasikan diskon persis dan tie-break mengikuti urutan item", () => {
+  const shares = allocateDiscountByItem([1, 1, 1], 2);
+  assert.deepEqual(shares, [1, 1, 0]);
+  assert.equal(shares.reduce((sum, value) => sum + value, 0), 2);
+});
+
 test("keranjang semua digital → INSTAN", () => {
   assert.equal(
     fulfillmentTypeForCategories(["template", "software", "ebook"]),

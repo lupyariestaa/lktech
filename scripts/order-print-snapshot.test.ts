@@ -26,3 +26,14 @@ test("legacy print order tetap punya fallback ID finishing dan format lembar", (
     printPricing: { method: "sheet", pricePerSheet: 100, description: "A3 matte" },
   } as never), ["Format: A3 matte", "Finishing: laminasi"]);
 });
+
+test("ringkasan order menggunakan snapshot nama dan bukan ID internal", () => {
+  const lines = printSpecificationLines({
+    slug: "print", name: "Banner", price: 100, qty: 1, subtotal: 100,
+    printOptions: { finishingIds: ["mata-ayam"] },
+    printFinishing: [{ id: "mata-ayam", name: "Mata ayam" }],
+  } as never);
+
+  assert.deepEqual(lines, ["Finishing: Mata ayam"]);
+  assert.ok(!lines.join(" ").includes("mata-ayam"));
+});

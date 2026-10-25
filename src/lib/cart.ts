@@ -29,6 +29,8 @@ export type CartItem = {
     heightM?: number;
     finishingIds: string[];
   };
+  /** Snapshot of the user-facing finishing names; IDs remain authoritative. */
+  printFinishing?: Array<{ id: string; name: string }>;
   printPricing?: PrintPricing;
 };
 
@@ -73,7 +75,7 @@ export function toCartItem(
 export function toPrintCartItem(
   product: Product,
   variant: ProductVariant,
-  options: NonNullable<CartItem["printOptions"]>,
+  options: NonNullable<CartItem["printOptions"]> & { finishing?: Array<{ id: string; name: string }> },
   price: number,
   qty = 1,
 ): CartItem {
@@ -86,6 +88,7 @@ export function toPrintCartItem(
     variantSlug: variant.slug,
     variantName: variant.name,
     printOptions: { ...options, finishingIds: [...options.finishingIds].sort() },
+    printFinishing: options.finishing?.map((choice) => ({ ...choice })),
     printPricing: variant.printPricing,
   };
 }
@@ -193,7 +196,9 @@ export function buildCheckoutMessage(
     variantSlug: it.variantSlug,
     variantName: it.variantName,
     printOptions: it.printOptions,
-    printFinishing: it.printOptions?.finishingIds.map((id) => ({ id, name: id })),
+    printFinishing: it.printFinishing?.length
+      ? it.printFinishing
+      : it.printOptions?.finishingIds.map((id) => ({ id, name: "Finishing dipilih" })),
     printPricing: it.printPricing,
   }));
   return buildOrderMessage(orderItems, buyer);

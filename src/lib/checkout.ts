@@ -1,6 +1,6 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { createOrder, deleteOrder, updateOrderPayment } from "@/lib/orders";
+import { createOrder, recordInvoiceRecovery, updateOrderPayment } from "@/lib/orders";
 import { getProductsBySlugs } from "@/lib/products";
 import { evaluatePurchase } from "@/lib/product-format";
 import { getSiteSettings } from "@/lib/settings";
@@ -22,7 +22,7 @@ import { notifyOrderAwaitingConfirmation } from "@/lib/order-payment";
 import { createInvoice, isMayarConfigured, getMayarMode } from "@/lib/mayar";
 import { obs } from "@/lib/observability";
 import type { CheckoutInput } from "@/lib/order-schema";
-import type { OrderCoupon, OrderItem, OrderPayment } from "@/lib/order-types";
+import type { InvoiceRecovery, OrderCoupon, OrderItem, OrderPayment } from "@/lib/order-types";
 import type { FulfillmentType } from "@/lib/payment-types";
 
 /**
@@ -288,6 +288,20 @@ export async function performCheckout(
     const payment: OrderPayment = { provider: "mayar", status: "belum_bayar" };
     const invoiceAmount = hasGoods && hasService ? goodsInvoiceAmount : total;
     if (isMayarConfigured() && invoiceAmount > 0) {
+      const recovery: InvoiceRecovery = {
+        state: "creating",
+        component: hasGoods && hasService ? "goods" : "order",
+        amountExpected: invoiceAmount,
+        correlationId: order.id,
+        startedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        await recordInvoiceRecovery(order.id, recovery);
+      } catch (markerError) {
+        console.error("[checkout] tidak dapat menandai pembuatan invoice:", order.id, markerError);
+        return fail(503, { error: `Status invoice pesanan belum aman. Hubungi admin dengan kode pesanan ${order.id} sebelum mencoba lagi.` });
+      }
       try {
         const mobile =
           (buyerProfile?.whatsapp ?? "").trim() || settings.whatsapp || "";
@@ -320,20 +334,41 @@ export async function performCheckout(
         payment.expiresAt = new Date(invoice.expiredAt).toISOString();
         payUrl = invoice.payUrl;
 
+        await recordInvoiceRecovery(order.id, {
+          ...recovery,
+          invoiceId: invoice.invoiceId,
+          transactionId: invoice.transactionId,
+          payUrl: invoice.payUrl,
+          expiresAt: payment.expiresAt,
+          updatedAt: new Date().toISOString(),
+        });
+
         await updateOrderPayment(order.id, payment);
+        await recordInvoiceRecovery(order.id, { ...recovery, state: "linked", invoiceId: invoice.invoiceId, transactionId: invoice.transactionId, payUrl: invoice.payUrl, expiresAt: payment.expiresAt, updatedAt: new Date().toISOString() });
         order = { ...order, payment };
       } catch (payErr) {
         console.error("[checkout] gagal membuat invoice Mayar:", payErr);
-        if (fulfillment === "cetak") {
-          const deleted = await deleteOrder(order.id, ["menunggu_bayar"]);
-          if (!deleted.ok) {
-            console.error("[checkout] gagal membersihkan order cetak tanpa invoice:", order.id, deleted);
-            return fail(503, { error: `Invoice Mayar gagal dibuat. Hubungi admin dengan kode pesanan ${order.id} sebelum mencoba lagi.` });
-          }
-          return fail(503, { error: "Invoice Mayar gagal dibuat. Pesanan belum dilanjutkan; coba lagi nanti." });
+        const partialInvoice = payment.invoiceId
+          ? {
+              invoiceId: payment.invoiceId,
+              transactionId: payment.transactionId,
+              payUrl: payment.payUrl,
+              expiresAt: payment.expiresAt,
+            }
+          : {};
+        try {
+          await recordInvoiceRecovery(order.id, {
+            ...recovery,
+            state: "orphaned",
+            updatedAt: new Date().toISOString(),
+            error: payErr instanceof Error ? payErr.message.slice(0, 300) : "unknown_error",
+            ...partialInvoice,
+          });
+        } catch (recoveryErr) {
+          console.error("[checkout] gagal mencatat invoice orphan:", order.id, recoveryErr);
         }
         paymentWarning =
-          "Link pembayaran otomatis sedang tidak tersedia. Kami arahkan ke WhatsApp untuk menyelesaikan pembayaran.";
+          `Status invoice otomatis sedang diperiksa. Jangan membuat pembayaran ulang; hubungi admin dengan kode pesanan ${order.id}.`;
       }
     } else if (!isMayarConfigured()) {
       paymentWarning =

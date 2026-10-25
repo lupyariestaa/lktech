@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { isMayarConfigured, getMayarMode } from "@/lib/mayar";
 import { isDownloadConfigured } from "@/lib/downloads";
 import { isBuyerEmailConfigured } from "@/lib/email-order";
+import { webhookTokenConfiguration } from "@/lib/webhook-security-pure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export async function GET(req: Request) {
         configured: isMayarConfigured(),
         mode: getMayarMode(),
         webhookTokenSet: Boolean(process.env.MAYAR_WEBHOOK_TOKEN?.trim()),
+        webhookSecure: webhookTokenConfiguration(process.env.NODE_ENV, process.env.MAYAR_WEBHOOK_TOKEN).secure,
       },
       email: { configured: isBuyerEmailConfigured },
       cloudinary: { configured: cloudinary },

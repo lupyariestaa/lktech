@@ -75,3 +75,17 @@ test("merge keranjang akun mempertahankan item yang berbeda dan urutannya", () =
   assert.deepEqual(merged.map((item) => item.slug), ["digital", "banner", "jasa"]);
   assert.deepEqual(merged.map((item) => item.qty), [1, 3, 1]);
 });
+
+test("snapshot nama finishing tidak mengubah identitas pilihan yang tetap memakai ID", () => {
+  const cartItem = {
+    ...printItem(),
+    printFinishing: [{ id: "mata-ayam", name: "Mata ayam" }],
+  };
+  const renamed = {
+    ...cartItem,
+    printFinishing: [{ id: "mata-ayam", name: "Lubang mata ayam" }],
+  };
+
+  assert.equal(cartIdentityKey(cartItem), cartIdentityKey(renamed));
+  assert.equal(cartItem.printFinishing[0].name, "Mata ayam");
+});

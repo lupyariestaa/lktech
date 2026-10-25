@@ -28,7 +28,7 @@ Pelanggan dapat checkout dengan spesifikasi yang tidak sama dengan konfigurasi y
 **Kriteria selesai**  
 Tidak ada spesifikasi cetak yang hilang saat guest login atau ketika keranjang guest digabung ke keranjang akun.
 
-**Penyelesaian**  
+**Penyelesaian**
 Selesai pada perubahan kerja saat ini: identitas keranjang memakai tuple terstruktur berdasarkan produk, varian, ukuran, dan finishing; merge hanya menambah kuantitas untuk konfigurasi identik. Ditambahkan empat tes regresi di `scripts/cart-identity.test.ts`.
 
 ### [x] GAP-02 — Pesan ulang tidak membawa spesifikasi produk cetak
@@ -48,7 +48,7 @@ Item cetak dari riwayat dapat masuk keranjang tanpa ukuran/finishing lalu ditola
 **Kriteria selesai**  
 Item cetak dapat dipesan ulang dengan rincian yang benar, atau pelanggan diberi jalur konfigurasi ulang yang jelas.
 
-**Penyelesaian**  
+**Penyelesaian**
 Selesai pada perubahan kerja saat ini: endpoint produk terkini mengembalikan seluruh varian, data tarif cetak, batas ukuran, dan finishing aktif. Pesan ulang mempertahankan ukuran/finishing dari snapshot pesanan, memvalidasinya terhadap konfigurasi terbaru, dan menghitung harga terbaru. Item yang varian atau finishing-nya sudah tidak berlaku dilewati dengan pesan yang meminta pelanggan memilih ulang; kegagalan memuat data tidak memakai harga historis sebagai fallback. Lima tes regresi tersedia di `scripts/reorder-item.test.ts`.
 
 ### [x] GAP-03 — Spesifikasi cetak tidak tersedia sebagai rincian operasional order
@@ -69,7 +69,7 @@ Admin dan pelanggan bisa kesulitan memastikan ukuran serta finishing yang harus 
 **Kriteria selesai**  
 Admin dan pembeli dapat melihat kembali spesifikasi order yang sama persis dengan pilihan saat checkout.
 
-**Penyelesaian**  
+**Penyelesaian**
 Selesai pada perubahan kerja saat ini: order baru menyimpan snapshot nama finishing bersama ID, opsi dimensi, tarif, serta nama varian/bahan; normalisasi tetap menerima order lama tanpa snapshot. Spesifikasi kini ditampilkan di detail dan kartu admin, detail riwayat akun, pesan WhatsApp kanonik, dan email konfirmasi. Order lama memakai ID finishing sebagai fallback yang jujur tanpa membaca katalog terkini. Tiga tes regresi di `scripts/order-print-snapshot.test.ts` memeriksa normalisasi snapshot/legacy dan rendering spesifikasi.
 
 ### [x] GAP-04 — Webhook dapat menandai order lunas tanpa nominal yang terverifikasi
@@ -89,7 +89,7 @@ Order dapat berstatus lunas tanpa bukti nominal yang cocok, jika event tanpa nom
 **Kriteria selesai**  
 Order hanya ditandai lunas setelah pembayaran dan nominal dapat diverifikasi terhadap order.
 
-**Penyelesaian**  
+**Penyelesaian**
 Selesai pada perubahan kerja saat ini: webhook menolak nominal hilang, tidak valid, kurang, atau lebih (harus sama persis dengan total order), tanpa fallback ke `order.total`. Jika order menyimpan ID invoice Mayar, bukti invoice pada event juga wajib ada dan harus cocok; ID transaksi dicocokkan bila kedua sisi memilikinya. Event tertolak tidak mengubah status lunas dan dicatat sebagai `paymentMismatch` untuk pemeriksaan. Enam tes regresi di `scripts/mayar-webhook.test.ts` menguji nominal hilang/invalid/kurang/sama/lebih dan mismatch invoice/transaksi. Kontrak payload Mayar yang didokumentasikan di `docs/2026-10-06-fase-konversi-closing.md` mengidentifikasi `data.id` sebagai invoice ID; kontrak live belum diverifikasi.
 
 ### [x] GAP-05 — Validasi transisi status admin tidak atomik dengan update status
@@ -109,7 +109,7 @@ Dua perubahan status yang berjalan bersamaan dapat melewati matriks transisi yan
 **Kriteria selesai**  
 Status hanya dapat berubah melalui transisi yang valid dari status yang benar-benar tersimpan saat transaksi dieksekusi.
 
-**Penyelesaian**  
+**Penyelesaian**
 Selesai pada perubahan kerja saat ini: `updateOrderStatus` membaca status terkini dan memvalidasi matriks transisi sebelum menulis, semuanya dalam transaksi Firestore. Aksi tunggal mengembalikan 409 beserta status terbaru bila transisi usang; aksi massal melewati item tersebut dengan alasan `invalid_transition`. Kedua jalur menjalankan efek samping hanya bila transaksi benar-benar mengubah status. Tes `evaluateStatusTransition` ditambahkan ke `scripts/order-status.test.ts`; uji emulator untuk kondisi race belum tersedia.
 
 ## Prioritas P1 — Konsistensi fulfillment dan ketahanan operasional
@@ -131,10 +131,10 @@ Satu order dapat memuat barang dengan kebutuhan pembayaran/produksi berbeda, tet
 **Kriteria selesai**  
 Pelanggan dan admin menerima alur konsisten untuk setiap jenis keranjang campuran.
 
-**Penyelesaian**  
+**Penyelesaian**
 Kebijakan disepakati: fulfillment per item, diskon kupon order dialokasikan proporsional dengan largest remainder (jumlah share tepat sama dengan diskon), dan pada order campuran berjasa invoice Mayar pertama hanya mencakup item non-jasa. Pembayaran itu direkam terpisah; item non-jasa dapat dipenuhi sementara order menunggu konfirmasi. Admin baru dapat membuat invoice jasa terpisah setelah invoice barang dibayar; status order baru menjadi `dibayar` setelah kedua komponennya lunas. Snapshot fulfillment dan alokasi diskon disimpan di item order; normalisasi order lama tetap kompatibel. Ditambahkan regresi alokasi nominal di `scripts/order-fulfillment.test.ts`. TypeScript, ESLint, dan uji unit perlu dijalankan penuh; alur gateway live dan simulasi race webhook belum tersedia.
 
-### [ ] GAP-07 — Kegagalan penyimpanan invoice setelah pembuatan invoice dapat meninggalkan order yatim
+### [x] GAP-07 — Kegagalan penyimpanan invoice setelah pembuatan invoice dapat meninggalkan order yatim
 
 **Temuan**  
 Checkout membuat order terlebih dahulu, kemudian invoice Mayar, lalu menyimpan detail pembayaran. Jika invoice berhasil dibuat tetapi `updateOrderPayment` gagal, pembersihan order dapat gagal juga. Kondisi tersebut hanya dicatat ke log dan perlu ditangani manual.
@@ -152,7 +152,10 @@ Invoice aktif bisa ada di Mayar tanpa tautan yang tersimpan di order, atau order
 **Kriteria selesai**  
 Kegagalan parsial terdeteksi dan dapat dipulihkan tanpa invoice/order hilang atau pembayaran ganda.
 
-### [ ] GAP-08 — Label finishing di keranjang menampilkan ID internal
+**Penyelesaian**
+Selesai pada perubahan kerja saat ini: order mencatat recovery state `creating` sebelum request Mayar, correlation ID, komponen, nominal eksak, dan attempt count. Respons invoice dicatat ke recovery record sebelum payment ditautkan; kegagalan menjadi `orphaned`, mempertahankan ID/URL jika respons sempat diterima. Pembuatan invoice ulang diblokir selama state masih `creating`/`orphaned`. Panel detail admin menyediakan tautkan invoice yang sudah diverifikasi atau konfirmasi eksplisit setelah mengecek Mayar bahwa invoice tidak ada; retry baru dimungkinkan setelah konfirmasi tersebut. Order tidak dihapus otomatis pada kegagalan parsial. Pola yang sama diterapkan ke invoice manual. TypeScript, ESLint, 674 unit test, tes fulfillment, dan tes recovery lulus. Mayar tidak menyediakan idempotency key yang terverifikasi di kode/kontrak ini; ketidakpastian jaringan tetap butuh rekonsiliasi admin. Simulasi Firestore/API gagal belum tersedia.
+
+### [x] GAP-08 — Label finishing di keranjang menampilkan ID internal
 
 **Temuan**  
 `src/components/cart-view.tsx` menampilkan `finishingIds` secara langsung, bukan nama pilihan yang dikenali pelanggan.
@@ -168,7 +171,10 @@ ID finishing dapat terlihat seperti kode teknis dan kurang jelas bagi pelanggan.
 **Kriteria selesai**  
 Ringkasan keranjang dan order menampilkan nama finishing yang mudah dipahami.
 
-### [ ] GAP-09 — Secret webhook Mayar belum dapat dipastikan dikonfigurasi di produksi
+**Penyelesaian**
+Selesai pada perubahan kerja saat ini: keranjang menyimpan `printFinishing` sebagai snapshot nama dari katalog saat opsi dipilih, sementara `printOptions.finishingIds` tetap dikirim ke checkout dan divalidasi server. Tampilan keranjang memakai nama snapshot (fallback generik untuk cart lama agar tidak membocorkan ID); order tetap membuat snapshot nama dari konfigurasi katalog tervalidasi server, dan detail order memakai snapshot tersebut. Tes regresi menegaskan bahwa label berubah tanpa mengubah identitas pilihan dan order menampilkan nama, bukan ID. Panduan Next.js lokal belum tersedia di `node_modules/next/dist/docs/`; GAP-08 hanya mengubah model data dan komponen klien yang ada, tanpa API Next.js baru.
+
+### [x] GAP-09 — Secret webhook Mayar belum dapat dipastikan dikonfigurasi di produksi
 
 **Temuan**  
 Jika `MAYAR_WEBHOOK_TOKEN` kosong, verifikasi token webhook dinonaktifkan dan endpoint hanya mencatat peringatan (`src/app/api/webhooks/mayar/route.ts`). Audit ini tidak memeriksa secret lingkungan produksi.
@@ -184,6 +190,9 @@ Keamanan webhook bergantung pada konfigurasi deployment dan korelasi event.
 
 **Kriteria selesai**  
 Webhook produksi menolak request tanpa token yang sah, dan konfigurasi dapat diverifikasi dengan aman.
+
+**Penyelesaian**
+Selesai pada perubahan kode/dokumentasi: konfigurasi production kini fail-closed dengan HTTP 503 jika `MAYAR_WEBHOOK_TOKEN` tidak ada; token salah ditolak HTTP 401, dan perbandingan token memakai `timingSafeEqual`. Endpoint health publik dan integrasi admin mengembalikan indikator `webhookSecure`/`webhookTokenSet` tanpa membocorkan secret. Setup, deployment, pengujian, serta rotasi didokumentasikan di `docs/mayar-webhook-token.md`. Ditambahkan regresi untuk kebijakan konfigurasi. Belum dapat dipastikan bahwa secret production aktual cocok dengan dashboard Mayar karena repo tidak memiliki akses ke environment deployment atau dashboard; operator wajib menyelesaikan pemeriksaan release yang didokumentasikan.
 
 ## Prioritas P2 — Kualitas konfigurasi produk dan pengalaman pengguna
 

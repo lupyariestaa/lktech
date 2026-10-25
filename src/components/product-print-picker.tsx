@@ -57,6 +57,9 @@ export function ProductPrintPicker({ product, compact = false }: { product: Prod
     add(toPrintCartItem(product, variant, {
       ...(pricing?.method === "area" ? { widthM: Number(width), heightM: Number(height) } : {}),
       finishingIds,
+      finishing: config.finishingOptions
+        .filter((option) => finishingIds.includes(option.id))
+        .map(({ id, name }) => ({ id, name })),
     }, price, quantity));
     router.push("/keranjang");
   };

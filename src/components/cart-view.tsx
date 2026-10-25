@@ -392,7 +392,9 @@ export function CartView({ promoCode }: { promoCode?: string }) {
                       : it.printPricing?.method === "sheet"
                         ? it.printPricing.description || "Per lembar"
                         : ""}
-                    {it.printOptions.finishingIds.length > 0 && ` · ${it.printOptions.finishingIds.join(", ")}`}
+                    {it.printOptions.finishingIds.length > 0 && ` · ${it.printFinishing?.length
+                      ? it.printFinishing.map((option) => option.name).join(", ")
+                      : "Finishing dipilih"}`}
                   </p>
                 )}
               </div>
