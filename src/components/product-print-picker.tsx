@@ -44,9 +44,6 @@ export function ProductPrintPicker({ product, compact = false }: { product: Prod
     Number.isFinite(widthM) && Number.isFinite(heightM) &&
     Math.round(widthM! * 100) === widthM! * 100 && Math.round(heightM! * 100) === heightM! * 100
   );
-  const toggleFinishing = (id: string) => setFinishingIds((current) =>
-    current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
-  );
   const submit = () => {
     if (!variant || price === null || !areaValid) {
       setError("Pilih varian dan isi ukuran yang valid.");
@@ -98,12 +95,17 @@ export function ProductPrintPicker({ product, compact = false }: { product: Prod
         <p className="text-xs text-muted">Batas ukuran: {config.minWidthM}–{config.maxWidthM} m lebar, {config.minHeightM}–{config.maxHeightM} m tinggi.</p>
       </fieldset>}
       {pricing?.method === "sheet" && <p className="text-sm text-muted">{pricing.description || "Harga per lembar"}</p>}
-      {config.finishingOptions.length > 0 && <fieldset className="grid gap-2">
-        <legend className="mb-1 text-sm font-semibold text-secondary">Finishing <span className="font-normal text-muted">(tanpa biaya)</span></legend>
-        {config.finishingOptions.map((option) => <label key={option.id} className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={finishingIds.includes(option.id)} onChange={() => toggleFinishing(option.id)} />{option.name}
-        </label>)}
-      </fieldset>}
+      {config.finishingOptions.length > 0 && <label className="grid gap-1.5 text-sm font-semibold text-secondary">
+        Finishing banner <span className="text-xs font-normal text-muted">Pilih satu, tanpa biaya tambahan</span>
+        <select
+          className={field}
+          value={finishingIds[0] ?? ""}
+          onChange={(event) => setFinishingIds(event.target.value ? [event.target.value] : [])}
+        >
+          <option value="">Tanpa finishing khusus</option>
+          {config.finishingOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+        </select>
+      </label>}
       <label className={cn("grid gap-1.5 text-xs font-medium text-muted", compact ? "grid-cols-[minmax(0,1fr)_7rem] items-center" : "max-w-56")}>
         <span>Jumlah banner</span>
         <input className={field} type="number" min="1" max="999" step="1" value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(999, Math.floor(Number(event.target.value) || 1))))} />

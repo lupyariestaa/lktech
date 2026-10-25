@@ -59,7 +59,10 @@ await ref.create({
     maxWidthM: 0,
     maxHeightM: 0,
     minPricePerUnit: 0,
-    finishingOptions: [],
+    finishingOptions: [
+      { id: "mata-ayam", name: "Mata ayam" },
+      { id: "lebih-bahan-selongsong", name: "Lebih bahan & selongsong / rongga" },
+    ],
   },
   soldOut: false,
   featured: false,

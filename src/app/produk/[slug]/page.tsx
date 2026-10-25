@@ -13,7 +13,6 @@ import {
 import { PageHero } from "@/components/page-hero";
 import { ProductBuyActions } from "@/components/product-buy-actions";
 import { ProductVariantPicker } from "@/components/product-variant-picker";
-import { ProductPrintPicker } from "@/components/product-print-picker";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductCard } from "@/components/product-card";
 import { ProductReviews } from "@/components/product-reviews";
@@ -262,12 +261,7 @@ export default async function ProdukDetailPage({
             </section>
 
             {/* ===== Paket (multi-varian) ===== */}
-            {product.category === "percetakan" ? (
-              <section id="opsi-cetak" className="scroll-mt-28">
-                <SectionTitle eyebrow="Konfigurasi cetak" title="Pilih spesifikasi cetak" />
-                <div className="mt-8"><ProductPrintPicker product={product} /></div>
-              </section>
-            ) : multi && (
+            {multi && product.category !== "percetakan" && (
               <section id="paket" className="scroll-mt-28">
                 <SectionTitle eyebrow="Paket" title="Pilih paket sesuai kebutuhan" />
                 <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
