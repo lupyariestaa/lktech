@@ -378,6 +378,24 @@ export const reviewModerateSchema = z.object({
   reason: z.string().trim().max(300).optional(),
 });
 
+/**
+ * Tindak lanjut insight SEO (fase D3): catat keputusan editorial admin.
+ * Non-otomatis & non-PII; `subject` = teks query atau URL halaman.
+ */
+export const seoInsightActionSchema = z.object({
+  insightId: z.string().trim().regex(/^[0-9a-f]{8}$/, "ID insight tidak valid."),
+  rule: z.enum([
+    "declining_clicks",
+    "impressions_without_clicks",
+    "low_ctr_high_impressions",
+    "striking_distance",
+  ]),
+  kind: z.enum(["query", "page"]),
+  subject: z.string().trim().min(1).max(300),
+  decision: z.enum(["review_title", "update_content", "ignore"]),
+  reason: z.string().trim().max(300).optional(),
+});
+
 // ===== Newsletter & Broadcast (FASE R2) =====
 
 /** Daftar newsletter (opt-in publik). */

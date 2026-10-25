@@ -1,11 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Download, ExternalLink, Loader2, RefreshCw, Search, TrendingUp } from "lucide-react";
-import { fetchSeoReport, type GscRow, type SearchConsoleReport, type SeoReportRequest } from "@/lib/admin-settings-api";
+import { AlertTriangle, Download, ExternalLink, Lightbulb, Loader2, RefreshCw, Search, TrendingUp } from "lucide-react";
+import {
+  fetchSeoReport,
+  submitSeoInsightAction,
+  type GscRow,
+  type SearchConsoleReport,
+  type SeoReportRequest,
+} from "@/lib/admin-settings-api";
 import { cn } from "@/lib/utils";
 import { LineChart } from "@/components/admin/line-chart";
 import { safeCsvCell } from "@/lib/search-console-pure";
+import {
+  sameOriginUrl,
+  SEO_INSIGHT_RULE_LABEL,
+  SEO_INSIGHT_DECISION_LABEL,
+  SEO_INSIGHT_DECISIONS,
+  type SeoInsight,
+  type SeoInsightConfig,
+  type SeoInsightDecision,
+} from "@/lib/seo-insights-pure";
 
 /** Format angka ringkas (mis. 1.2K). */
 function fmt(n: number): string {
@@ -37,6 +52,7 @@ export function SeoDashboard() {
   const [days, setDays] = useState(28);
   const [customRange, setCustomRange] = useState<{ startDate: string; endDate: string } | null>(null);
   const [filters, setFilters] = useState<Pick<SeoReportRequest, "country" | "device" | "searchType" | "query" | "page">>({ searchType: "web" });
+  const [minImpressions, setMinImpressions] = useState(0);
   const requestId = useRef(0);
 
   const load = useCallback(async (options: SeoReportRequest) => {
@@ -76,19 +92,26 @@ export function SeoDashboard() {
     };
   }, []);
 
+  /** Opsi permintaan aktif (rentang + filter + ambang insight). */
+  const currentOptions = (): SeoReportRequest => ({
+    ...(customRange ?? { days }),
+    ...filters,
+    ...(minImpressions > 0 ? { minImpressions } : {}),
+  });
+
   const onRange = (d: number) => {
     setDays(d);
     setCustomRange(null);
-    void load({ days: d, ...filters });
+    void load({ days: d, ...filters, ...(minImpressions > 0 ? { minImpressions } : {}) });
   };
 
   const applyCustomRange = () => {
     if (!customRange) return;
-    void load({ ...customRange, ...filters });
+    void load(currentOptions());
   };
   const applyFilters = (next: typeof filters) => {
     setFilters(next);
-    void load({ ...(customRange ?? { days }), ...next });
+    void load({ ...(customRange ?? { days }), ...next, ...(minImpressions > 0 ? { minImpressions } : {}) });
   };
   const exportCsv = (rows: GscRow[], label: string) => {
     const header = ["Item", "Klik", "Impresi", "CTR", "Posisi"].map(safeCsvCell).join(",");
@@ -126,7 +149,7 @@ export function SeoDashboard() {
         </div>
         <button
           type="button"
-          onClick={() => load({ ...(customRange ?? { days }), ...filters })}
+          onClick={() => load(currentOptions())}
           disabled={loading}
           aria-label="Muat ulang data SEO"
           className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/40 hover:text-primary"
@@ -147,10 +170,21 @@ export function SeoDashboard() {
         <input value={filters.country ?? ""} onChange={(e) => setFilters((f) => ({ ...f, country: e.target.value || undefined }))} placeholder="Negara (kode ISO 3 huruf)" className="rounded-lg border border-slate-200 p-2 text-sm" />
         <select value={filters.device ?? ""} onChange={(e) => setFilters((f) => ({ ...f, device: (e.target.value || undefined) as SeoReportRequest["device"] }))} className="rounded-lg border border-slate-200 p-2 text-sm"><option value="">Semua perangkat</option><option value="DESKTOP">Desktop</option><option value="MOBILE">Mobile</option><option value="TABLET">Tablet</option></select>
         <select value={filters.searchType ?? "web"} onChange={(e) => setFilters((f) => ({ ...f, searchType: e.target.value as SeoReportRequest["searchType"] }))} className="rounded-lg border border-slate-200 p-2 text-sm"><option value="web">Web</option><option value="image">Image</option><option value="video">Video</option><option value="news">News</option></select>
-        <button type="button" onClick={() => { setFilters({}); void load(customRange ?? { days }); }} className="rounded-lg border border-slate-200 p-2 text-sm text-secondary">Reset filter</button>
+        <button type="button" onClick={() => { setFilters({}); setMinImpressions(0); void load(customRange ?? { days }); }} className="rounded-lg border border-slate-200 p-2 text-sm text-secondary">Reset filter</button>
         <input value={filters.query ?? ""} onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value || undefined }))} placeholder="Query mengandung…" className="rounded-lg border border-slate-200 p-2 text-sm" />
         <input value={filters.page ?? ""} onChange={(e) => setFilters((f) => ({ ...f, page: e.target.value || undefined }))} placeholder="URL mengandung…" className="rounded-lg border border-slate-200 p-2 text-sm" />
-        <button type="button" onClick={() => applyFilters(filters)} disabled={loading} className="rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary disabled:opacity-50">Terapkan filter</button>
+        <label className="text-xs font-medium text-muted">Ambang impresi insight
+          <input
+            type="number"
+            min={0}
+            max={100000}
+            value={minImpressions || ""}
+            onChange={(e) => setMinImpressions(Math.max(0, Math.min(100000, Number(e.target.value) || 0)))}
+            placeholder="0 = heuristik bawaan"
+            className="mt-1 block w-full rounded-lg border border-slate-200 p-2 text-sm text-secondary"
+          />
+        </label>
+        <button type="button" onClick={() => applyFilters(filters)} disabled={loading} className="self-end rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary disabled:opacity-50">Terapkan filter</button>
       </div>
 
       {loading && !report ? (
@@ -216,15 +250,27 @@ export function SeoDashboard() {
             </p>
           )}
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="mb-3 text-sm font-bold text-secondary">Tren klik harian</h2>
-            <LineChart
-              points={report.trend.map((row) => ({ label: row.keys?.[0]?.slice(5) ?? "", full: row.keys?.[0] ?? "", value: row.clicks }))}
-              formatValue={fmt}
-              ariaLabel="Tren klik Search Console per hari"
-              emptyLabel={report.unavailableSections?.includes("trend") ? "Tren gagal dimuat." : "Belum ada data tren."}
-            />
-          </section>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-sm font-bold text-secondary">Tren klik harian</h2>
+              <LineChart
+                points={report.trend.map((row) => ({ label: row.keys?.[0]?.slice(5) ?? "", full: row.keys?.[0] ?? "", value: row.clicks }))}
+                formatValue={fmt}
+                ariaLabel="Tren klik Search Console per hari"
+                emptyLabel={report.unavailableSections?.includes("trend") ? "Tren gagal dimuat." : "Belum ada data tren."}
+              />
+            </section>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-sm font-bold text-secondary">Tren impresi harian</h2>
+              <LineChart
+                points={report.trend.map((row) => ({ label: row.keys?.[0]?.slice(5) ?? "", full: row.keys?.[0] ?? "", value: row.impressions }))}
+                formatValue={fmt}
+                accent="#7C3AED"
+                ariaLabel="Tren impresi Search Console per hari"
+                emptyLabel={report.unavailableSections?.includes("trend") ? "Tren gagal dimuat." : "Belum ada data tren."}
+              />
+            </section>
+          </div>
 
           <div className="grid gap-5 lg:grid-cols-2">
             <RowTable
@@ -247,6 +293,13 @@ export function SeoDashboard() {
               isUrl
             />
           </div>
+
+          <InsightList
+            insights={report.insights}
+            config={report.insightConfig}
+            declinesUnavailable={report.unavailableSections?.includes("declines") ?? false}
+          />
+
           <p className="text-[11px] text-muted">
             Data {report.range.startDate} → {report.range.endDate}. Diambil {new Date(report.fetchedAt).toLocaleString("id-ID")}. Search Console dapat memiliki jeda beberapa hari.
           </p>
@@ -386,6 +439,162 @@ function RowTable({
             </div>
           )}
         </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Daftar peluang berbasis aturan (fase D3). Setiap kartu menampilkan data
+ * sumber, aturan pemicu, ambang heuristik, keterbatasan, dan satu tindakan
+ * manual. Admin dapat mencatat tindak lanjut; TIDAK ada perubahan otomatis.
+ */
+function InsightList({
+  insights,
+  config,
+  declinesUnavailable,
+}: {
+  insights: SeoInsight[];
+  config: SeoInsightConfig;
+  declinesUnavailable: boolean;
+}) {
+  const [decisions, setDecisions] = useState<Record<string, SeoInsightDecision>>({});
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const origin = typeof window !== "undefined" ? window.location.origin : null;
+
+  const decide = async (insight: SeoInsight, decision: SeoInsightDecision) => {
+    setBusyId(insight.id);
+    setError(null);
+    try {
+      const reason = (reasons[insight.id] ?? "").trim();
+      await submitSeoInsightAction({
+        insightId: insight.id,
+        rule: insight.rule,
+        kind: insight.kind,
+        subject: insight.subject,
+        decision,
+        ...(reason ? { reason } : {}),
+      });
+      setDecisions((prev) => ({ ...prev, [insight.id]: decision }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menyimpan tindak lanjut.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-bold text-secondary">
+          <Lightbulb className="h-4 w-4" aria-hidden="true" /> Peluang (heuristik)
+        </h2>
+        <span className="text-[11px] text-muted">
+          Ambang: impresi ≥ {config.minImpressions}, CTR {"<"} {Math.round(config.ctrRatioBelowAverage * 100)}% rata-rata,
+          posisi {config.strikingDistanceMin}–{config.strikingDistanceMax}, tanpa klik ≥ {config.zeroClickMinImpressions}, turun ≥ {Math.round(config.declineRatio * 100)}%
+        </span>
+      </div>
+      <p className="mt-1 text-[11px] text-muted">
+        Aturan berbasis data Search Console, bukan skor otomatis. Tidak ada perubahan konten yang dilakukan sistem.
+        Ukur ulang beberapa hari setelah crawl dan data terkumpul.
+      </p>
+      {declinesUnavailable && (
+        <p className="mt-2 text-[11px] text-amber-700">
+          Periode pembanding tidak lengkap, jadi aturan “klik menurun” dilewati pada muat ini.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-rose-600">{error}</p>
+      )}
+
+      {insights.length === 0 ? (
+        <p className="mt-3 text-xs text-muted">Tidak ada peluang yang melewati ambang heuristik pada rentang ini.</p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-3">
+          {insights.map((insight) => {
+            const url = insight.kind === "page" ? sameOriginUrl(origin, insight.subject) : null;
+            const decided = decisions[insight.id];
+            return (
+              <li key={insight.id} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                      {SEO_INSIGHT_RULE_LABEL[insight.rule]} · {insight.kind === "page" ? "Halaman" : "Query"}
+                    </p>
+                    <p className="mt-0.5 break-words text-sm font-semibold text-secondary">
+                      {url ? (
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                          {insight.subject}
+                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                        </a>
+                      ) : (
+                        insight.subject
+                      )}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-[11px] tabular-nums text-muted">
+                    {Math.round(insight.metrics.clicks)} klik · {fmt(insight.metrics.impressions)} impresi · CTR {pct(insight.metrics.ctr)} · pos {insight.metrics.position.toFixed(1)}
+                    {insight.comparison && <> · pembanding {Math.round(insight.comparison.clicks)} klik</>}
+                  </p>
+                </div>
+                <p className="mt-2 text-xs text-secondary">
+                  <span className="font-medium">Aturan:</span> {insight.trigger}
+                </p>
+                <p className="mt-1 text-xs text-secondary">
+                  <span className="font-medium">Saran tindakan:</span> {insight.action}
+                </p>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[11px] font-medium text-muted">Ambang &amp; keterbatasan</summary>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[11px] text-muted">
+                    {Object.entries(insight.thresholds).map(([key, value]) => (
+                      <li key={key}>{key}: {value}</li>
+                    ))}
+                    {insight.limitations.map((limitation) => (
+                      <li key={limitation}>{limitation}</li>
+                    ))}
+                  </ul>
+                </details>
+                <label className="mt-2 block text-[11px] font-medium text-muted">
+                  Alasan (opsional, maks 300 karakter)
+                  <input
+                    type="text"
+                    maxLength={300}
+                    value={reasons[insight.id] ?? ""}
+                    onChange={(e) => setReasons((prev) => ({ ...prev, [insight.id]: e.target.value }))}
+                    placeholder="mis. judul sudah diperbarui"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 p-1.5 text-xs text-secondary"
+                  />
+                </label>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {SEO_INSIGHT_DECISIONS.map((decision) => (
+                    <button
+                      key={decision}
+                      type="button"
+                      onClick={() => void decide(insight, decision)}
+                      disabled={busyId === insight.id}
+                      aria-pressed={decided === decision}
+                      className={cn(
+                        "rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold disabled:opacity-50",
+                        decided === decision
+                          ? "border-primary bg-primary text-white"
+                          : "border-slate-200 text-secondary hover:border-primary/40 hover:text-primary",
+                      )}
+                    >
+                      {SEO_INSIGHT_DECISION_LABEL[decision]}
+                    </button>
+                  ))}
+                  {decided && (
+                    <span role="status" className="text-[11px] text-muted">
+                      Tercatat di audit: {SEO_INSIGHT_DECISION_LABEL[decided]}
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );

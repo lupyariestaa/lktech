@@ -168,11 +168,11 @@ export function parseGscFilters(params: URLSearchParams): GscFilters | null {
   const searchType = params.get("searchType")?.trim().toLowerCase() ?? "";
   const queryContains = params.get("query")?.trim() ?? "";
   const pageContains = params.get("page")?.trim() ?? "";
-  const allowed = new Set(["days", "startDate", "endDate", "country", "device", "searchType", "query", "page"]);
+  const allowed = new Set(["days", "startDate", "endDate", "country", "device", "searchType", "query", "page", "minImpressions"]);
   for (const key of params.keys()) if (!allowed.has(key)) return null;
   if (params.getAll("days").length > 1 || params.getAll("startDate").length > 1 || params.getAll("endDate").length > 1
     || params.getAll("country").length > 1 || params.getAll("device").length > 1 || params.getAll("searchType").length > 1
-    || params.getAll("query").length > 1 || params.getAll("page").length > 1) return null;
+    || params.getAll("query").length > 1 || params.getAll("page").length > 1 || params.getAll("minImpressions").length > 1) return null;
   if (country && !/^[a-z]{3}$/.test(country)) return null;
   if (device && !["DESKTOP", "MOBILE", "TABLET"].includes(device)) return null;
   if (searchType && !["web", "image", "video", "news"].includes(searchType)) return null;

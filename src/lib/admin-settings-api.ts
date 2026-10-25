@@ -1,4 +1,5 @@
 import { adminFetch } from "@/lib/admin-fetch";
+import type { SeoInsight, SeoInsightConfig, SeoInsightDecision } from "@/lib/seo-insights-pure";
 
 /** Status integrasi (fase S5). Tanpa rahasia — hanya boolean/mode. */
 export type IntegrationsStatus = {
@@ -115,12 +116,16 @@ export type SearchConsoleReport = {
   range: { startDate: string; endDate: string };
   fetchedAt: string;
   summary?: { clicks: number; impressions: number; ctr: number; averagePosition: number };
-  unavailableSections?: Array<"summary" | "queries" | "pages" | "trend" | "comparison">;
+  unavailableSections?: Array<"summary" | "queries" | "pages" | "trend" | "comparison" | "declines">;
   topQueries: GscRow[];
   topPages: GscRow[];
   previousRange?: { startDate: string; endDate: string };
   comparisonSummary?: { clicks: number; impressions: number; ctr: number; averagePosition: number };
   trend: GscRow[];
+  /** Insight berbasis aturan (fase D3) — heuristik & transparan. */
+  insights: SeoInsight[];
+  /** Ambang heuristik aktif yang dipakai server untuk `insights`. */
+  insightConfig: SeoInsightConfig;
 };
 
 export type SeoReportRequest = {
@@ -132,6 +137,8 @@ export type SeoReportRequest = {
   searchType?: "web" | "image" | "video" | "news";
   query?: string;
   page?: string;
+  /** Ambang impresi minimum untuk insight (0 = pakai default server). */
+  minImpressions?: number;
 };
 
 /** Laporan Search Console dengan filter yang divalidasi ulang di server. */
@@ -141,4 +148,22 @@ export async function fetchSeoReport(options: SeoReportRequest = {}): Promise<Se
     if (value !== undefined && value !== "") params.set(key, String(value));
   }
   return adminFetch<SearchConsoleReport>(`/api/admin/seo?${params.toString()}`);
+}
+
+/**
+ * Catat tindak lanjut editorial atas insight SEO (fase D3). Tidak mengubah
+ * konten apa pun; hanya menulis entri audit non-PII.
+ */
+export async function submitSeoInsightAction(input: {
+  insightId: string;
+  rule: SeoInsight["rule"];
+  kind: SeoInsight["kind"];
+  subject: string;
+  decision: SeoInsightDecision;
+  reason?: string;
+}): Promise<{ ok: boolean }> {
+  return adminFetch<{ ok: boolean }>("/api/admin/seo", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
 }

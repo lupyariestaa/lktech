@@ -15,6 +15,13 @@ import {
   type GscErrorCode,
   type GscRow,
 } from "@/lib/search-console-pure";
+import {
+  computeSeoInsights,
+  DEFAULT_SEO_INSIGHT_CONFIG,
+  type SeoInsight,
+  type SeoInsightConfig,
+} from "@/lib/seo-insights-pure";
+import { SITE_URL } from "@/lib/site";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
@@ -122,24 +129,37 @@ export type SearchConsoleReport = {
   range: { startDate: string; endDate: string };
   fetchedAt: string;
   summary?: { clicks: number; impressions: number; ctr: number; averagePosition: number };
-  unavailableSections?: Array<"summary" | "queries" | "pages" | "trend" | "comparison">;
+  unavailableSections?: Array<"summary" | "queries" | "pages" | "trend" | "comparison" | "declines">;
   topQueries: GscRow[];
   topPages: GscRow[];
   previousRange?: { startDate: string; endDate: string };
   comparisonSummary?: { clicks: number; impressions: number; ctr: number; averagePosition: number };
   trend: GscRow[];
+  /** Insight berbasis aturan (fase D3); heuristik & transparan. */
+  insights: SeoInsight[];
+  /** Ambang heuristik aktif yang dipakai untuk `insights`. */
+  insightConfig: SeoInsightConfig;
 };
 
-export async function getSearchConsoleReport(options: { days?: number; startDate?: string; endDate?: string; filters?: GscFilters } = {}): Promise<SearchConsoleReport> {
+export async function getSearchConsoleReport(options: {
+  days?: number;
+  startDate?: string;
+  endDate?: string;
+  filters?: GscFilters;
+  insightConfig?: Partial<SeoInsightConfig>;
+} = {}): Promise<SearchConsoleReport> {
   const now = new Date();
   const range = resolveReportRange({ ...options, now }) ?? dateRange(options.days ?? 28, now);
   const fetchedAt = new Date().toISOString();
+  const insightConfig = { ...DEFAULT_SEO_INSIGHT_CONFIG, ...(options.insightConfig ?? {}) };
   const empty = {
     range,
     fetchedAt,
     topQueries: [] as GscRow[],
     topPages: [] as GscRow[],
     trend: [] as GscRow[],
+    insights: [] as SeoInsight[],
+    insightConfig,
   };
   if (!isSearchConsoleConfigured()) return { ...empty, status: "not_configured" };
 
@@ -148,13 +168,16 @@ export async function getSearchConsoleReport(options: { days?: number; startDate
 
   const previousRange = previousDateRange(range);
   const filters = options.filters ?? {};
-  const [summaryResult, queriesResult, pagesResult, trendResult, comparisonResult] = await Promise.all([
-    querySearchAnalytics(tokenResult.data, [], range.startDate, range.endDate, 1, filters),
-    querySearchAnalytics(tokenResult.data, ["query"], range.startDate, range.endDate, 100, filters),
-    querySearchAnalytics(tokenResult.data, ["page"], range.startDate, range.endDate, 100, filters),
-    querySearchAnalytics(tokenResult.data, ["date"], range.startDate, range.endDate, 1000, filters),
-    querySearchAnalytics(tokenResult.data, [], previousRange.startDate, previousRange.endDate, 1, filters),
-  ]);
+  const [summaryResult, queriesResult, pagesResult, trendResult, comparisonResult, previousQueriesResult, previousPagesResult] =
+    await Promise.all([
+      querySearchAnalytics(tokenResult.data, [], range.startDate, range.endDate, 1, filters),
+      querySearchAnalytics(tokenResult.data, ["query"], range.startDate, range.endDate, 100, filters),
+      querySearchAnalytics(tokenResult.data, ["page"], range.startDate, range.endDate, 100, filters),
+      querySearchAnalytics(tokenResult.data, ["date"], range.startDate, range.endDate, 1000, filters),
+      querySearchAnalytics(tokenResult.data, [], previousRange.startDate, previousRange.endDate, 1, filters),
+      querySearchAnalytics(tokenResult.data, ["query"], previousRange.startDate, previousRange.endDate, 100, filters),
+      querySearchAnalytics(tokenResult.data, ["page"], previousRange.startDate, previousRange.endDate, 100, filters),
+    ]);
   const summary = summaryResult.ok ? normalizeGscSummary(summaryResult.data) : null;
   const topQueries = queriesResult.ok && isValidGscResponse(queriesResult.data)
     ? normalizeGscRows(queriesResult.data)
@@ -166,6 +189,23 @@ export async function getSearchConsoleReport(options: { days?: number; startDate
     ? normalizeGscRows(trendResult.data)
     : null;
   const comparisonSummary = comparisonResult.ok ? normalizeGscSummary(comparisonResult.data) : null;
+  const previousQueries = previousQueriesResult.ok && isValidGscResponse(previousQueriesResult.data)
+    ? normalizeGscRows(previousQueriesResult.data)
+    : null;
+  const previousPages = previousPagesResult.ok && isValidGscResponse(previousPagesResult.data)
+    ? normalizeGscRows(previousPagesResult.data)
+    : null;
+
+  const insights = computeSeoInsights({
+    queries: topQueries ?? [],
+    pages: topPages ?? [],
+    // Hanya kirim periode pembanding bila KEDUA breakdown valid, agar aturan
+    // penurunan tidak membandingkan data yang sebagian hilang.
+    ...(previousQueries && previousPages ? { previousQueries, previousPages } : {}),
+    origin: SITE_URL,
+    range,
+    config: options.insightConfig,
+  });
 
   const failures = [
     !summaryResult.ok ? summaryResult.error : summary === null ? "invalid_response" : null,
@@ -173,6 +213,8 @@ export async function getSearchConsoleReport(options: { days?: number; startDate
     !pagesResult.ok ? pagesResult.error : topPages === null ? "invalid_response" : null,
     !trendResult.ok ? trendResult.error : trend === null ? "invalid_response" : null,
     !comparisonResult.ok ? comparisonResult.error : comparisonSummary === null ? "invalid_response" : null,
+    !previousQueriesResult.ok ? previousQueriesResult.error : previousQueries === null ? "invalid_response" : null,
+    !previousPagesResult.ok ? previousPagesResult.error : previousPages === null ? "invalid_response" : null,
   ].filter((error): error is GscErrorCode => error !== null);
 
   const hasData = (summary?.impressions ?? 0) > 0 || (summary?.clicks ?? 0) > 0;
@@ -192,6 +234,7 @@ export async function getSearchConsoleReport(options: { days?: number; startDate
     if (topPages === null) unavailableSections.push("pages");
     if (trend === null) unavailableSections.push("trend");
     if (comparisonSummary === null) unavailableSections.push("comparison");
+    if (previousQueries === null || previousPages === null) unavailableSections.push("declines");
     return {
       ...empty,
       status,
@@ -202,6 +245,7 @@ export async function getSearchConsoleReport(options: { days?: number; startDate
       topQueries: topQueries ?? [],
       topPages: topPages ?? [],
       trend: trend ?? [],
+      insights,
     };
   }
 
@@ -214,5 +258,6 @@ export async function getSearchConsoleReport(options: { days?: number; startDate
     topQueries: topQueries!,
     topPages: topPages!,
     trend: trend!,
+    insights,
   };
 }

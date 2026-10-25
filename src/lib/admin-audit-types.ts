@@ -43,6 +43,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   "settings.backup_export",
   "settings.cache_clear",
   "settings.maintenance",
+  "seo.insight_action",
 ] as const;
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];
@@ -88,6 +89,7 @@ export const ADMIN_AUDIT_ACTION_LABEL: Record<AdminAuditAction, string> = {
   "settings.backup_export": "Ekspor backup",
   "settings.cache_clear": "Bersihkan cache",
   "settings.maintenance": "Ubah mode pemeliharaan",
+  "seo.insight_action": "Tindak lanjut insight SEO",
 };
 
 /** Entri audit tersimpan. */
