@@ -293,6 +293,7 @@ function normalizeProduct(data: Record<string, unknown>): Product {
     cover: str(data.cover, "default"),
     coverPublicId: str(data.coverPublicId) || undefined,
     coverAlt: str(data.coverAlt) || undefined,
+    imageRatio: data.imageRatio === "square" ? "square" : "video",
     gallery: strArr(data.gallery),
     badge: str(data.badge) || undefined,
     features: normalizeFeatures(data.features),

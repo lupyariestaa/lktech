@@ -250,7 +250,7 @@ export default async function ProdukDetailPage({
           {/* ===== Konten utama ===== */}
           <div className="flex min-w-0 flex-col gap-10 sm:gap-14">
             {/* Galeri / cover (interaktif: thumbnail + lightbox) */}
-            <ProductGallery images={galleryImages} productName={product.name} />
+            <ProductGallery images={galleryImages} productName={product.name} ratio={product.imageRatio === "square" ? "square" : "video"} />
 
             {/* Deskripsi */}
             <section>

@@ -236,6 +236,7 @@ export const productSchema = z.object({
   cover: imageUrlSchema.optional(),
   coverPublicId: z.string().trim().max(500).optional(),
   coverAlt: z.string().trim().max(200).optional(),
+  imageRatio: z.enum(["square", "video"]).optional(),
   gallery: z.array(z.string().trim().max(1000)).max(20).optional(),
   badge: z.string().trim().max(40).optional(),
   features: z.array(productFeatureSchema).max(20).optional(),

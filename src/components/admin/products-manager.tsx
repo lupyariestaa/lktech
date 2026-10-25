@@ -57,6 +57,7 @@ const emptyProduct: Product = {
   price: 0,
   originalPrice: undefined,
   cover: "default",
+  imageRatio: "video",
   gallery: [],
   badge: undefined,
   features: [],
@@ -584,11 +585,49 @@ function ProductForm({
           </Field>
         </div>
 
+        <Field label="Rasio gambar produk (cover & galeri)">
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              ["square", "1:1", "Kotak"],
+              ["video", "16:9", "Landscape"],
+            ] as const).map(([ratio, title, subtitle]) => (
+              <button
+                key={ratio}
+                type="button"
+                aria-pressed={(product.imageRatio ?? "video") === ratio}
+                onClick={() => set("imageRatio", ratio)}
+                className={cn(
+                  "rounded-2xl border p-3 text-left transition-colors",
+                  (product.imageRatio ?? "video") === ratio
+                    ? "border-primary bg-primary-50 ring-1 ring-primary"
+                    : "border-slate-200 bg-white hover:border-primary/40",
+                )}
+              >
+                <span className="flex items-center gap-3">
+                  <span className={cn(
+                    "block shrink-0 rounded-md border-2",
+                    ratio === "square" ? "h-10 w-10" : "h-7 w-12",
+                    (product.imageRatio ?? "video") === ratio ? "border-primary bg-primary/10" : "border-slate-300 bg-slate-50",
+                  )} />
+                  <span>
+                    <span className="block text-sm font-semibold text-secondary">{title}</span>
+                    <span className="block text-xs text-muted">{subtitle}</span>
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted">Rasio ini mengatur tampilan cover, kartu katalog, galeri, dan thumbnail. Gambar tidak dipotong saat diperbesar.</p>
+        </Field>
+
         {/* Cover */}
         <div className="rounded-2xl border border-slate-200 bg-surface p-5">
           <p className="text-sm font-semibold text-secondary">Gambar Cover</p>
           <div className="mt-3 flex items-center gap-4">
-            <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className={cn(
+              "relative w-28 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white",
+              product.imageRatio === "square" ? "aspect-square" : "aspect-video",
+            )}>
               {product.cover && product.cover !== "default" ? (
                 <Image
                   src={product.cover}

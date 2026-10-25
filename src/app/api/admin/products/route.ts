@@ -82,6 +82,7 @@ export async function POST(req: Request) {
         : undefined,
     cover: (body.cover ?? "default").trim() || "default",
     coverPublicId: body.coverPublicId?.trim() || undefined,
+    imageRatio: body.imageRatio === "square" ? "square" : "video",
     gallery: Array.isArray(body.gallery) ? body.gallery.filter(Boolean) : [],
     badge: body.badge?.trim() || undefined,
     features: Array.isArray(body.features)

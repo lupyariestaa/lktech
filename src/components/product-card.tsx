@@ -56,7 +56,10 @@ export function ProductCard({
           tidak terpotong (dulu 4:3 + object-cover memotong ±25% lebarnya). */}
       <Link
         href={`/produk/${product.slug}`}
-        className="relative block aspect-[16/9] overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10"
+        className={cn(
+          "relative block overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10",
+          product.imageRatio === "square" ? "aspect-square" : "aspect-[16/9]",
+        )}
       >
         {cover && !coverFailed ? (
           <Image

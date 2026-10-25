@@ -14,16 +14,18 @@ export type { GalleryImage };
 export function ProductGallery({
   images,
   productName,
+  ratio = "video",
 }: {
   images: GalleryImage[];
   productName: string;
+  ratio?: "square" | "video";
 }) {
   return (
     <MediaGallery
       images={images}
       label={productName}
       placeholderIcon={<Package className="h-16 w-16" />}
-      ratio="video"
+      ratio={ratio === "square" ? "square" : "video"}
     />
   );
 }

@@ -27,8 +27,8 @@ export function MediaGallery({
   label?: string;
   /** Ikon fallback bila tidak ada gambar. */
   placeholderIcon?: React.ReactNode;
-  /** Rasio gambar besar: "video" (16:9) | "photo" (16:10). */
-  ratio?: "video" | "photo";
+  /** Rasio gambar besar yang dipakai gambar utama dan thumbnail. */
+  ratio?: "video" | "photo" | "square";
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -37,7 +37,7 @@ export function MediaGallery({
   const total = images.length;
   const hasImages = total > 0;
   const current = images[activeIndex] ?? images[0];
-  const aspectClass = ratio === "photo" ? "aspect-[16/10]" : "aspect-video";
+  const aspectClass = ratio === "square" ? "aspect-square" : ratio === "photo" ? "aspect-[16/10]" : "aspect-video";
 
   const go = (delta: number) => {
     if (total === 0) return;
@@ -129,7 +129,7 @@ export function MediaGallery({
               aria-label={`Tampilkan gambar ${i + 1}`}
               aria-current={i === activeIndex ? "true" : undefined}
               className={cn(
-                "relative aspect-video w-20 shrink-0 snap-start overflow-hidden rounded-lg border-2 transition-all sm:w-24 md:w-28",
+                cn("relative w-20 shrink-0 snap-start overflow-hidden rounded-lg border-2 transition-all sm:w-24 md:w-28", aspectClass),
                 i === activeIndex
                   ? "border-primary ring-2 ring-primary/20"
                   : "border-slate-200 opacity-70 hover:opacity-100",

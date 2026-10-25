@@ -58,6 +58,9 @@ export type PrintProductConfig = {
   whatsappDesignMessage?: string;
 };
 
+/** Rasio tampilan gambar cover dan galeri produk. */
+export type ProductImageRatio = "square" | "video";
+
 /**
  * Satu VARIAN/PAKET dari sebuah produk (mis. "Portfolio Basic",
  * "Portfolio Profesional", "Portfolio Custom").
@@ -167,6 +170,8 @@ export type Product = {
   coverPublicId?: string;
   /** Teks alternatif cover (a11y/SEO, diisi dari media `alt`). */
   coverAlt?: string;
+  /** Rasio gambar pada kartu katalog dan halaman detail. Default: 16:9. */
+  imageRatio?: ProductImageRatio;
   /** Galeri gambar tambahan. */
   gallery: string[];
   /** Badge kecil, mis. "Terlaris". */
