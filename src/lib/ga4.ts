@@ -1,6 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import { parseServiceAccount } from "@/lib/search-console-pure";
+import { observeProvider } from "@/lib/seo-observability";
 import {
   GA4_SUMMARY_METRICS,
   buildRunReportBody,
@@ -62,7 +63,7 @@ function createJwt(clientEmail: string, privateKey: string): string {
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: Ga4ErrorCode };
 
-async function getAccessToken(): Promise<Result<string>> {
+async function getAccessTokenInner(): Promise<Result<string>> {
   const sa = parseServiceAccount(process.env.GA4_SERVICE_ACCOUNT);
   if (!sa) return { ok: false, error: "invalid_credentials" };
   try {
@@ -97,7 +98,12 @@ async function getAccessToken(): Promise<Result<string>> {
   }
 }
 
-async function runReport(token: string, body: Record<string, unknown>): Promise<Result<unknown>> {
+/** Ambil token akses GA4 dengan pencatatan metrik operasional (fase D7). */
+function getAccessToken(): Promise<Result<string>> {
+  return observeProvider("ga4_auth", () => getAccessTokenInner());
+}
+
+async function runReportInner(token: string, body: Record<string, unknown>): Promise<Result<unknown>> {
   const propertyId = normalizePropertyId(process.env.GA4_PROPERTY_ID);
   if (!propertyId) return { ok: false, error: "invalid_credentials" };
   try {
@@ -116,6 +122,11 @@ async function runReport(token: string, body: Record<string, unknown>): Promise<
       error: error instanceof Error && error.name === "TimeoutError" ? "request_timeout" : "provider_unavailable",
     };
   }
+}
+
+/** `runReport` dengan pencatatan metrik operasional (fase D7). */
+function runReport(token: string, body: Record<string, unknown>): Promise<Result<unknown>> {
+  return observeProvider("ga4", () => runReportInner(token, body));
 }
 
 export type Ga4TrendPoint = { date: string; pageViews: number; sessions: number; activeUsers: number };

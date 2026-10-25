@@ -1,6 +1,6 @@
 # Planning Pengembangan Sistem SEO & Dashboard LKTech
 
-> **Status:** D1–D6 tervalidasi dan sudah di-push; siap lanjut D7 (rilis, observability, evaluasi)
+> **Status:** D1–D6 tervalidasi dan sudah di-push; D7 (porsi kode) implementasi lokal, menunggu verifikasi/commit; langkah rilis/evaluasi manual
 > **Disusun:** 25 Oktober 2026  
 > **Cakupan:** audit kondisi repo saat ini dan rencana pengembangan bertahap untuk SEO teknis, pengukuran, dan pengalaman dashboard admin.  
 > **Dokumen fondasi:** `docs/2026-10-12-seo-konten-mesin.md` mencatat pengerjaan fondasi SEO S0–S7. Dokumen ini melanjutkan fondasi tersebut, bukan menyatakan seluruh rekomendasi baru sudah dikerjakan.
@@ -75,6 +75,8 @@ Rekomendasi utama: kembangkan secara bertahap, dimulai dengan **ketepatan dan ke
 **Catatan kemajuan D5 (25 Oktober 2026):** implementasi lokal menambahkan workflow pengaturan dan konten SEO. Modul murni `src/lib/seo-workflow-pure.ts` memusatkan panduan panjang sebagai satu sumber kebenaran (`SNIPPET_GUIDE`: judul 30–60, deskripsi 70–160 karakter) — ditegaskan sebagai HEURISTIK tampilan, bukan batas pasti Google. Preview snippet gaya hasil pencarian (`buildSnippetPreview`, `analyzeSnippet`) memakai judul/deskripsi hasil **resolusi** (meta bila ada, fallback judul/ringkasan) sehingga mencerminkan aturan metadata yang benar-benar dipakai aplikasi, dan menampilkan status panjang sebagai panduan (bukan error). Validasi gambar Open Graph bersifat statis tanpa memuat gambar (`validateOgImageUrl`): bentuk URL diperiksa, ekstensi dikenal/diperkirakan. Checklist pra-terbit (`buildSeoChecklist`) mencakup judul/deskripsi ada & panjang, keunikan judul/slug, kebersihan slug, indexability, canonical, gambar & alt, tautan internal, dan structured data per jenis konten — **tidak memblokir publish** (`SEO_CHECKLIST_BLOCKING_ENABLED = false`), tanpa perubahan konten otomatis. Komponen `src/components/admin/seo-preview.tsx` (`SeoSnippetPreview`, `OgPreview`, `SeoChecklistPanel`) memakai `useSyncExternalStore` untuk host agar aman dari hydration mismatch; diintegrasikan ke editor artikel (`articles-manager.tsx`: preview snippet/OG, checklist, deteksi duplikat judul/slug dari daftar konten) dan Settings SEO (`settings-seo.tsx`: label batas selaras `settingsSchema` — title 160, description 320, ogImage 500, searchConsoleId 120 — plus preview snippet/OG default). Tes baru `scripts/seo-workflow.test.ts` (11) dan seluruh unit test (729), ESLint berkas terkait, TypeScript, `git diff --check`, dan production build (162/162 halaman statis) lulus. Di-commit sebagai `5571597` (`feat: add SEO content workflow previews`) dan di-push ke `origin/main`.
 
 **Catatan kemajuan D6 (25 Oktober 2026):** implementasi lokal menambahkan integrasi **Google Analytics 4** sebagai sumber **TERPISAH** dari Search Console (tidak ada endpoint gabungan; angka GA4 tidak dicampur dengan GSC). Keputusan produk yang diputuskan: metrik **keterlibatan + konversi kunci** — server-side GA4 Data API read-only, properti eksplisit, dan maksimum **3 event konversi** dipilih admin. Modul murni `src/lib/ga4-pure.ts` memuat validasi ID properti (`normalizePropertyId` — menerima ID numerik, menolak `G-XXXXXXX`), resolusi rentang (`resolveGa4Range`, jeda 1 hari, maks 180 hari), pembangun body `runReport` (metrik/dimensi/filter `eventName` `inListFilter`, batas baris), normalisasi respons (`normalizeGa4Rows`, `normalizeGa4Summary`, `isValidGa4Response`), kode error aman (`ga4ErrorCode`), status laporan (`ga4Status`), parsing event konversi (`parseConversionEvents`), dan **redaksi rahasia** (`redactSecrets`) untuk log. Server `src/lib/ga4.ts` memakai kredensial terpisah (`GA4_SERVICE_ACCOUNT`, `GA4_PROPERTY_ID`, `GA4_CONVERSION_EVENTS`), scope `analytics.readonly`, JWT RS256 tanpa dependensi baru, timeout, dan pemetaan kuota. Endpoint **khusus** `GET /api/admin/seo/ga4` (admin guard, `no-store`, whitelist parameter) mengembalikan `status`/`errorCode` + ringkasan, tren harian, halaman teratas, dan konversi. UI `src/components/admin/ga4-panel.tsx` menampilkan panel berlabel sumber GA4 (tampilan halaman/sesi/pengguna/rasio keterlibatan, tren, tabel halaman dengan CSV aman, event konversi, dan catatan keterbatasan: sampling/thresholding, jeda pemrosesan, tidak menyimpulkan peringkat, tidak sebanding langsung dengan GSC), plus tautan terpisah ke Speed Insights Vercel/CWV. Halaman `/admin/seo` disusun ulang agar tiap sumber punya judulnya sendiri (Search Console, audit teknis, GA4). Tes baru `scripts/ga4.test.ts` (14) dan seluruh unit test (743), ESLint berkas terkait, TypeScript, `git diff --check`, dan production build (162/162 halaman statis) lulus. Keputusan/privacy/biaya/batas API terdokumentasi di §10.3. Di-commit sebagai `421e071` (`feat: add Google Analytics 4 engagement dashboard`) dan di-push ke `origin/main`.
+
+**Catatan kemajuan D7 porsi kode (25 Oktober 2026):** implementasi lokal menambahkan **observabilitas**, **feature flag (kill switch)**, dan **QA metadata**. Modul murni `src/lib/seo-observability-pure.ts` memusatkan registry metrik per provider (`createMetricsRegistry`, `recordProviderCall`, `snapshotMetrics`) — sukses/gagal, jumlah per kode error aman, jumlah `quota_limited`, latency (count/min/max/avg), waktu terakhir — plus pembangun log aman (`buildProviderLogEvent`, kunci terbatas, tanpa query/URL/token). `src/lib/seo-observability.ts` menyimpan registry **in-memory per proses** (tanpa storage, tanpa PII) dan mengekspos `observeProvider(provider, fn)` yang mencatat hasil + latency dan hanya menulis log pada kegagalan. Instrumentasi dipasang di `src/lib/search-console.ts` (provider `gsc_auth`, `gsc`) dan `src/lib/ga4.ts` (provider `ga4_auth`, `ga4`). Endpoint `GET /api/admin/seo/observability` (guard admin) mengembalikan snapshot metrik + status flag. Modul murni `src/lib/seo-flags-pure.ts` (`SEO_FEATURES` = `gsc`/`audit`/`ga4`, `parseDisabledFeatures`, `resolveSeoFlags`, `seoFeatureEnabled`) dan `src/lib/seo-flags.ts` (`isSeoFeatureEnabledFromEnv`, `seoFeatureDisabledResponse` → HTTP 503 `seo_feature_disabled`) menyediakan kill switch via env `SEO_DISABLED_FEATURES`; **default semua aktif**. Gerbang fitur dipasang di `src/app/api/admin/seo/route.ts` (`gsc`), `src/app/api/admin/seo/audit/route.ts` (GET+POST, `audit`), dan `src/app/api/admin/seo/ga4/route.ts` (`ga4`). Skrip QA metadata `scripts/seo-metadata.test.ts` memakai aturan audit yang sama (`parseHtmlFacts`/`analyzePage`/`isNoindex`) untuk memeriksa canonical/robots/JSON-LD pada **sampel rute statis & dinamis** (fixture), menegaskan "tidak ada di sitemap" bukan klaim indexing dan panjang judul/deskripsi ditandai heuristik. Tes baru `scripts/seo-ops.test.ts` (5) + `scripts/seo-metadata.test.ts` (20); seluruh unit test (768), ESLint berkas terkait, TypeScript, `git diff --check`, dan production build lulus. Dokumentasi operasional/rilis (setup/deployment, definisi metrik, observabilitas, troubleshooting, rollback, feature flag) ada di §10.4. Rilis produksi, uji preview/staging, review privacy/security, dan evaluasi manfaat tetap langkah manual. Belum di-commit atau di-push.
 
 ---
 
@@ -412,6 +414,59 @@ Keputusan produk pemilik (25 Oktober 2026): **metrik keterlibatan + konversi kun
 | **Biaya** | GA4 Data API termasuk dalam GA4 tanpa biaya tambahan; dibatasi kuota (core: 200.000 token/properti/hari; ± 40.000 token/jam/properti; batas permintaan serentak). Dibatasi juga oleh admin guard dan rentang ≤ 180 hari. Error kuota dipetakan ke `quota_limited` (pesan aman). |
 | **Batas & keterbatasan** | GA4 dapat memakai sampling/thresholding; ada jeda pemrosesan (hari terakhir dikecualikan). Definisi metrik berbeda dari GSC sehingga **tidak boleh** dibandingkan langsung. Timezone mengikuti properti GA4. Estimasi bukan jaminan. |
 | **Performa pengalaman** | Core Web Vitals ditautkan keluar ke Speed Insights Vercel (sumber berbeda) sebagai indikator pengalaman, **bukan** faktor peringkat langsung dan tidak dicampur dengan GA4/GSC. |
+
+### 10.4 Operasional & rilis D7 (runbook) — porsi kode
+
+Bagian ini adalah runbook untuk rilis/operasional fase D7. Rilis produksi, uji preview/staging,
+review privacy/security, dan evaluasi manfaat **tetap langkah manual** dan memerlukan persetujuan admin.
+
+#### Setup & deployment
+
+1. **Env produksi** (Vercel → Project → Settings → Environment Variables → *Redeploy*). Semua opsional & fail-safe:
+   - GSC: `GSC_SERVICE_ACCOUNT` (JSON satu baris, rahasia) + `GSC_SITE_URL`.
+   - GA4: `GA4_SERVICE_ACCOUNT` (JSON satu baris, rahasia) + `GA4_PROPERTY_ID` (ID numerik) + opsional `GA4_CONVERSION_EVENTS` (maks 3, dipisah koma).
+   - Kill switch: `SEO_DISABLED_FEATURES` (mis. `audit,ga4`). Kosong = semua aktif.
+2. **Izin**: beri service account akses baca — pengguna di properti Search Console; **Viewer** di properti GA4. Enable Search Console API & Google Analytics Data API di project Google Cloud.
+3. **Verifikasi baca-saja**: buka `/admin/seo` → tiap sumber (GSC, audit, GA4) menampilkan `not_configured` bila env belum diisi, `connected` bila berhasil, `no_data` bila kosong, `partial` bila sebagian query gagal, `error` bila gagal total.
+4. **QA metadata**: jalankan `npm run test:seo-metadata` untuk memeriksa canonical/robots/JSON-LD pada sampel rute statis & dinamis memakai aturan audit yang sama.
+
+#### Definisi metrik
+
+- **GSC (pencarian)**: klik, impresi, CTR, posisi rata-rata. Jeda data 3 hari; agregat properti dihitung dari *aggregate query* terpisah (bukan penjumlahan top-N).
+- **GA4 (keterlibatan)**: tampilan halaman (`screenPageViews`), sesi, pengguna aktif, sesi terlibat, rasio keterlibatan. Jeda data 1 hari.
+- **Latency observabilitas**: selisih waktu `Date.now()` sebelum/sesudah pemanggilan provider (ms), per proses.
+- **Aturan**: GSC dan GA4 adalah **dua sumber berbeda** dengan definisi berbeda; angkanya **tidak boleh** dibandingkan langsung dan tidak digabung dalam satu endpoint.
+
+#### Observabilitas (metrik operasional)
+
+- Registry **in-memory per proses** (`src/lib/seo-observability-pure.ts`): sukses/gagal per provider, jumlah per kode error aman, jumlah `quota_limited`, latency (count/min/max/avg), waktu terakhir.
+- Provider yang dicatat: `gsc_auth`, `gsc`, `ga4_auth`, `ga4`.
+- **Tanpa data sensitif**: tidak ada query pencarian, URL halaman, email, atau token. Log hanya pada kegagalan, dengan kunci terbatas (`seo.provider_call`).
+- Snapshot admin: `GET /api/admin/seo/observability` (guard admin) mengembalikan metrik + status flag. **Catatan**: di serverless, tiap instance punya salinan sendiri dan bisa didaur ulang — angka ini indikator cepat, **bukan** pengganti monitoring produksi (Sentry/log platform).
+
+#### Feature flag / kill switch
+
+- `SEO_DISABLED_FEATURES` menonaktifkan fitur **tanpa redeploy kode** (cukup ubah env lalu redeploy instan).
+- Fitur dikenal: `gsc`, `audit`, `ga4`. Default semua **aktif**.
+- Bila fitur nonaktif, endpoint terkait membalas **HTTP 503** `code: "seo_feature_disabled"`; UI menampilkan pesan dan fitur lain tetap berjalan.
+
+#### Rollback
+
+1. **Primer (tanpa kode)**: set `SEO_DISABLED_FEATURES` ke fitur bermasalah (mis. `audit`) → redeploy. Fitur langsung mati, sisa dashboard tetap hidup.
+2. **Kode**: `git revert` commit fitur terkait (`feat: add SEO observability and feature flags`, `feat: add Google Analytics 4 engagement dashboard`, dst.) → push `main` → redeploy Vercel.
+3. **Data**: crawl audit disimpan di koleksi `seo_audits` dengan retensi terbatas (10 run terakhir); tidak ada store baru untuk observabilitas/GA4. Rollback tidak memerlukan migrasi.
+
+#### Troubleshooting
+
+| Gejala | Kemungkinan penyebab | Tindakan |
+| --- | --- | --- |
+| Panel `not_configured` | env belum diisi / salah nama | Isi env yang benar, redeploy |
+| `invalid_credentials` | JSON service account tidak valid / 1-baris rusak | Periksa isi `*_SERVICE_ACCOUNT`, pastikan JSON utuh satu baris |
+| `permission_denied` | service account belum diberi akses | Tambahkan sebagai pengguna (GSC) / Viewer (GA4) |
+| `quota_limited` | kuota API tercapai | Tunggu, kurangi rentang/refresh; cek kuota di console |
+| `request_timeout` | jaringan/API lambat | Coba lagi; periksa status layanan Google |
+| `status: partial` | sebagian query gagal | Bagian tersedia tetap tampil; muat ulang |
+| 503 `seo_feature_disabled` | fitur dinonaktifkan via env | Hapus dari `SEO_DISABLED_FEATURES` bila memang ingin diaktifkan |
 
 ---
 

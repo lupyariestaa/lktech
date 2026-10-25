@@ -302,6 +302,13 @@ Observability & data (fail-safe, opsional).
 - **Panel GA4 (fase D6)** — `src/lib/ga4.ts` (GA4 Data API read-only, kredensial terpisah) + endpoint
   **`/api/admin/seo/ga4`** + panel di `/admin/seo`. Sumber terpisah dari GSC; maks 3 event konversi;
   hanya agregat tanpa PII. Test `test:ga4` (**14**).
+- **Observabilitas + feature flag (fase D7)** — `src/lib/seo-observability*.ts` (metrik per provider
+  in-memory: sukses/gagal, kode error, quota, latency; tanpa data sensitif) + endpoint
+  **`/api/admin/seo/observability`**; `src/lib/seo-flags*.ts` + env `SEO_DISABLED_FEATURES`
+  (kill switch `gsc`/`audit`/`ga4`, default aktif; nonaktif → 503 `seo_feature_disabled`).
+  Test `test:seo-ops` (**5**).
+- **QA metadata (fase D7)** — `scripts/seo-metadata.test.ts` memeriksa canonical/robots/JSON-LD
+  pada sampel rute statis & dinamis memakai aturan audit yang sama. Test `test:seo-metadata` (**20**).
 - **Test** `test:search-console` (**9**).
 
 **Verifikasi:** GA4 tak render tanpa env (fail-safe); `/admin/seo` & `/api/admin/seo` terdaftar.

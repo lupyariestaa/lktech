@@ -63,6 +63,8 @@
     "scripts/seo-audit.test.ts",
     "scripts/seo-workflow.test.ts",
     "scripts/ga4.test.ts",
+    "scripts/seo-ops.test.ts",
+    "scripts/seo-metadata.test.ts",
     "scripts/payment-metrics.test.ts",
     "scripts/order-schema.test.ts",
     "scripts/product-stock.test.ts",

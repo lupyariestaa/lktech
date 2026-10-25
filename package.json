@@ -43,6 +43,8 @@
     "test:seo-audit": "node --experimental-strip-types --test scripts/seo-audit.test.ts",
     "test:seo-workflow": "node --experimental-strip-types --test scripts/seo-workflow.test.ts",
     "test:ga4": "node --experimental-strip-types --test scripts/ga4.test.ts",
+    "test:seo-ops": "node --experimental-strip-types --test scripts/seo-ops.test.ts",
+    "test:seo-metadata": "node --experimental-strip-types --test scripts/seo-metadata.test.ts",
     "test:pwa": "node --experimental-strip-types --test scripts/pwa.test.ts",
     "test:analytics-daily": "node --experimental-strip-types --test scripts/analytics-daily.test.ts",
     "test:nav-menu": "node --experimental-strip-types --test scripts/nav-menu.test.ts",

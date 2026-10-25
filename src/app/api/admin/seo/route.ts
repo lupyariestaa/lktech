@@ -5,6 +5,7 @@ import { parseGscFilters, resolveReportRange } from "@/lib/search-console-pure";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { guardAdminMutation } from "@/lib/admin-rate-limit";
 import { seoInsightActionSchema } from "@/lib/api-schemas";
+import { isSeoFeatureEnabledFromEnv, seoFeatureDisabledResponse } from "@/lib/seo-flags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,8 @@ function parseMinImpressions(raw: string | null): number {
 export async function GET(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  if (!isSeoFeatureEnabledFromEnv("gsc")) return seoFeatureDisabledResponse("gsc");
 
   const params = new URL(req.url).searchParams;
   const filters = parseGscFilters(params);

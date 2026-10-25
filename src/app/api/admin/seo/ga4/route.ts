@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { getGa4Report } from "@/lib/ga4";
 import { resolveGa4Range } from "@/lib/ga4-pure";
 
+import { isSeoFeatureEnabledFromEnv, seoFeatureDisabledResponse } from "@/lib/seo-flags";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -19,6 +21,8 @@ const ALLOWED_PARAMS = new Set(["days", "startDate", "endDate"]);
 export async function GET(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  if (!isSeoFeatureEnabledFromEnv("ga4")) return seoFeatureDisabledResponse("ga4");
 
   const params = new URL(req.url).searchParams;
   for (const key of params.keys()) {

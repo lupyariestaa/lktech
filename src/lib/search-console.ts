@@ -22,6 +22,7 @@ import {
   type SeoInsightConfig,
 } from "@/lib/seo-insights-pure";
 import { SITE_URL } from "@/lib/site";
+import { observeProvider } from "@/lib/seo-observability";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
@@ -50,7 +51,7 @@ function createJwt(clientEmail: string, privateKey: string): string {
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: GscErrorCode };
 
-async function getAccessToken(): Promise<Result<string>> {
+async function getAccessTokenInner(): Promise<Result<string>> {
   const sa = parseServiceAccount(process.env.GSC_SERVICE_ACCOUNT);
   if (!sa) return { ok: false, error: "invalid_credentials" };
   try {
@@ -85,7 +86,12 @@ async function getAccessToken(): Promise<Result<string>> {
   }
 }
 
-async function querySearchAnalytics(
+/** Ambil token akses dengan pencatatan metrik operasional (fase D7). */
+function getAccessToken(): Promise<Result<string>> {
+  return observeProvider("gsc_auth", () => getAccessTokenInner());
+}
+
+async function querySearchAnalyticsInner(
   token: string,
   dimensions: string[],
   startDate: string,
@@ -121,6 +127,20 @@ async function querySearchAnalytics(
       error: error instanceof Error && error.name === "TimeoutError" ? "request_timeout" : "provider_unavailable",
     };
   }
+}
+
+/** Query Search Analytics dengan pencatatan metrik operasional (fase D7). */
+function querySearchAnalytics(
+  token: string,
+  dimensions: string[],
+  startDate: string,
+  endDate: string,
+  rowLimit?: number,
+  filters: GscFilters = {},
+): Promise<Result<unknown>> {
+  return observeProvider("gsc", () =>
+    querySearchAnalyticsInner(token, dimensions, startDate, endDate, rowLimit, filters),
+  );
 }
 
 export type SearchConsoleReport = {

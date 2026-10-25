@@ -13,6 +13,7 @@ import {
 } from "@/lib/seo-inventory";
 import { emptyAuditReport, runSeoAudit } from "@/lib/seo-crawler";
 import { getLatestSeoAudit, saveSeoAudit } from "@/lib/seo-audit-store";
+import { isSeoFeatureEnabledFromEnv, seoFeatureDisabledResponse } from "@/lib/seo-flags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,8 @@ export async function GET(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
+  if (!isSeoFeatureEnabledFromEnv("audit")) return seoFeatureDisabledResponse("audit");
+
   const latest = await getLatestSeoAudit();
   return NextResponse.json(
     latest
@@ -50,6 +53,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
+
+  if (!isSeoFeatureEnabledFromEnv("audit")) return seoFeatureDisabledResponse("audit");
 
   const limited = await guardAdminMutation(check.uid, "seo.audit_run", {
     limit: 10,
