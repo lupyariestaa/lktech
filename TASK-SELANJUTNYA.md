@@ -298,7 +298,10 @@ Observability & data (fail-safe, opsional).
 - **Panel `/admin/seo`** — rentang 7/28/90 hari, ringkasan klik/impresi/CTR, tabel query &
   halaman teratas. Bila belum dikonfigurasi → **panduan setup** (bukan error).
 - **Menu "SEO"** di grup utama admin (dekat Analitik).
-- **`.env.example`** — `NEXT_PUBLIC_GA_ID`, `GSC_SERVICE_ACCOUNT`, `GSC_SITE_URL`.
+- **`.env.example`** — `NEXT_PUBLIC_GA_ID`, `GSC_SERVICE_ACCOUNT`, `GSC_SITE_URL`, dan (fase D6) `GA4_SERVICE_ACCOUNT`, `GA4_PROPERTY_ID`, `GA4_CONVERSION_EVENTS`.
+- **Panel GA4 (fase D6)** — `src/lib/ga4.ts` (GA4 Data API read-only, kredensial terpisah) + endpoint
+  **`/api/admin/seo/ga4`** + panel di `/admin/seo`. Sumber terpisah dari GSC; maks 3 event konversi;
+  hanya agregat tanpa PII. Test `test:ga4` (**14**).
 - **Test** `test:search-console` (**9**).
 
 **Verifikasi:** GA4 tak render tanpa env (fail-safe); `/admin/seo` & `/api/admin/seo` terdaftar.

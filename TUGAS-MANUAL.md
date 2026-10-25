@@ -97,6 +97,7 @@ Pilih sesuai kebutuhan. Isi → Vercel → **Redeploy**.
 
 - [x] `NEXT_PUBLIC_GA_ID` — GA4 seluruh situs (`G-XXXXXXX`). ✅ Terpasang (2026-10-15) — `G-HQDT6937K4` live di homepage.
 - [ ] `GSC_SERVICE_ACCOUNT` (JSON service account 1 baris) + `GSC_SITE_URL` — panel `/admin/seo`. ⏭️ Ditunda (butuh Google Cloud, menunggu kartu verifikasi).
+- [ ] `GA4_SERVICE_ACCOUNT` (JSON service account 1 baris) + `GA4_PROPERTY_ID` (ID numerik) — panel GA4 di `/admin/seo`. Opsional: `GA4_CONVERSION_EVENTS` (maks 3 nama event, dipisah koma). ⏭️ Kredensial terpisah dari GSC; butuh akses Viewer pada properti GA4.
 - [x] `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` - rate-limit lintas-instance (memperkuat anti-enumeration kupon KP-M4). ✅ Terpasang (2026-10-15).
 - [ ] `BROADCAST_DAILY_QUOTA` - batas email broadcast per hari (zona Asia/Jakarta). Kosong/0 = nonaktif; bila diisi, pengiriman ditolak saat melewati batas dan Sentry menerima alarm di 80%.
 - [ ] `WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` - notifikasi WhatsApp (Meta Business).
