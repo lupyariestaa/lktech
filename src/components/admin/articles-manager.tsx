@@ -38,6 +38,12 @@ import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import { useUnsavedChanges } from "@/components/admin/use-unsaved-changes";
 import type { CloudinaryAsset } from "@/lib/cloudinary-client";
 import { cn } from "@/lib/utils";
+import {
+  OgPreview,
+  SeoChecklistPanel,
+  SeoSnippetPreview,
+} from "@/components/admin/seo-preview";
+import { buildSeoChecklist, countInternalLinks, SNIPPET_GUIDE } from "@/lib/seo-workflow-pure";
 
 const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
@@ -270,6 +276,10 @@ export function ArticlesManager() {
           onCancel={() => setEditing(null)}
           error={error}
           originalSlug={originalSlug}
+          otherTitles={items
+            .filter((a) => a.slug !== originalSlug)
+            .map((a) => a.metaTitle?.trim() || a.title)}
+          otherSlugs={items.filter((a) => a.slug !== originalSlug).map((a) => a.slug)}
         />
       </div>
     );
@@ -336,6 +346,8 @@ function ArticleForm({
   onCancel,
   error,
   originalSlug,
+  otherTitles,
+  otherSlugs,
 }: {
   article: Article;
   isNew: boolean;
@@ -345,9 +357,37 @@ function ArticleForm({
   onCancel: () => void;
   error: string | null;
   originalSlug: string;
+  /** Judul/meta konten lain (untuk deteksi judul serupa). */
+  otherTitles: string[];
+  /** Slug konten lain (untuk deteksi slug duplikat). */
+  otherSlugs: string[];
 }) {
   const set = <K extends keyof Article>(key: K, value: Article[K]) =>
     onChange({ ...article, [key]: value });
+
+  const normalize = (v: string) => v.trim().toLowerCase();
+  const effectiveTitle = (article.metaTitle?.trim() || article.title.trim());
+  const titleDuplicate =
+    effectiveTitle.length > 0 &&
+    otherTitles.some((t) => normalize(t) === normalize(effectiveTitle));
+  const slugDuplicate =
+    article.slug.trim().length > 0 && otherSlugs.some((s) => normalize(s) === normalize(article.slug));
+  const checklist = buildSeoChecklist({
+    kind: "article",
+    title: article.title,
+    metaTitle: article.metaTitle,
+    excerpt: article.excerpt,
+    metaDescription: article.metaDescription,
+    slug: article.slug,
+    internalLinkCount: countInternalLinks(article.body),
+    imageUrl: article.coverImage,
+    imageAlt: article.coverAlt,
+    titleDuplicate,
+    slugDuplicate,
+    canonicalPath: article.slug.trim() ? `/blog/${article.slug.trim()}` : "",
+    indexable: article.status !== "draft",
+    hasStructuredData: true,
+  });
 
   // Konfirmasi saat menutup form (mencegah kehilangan ketikan).
   const { guard, dialogProps } = useUnsavedChanges(true);
@@ -507,7 +547,7 @@ function ArticleForm({
               placeholder="Kosong = pakai judul artikel"
               className={fieldBase}
             />
-            <CharHint value={article.metaTitle ?? ""} min={30} max={60} />
+            <CharHint value={article.metaTitle ?? ""} min={SNIPPET_GUIDE.title.min} max={SNIPPET_GUIDE.title.max} />
           </Field>
           <Field label="Deskripsi SEO (opsional)">
             <textarea
@@ -517,9 +557,30 @@ function ArticleForm({
               placeholder="Kosong = pakai ringkasan"
               className={cn(fieldBase, "resize-none")}
             />
-            <CharHint value={article.metaDescription ?? ""} min={70} max={160} />
+            <CharHint
+              value={article.metaDescription ?? ""}
+              min={SNIPPET_GUIDE.description.min}
+              max={SNIPPET_GUIDE.description.max}
+            />
           </Field>
         </div>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <SeoSnippetPreview
+            title={article.metaTitle ?? ""}
+            description={article.metaDescription ?? ""}
+            titleFallback={article.title}
+            descriptionFallback={article.excerpt}
+            path={`/blog/${article.slug.trim() || "..."}`}
+          />
+          <OgPreview
+            title={article.metaTitle?.trim() || article.title}
+            description={article.metaDescription?.trim() || article.excerpt}
+            image={article.coverImage}
+          />
+        </div>
+
+        <SeoChecklistPanel items={checklist} />
 
         <Field label="Jadwal terbit (WIB, opsional)">
           <input

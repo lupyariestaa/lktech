@@ -7,6 +7,8 @@ import { useToast } from "@/components/admin/toast";
 import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/settings-types";
 import { validateUrl } from "@/lib/settings-form-pure";
+import { SNIPPET_GUIDE, validateOgImageUrl } from "@/lib/seo-workflow-pure";
+import { OgPreview, SeoSnippetPreview } from "@/components/admin/seo-preview";
 import {
   fieldClass as field,
   fieldErrorClass as fieldError,
@@ -54,6 +56,7 @@ export function SettingsSeo() {
   };
 
   const ogError = useMemo(() => validateUrl(seo.ogImage ?? "", "URL gambar OG"), [seo.ogImage]);
+  const ogCheck = useMemo(() => validateOgImageUrl(seo.ogImage ?? ""), [seo.ogImage]);
 
   const onSave = async () => {
     if (ogError) {
@@ -96,7 +99,10 @@ export function SettingsSeo() {
           <Search className="h-4 w-4" /> Meta Default & Open Graph
         </h2>
         <p className="mt-1 text-xs text-muted">
-          Dipakai bila halaman tidak menetapkan meta sendiri. Judul ≤60, deskripsi ≤160.
+          Dipakai bila halaman tidak menetapkan meta sendiri. Rekomendasi tampilan: judul{" "}
+          {SNIPPET_GUIDE.title.min}–{SNIPPET_GUIDE.title.max}, deskripsi{" "}
+          {SNIPPET_GUIDE.description.min}–{SNIPPET_GUIDE.description.max} karakter — ini panduan, bukan
+          batas penyimpanan (batas per kolom ada di bawah input).
         </p>
         <div className="mt-4 grid gap-4">
           <label className="flex flex-col gap-1.5">
@@ -108,7 +114,7 @@ export function SettingsSeo() {
               className={field}
               placeholder="LKTech — Jasa Pembuatan Website, Aplikasi & Produk Digital"
             />
-            <span className="text-[11px] text-muted">{(seo.title ?? "").length}/160</span>
+            <span className="text-[11px] text-muted">{(seo.title ?? "").length}/160 karakter tersimpan</span>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-secondary">Meta Description (default)</span>
@@ -120,21 +126,27 @@ export function SettingsSeo() {
               className={`${field} resize-none`}
               placeholder="Deskripsi singkat situs…"
             />
-            <span className="text-[11px] text-muted">{(seo.description ?? "").length}/320</span>
+            <span className="text-[11px] text-muted">{(seo.description ?? "").length}/320 karakter tersimpan</span>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-secondary">URL Gambar OG (default)</span>
             <input
               value={seo.ogImage ?? ""}
               onChange={(e) => updateSeo({ ogImage: e.target.value })}
+              maxLength={500}
               className={`${field} ${ogError ? fieldError : ""}`}
               placeholder="https://…/og-image.png"
               aria-invalid={Boolean(ogError)}
-              aria-describedby={ogError ? "og-error" : undefined}
+              aria-describedby={ogError ? "og-error" : "og-hint"}
             />
-            {ogError && (
+            {ogError ? (
               <span id="og-error" role="alert" className="text-xs text-rose-600">
                 {ogError}
+              </span>
+            ) : (
+              <span id="og-hint" className="text-[11px] text-muted">
+                Maks 500 karakter. Dimensi gambar tidak diperiksa otomatis (perlu memuat gambar).
+                {ogCheck.status === "warn" && ogCheck.reason ? ` ${ogCheck.reason}` : ""}
               </span>
             )}
           </label>
@@ -143,13 +155,29 @@ export function SettingsSeo() {
             <input
               value={seo.searchConsoleId ?? ""}
               onChange={(e) => updateSeo({ searchConsoleId: e.target.value })}
+              maxLength={120}
               className={field}
               placeholder="nilai konten meta google-site-verification"
             />
             <span className="text-[11px] text-muted">
-              Ditempel ke <code>&lt;meta name=&quot;google-site-verification&quot;&gt;</code>.
+              Ditempel ke <code>&lt;meta name=&quot;google-site-verification&quot;&gt;</code>. Maks 120 karakter.
             </span>
           </label>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <SeoSnippetPreview
+            title={seo.title ?? ""}
+            description={seo.description ?? ""}
+            titleFallback={settings.brandName ?? "LKTech"}
+            descriptionFallback={settings.tagline ?? ""}
+            path="/"
+          />
+          <OgPreview
+            title={seo.title?.trim() || settings.brandName || "LKTech"}
+            description={seo.description?.trim() || settings.tagline || ""}
+            image={seo.ogImage}
+          />
         </div>
       </section>
 
