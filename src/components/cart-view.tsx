@@ -242,7 +242,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
       setAppliedCoupon(null);
       setCouponNotice(null);
 
-      // INSTAN + invoice tersedia → arahkan ke halaman pembayaran online.
+      // Produk online berbayar (digital/cetak) → arahkan ke invoice Mayar.
       if (order.payUrl) {
         // FASE P6: ukur pembayaran yang dimulai (sebelum redirect ke gateway).
         trackPaymentInitiated({

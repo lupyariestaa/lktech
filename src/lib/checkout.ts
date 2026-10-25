@@ -1,6 +1,6 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { createOrder, updateOrderPayment } from "@/lib/orders";
+import { createOrder, deleteOrder, updateOrderPayment } from "@/lib/orders";
 import { getProductsBySlugs } from "@/lib/products";
 import { evaluatePurchase } from "@/lib/product-format";
 import { getSiteSettings } from "@/lib/settings";
@@ -231,6 +231,14 @@ export async function performCheckout(
   );
 
   const fulfillment: FulfillmentType = fulfillmentTypeForCategories(categories);
+  if (fulfillment === "cetak" && (!isMayarConfigured() || total <= 0)) {
+    if (couponId) await restoreCouponUsage(couponId, actor.uid);
+    return fail(503, {
+      error: total <= 0
+        ? "Total pesanan cetak harus lebih dari Rp0 agar bisa dibayar melalui Mayar."
+        : "Pembayaran Mayar belum tersedia. Pesanan cetak belum dibuat; coba lagi nanti.",
+    });
+  }
   const initialStatus = fulfillment === "jasa" ? "menunggu_konfirmasi" : "menunggu_bayar";
 
   let order;
@@ -254,7 +262,7 @@ export async function performCheckout(
     throw orderErr;
   }
 
-  // ===== INSTAN: buat invoice Mayar (best-effort) =====
+  // ===== Produk digital/cetak: buat invoice Mayar =====
   let payUrl: string | null = null;
   let paymentWarning: string | null = null;
   if (fulfillment === "instan" || fulfillment === "cetak") {
@@ -294,6 +302,14 @@ export async function performCheckout(
         order = { ...order, payment };
       } catch (payErr) {
         console.error("[checkout] gagal membuat invoice Mayar:", payErr);
+        if (fulfillment === "cetak") {
+          const deleted = await deleteOrder(order.id, ["menunggu_bayar"]);
+          if (!deleted.ok) {
+            console.error("[checkout] gagal membersihkan order cetak tanpa invoice:", order.id, deleted);
+            return fail(503, { error: `Invoice Mayar gagal dibuat. Hubungi admin dengan kode pesanan ${order.id} sebelum mencoba lagi.` });
+          }
+          return fail(503, { error: "Invoice Mayar gagal dibuat. Pesanan belum dilanjutkan; coba lagi nanti." });
+        }
         paymentWarning =
           "Link pembayaran otomatis sedang tidak tersedia. Kami arahkan ke WhatsApp untuk menyelesaikan pembayaran.";
       }
