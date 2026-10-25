@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Search, TrendingUp } from "lucide-react";
 import { fetchSeoReport, type GscRow, type SearchConsoleReport } from "@/lib/admin-settings-api";
 import { cn } from "@/lib/utils";
@@ -26,33 +26,42 @@ export function SeoDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(28);
+  const requestId = useRef(0);
 
   const load = useCallback(async (d: number) => {
+    const id = ++requestId.current;
     setLoading(true);
     setError(null);
     try {
-      setReport(await fetchSeoReport(d));
+      const next = await fetchSeoReport(d);
+      if (id === requestId.current) setReport(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data.");
+      if (id === requestId.current) {
+        setError(err instanceof Error ? err.message : "Gagal memuat data.");
+      }
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     let active = true;
+    const id = ++requestId.current;
     (async () => {
       try {
         const data = await fetchSeoReport(28);
-        if (active) setReport(data);
+        if (active && id === requestId.current) setReport(data);
       } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : "Gagal memuat data.");
+        if (active && id === requestId.current) {
+          setError(err instanceof Error ? err.message : "Gagal memuat data.");
+        }
       } finally {
-        if (active) setLoading(false);
+        if (active && id === requestId.current) setLoading(false);
       }
     })();
     return () => {
       active = false;
+      requestId.current += 1;
     };
   }, []);
 
@@ -61,8 +70,7 @@ export function SeoDashboard() {
     void load(d);
   };
 
-  const totalClicks = (report?.topQueries ?? []).reduce((n, r) => n + r.clicks, 0);
-  const totalImpressions = (report?.topQueries ?? []).reduce((n, r) => n + r.impressions, 0);
+  const summary = report?.summary;
 
   return (
     <div className="flex flex-col gap-5">
@@ -105,7 +113,12 @@ export function SeoDashboard() {
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{error}</span>
         </div>
-      ) : !report?.configured ? (
+      ) : !report ? (
+        <div className="flex items-center gap-3 text-muted">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <span className="text-sm">Memuat data Search Console…</span>
+        </div>
+      ) : report.status === "not_configured" ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
           <p className="flex items-center gap-2 font-semibold">
             <AlertTriangle className="h-4 w-4" aria-hidden="true" />
@@ -120,19 +133,30 @@ export function SeoDashboard() {
           </ul>
           <p className="mt-2 text-xs">
             Beri akses service account sebagai <em>pengguna</em> di properti Search Console.
-            Lihat <code>docs/2026-10-06-setup-pembayaran-mayar.md</code> pola env.
+            Atur service account read-only dan properti GSC pada environment server.
           </p>
         </div>
       ) : (
         <>
           {/* Ringkasan */}
+          {(report.status === "error" || report.status === "partial") && (
+            <ReportNotice
+              status={report.status}
+              code={report.errorCode}
+            />
+          )}
+          {report.status === "no_data" && (
+            <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Search Console berhasil dihubungi, tetapi belum mengembalikan data untuk rentang ini.
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Metric label="Klik" value={fmt(totalClicks)} tone="emerald" />
-            <Metric label="Impresi" value={fmt(totalImpressions)} />
-            <Metric label="CTR" value={totalImpressions > 0 ? pct(totalClicks / totalImpressions) : "—"} />
+            <Metric label="Klik" value={summary ? fmt(summary.clicks) : "—"} tone="emerald" />
+            <Metric label="Impresi" value={summary ? fmt(summary.impressions) : "—"} />
+            <Metric label="CTR" value={summary ? pct(summary.ctr) : "—"} />
             <Metric
-              label="Halaman teratas"
-              value={String(report.topPages.length)}
+              label="Posisi rata-rata"
+              value={summary ? summary.averagePosition.toFixed(1) : "—"}
             />
           </div>
 
@@ -141,22 +165,49 @@ export function SeoDashboard() {
               title="Query teratas"
               icon={<Search className="h-4 w-4" aria-hidden="true" />}
               rows={report.topQueries}
-              emptyHint="Belum ada data query pada rentang ini."
+              emptyHint={report.unavailableSections?.includes("queries")
+                ? "Data query gagal dimuat; coba muat ulang."
+                : "Belum ada data query pada rentang ini."}
             />
             <RowTable
               title="Halaman teratas"
               icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
               rows={report.topPages}
-              emptyHint="Belum ada data halaman pada rentang ini."
+              emptyHint={report.unavailableSections?.includes("pages")
+                ? "Data halaman gagal dimuat; coba muat ulang."
+                : "Belum ada data halaman pada rentang ini."}
               isUrl
             />
           </div>
           <p className="text-[11px] text-muted">
-            Data {report.range.startDate} → {report.range.endDate}. Search Console punya
-            jeda 2–3 hari; angka terbaru mungkin belum lengkap.
+            Data {report.range.startDate} → {report.range.endDate}. Diambil {new Date(report.fetchedAt).toLocaleString("id-ID")}. Search Console dapat memiliki jeda beberapa hari.
           </p>
         </>
       )}
+    </div>
+  );
+}
+
+function ReportNotice({
+  status,
+  code,
+}: {
+  status: "error" | "partial";
+  code?: string;
+}) {
+  const message = status === "partial"
+    ? "Sebagian laporan gagal dimuat. Angka atau tabel yang tersedia ditandai; muat ulang nanti."
+    : "Laporan Search Console gagal dimuat. Periksa akses service account, properti, API, lalu coba lagi.";
+  return (
+    <div
+      role="status"
+      className={cn(
+        "rounded-2xl border px-4 py-3 text-sm",
+        "border-rose-200 bg-rose-50 text-rose-700",
+      )}
+    >
+      <p>{message}</p>
+      {code && <p className="mt-1 text-xs opacity-80">Kode: {code}</p>}
     </div>
   );
 }

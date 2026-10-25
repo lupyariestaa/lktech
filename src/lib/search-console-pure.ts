@@ -20,6 +20,16 @@ export type GscRow = {
   position: number;
 };
 
+/** Safe status codes surfaced to the admin dashboard (never provider payloads). */
+export type GscErrorCode =
+  | "invalid_credentials"
+  | "permission_denied"
+  | "quota_limited"
+  | "provider_unavailable"
+  | "request_timeout"
+  | "invalid_response"
+  | "request_failed";
+
 export type GscQueryResult = {
   rows: GscRow[];
   /** Rentang tanggal yang dipakai (yyyy-mm-dd). */
@@ -50,16 +60,28 @@ export function parseServiceAccount(raw: string | undefined | null): ServiceAcco
   }
 }
 
-/** Rentang tanggal ISO (yyyy-mm-dd) untuk N hari terakhir, dari `now`. */
+/** Rentang N hari untuk GSC; mengecualikan 3 hari terakhir yang rawan belum matang. */
 export function dateRange(days: number, now: Date): { startDate: string; endDate: string } {
   const safeDays = Math.min(Math.max(Math.floor(days) || 28, 1), 180);
   const end = new Date(now);
   const start = new Date(now);
-  // -1 hari karena GSC sering belum punya data hari ini (lag).
-  end.setUTCDate(end.getUTCDate() - 1);
-  start.setUTCDate(start.getUTCDate() - safeDays);
+  // -3 hari: GSC performance data lazim tertunda 2–3 hari.
+  end.setUTCDate(end.getUTCDate() - 3);
+  start.setTime(end.getTime());
+  start.setUTCDate(start.getUTCDate() - (safeDays - 1));
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   return { startDate: fmt(start), endDate: fmt(end) };
+}
+
+export function reportStatus(input: {
+  configured: boolean;
+  failureCount: number;
+  hasData: boolean;
+}): "not_configured" | "connected" | "no_data" | "partial" | "error" {
+  if (!input.configured) return "not_configured";
+  if (input.failureCount >= 3) return "error";
+  if (input.failureCount > 0) return "partial";
+  return input.hasData ? "connected" : "no_data";
 }
 
 /** Body permintaan `searchanalytics.query` (top queries/pages). */
@@ -79,7 +101,8 @@ export function buildQueryBody(options: {
 
 /** Normalisasi respons GSC mentah → `GscRow[]` (buang baris kosong). */
 export function normalizeGscRows(raw: unknown): GscRow[] {
-  const rows = (raw as { rows?: unknown })?.rows;
+  if (!raw || typeof raw !== "object") return [];
+  const rows = (raw as { rows?: unknown }).rows;
   if (!Array.isArray(rows)) return [];
   return rows
     .map((r) => {
@@ -93,6 +116,53 @@ export function normalizeGscRows(raw: unknown): GscRow[] {
       };
     })
     .filter((r) => r.keys!.length > 0 || r.impressions > 0);
+}
+
+/** True for a well-formed Search Analytics response, including omitted rows. */
+export function isValidGscResponse(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const rows = (raw as { rows?: unknown }).rows;
+  if (rows === undefined) return true;
+  if (!Array.isArray(rows)) return false;
+  return rows.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const row = item as Record<string, unknown>;
+    return [row.clicks, row.impressions, row.ctr, row.position].every(
+      (value) => value !== undefined && Number.isFinite(Number(value)),
+    ) && (row.keys === undefined || (Array.isArray(row.keys) && row.keys.every((key) => typeof key === "string")));
+  });
+}
+
+/** Normalize a single aggregate Search Analytics response row. */
+export function normalizeGscSummary(raw: unknown): {
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  averagePosition: number;
+} | null {
+  if (!raw || typeof raw !== "object") return null;
+  const rows = (raw as { rows?: unknown }).rows;
+  if (rows === undefined) {
+    return { clicks: 0, impressions: 0, ctr: 0, averagePosition: 0 };
+  }
+  if (!Array.isArray(rows)) return null;
+  const row = rows[0] as Record<string, unknown> | undefined;
+  if (!row) return { clicks: 0, impressions: 0, ctr: 0, averagePosition: 0 };
+  const clicks = Number(row.clicks);
+  const impressions = Number(row.impressions);
+  const ctr = Number(row.ctr);
+  const averagePosition = Number(row.position);
+  if (![clicks, impressions, ctr, averagePosition].every(Number.isFinite)) return null;
+  return { clicks, impressions, ctr, averagePosition };
+}
+
+/** Map provider status to a safe, stable error code; do not expose response text. */
+export function gscErrorCode(status: number): GscErrorCode {
+  if (status === 400 || status === 401) return "invalid_credentials";
+  if (status === 403) return "permission_denied";
+  if (status === 429) return "quota_limited";
+  if (status >= 500) return "provider_unavailable";
+  return "request_failed";
 }
 
 /** Ringkas total dari daftar baris (klik/impresi/CTR rata-rata/posisi rata-rata). */

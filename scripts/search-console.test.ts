@@ -5,6 +5,10 @@ import {
   dateRange,
   buildQueryBody,
   normalizeGscRows,
+  normalizeGscSummary,
+  isValidGscResponse,
+  gscErrorCode,
+  reportStatus,
   summarizeGsc,
 } from "../src/lib/search-console-pure.ts";
 
@@ -31,18 +35,17 @@ test("parseServiceAccount: kosong / invalid / field kurang", () => {
   assert.equal(parseServiceAccount(JSON.stringify({ client_email: "x" })), null);
 });
 
-test("dateRange: N hari, end = kemarin (lag GSC)", () => {
+test("dateRange: N hari, end mengecualikan jeda 3 hari GSC", () => {
   const r = dateRange(28, new Date("2026-10-12T10:00:00Z"));
-  assert.equal(r.endDate, "2026-10-11");
-  // end = kemarin; start = kemarin - 28 hari.
-  assert.equal(r.startDate, "2026-09-14");
+  assert.equal(r.endDate, "2026-10-09");
+  assert.equal(r.startDate, "2026-09-12");
 });
 
 test("dateRange: clamp rentang", () => {
   const r = dateRange(9999, new Date("2026-10-12T00:00:00Z"));
-  // clamp max 180 hari → start = kemarin - 180
-  assert.equal(r.endDate, "2026-10-11");
-  assert.equal(r.startDate, "2026-04-15");
+  // clamp max 180 hari, dengan jeda akhir tiga hari.
+  assert.equal(r.endDate, "2026-10-09");
+  assert.equal(r.startDate, "2026-04-13");
 });
 
 test("buildQueryBody: rowLimit clamp & dimensi", () => {
@@ -68,6 +71,42 @@ test("normalizeGscRows: parsing & buang kosong", () => {
 test("normalizeGscRows: bukan objek rows → []", () => {
   assert.deepEqual(normalizeGscRows(null), []);
   assert.deepEqual(normalizeGscRows({}), []);
+});
+
+test("isValidGscResponse distingue una respuesta vacía válida de una respuesta malformada", () => {
+  assert.equal(isValidGscResponse({}), true);
+  assert.equal(isValidGscResponse({ rows: [] }), true);
+  assert.equal(isValidGscResponse({ rows: "bad" }), false);
+  assert.equal(isValidGscResponse(null), false);
+});
+
+test("normalizeGscSummary toma la fila agregada y acepta respuesta vacía", () => {
+  assert.deepEqual(
+    normalizeGscSummary({ rows: [{ clicks: 12, impressions: 240, ctr: 0.05, position: 7.2 }] }),
+    { clicks: 12, impressions: 240, ctr: 0.05, averagePosition: 7.2 },
+  );
+  assert.deepEqual(normalizeGscSummary({}), {
+    clicks: 0,
+    impressions: 0,
+    ctr: 0,
+    averagePosition: 0,
+  });
+  assert.equal(normalizeGscSummary({ rows: "bad" }), null);
+});
+
+test("gscErrorCode maps upstream status without exposing provider details", () => {
+  assert.equal(gscErrorCode(401), "invalid_credentials");
+  assert.equal(gscErrorCode(403), "permission_denied");
+  assert.equal(gscErrorCode(429), "quota_limited");
+  assert.equal(gscErrorCode(503), "provider_unavailable");
+});
+
+test("reportStatus membedakan not configured, no data, partial, dan error", () => {
+  assert.equal(reportStatus({ configured: false, failureCount: 0, hasData: false }), "not_configured");
+  assert.equal(reportStatus({ configured: true, failureCount: 0, hasData: false }), "no_data");
+  assert.equal(reportStatus({ configured: true, failureCount: 1, hasData: true }), "partial");
+  assert.equal(reportStatus({ configured: true, failureCount: 3, hasData: false }), "error");
+  assert.equal(reportStatus({ configured: true, failureCount: 0, hasData: true }), "connected");
 });
 
 test("summarizeGsc: total & CTR & posisi berbobot impresi", () => {

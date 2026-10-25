@@ -103,8 +103,19 @@ export type GscRow = {
 };
 
 export type SearchConsoleReport = {
-  configured: boolean;
+  status: "not_configured" | "connected" | "no_data" | "partial" | "error";
+  errorCode?:
+    | "invalid_credentials"
+    | "permission_denied"
+    | "quota_limited"
+    | "provider_unavailable"
+    | "request_timeout"
+    | "invalid_response"
+    | "request_failed";
   range: { startDate: string; endDate: string };
+  fetchedAt: string;
+  summary?: { clicks: number; impressions: number; ctr: number; averagePosition: number };
+  unavailableSections?: Array<"summary" | "queries" | "pages">;
   topQueries: GscRow[];
   topPages: GscRow[];
 };
