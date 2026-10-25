@@ -98,6 +98,7 @@ export async function POST(req: Request) {
     featured: Boolean(body.featured),
     active: body.active === undefined ? true : Boolean(body.active),
     waMessage: body.waMessage?.trim() || undefined,
+    printConfig: body.printConfig,
     process: Array.isArray(body.process)
       ? body.process
           .filter((s) => s && (s.title || s.description))
@@ -144,6 +145,7 @@ export async function POST(req: Request) {
             limits: Array.isArray(v.limits) ? v.limits.filter(Boolean) : [],
             delivery: v.delivery?.trim() || undefined,
             waMessage: v.waMessage?.trim() || undefined,
+            printPricing: v.printPricing,
           }))
       : [],
     downloadable: (() => {

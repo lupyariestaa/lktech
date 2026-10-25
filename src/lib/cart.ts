@@ -1,4 +1,4 @@
-import type { Product, ProductVariant } from "@/lib/product-types";
+import type { Product, ProductVariant, PrintPricing } from "@/lib/product-types";
 import type { OrderItem } from "@/lib/order-types";
 import { formatPrice } from "@/lib/product-format";
 
@@ -21,14 +21,24 @@ export type CartItem = {
   variantSlug?: string;
   /** Nama varian terpilih (kosong untuk produk tunggal). */
   variantName?: string;
+  /** Pilihan cetak pelanggan; juga menjadi bagian kunci item cart. */
+  printOptions?: {
+    widthM?: number;
+    heightM?: number;
+    finishingIds: string[];
+  };
+  printPricing?: PrintPricing;
 };
 
 /**
  * Kunci unik sebuah item keranjang (produk + varian). Dipakai agar varian
  * berbeda tidak saling menimpa di keranjang.
  */
-export function cartItemKey(item: Pick<CartItem, "slug" | "variantSlug">): string {
-  return item.variantSlug ? `${item.slug}::${item.variantSlug}` : item.slug;
+export function cartItemKey(item: Pick<CartItem, "slug" | "variantSlug" | "printOptions">): string {
+  const base = item.variantSlug ? `${item.slug}::${item.variantSlug}` : item.slug;
+  return item.printOptions
+    ? `${base}::${item.printOptions.widthM ?? ""}x${item.printOptions.heightM ?? ""}::${[...item.printOptions.finishingIds].sort().join(",")}`
+    : base;
 }
 
 /**
@@ -58,6 +68,26 @@ export function toCartItem(
     price: product.price,
     cover: product.cover,
     qty,
+  };
+}
+
+export function toPrintCartItem(
+  product: Product,
+  variant: ProductVariant,
+  options: NonNullable<CartItem["printOptions"]>,
+  price: number,
+  qty = 1,
+): CartItem {
+  return {
+    slug: product.slug,
+    name: `${product.name} — ${variant.name}`,
+    price,
+    cover: product.cover,
+    qty,
+    variantSlug: variant.slug,
+    variantName: variant.name,
+    printOptions: { ...options, finishingIds: [...options.finishingIds].sort() },
+    printPricing: variant.printPricing,
   };
 }
 
@@ -160,6 +190,8 @@ export function buildCheckoutMessage(
     subtotal: it.price * it.qty,
     variantSlug: it.variantSlug,
     variantName: it.variantName,
+    printOptions: it.printOptions,
+    printPricing: it.printPricing,
   }));
   return buildOrderMessage(orderItems, buyer);
 }

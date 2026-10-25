@@ -6,6 +6,7 @@ import {
 } from "@/lib/payment-types";
 import { coerceISODate } from "@/lib/order-time-pure";
 import { ORDER_STATUS_LIST } from "@/lib/order-status-pure";
+import type { PrintPricing } from "@/lib/product-types";
 
 // Re-export agar konsumen order cukup impor dari satu tempat.
 export type { FulfillmentType, OrderPayment };
@@ -72,6 +73,12 @@ export type OrderItem = {
   variantSlug?: string;
   /** Nama varian terpilih (kosong untuk produk tunggal). */
   variantName?: string;
+  printOptions?: {
+    widthM?: number;
+    heightM?: number;
+    finishingIds: string[];
+  };
+  printPricing?: PrintPricing;
 };
 
 /** Kupon yang tercatat pada sebuah order (snapshot saat checkout). */
@@ -118,7 +125,7 @@ uid: string;
     expected?: number;
     atISO?: string;
   };
-  /** Jalur fulfillment: "instan" (unduh) atau "jasa" (konsultasi). */
+  /** Jalur fulfillment: unduh, jasa, atau pickup cetak. */
   fulfillment?: FulfillmentType;
   /**
    * ID token unduhan (`downloads/{tokenId}`) yang dibuat setelah pembayaran
@@ -182,6 +189,9 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
     .map((it) => {
       const price = num(it.price);
       const qty = Math.max(1, Math.floor(num(it.qty)));
+      const rawPrintOptions = it.printOptions && typeof it.printOptions === "object"
+        ? it.printOptions as Record<string, unknown>
+        : null;
       return {
         slug: str(it.slug),
         name: str(it.name),
@@ -189,6 +199,17 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
         qty,
         subtotal: num(it.subtotal) || price * qty,
         variantSlug: str(it.variantSlug) || undefined,
+        printOptions:
+          rawPrintOptions
+            ? {
+                widthM: num(rawPrintOptions.widthM) || undefined,
+                heightM: num(rawPrintOptions.heightM) || undefined,
+                finishingIds: Array.isArray(rawPrintOptions.finishingIds)
+                  ? rawPrintOptions.finishingIds.filter((id): id is string => typeof id === "string")
+                  : [],
+              }
+            : undefined,
+        printPricing: normalizePrintPricing(it.printPricing),
         variantName: str(it.variantName) || undefined,
       };
     });
@@ -207,7 +228,7 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
 
   const payment = normalizeOrderPayment(data.payment);
   const fulfillment =
-    data.fulfillment === "instan" || data.fulfillment === "jasa"
+    data.fulfillment === "instan" || data.fulfillment === "jasa" || data.fulfillment === "cetak"
       ? (data.fulfillment as FulfillmentType)
       : undefined;
 
@@ -277,6 +298,22 @@ status,
   };
 }
 
+function normalizePrintPricing(value: unknown): PrintPricing | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const data = value as Record<string, unknown>;
+  if (data.method === "area" && Number.isFinite(Number(data.ratePerM2)) && Number(data.ratePerM2) > 0) {
+    return { method: "area", ratePerM2: Number(data.ratePerM2) };
+  }
+  if (data.method === "sheet" && Number.isFinite(Number(data.pricePerSheet)) && Number(data.pricePerSheet) > 0) {
+    return {
+      method: "sheet",
+      pricePerSheet: Number(data.pricePerSheet),
+      description: typeof data.description === "string" ? data.description : undefined,
+    };
+  }
+  return undefined;
+}
+
 // Logika kedaluwarsa dipindah ke modul murni (bebas impor runtime) agar dapat
 // diuji Node tanpa resolver alias — lihat `@/lib/order-expiry-pure`.
 export { isOrderExpired, DEFAULT_EXPIRY_TTL_MS } from "@/lib/order-expiry-pure";
@@ -292,4 +329,3 @@ export {
   shouldRestoreCoupon,
   shouldSendStatusEmail,
 } from "@/lib/order-status-pure";
-

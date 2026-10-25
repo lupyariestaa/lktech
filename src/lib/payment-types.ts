@@ -69,7 +69,7 @@ export type OrderPayment = {
 };
 
 /** Jenis fulfillment order: INSTAN (unduh) atau JASA (konsultasi). */
-export type FulfillmentType = "instan" | "jasa";
+export type FulfillmentType = "instan" | "jasa" | "cetak";
 
 /**
  * Hasil pembuatan invoice Mayar (dikembalikan `createInvoice`).

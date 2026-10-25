@@ -219,6 +219,10 @@ export const productVariantSchema = z.object({
   limits: z.array(z.string().trim().max(300)).max(30).optional(),
   delivery: z.string().trim().max(120).optional(),
   waMessage: z.string().trim().max(1000).optional(),
+  printPricing: z.discriminatedUnion("method", [
+    z.object({ method: z.literal("area"), ratePerM2: z.number().finite().min(0).max(1_000_000_000) }),
+    z.object({ method: z.literal("sheet"), pricePerSheet: z.number().finite().min(0).max(1_000_000_000), description: z.string().trim().max(300).optional() }),
+  ]).optional(),
 });
 
 export const productSchema = z.object({
@@ -267,6 +271,15 @@ export const productSchema = z.object({
   relatedSlugs: z.array(z.string().trim().max(200)).max(12).optional(),
   reviewsEnabled: z.boolean().optional(),
   waMessage: z.string().trim().max(1000).optional(),
+  printConfig: z.object({
+    minWidthM: z.number().finite().min(0).max(100),
+    minHeightM: z.number().finite().min(0).max(100),
+    maxWidthM: z.number().finite().min(0).max(100),
+    maxHeightM: z.number().finite().min(0).max(100),
+    minPricePerUnit: z.number().finite().min(0).max(1_000_000_000),
+    finishingOptions: z.array(z.object({ id: z.string().trim().min(1).max(100), name: z.string().trim().min(1).max(100) })).max(20),
+    whatsappDesignMessage: z.string().trim().max(1000).optional(),
+  }).optional(),
 });
 
 // ===== Akun user: wishlist & alamat =====
@@ -523,4 +536,3 @@ export const couponUpdateSchema = refineDateRange(
     active?: boolean;
   }>,
 );
-

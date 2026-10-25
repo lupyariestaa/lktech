@@ -10,22 +10,27 @@ import type { FulfillmentType } from "@/lib/payment-types";
  * - **JASA** — kategori `jasa`: layanan manusia → tidak lewat invoice otomatis
  *   (kepatuhan Mayar MoR yang tak mendukung "entirely human services");
  *   order masuk `menunggu_konfirmasi`, admin menghubungi pembeli.
+ * - **CETAK** — kategori percetakan: barang fisik; bayar dulu, produksi setelah
+ *   approval desain, pickup; campuran dengan barang digital tetap memakai jalur digital.
  */
 export function fulfillmentTypeForCategory(
   category: ProductCategory | string,
 ): FulfillmentType {
-  return category === "jasa" ? "jasa" : "instan";
+  if (category === "jasa") return "jasa";
+  if (category === "percetakan") return "cetak";
+  return "instan";
 }
 
 /**
  * Menentukan jalur fulfillment untuk SELURUH isi keranjang/order.
- * Jika ada minimal satu item JASA → seluruh order JASA (jalur aman:
- * konsultasi dulu), karena jasa tak bisa dicampur invoice otomatis.
+ * Jasa mengambil alih order campuran; cetak terpisah dari order digital.
  */
 export function fulfillmentTypeForCategories(
   categories: readonly string[],
 ): FulfillmentType {
-  return categories.some((c) => c === "jasa") ? "jasa" : "instan";
+  if (categories.includes("jasa")) return "jasa";
+  if (categories.length > 0 && categories.every((category) => category === "percetakan")) return "cetak";
+  return "instan";
 }
 
 /**
@@ -38,10 +43,12 @@ export function fulfillmentTypeForCategories(
 export function effectiveFulfillment(
   fulfillment: FulfillmentType | undefined,
 ): FulfillmentType {
-  return fulfillment === "jasa" ? "jasa" : "instan";
+  if (fulfillment === "jasa" || fulfillment === "cetak") return fulfillment;
+  return "instan";
 }
 
 export const FULFILLMENT_LABEL: Record<FulfillmentType, string> = {
   instan: "Produk instan (unduh)",
   jasa: "Jasa (konsultasi/konfirmasi)",
+  cetak: "Produk cetak (pickup)",
 };

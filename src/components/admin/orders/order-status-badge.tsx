@@ -70,18 +70,16 @@ export function FulfillmentChip({
 }) {
   const eff = effectiveFulfillment(fulfillment);
   // F-G21: nama variabel = komponen ikon (bukan "Instan" yang menyesatkan).
-  const Icon = eff === "jasa" ? Truck : Zap;
+  const Icon = eff === "jasa" || eff === "cetak" ? Truck : Zap;
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
-        eff === "jasa"
-          ? "bg-purple-50 text-purple-600"
-          : "bg-sky-50 text-sky-600",
+        eff === "jasa" ? "bg-purple-50 text-purple-600" : eff === "cetak" ? "bg-amber-50 text-amber-700" : "bg-sky-50 text-sky-600",
       )}
     >
       <Icon className="h-3 w-3" />
-      {eff === "jasa" ? "Jasa" : "Instan"}
+      {eff === "jasa" ? "Jasa" : eff === "cetak" ? "Cetak" : "Instan"}
     </span>
   );
 }

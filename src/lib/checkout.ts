@@ -127,6 +127,7 @@ export async function performCheckout(
     const evaluation = evaluatePurchase(product, {
       variantSlug: reqItem.variantSlug,
       qty: reqItem.qty,
+      printOptions: reqItem.printOptions,
     });
     if (!evaluation.ok) {
       return fail(409, {
@@ -147,6 +148,8 @@ export async function performCheckout(
         subtotal: evaluation.price * qty,
         variantSlug: evaluation.variantSlug,
         variantName: evaluation.variantName,
+        ...(evaluation.printOptions ? { printOptions: evaluation.printOptions } : {}),
+        ...(evaluation.printPricing ? { printPricing: evaluation.printPricing } : {}),
       });
     } else {
       items.push({
@@ -228,8 +231,7 @@ export async function performCheckout(
   );
 
   const fulfillment: FulfillmentType = fulfillmentTypeForCategories(categories);
-  const initialStatus =
-    fulfillment === "jasa" ? "menunggu_konfirmasi" : "menunggu_bayar";
+  const initialStatus = fulfillment === "jasa" ? "menunggu_konfirmasi" : "menunggu_bayar";
 
   let order;
   try {
@@ -255,7 +257,7 @@ export async function performCheckout(
   // ===== INSTAN: buat invoice Mayar (best-effort) =====
   let payUrl: string | null = null;
   let paymentWarning: string | null = null;
-  if (fulfillment === "instan") {
+  if (fulfillment === "instan" || fulfillment === "cetak") {
     const payment: OrderPayment = { provider: "mayar", status: "belum_bayar" };
     if (isMayarConfigured() && total > 0) {
       try {

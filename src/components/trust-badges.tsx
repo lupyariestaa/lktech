@@ -21,7 +21,7 @@ export function TrustBadges({
   refundNote,
   className,
 }: {
-  variant?: "instan" | "jasa" | "compact";
+  variant?: "instan" | "jasa" | "cetak" | "compact";
   refundNote?: string;
   className?: string;
 }) {
@@ -31,6 +31,11 @@ export function TrustBadges({
           { icon: BadgeCheck, label: "Dikonfirmasi manual oleh tim ahli" },
           { icon: Lock, label: "Pembayaran setelah kesepakatan" },
         ]
+      : variant === "cetak"
+        ? [
+            { icon: Lock, label: "Pembayaran online setelah checkout" },
+            { icon: BadgeCheck, label: "Pesanan diambil di lokasi" },
+          ]
       : variant === "compact"
         ? [
             { icon: Lock, label: "Pembayaran aman (QRIS/VA/e-wallet)" },

@@ -5,6 +5,11 @@ export const checkoutItemSchema = z.object({
   slug: z.string().trim().min(1).max(200),
   /** Slug varian terpilih (produk multi-varian). Opsional untuk produk tunggal. */
   variantSlug: z.string().trim().min(1).max(200).optional(),
+  printOptions: z.object({
+    widthM: z.number().finite().positive().max(100).optional(),
+    heightM: z.number().finite().positive().max(100).optional(),
+    finishingIds: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
+  }).strict().optional(),
   qty: z.number().int().min(1).max(999),
 });
 

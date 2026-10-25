@@ -202,6 +202,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
         items.map((it) => ({
           slug: it.slug,
           variantSlug: it.variantSlug,
+          printOptions: it.printOptions,
           qty: it.qty,
         })),
         user.displayName ?? "",
@@ -384,6 +385,16 @@ export function CartView({ promoCode }: { promoCode?: string }) {
                 <p className="mt-1 text-sm text-muted">
                   {formatPrice(it.price)}
                 </p>
+                {it.printOptions && (
+                  <p className="mt-1 text-xs text-muted">
+                    {it.printOptions.widthM !== undefined
+                      ? `${it.printOptions.widthM} × ${it.printOptions.heightM} m`
+                      : it.printPricing?.method === "sheet"
+                        ? it.printPricing.description || "Per lembar"
+                        : ""}
+                    {it.printOptions.finishingIds.length > 0 && ` · ${it.printOptions.finishingIds.join(", ")}`}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-4">

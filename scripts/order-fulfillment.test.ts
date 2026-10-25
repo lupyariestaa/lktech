@@ -17,6 +17,10 @@ test("kategori jasa → JASA", () => {
   assert.equal(fulfillmentTypeForCategory("jasa"), "jasa");
 });
 
+test("kategori percetakan → CETAK", () => {
+  assert.equal(fulfillmentTypeForCategory("percetakan"), "cetak");
+});
+
 test("kategori digital → INSTAN", () => {
   for (const c of ["template", "software", "ebook", "aplikasi", "lainnya"]) {
     assert.equal(fulfillmentTypeForCategory(c), "instan");
@@ -36,6 +40,11 @@ test("keranjang semua digital → INSTAN", () => {
     fulfillmentTypeForCategories(["template", "software", "ebook"]),
     "instan",
   );
+});
+
+test("keranjang semua cetak → CETAK; campuran cetak+digi → INSTAN", () => {
+  assert.equal(fulfillmentTypeForCategories(["percetakan", "percetakan"]), "cetak");
+  assert.equal(fulfillmentTypeForCategories(["percetakan", "template"]), "instan");
 });
 
 /* ---- OR-B7: effectiveFulfillment (order lama tanpa field) ---- */

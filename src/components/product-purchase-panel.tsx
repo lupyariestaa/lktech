@@ -115,6 +115,7 @@ export function useBuySelectedVariant(product: Product) {
 
   const run = (buyNow: boolean) => {
     if (!selected || isStockOut(selected) || blocked) return;
+    if (product.category === "percetakan") return;
     if (!requireLogin()) return;
     setBusy(buyNow ? "buy" : "cart");
     add(cardItemForVariant(product, selected, 1));

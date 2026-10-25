@@ -2,6 +2,7 @@ import type {
   Product,
   ProductCategory,
   ProductDownloadable,
+  PrintProductConfig,
   ProductDownloadFile,
   ProductFeature,
   ProductProcessStep,
@@ -202,6 +203,14 @@ function normalizeVariant(raw: unknown): ProductVariant | null {
   if (!slug || !name) return null;
 
   const original = num(d.originalPrice, 0);
+  const pricingRaw = d.printPricing && typeof d.printPricing === "object"
+    ? d.printPricing as Record<string, unknown>
+    : null;
+  const printPricing = pricingRaw?.method === "area"
+    ? { method: "area" as const, ratePerM2: num(pricingRaw.ratePerM2) }
+    : pricingRaw?.method === "sheet"
+      ? { method: "sheet" as const, pricePerSheet: num(pricingRaw.pricePerSheet), description: str(pricingRaw.description) || undefined }
+      : undefined;
   return {
     slug,
     name,
@@ -218,6 +227,25 @@ function normalizeVariant(raw: unknown): ProductVariant | null {
     limits: strArr(d.limits),
     delivery: str(d.delivery) || undefined,
     waMessage: str(d.waMessage) || undefined,
+    printPricing,
+  };
+}
+
+function normalizePrintConfig(raw: unknown): PrintProductConfig | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const d = raw as Record<string, unknown>;
+  return {
+    minWidthM: num(d.minWidthM),
+    minHeightM: num(d.minHeightM),
+    maxWidthM: num(d.maxWidthM),
+    maxHeightM: num(d.maxHeightM),
+    minPricePerUnit: num(d.minPricePerUnit),
+    finishingOptions: Array.isArray(d.finishingOptions)
+      ? d.finishingOptions.filter((x): x is Record<string, unknown> => Boolean(x && typeof x === "object"))
+          .map((x) => ({ id: str(x.id).trim(), name: str(x.name).trim() }))
+          .filter((x) => x.id && x.name)
+      : [],
+    whatsappDesignMessage: str(d.whatsappDesignMessage) || undefined,
   };
 }
 
@@ -280,6 +308,7 @@ function normalizeProduct(data: Record<string, unknown>): Product {
     featured: Boolean(data.featured),
     active: data.active === undefined ? true : Boolean(data.active),
     downloadable: normalizeDownloadable(data.downloadable),
+    printConfig: normalizePrintConfig(data.printConfig),
     relatedSlugs: normalizeRelatedSlugs(data.relatedSlugs),
     ratingSummary: normalizeProductRatingSummary(data.ratingSummary),
     // Default: tampil (hanya `false` eksplisit yang menyembunyikan) — backward-compat.
@@ -393,6 +422,11 @@ export async function saveProduct(
     const vv: Record<string, unknown> = { ...v };
     for (const key of ["tagline", "originalPrice", "badge", "delivery", "waMessage", "stock"]) {
       if (vv[key] === undefined) delete vv[key];
+    }
+    if (vv.printPricing && typeof vv.printPricing === "object") {
+      const pricing = { ...(vv.printPricing as Record<string, unknown>) };
+      if (pricing.description === undefined) delete pricing.description;
+      vv.printPricing = pricing;
     }
     return vv;
   });

@@ -141,6 +141,25 @@ export function ProductsManager() {
     }
 
     const multi = hasVariants(editing);
+    if (editing.category === "percetakan") {
+      const config = editing.printConfig;
+      const configValid = !!config && Number.isFinite(config.minWidthM) && Number.isFinite(config.minHeightM) &&
+        Number.isFinite(config.maxWidthM) && Number.isFinite(config.maxHeightM) &&
+        config.minWidthM > 0 && config.minHeightM > 0 && config.maxWidthM >= config.minWidthM &&
+        config.maxHeightM >= config.minHeightM && Number.isFinite(config.minPricePerUnit) && config.minPricePerUnit >= 0;
+      const pricingValid = editing.variants.length > 0 && editing.variants.every((variant) =>
+        variant.printPricing?.method === "area"
+          ? Number.isFinite(variant.printPricing.ratePerM2) && variant.printPricing.ratePerM2 > 0
+          : variant.printPricing?.method === "sheet" && Number.isFinite(variant.printPricing.pricePerSheet) && variant.printPricing.pricePerSheet > 0,
+      );
+      const finishingValid = !!config && config.finishingOptions.every((option) => option.id.trim() && option.name.trim());
+      if (!configValid || !pricingValid || !finishingValid) {
+        const msg = "Produk percetakan wajib punya batas ukuran valid, finishing valid, dan metode harga pada setiap varian.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+    }
 
     if (multi) {
       // ===== Validasi produk multi-varian =====
@@ -773,7 +792,12 @@ function ProductForm({
         <VariantsEditor
           variants={product.variants}
           onChange={(variants) => set("variants", variants)}
+          printProduct={product.category === "percetakan"}
         />
+
+        {product.category === "percetakan" && (
+          <PrintConfigEditor value={product.printConfig} onChange={(printConfig) => set("printConfig", printConfig)} />
+        )}
 
         {/* ===== Alur Pembuatan ===== */}
         <ProcessEditor
@@ -962,9 +986,11 @@ const emptyVariant: ProductVariant = {
 function VariantsEditor({
   variants,
   onChange,
+  printProduct = false,
 }: {
   variants: ProductVariant[];
   onChange: (v: ProductVariant[]) => void;
+  printProduct?: boolean;
 }) {
   const update = (i: number, patch: Partial<ProductVariant>) =>
     onChange(variants.map((v, j) => (j === i ? { ...v, ...patch } : v)));
@@ -1008,6 +1034,7 @@ function VariantsEditor({
               index={i}
               total={variants.length}
               variant={v}
+              printProduct={printProduct}
               onChange={(patch) => update(i, patch)}
               onRemove={() => onChange(variants.filter((_, j) => j !== i))}
               onMove={(dir) => move(i, dir)}
@@ -1032,6 +1059,7 @@ function VariantCard({
   onRemove,
   onMove,
   onSetHighlight,
+  printProduct = false,
 }: {
   index: number;
   total: number;
@@ -1040,6 +1068,7 @@ function VariantCard({
   onRemove: () => void;
   onMove: (dir: -1 | 1) => void;
   onSetHighlight: () => void;
+  printProduct?: boolean;
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -1106,7 +1135,30 @@ function VariantCard({
         </Field>
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+      {printProduct ? (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Field label="Metode harga">
+            <select value={variant.printPricing?.method ?? "area"} onChange={(event) => onChange({
+              printPricing: event.target.value === "area"
+                ? { method: "area", ratePerM2: 0 }
+                : { method: "sheet", pricePerSheet: 0 },
+            })} className={fieldBase}>
+              <option value="area">Per m²</option>
+              <option value="sheet">Per lembar</option>
+            </select>
+          </Field>
+          {variant.printPricing?.method === "sheet" ? <>
+            <Field label="Harga per lembar (Rp)">
+              <input type="number" min="1" value={variant.printPricing.pricePerSheet || ""} onChange={(event) => onChange({ printPricing: { method: "sheet", pricePerSheet: Number(event.target.value), description: variant.printPricing?.method === "sheet" ? variant.printPricing.description : undefined } })} className={fieldBase} />
+            </Field>
+            <Field label="Keterangan lembar">
+              <input value={variant.printPricing.description ?? ""} onChange={(event) => onChange({ printPricing: { method: "sheet", pricePerSheet: variant.printPricing?.method === "sheet" ? variant.printPricing.pricePerSheet : 0, description: event.target.value } })} placeholder="Contoh: 1 lembar ukuran A3" className={fieldBase} />
+            </Field>
+          </> : <Field label="Tarif per m² (Rp)">
+            <input type="number" min="1" value={variant.printPricing?.method === "area" ? variant.printPricing.ratePerM2 || "" : ""} onChange={(event) => onChange({ printPricing: { method: "area", ratePerM2: Number(event.target.value) } })} className={fieldBase} />
+          </Field>}
+        </div>
+      ) : <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <Field label="Harga (Rp)">
           <input
             type="number"
@@ -1135,7 +1187,7 @@ function VariantCard({
             className={fieldBase}
           />
         </Field>
-      </div>
+      </div>}
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <Field label="Fitur paket (Judul | Deskripsi, 1 per baris)">
@@ -1269,6 +1321,36 @@ function VariantCard({
       </div>
     </div>
   );
+}
+
+function PrintConfigEditor({ value, onChange }: {
+  value: Product["printConfig"];
+  onChange: (value: NonNullable<Product["printConfig"]>) => void;
+}) {
+  const config = value ?? { minWidthM: 0, minHeightM: 0, maxWidthM: 0, maxHeightM: 0, minPricePerUnit: 0, finishingOptions: [] };
+  const numeric = [
+    ["minWidthM", "Lebar minimum (m)"], ["maxWidthM", "Lebar maksimum (m)"],
+    ["minHeightM", "Tinggi minimum (m)"], ["maxHeightM", "Tinggi maksimum (m)"],
+    ["minPricePerUnit", "Harga minimum / unit (Rp)"],
+  ] as const;
+  return <section className="rounded-2xl border border-slate-200 bg-surface p-5">
+    <h3 className="text-sm font-semibold text-secondary">Konfigurasi percetakan</h3>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      {numeric.map(([key, label]) => <Field key={key} label={label}>
+        <input type="number" min="0" step={key === "minPricePerUnit" ? "100" : "0.01"} value={config[key] || ""}
+          onChange={(event) => onChange({ ...config, [key]: event.target.value ? Number(event.target.value) : 0 })} className={fieldBase} />
+      </Field>)}
+    </div>
+    <div className="mt-5 flex items-center justify-between">
+      <p className="text-sm font-medium text-secondary">Finishing (tanpa biaya)</p>
+      <button type="button" onClick={() => onChange({ ...config, finishingOptions: [...config.finishingOptions, { id: `finishing-${Date.now()}`, name: "" }] })} className="text-xs font-semibold text-primary">Tambah</button>
+    </div>
+    {config.finishingOptions.map((option, index) => <div key={option.id} className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-2">
+      <input aria-label="ID finishing" value={option.id} onChange={(event) => onChange({ ...config, finishingOptions: config.finishingOptions.map((item, i) => i === index ? { ...item, id: event.target.value } : item) })} className={fieldBase} />
+      <input aria-label="Nama finishing" value={option.name} onChange={(event) => onChange({ ...config, finishingOptions: config.finishingOptions.map((item, i) => i === index ? { ...item, name: event.target.value } : item) })} placeholder="Mata ayam" className={fieldBase} />
+      <button type="button" aria-label="Hapus finishing" onClick={() => onChange({ ...config, finishingOptions: config.finishingOptions.filter((_, i) => i !== index) })} className="px-3 text-rose-600">×</button>
+    </div>)}
+  </section>;
 }
 
 /* ================= Editor Alur Pembuatan ================= */

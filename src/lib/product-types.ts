@@ -27,6 +27,7 @@ export const PRODUCT_CATEGORIES = [
   "aplikasi",
   "ebook",
   "jasa",
+  "percetakan",
   "lainnya",
 ] as const;
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
@@ -37,7 +38,24 @@ export const PRODUCT_CATEGORY_LABEL: Record<ProductCategory, string> = {
   aplikasi: "Aplikasi",
   ebook: "E-Book",
   jasa: "Jasa Digital",
+  percetakan: "Percetakan",
   lainnya: "Lainnya",
+};
+
+export type PrintPricing =
+  | { method: "area"; ratePerM2: number }
+  | { method: "sheet"; pricePerSheet: number; description?: string };
+
+export type PrintFinishingOption = { id: string; name: string };
+
+export type PrintProductConfig = {
+  minWidthM: number;
+  minHeightM: number;
+  maxWidthM: number;
+  maxHeightM: number;
+  minPricePerUnit: number;
+  finishingOptions: PrintFinishingOption[];
+  whatsappDesignMessage?: string;
 };
 
 /**
@@ -87,6 +105,8 @@ export type ProductVariant = {
   delivery?: string;
   /** Pesan WhatsApp khusus paket (bila kosong, sistem menyusun otomatis). */
   waMessage?: string;
+  /** Aturan cetak per varian: tarif luas atau harga per lembar. */
+  printPricing?: PrintPricing;
 };
 
 /**
@@ -183,6 +203,8 @@ export type Product = {
    * produk lama tanpa field ini tetap valid (tidak ada unduhan otomatis).
    */
   downloadable?: ProductDownloadable;
+  /** Batas dan opsi bersama produk cetak. Produk digital lama tidak memiliki field ini. */
+  printConfig?: PrintProductConfig;
   /**
    * Slug produk lain yang relevan / sering dibeli bersama (FASE P3).
    * Dipakai untuk section "Sering dibeli bersama" & saran cross-sell.

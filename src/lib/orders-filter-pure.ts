@@ -39,7 +39,7 @@ export type OrdersSort =
   | "total_asc"
   | "status";
 
-export type FulfillmentFilter = "semua" | "instan" | "jasa";
+export type FulfillmentFilter = "semua" | "instan" | "jasa" | "cetak";
 export type CouponFilter = "semua" | "ada" | "tanpa";
 export type DatePreset =
   | "semua"
@@ -293,7 +293,7 @@ export function matchesFilter(
   if (f.status !== "semua" && order.status !== f.status) return false;
 
   if (f.fulfillment !== "semua") {
-    const eff = order.fulfillment === "jasa" ? "jasa" : "instan";
+    const eff = order.fulfillment === "jasa" ? "jasa" : order.fulfillment === "cetak" ? "cetak" : "instan";
     if (eff !== f.fulfillment) return false;
   }
 

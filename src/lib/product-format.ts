@@ -108,16 +108,40 @@ export type PurchaseIssueCode =
   | "soldout"
   | "out_of_stock"
   | "insufficient_stock"
-  | "no_price";
+  | "no_price"
+  | "print_options_invalid";
 
 /** Hasil evaluasi kelayakan beli satu item. */
 export type PurchaseEvaluation =
-  | { ok: true; price: number; variantSlug?: string; variantName?: string }
+  | { ok: true; price: number; variantSlug?: string; variantName?: string; printOptions?: { widthM?: number; heightM?: number; finishingIds: string[] }; printPricing?: import("@/lib/product-types").PrintPricing }
   | { ok: false; code: PurchaseIssueCode; message: string };
+
+export function calculatePrintUnitPrice(
+  pricing: import("@/lib/product-types").PrintPricing,
+  config: import("@/lib/product-types").PrintProductConfig,
+  options: { widthM?: number; heightM?: number },
+): number | null {
+  let price: number;
+  if (pricing.method === "area") {
+    const { widthM, heightM } = options;
+    if (!Number.isFinite(widthM) || !Number.isFinite(heightM) ||
+      Math.round(widthM! * 100) !== widthM! * 100 || Math.round(heightM! * 100) !== heightM! * 100 ||
+      widthM! < config.minWidthM || heightM! < config.minHeightM ||
+      widthM! > config.maxWidthM || heightM! > config.maxHeightM ||
+      !Number.isFinite(pricing.ratePerM2) || pricing.ratePerM2 <= 0) return null;
+    price = Math.max(widthM! * heightM! * pricing.ratePerM2, config.minPricePerUnit);
+  } else {
+    if (options.widthM !== undefined || options.heightM !== undefined ||
+      !Number.isFinite(pricing.pricePerSheet) || pricing.pricePerSheet <= 0) return null;
+    price = pricing.pricePerSheet;
+  }
+  const rounded = Math.ceil(price / 100) * 100;
+  return Number.isSafeInteger(rounded) && rounded > 0 ? rounded : null;
+}
 
 type EvaluatableVariant = Pick<
   ProductVariant,
-  "slug" | "name" | "price" | "soldOut" | "stock"
+  "slug" | "name" | "price" | "soldOut" | "stock" | "printPricing"
 >;
 
 type EvaluatableProduct = Pick<
@@ -125,6 +149,8 @@ type EvaluatableProduct = Pick<
   "slug" | "name" | "price" | "soldOut" | "stock" | "active"
 > & {
   variants: EvaluatableVariant[];
+  category?: string;
+  printConfig?: import("@/lib/product-types").PrintProductConfig;
 };
 
 /**
@@ -143,7 +169,7 @@ type EvaluatableProduct = Pick<
  */
 export function evaluatePurchase(
   product: EvaluatableProduct,
-  opts: { variantSlug?: string | null; qty: number },
+  opts: { variantSlug?: string | null; qty: number; printOptions?: { widthM?: number; heightM?: number; finishingIds: string[] } },
 ): PurchaseEvaluation {
   if (!product.active) {
     return { ok: false, code: "product_inactive", message: `Produk "${product.name}" sudah tidak dijual.` };
@@ -171,10 +197,41 @@ export function evaluatePurchase(
     if (left !== null && qty > left) {
       return { ok: false, code: "insufficient_stock", message: `Stok paket "${variant.name}" tersisa ${left}. Silakan kurangi jumlah.` };
     }
-    if (variant.price <= 0) {
+    if (variant.price <= 0 && !(product.category === "percetakan" && variant.printPricing)) {
       return { ok: false, code: "no_price", message: `Paket "${variant.name}" belum bisa dipesan online.` };
     }
+    if (product.category === "percetakan") {
+      const config = product.printConfig;
+      const pricing = variant.printPricing;
+      const options = opts.printOptions;
+      if (!config || !pricing || !options) {
+        return { ok: false, code: "print_options_invalid", message: "Konfigurasi cetak tidak lengkap. Muat ulang produk atau hubungi admin." };
+      }
+      const finishingIds = [...new Set(options.finishingIds)].sort();
+      if (finishingIds.length !== options.finishingIds.length) {
+        return { ok: false, code: "print_options_invalid", message: "Pilihan finishing duplikat." };
+      }
+      if (finishingIds.some((id) => !config.finishingOptions.some((option) => option.id === id))) {
+        return { ok: false, code: "print_options_invalid", message: "Pilihan finishing tidak valid." };
+      }
+      const unitPrice = calculatePrintUnitPrice(pricing, config, options);
+      if (unitPrice === null || !Number.isSafeInteger(unitPrice * qty)) {
+        return { ok: false, code: "no_price", message: "Total harga cetak tidak valid." };
+      }
+      return {
+        ok: true,
+        price: unitPrice,
+        variantSlug: variant.slug,
+        variantName: variant.name,
+        printOptions: { widthM: options.widthM, heightM: options.heightM, finishingIds },
+        printPricing: pricing,
+      };
+    }
     return { ok: true, price: variant.price, variantSlug: variant.slug, variantName: variant.name };
+  }
+
+  if (product.category === "percetakan") {
+    return { ok: false, code: "print_options_invalid", message: "Produk cetak wajib memakai varian dengan konfigurasi harga." };
   }
 
   // ===== Produk tunggal =====

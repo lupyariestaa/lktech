@@ -232,6 +232,7 @@ export function OrdersToolbar({
               <option value="semua">Semua jalur</option>
               <option value="instan">Instan (unduh)</option>
               <option value="jasa">Jasa</option>
+              <option value="cetak">Cetak (pickup)</option>
             </select>
           </label>
 

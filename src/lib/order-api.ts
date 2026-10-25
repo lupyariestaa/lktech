@@ -29,6 +29,7 @@ export type CheckoutRequestItem = {
   slug: string;
   /** Slug varian terpilih (produk multi-varian). */
   variantSlug?: string;
+  printOptions?: { widthM?: number; heightM?: number; finishingIds: string[] };
   qty: number;
 };
 
