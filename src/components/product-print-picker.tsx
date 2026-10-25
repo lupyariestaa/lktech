@@ -65,26 +65,29 @@ export function ProductPrintPicker({ product, compact = false }: { product: Prod
   };
 
   return (
-    <div className={cn("grid gap-5 rounded-3xl border border-slate-200 bg-slate-50 p-5 sm:p-6", compact ? "max-w-none" : "max-w-xl")}>
+    <div className={cn(
+      "grid min-w-0 gap-5",
+      compact
+        ? "max-w-none"
+        : "max-w-xl rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6",
+    )}>
       <fieldset>
         <legend className="mb-3 text-sm font-semibold text-secondary">Pilih bahan <span className="font-normal text-muted">({variants.length} bahan)</span></legend>
         <div className="grid gap-2">
           {variants.map((item) => {
             const selected = item.slug === variantSlug;
             const materialPrice = item.printPricing?.method === "area" ? `${formatPrice(item.printPricing.ratePerM2)} / m²` : item.printPricing?.method === "sheet" ? `${formatPrice(item.printPricing.pricePerSheet)} / lembar` : "";
-            return <button key={item.slug} type="button" aria-pressed={selected} onClick={() => setVariantSlug(item.slug)} className={cn("flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition", selected ? "border-primary bg-primary-50" : "border-slate-200 bg-white hover:border-primary/40")}>
-              <span className="flex min-w-0 items-center gap-3">
-                <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-full border", selected ? "border-primary bg-primary text-white" : "border-slate-300 bg-white")}>{selected && <span aria-hidden="true" className="text-xs">✓</span>}</span>
-                <span className="text-sm font-semibold text-secondary">{item.name}</span>
-              </span>
-              <span className="shrink-0 text-sm font-bold text-secondary">{materialPrice}</span>
+            return <button key={item.slug} type="button" aria-pressed={selected} onClick={() => setVariantSlug(item.slug)} className={cn("grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-2xl border px-3 py-3 text-left transition sm:gap-3 sm:px-4", selected ? "border-primary bg-primary-50" : "border-slate-200 bg-white hover:border-primary/40")}>
+              <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-full border", selected ? "border-primary bg-primary text-white" : "border-slate-300 bg-white")}>{selected && <span aria-hidden="true" className="text-xs">✓</span>}</span>
+              <span className="min-w-0 text-sm font-semibold leading-snug text-secondary">{item.name}</span>
+              <span className="shrink-0 whitespace-nowrap text-xs font-bold tabular-nums text-secondary sm:text-sm">{materialPrice}</span>
             </button>;
           })}
         </div>
       </fieldset>
       {pricing?.method === "area" && <fieldset className="grid gap-3">
         <legend className="text-sm font-semibold text-secondary">Ukuran banner <span className="font-normal text-muted">(m)</span></legend>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
           <label className="grid gap-1.5 text-xs font-medium text-muted">Lebar
             <input className={field} type="number" inputMode="decimal" min={config.minWidthM} max={config.maxWidthM} step="0.01" value={width} onChange={(event) => setWidth(event.target.value)} />
           </label>
@@ -101,17 +104,18 @@ export function ProductPrintPicker({ product, compact = false }: { product: Prod
           <input type="checkbox" checked={finishingIds.includes(option.id)} onChange={() => toggleFinishing(option.id)} />{option.name}
         </label>)}
       </fieldset>}
-      <label className="grid max-w-40 gap-1.5 text-xs font-medium text-muted">Jumlah banner
+      <label className={cn("grid gap-1.5 text-xs font-medium text-muted", compact ? "grid-cols-[minmax(0,1fr)_7rem] items-center" : "max-w-56")}>
+        <span>Jumlah banner</span>
         <input className={field} type="number" min="1" max="999" step="1" value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(999, Math.floor(Number(event.target.value) || 1))))} />
       </label>
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className={cn("min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4", compact && "bg-white")}>
         <p className="text-xs text-muted">Estimasi per banner</p>
-        <p className="mt-1 text-xl font-bold text-secondary">{price === null || !areaValid ? "Masukkan ukuran valid" : formatPrice(price)}</p>
+        <p className="mt-1 break-words text-lg font-bold leading-tight text-secondary sm:text-xl">{price === null || !areaValid ? "Masukkan ukuran valid" : formatPrice(price)}</p>
         {pricing?.method === "area" && price !== null && areaValid && <p className="mt-1 text-xs text-muted">{width} × {height} m × {formatPrice(pricing.ratePerM2)} / m²</p>}
         {quantity > 1 && price !== null && <p className="mt-2 text-sm font-semibold text-primary">Total {quantity} banner: {formatPrice(price * quantity)}</p>}
       </div>
       {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
-      <button type="button" onClick={submit} className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-dark">Tambah ke keranjang</button>
+      <button type="button" onClick={submit} className="w-full rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Tambah ke keranjang</button>
     </div>
   );
 }
