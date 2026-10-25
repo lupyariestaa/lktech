@@ -52,8 +52,7 @@ export function ProductCard({
 
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5 sm:rounded-3xl">
-      {/* Cover — rasio 16:9 mengikuti asli gambar, jadi teks di dalam cover
-          tidak terpotong (dulu 4:3 + object-cover memotong ±25% lebarnya). */}
+      {/* Cover mengikuti rasio pilihan dan menampilkan seluruh gambar. */}
       <Link
         href={`/produk/${product.slug}`}
         className={cn(
@@ -67,7 +66,7 @@ export function ProductCard({
             alt={product.coverAlt || product.name}
             fill
             sizes={imageSizes}
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-contain transition-transform duration-500"
             onError={() => setCoverFailed(true)}
           />
         ) : (

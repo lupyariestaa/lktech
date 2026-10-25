@@ -215,7 +215,7 @@ Seed untuk setup baru menghasilkan produk banner siap jual dengan konfigurasi ya
 **Penyelesaian**
 Selesai: setelah operator mengonfirmasi konfigurasi yang sudah ada di katalog aktif, seed diselaraskan agar menghasilkan produk aktif dengan varian Flexi 280 (Rp25.000/m²), Flexi 340 (Rp30.000/m²), Korea 440 (Rp40.000/m²), batas ukuran 0,5–100 m, finishing yang sama, dan keterangan layanan yang sama. Seed tetap menolak menimpa dokumen yang sudah ada. Konfigurasi dipisah ke helper murni dan dilindungi tes regresi; data bisnis disalin dari produk aktif, bukan dikarang.
 
-### [ ] GAP-11 — Rasio gambar mengklaim gambar tidak dipotong, tetapi rendering memakai `object-cover`
+### [x] GAP-11 — Rasio gambar mengklaim gambar tidak dipotong, tetapi rendering memakai `object-cover`
 
 **Temuan**  
 Editor dashboard menyatakan gambar tidak dipotong, sedangkan kartu produk dan galeri menggunakan `object-cover` (`src/components/product-card.tsx`, `src/components/media-gallery.tsx`). Gambar dengan rasio sumber berbeda dapat terpotong agar memenuhi rasio 1:1 atau 16:9.
@@ -231,6 +231,9 @@ Hasil visual tidak sesuai keterangan di dashboard dan subjek gambar bisa terpoto
 
 **Kriteria selesai**  
 Perilaku crop konsisten dengan pilihan rasio dan keterangan dashboard.
+
+**Penyelesaian**
+Selesai: gambar produk kini menggunakan `object-contain` di kartu katalog, wishlist, cover editor, galeri utama, thumbnail galeri, dan thumbnail lightbox; perilaku ini konsisten dengan lightbox utama. Bingkai rasio tetap dipakai, sehingga ruang kosong akan tampak bila rasio sumber berbeda. Keterangan editor menjelaskan hal tersebut dan membedakan crop otomatis dari opsi transformasi crop di pemilih media. Tes regresi memeriksa fit gambar pada tampilan terkait serta isi keterangan.
 
 ## Matriks verifikasi/regresi yang disarankan
 

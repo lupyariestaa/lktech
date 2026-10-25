@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Heart, Package, ShoppingCart } from "lucide-react";
 import type { Product } from "@/lib/product-types";
 import { hasVariants, productPriceLabel } from "@/lib/product-format";
+import { cn } from "@/lib/utils";
 
 /** Tab "Favorit": grid produk wishlist + aksi. */
 export function AccountWishlist({
@@ -53,7 +54,10 @@ export function AccountWishlist({
           >
             <Link
               href={`/produk/${product.slug}`}
-              className="relative block aspect-video overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10"
+              className={cn(
+                "relative block overflow-hidden bg-gradient-to-br from-primary/10 to-primary-light/10",
+                product.imageRatio === "square" ? "aspect-square" : "aspect-video",
+              )}
             >
               {product.cover && product.cover !== "default" ? (
                 <Image
@@ -61,7 +65,7 @@ export function AccountWishlist({
                   alt={product.coverAlt || product.name}
                   fill
                   sizes="(max-width: 768px) 100vw, 300px"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="object-contain transition-transform duration-500"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-primary/40">

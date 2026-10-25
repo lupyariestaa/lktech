@@ -11,7 +11,7 @@ export type { GalleryImage };
 /**
  * Galeri media interaktif & super responsif — GENERIK (dipakai Produk & Portfolio).
  *
- * - Gambar besar 16:9 (`object-cover`) + tombol navigasi prev/next.
+ * - Gambar besar dengan rasio pilihan, ditampilkan utuh (`object-contain`).
  * - Strip thumbnail horizontal (scroll/snap di mobile), selalu terkurung dalam
  *   lebar container (`w-full min-w-0 max-w-full`).
  * - Klik gambar besar → lightbox; klik thumbnail → ganti gambar besar.
@@ -74,7 +74,7 @@ export function MediaGallery({
                 fill
                 sizes="(max-width: 1024px) 100vw, 720px"
                 priority
-                className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                className="object-contain"
               />
               <span className="pointer-events-none absolute right-3 bottom-3 hidden items-center gap-1.5 rounded-full bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 sm:inline-flex">
                 <Expand className="h-3.5 w-3.5" />
@@ -135,7 +135,7 @@ export function MediaGallery({
                   : "border-slate-200 opacity-70 hover:opacity-100",
               )}
             >
-              <Image src={img.url} alt="" fill sizes="112px" className="object-cover" />
+              <Image src={img.url} alt="" fill sizes="112px" className="object-contain" />
             </button>
           ))}
         </div>

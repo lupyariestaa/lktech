@@ -148,7 +148,7 @@ export function MediaLightbox({
                   : "border-transparent opacity-50 hover:opacity-90",
               )}
             >
-              <Image src={img.url} alt="" fill sizes="80px" className="object-cover" />
+              <Image src={img.url} alt="" fill sizes="80px" className="object-contain" />
             </button>
           ))}
         </div>

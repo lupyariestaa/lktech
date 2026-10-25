@@ -16,6 +16,7 @@
     "test:metrics": "node --experimental-strip-types --test scripts/metrics-spec.test.ts",
     "test:fulfillment": "node --experimental-strip-types --test scripts/order-fulfillment.test.ts",
     "test:print-pricing": "node --experimental-strip-types --test scripts/print-pricing.test.ts",
+    "test:product-image-fit": "node --test scripts/product-image-fit.test.mjs",
     "test:banner-placeholder": "node --test scripts/banner-placeholder.test.mjs",
     "test:downloads": "node --experimental-strip-types --test scripts/download-token.test.ts",
     "test:expiry": "node --experimental-strip-types --test scripts/order-expiry.test.ts",

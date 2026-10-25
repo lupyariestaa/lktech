@@ -314,7 +314,7 @@ export function ProductsManager() {
                     alt={p.name}
                     fill
                     sizes="80px"
-                    className="object-cover"
+                    className="object-contain"
                   />
                 ) : (
                   <span className="flex h-full w-full items-center justify-center text-slate-300">
@@ -617,7 +617,7 @@ function ProductForm({
               </button>
             ))}
           </div>
-          <p className="mt-2 text-xs text-muted">Rasio ini mengatur tampilan cover, kartu katalog, galeri, dan thumbnail. Gambar tidak dipotong saat diperbesar.</p>
+          <p className="mt-2 text-xs text-muted">Rasio ini mengatur bingkai cover dan galeri. Gambar ditampilkan utuh (tanpa crop otomatis); ruang kosong dapat terlihat jika rasio gambar berbeda. Opsi rasio saat memilih gambar di Media akan membuat versi crop.</p>
         </Field>
 
         {/* Cover */}
@@ -634,7 +634,7 @@ function ProductForm({
                   alt={product.coverAlt || "Cover produk"}
                   fill
                   sizes="112px"
-                  className="object-cover"
+                  className="object-contain"
                 />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-slate-300">
@@ -715,7 +715,7 @@ function ProductForm({
                     alt={`Galeri ${i + 1}`}
                     fill
                     sizes="200px"
-                    className="object-cover"
+                    className="object-contain"
                   />
                   <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-slate-900/70 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
                     <div className="flex gap-1">

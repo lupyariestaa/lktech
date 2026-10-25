@@ -87,7 +87,7 @@ export function CartCrossSell() {
                 <img
                   src={p.cover}
                   alt={p.name}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
               ) : (
                 <span className="grid h-full w-full place-items-center text-[10px] font-semibold text-muted">
