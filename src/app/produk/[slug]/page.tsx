@@ -460,7 +460,7 @@ export default async function ProdukDetailPage({
               <div className="rounded-3xl border border-slate-200 bg-white p-5">
                 <SocialProof className="mb-3 flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700" />
                 <TrustBadges
-                  variant={product.category === "jasa" ? "jasa" : "instan"}
+                  variant={product.category === "jasa" ? "jasa" : product.category === "percetakan" ? "cetak" : "instan"}
                 />
               </div>
 
@@ -547,7 +547,7 @@ export default async function ProdukDetailPage({
       )}
 
       {/* Bar pembelian sticky (mobile) */}
-      {multi && product.category !== "percetakan" && <ProductPurchaseBar product={product} />}
+      {(multi || product.category === "percetakan") && <ProductPurchaseBar product={product} />}
       </ProductPurchaseProvider>
 
       {/* Sering dibeli bersama (FASE P3) */}

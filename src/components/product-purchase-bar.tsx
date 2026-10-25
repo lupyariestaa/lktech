@@ -11,6 +11,7 @@ import {
   VariantPickerList,
 } from "@/components/product-purchase-panel";
 import { cn } from "@/lib/utils";
+import { ProductPrintPicker } from "@/components/product-print-picker";
 
 /**
  * Bar pembelian STICKY di bawah layar (MOBILE/tablet kecil < lg).
@@ -30,7 +31,7 @@ export function ProductPurchaseBar({ product }: { product: Product }) {
         <div className="mx-auto flex max-w-3xl items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[11px] text-muted">
-              {selectedVariantSlug ? "Terpilih" : "Mulai dari"}
+              {product.category === "percetakan" ? "Harga bahan mulai dari" : selectedVariantSlug ? "Terpilih" : "Mulai dari"}
             </p>
             <p className="truncate text-base font-bold text-secondary">
               {productPriceLabel(product)}
@@ -42,7 +43,7 @@ export function ProductPurchaseBar({ product }: { product: Product }) {
             className="inline-flex shrink-0 items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all active:scale-95"
           >
             <ChevronUp className="h-4 w-4" />
-            {selectedVariantSlug ? "Beli" : "Pilih Paket"}
+            {product.category === "percetakan" ? "Pilih bahan" : selectedVariantSlug ? "Beli" : "Pilih Paket"}
           </button>
         </div>
       </div>
@@ -102,9 +103,9 @@ function ProductPurchaseSheet({
         {/* Handle + header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <div>
-            <p className="text-sm font-bold text-secondary">Pilih paket</p>
+              <p className="text-sm font-bold text-secondary">{product.category === "percetakan" ? "Konfigurasi cetak" : "Pilih paket"}</p>
             <p className="text-xs text-muted">
-              {product.variants.length} paket tersedia
+              {product.variants.length} {product.category === "percetakan" ? "bahan" : "paket"} tersedia
             </p>
           </div>
           <button
@@ -119,7 +120,7 @@ function ProductPurchaseSheet({
 
         {/* Isi scroll */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          <VariantPickerList product={product} />
+          {product.category === "percetakan" ? <ProductPrintPicker product={product} compact /> : <VariantPickerList product={product} />}
         </div>
 
         {/* Aksi sticky di bawah sheet */}
@@ -145,6 +146,8 @@ function ProductPurchaseSheet({
             <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
             {product.category === "jasa"
               ? "Layanan jasa dikonfirmasi manual. Konsultasi dulu sebelum pembayaran."
+              : product.category === "percetakan"
+                ? "Login akun Google diperlukan. Bayar lewat Mayar setelah checkout; pesanan diambil di lokasi."
               : "Login akun Google diperlukan. Produk digital dibayar online & diunduh otomatis."}
           </p>
         </div>

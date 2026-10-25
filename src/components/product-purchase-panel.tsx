@@ -20,6 +20,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useAccountStatus } from "@/components/account-status-provider";
 import { useProductPurchase } from "@/components/product-purchase-context";
 import { cn } from "@/lib/utils";
+import { ProductPrintPicker } from "@/components/product-print-picker";
 
 /**
  * Daftar pilihan paket (radio). Dipakai bersama oleh panel sidebar (desktop)
@@ -200,17 +201,20 @@ export function SelectedVariantActions({
  */
 export function ProductPurchasePanel({ product }: { product: Product }) {
   const isJasa = product.category === "jasa";
+  const isPrint = product.category === "percetakan";
   const consultMessage = `Halo LKTech! Saya ingin berkonsultasi tentang paket layanan "${product.name}". Boleh dibantu?`;
   return (
     <div className="rounded-3xl border border-slate-200 bg-surface p-6">
-      <p className="text-xs font-medium text-muted">Mulai dari</p>
+      <p className="text-xs font-medium text-muted">{isPrint ? "Harga bahan mulai dari" : "Mulai dari"}</p>
       <div className="mt-1 flex items-end gap-2">
         <span className="text-2xl font-bold text-secondary">
           {productPriceLabel(product)}
         </span>
       </div>
 
-      <div className="mt-5">
+      {isPrint ? (
+        <div className="mt-5"><ProductPrintPicker product={product} compact /></div>
+      ) : <><div className="mt-5">
         <p className="text-xs font-semibold text-secondary">
           Pilih paket{" "}
           <span className="font-normal text-muted">
@@ -223,6 +227,7 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
       </div>
 
       <SelectedVariantActions product={product} className="mt-4" />
+      </>}
 
       {isJasa && (
         <a
@@ -236,15 +241,15 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
         </a>
       )}
 
-      <a
+      {!isPrint && <a
         href="#paket"
         className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
       >
         <Layers className="h-4 w-4" />
         Lihat detail semua paket
-      </a>
+      </a>}
 
-      <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
+      {!isPrint && <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted">
         <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
         {isJasa ? (
           <>
@@ -252,13 +257,15 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
             <strong className="font-semibold text-secondary">Konsultasi dulu</strong>{" "}
             sebelum pembayaran.
           </>
+        ) : isPrint ? (
+          <>Masuk akun untuk checkout. Pembayaran pesanan cetak dilakukan lewat <strong className="font-semibold text-secondary">Mayar</strong>; pesanan diambil langsung.</>
         ) : (
           <>
             Pembelian memerlukan login akun Google. Produk digital dibayar
             online &amp; diunduh otomatis setelah lunas.
           </>
         )}
-      </p>
+      </p>}
     </div>
   );
 }
