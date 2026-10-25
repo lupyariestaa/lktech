@@ -40,6 +40,7 @@
     "test:seo-schema": "node --experimental-strip-types --test scripts/seo-schema.test.ts",
     "test:locations": "node --experimental-strip-types --test scripts/locations.test.ts",
     "test:search-console": "node --experimental-strip-types --test scripts/search-console.test.ts",
+    "test:seo-audit": "node --experimental-strip-types --test scripts/seo-audit.test.ts",
     "test:pwa": "node --experimental-strip-types --test scripts/pwa.test.ts",
     "test:analytics-daily": "node --experimental-strip-types --test scripts/analytics-daily.test.ts",
     "test:nav-menu": "node --experimental-strip-types --test scripts/nav-menu.test.ts",

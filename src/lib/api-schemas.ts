@@ -396,6 +396,30 @@ export const seoInsightActionSchema = z.object({
   reason: z.string().trim().max(300).optional(),
 });
 
+/**
+ * Jalankan audit SEO teknis on-demand (fase D4). `groups` membatasi subset
+ * inventaris; `maxUrls` dibatasi ulang di server; `save` menyimpan hasil.
+ */
+export const seoAuditRunSchema = z.object({
+  groups: z
+    .array(
+      z.enum([
+        "Halaman statis",
+        "Layanan",
+        "Layanan × Kota",
+        "Portofolio",
+        "Artikel",
+        "Produk",
+        "Kategori blog",
+        "Tag blog",
+      ]),
+    )
+    .max(8)
+    .optional(),
+  maxUrls: z.number().int().min(1).max(40).optional(),
+  save: z.boolean().optional(),
+});
+
 // ===== Newsletter & Broadcast (FASE R2) =====
 
 /** Daftar newsletter (opt-in publik). */

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SeoDashboard } from "@/components/admin/seo-dashboard";
+import { SeoAuditPanel } from "@/components/admin/seo-audit-panel";
 
 export const metadata: Metadata = {
   title: "SEO & Search Console",
@@ -16,6 +17,7 @@ export default function AdminSeoPage() {
         </p>
       </div>
       <SeoDashboard />
+      <SeoAuditPanel />
     </div>
   );
 }

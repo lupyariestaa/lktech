@@ -60,6 +60,7 @@
     "scripts/locations.test.ts",
     "scripts/search-console.test.ts",
     "scripts/seo-insights.test.ts",
+    "scripts/seo-audit.test.ts",
     "scripts/payment-metrics.test.ts",
     "scripts/order-schema.test.ts",
     "scripts/product-stock.test.ts",

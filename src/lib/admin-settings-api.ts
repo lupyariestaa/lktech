@@ -1,5 +1,6 @@
 import { adminFetch } from "@/lib/admin-fetch";
 import type { SeoInsight, SeoInsightConfig, SeoInsightDecision } from "@/lib/seo-insights-pure";
+import type { AuditInventoryGroup, SeoAuditReport } from "@/lib/seo-audit-pure";
 
 /** Status integrasi (fase S5). Tanpa rahasia — hanya boolean/mode. */
 export type IntegrationsStatus = {
@@ -166,4 +167,36 @@ export async function submitSeoInsightAction(input: {
     method: "PATCH",
     body: JSON.stringify(input),
   });
+}
+
+/* ---- Audit SEO teknis on-demand (fase D4) ---- */
+
+export type SeoAuditRunRequest = {
+  /** Subset grup inventaris; kosong = semua grup. */
+  groups?: AuditInventoryGroup[];
+  /** Batas jumlah URL (server membatasi ulang). */
+  maxUrls?: number;
+  /** `false` = jangan simpan hasil (default simpan). */
+  save?: boolean;
+};
+
+export type SeoAuditRunResponse = { report: SeoAuditReport; saved: boolean };
+
+export type SeoAuditLatestResponse =
+  | { available: true; id: string; createdAt: string; actor: string; report: SeoAuditReport }
+  | { available: false; report: null };
+
+/** Jalankan audit SEO teknis on-demand (crawler internal same-origin). */
+export async function runSeoAudit(
+  input: SeoAuditRunRequest = {},
+): Promise<SeoAuditRunResponse> {
+  return adminFetch<SeoAuditRunResponse>("/api/admin/seo/audit", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Ambil hasil audit teknis terakhir (tanpa menjalankan crawl). */
+export async function fetchLatestSeoAudit(): Promise<SeoAuditLatestResponse> {
+  return adminFetch<SeoAuditLatestResponse>("/api/admin/seo/audit");
 }
