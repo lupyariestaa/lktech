@@ -6,6 +6,7 @@ import {
   isPayableStatus,
   isAwaitingPayment,
   isTransitionAllowed,
+  evaluateStatusTransition,
   shouldRestoreCoupon,
   shouldSendStatusEmail,
   ORDER_STATUS_LIST,
@@ -21,6 +22,12 @@ test("isPaidStatus: dibayar/diproses/selesai → true", () => {
   assert.equal(isPaidStatus("dibayar"), true);
   assert.equal(isPaidStatus("diproses"), true);
   assert.equal(isPaidStatus("selesai"), true);
+});
+
+test("evaluateStatusTransition: membedakan no-op, transisi valid, dan konflik", () => {
+  assert.equal(evaluateStatusTransition("menunggu_bayar", "menunggu_bayar"), "unchanged");
+  assert.equal(evaluateStatusTransition("menunggu_bayar", "dibayar"), "allowed");
+  assert.equal(evaluateStatusTransition("kedaluwarsa", "dibayar"), "invalid");
 });
 
 test("isPaidStatus: status lain → false", () => {

@@ -18,7 +18,8 @@ import {
 } from "@/lib/user-account-api";
 import { useCart } from "@/components/cart-provider";
 import { toCartItem } from "@/lib/cart";
-import { hasVariants } from "@/lib/product-format";
+import { calculatePrintUnitPrice, hasVariants } from "@/lib/product-format";
+import { resolveReorderItem } from "@/lib/reorder-item-pure";
 import type { Product } from "@/lib/product-types";
 import type { SavedAddress, UserProfile } from "@/lib/user-types";
 import { AccountTabs, type AccountTab } from "@/components/auth/account-tabs";
@@ -158,35 +159,33 @@ export function UserAccount() {
         }
 
         let added = 0;
-        let skipped = 0;
+        const skippedReasons = new Set<string>();
         for (const it of order.items) {
           const now = fresh?.get(it.slug);
-          if (now && (!now.exists || now.active === false || now.soldOut)) {
-            skipped += 1;
+          // Fail closed: if current product data cannot be loaded, do not silently
+          // fall back to historical price/specifications for a new order.
+          if (!now) {
+            skippedReasons.add("data");
             continue;
           }
-          const freshPrice = now?.variant?.price ?? now?.price ?? it.price;
-          add({
-            slug: it.slug,
-            name: it.name,
-            price: freshPrice,
-            cover: "default",
-            qty: it.qty,
-            variantSlug: it.variantSlug,
-            variantName: it.variantName,
-          });
+          const resolved = resolveReorderItem(it, now, calculatePrintUnitPrice);
+          if (!resolved.ok) {
+            skippedReasons.add(resolved.reason);
+            continue;
+          }
+          add(resolved.item);
           added += 1;
         }
 
         if (added === 0) {
-          pushToast("Produk pada pesanan ini sudah tidak tersedia.", "error");
+          pushToast(reorderSkippedMessage(skippedReasons), "error");
           return;
         }
         pushToast(
-          skipped > 0
-            ? `${added} item ditambahkan (${skipped} tak tersedia dilewati).`
+          skippedReasons.size > 0
+            ? `${added} item ditambahkan. Beberapa item dilewati: ${reorderSkippedMessage(skippedReasons)}`
             : `${added} item ditambahkan ke keranjang.`,
-          skipped > 0 ? "error" : "success",
+          skippedReasons.size > 0 ? "error" : "success",
         );
         router.push("/keranjang");
       } finally {
@@ -195,6 +194,20 @@ export function UserAccount() {
     },
     [add, router, pushToast, blocked],
   );
+
+  function reorderSkippedMessage(reasons: Set<string>): string {
+    if (reasons.has("data")) return "Data produk gagal dimuat, coba lagi.";
+    const messages: string[] = [];
+    if (reasons.has("unavailable")) messages.push("produk tidak tersedia");
+    if (reasons.has("variant_required")) messages.push("varian perlu dipilih ulang");
+    if (reasons.has("variant_unavailable")) messages.push("varian lama sudah tidak tersedia");
+    if (reasons.has("print_config_changed")) messages.push("opsi cetak/finishing lama sudah berubah");
+    if (reasons.has("invalid_print_options")) messages.push("spesifikasi cetak lama tidak valid");
+    if (reasons.has("insufficient_stock")) messages.push("stok tidak mencukupi");
+    return messages.length
+      ? `${messages.join(", ")}. Silakan pilih ulang dari halaman produk.`
+      : "Produk pada pesanan ini sudah tidak tersedia.";
+  }
 
   const onRemoveFav = useCallback(
     async (slug: string) => {

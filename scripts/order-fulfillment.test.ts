@@ -4,6 +4,7 @@ import {
   fulfillmentTypeForCategory,
   fulfillmentTypeForCategories,
   effectiveFulfillment,
+  allocateDiscountByItem,
 } from "../src/lib/order-fulfillment.ts";
 
 /**
@@ -33,6 +34,12 @@ test("kategori tak dikenal → INSTAN (default aman)", () => {
 
 test("keranjang campuran dgn jasa → JASA (jalur konsultasi)", () => {
   assert.equal(fulfillmentTypeForCategories(["template", "jasa"]), "jasa");
+});
+
+test("alokasi diskon proporsional menjaga jumlah Rupiah tepat dan deterministik", () => {
+  assert.deepEqual(allocateDiscountByItem([100, 200, 50], 17), [5, 10, 2]);
+  assert.equal(allocateDiscountByItem([0, 0], 0).reduce((a, b) => a + b, 0), 0);
+  assert.throws(() => allocateDiscountByItem([100], 101));
 });
 
 test("keranjang semua digital → INSTAN", () => {

@@ -161,6 +161,15 @@ export function isTransitionAllowed(previous: string, next: string): boolean {
   return (allowed as readonly string[]).includes(next);
 }
 
+/** Pure decision for callers that need to distinguish a no-op from a conflict. */
+export function evaluateStatusTransition(
+  previous: string,
+  next: string,
+): "unchanged" | "allowed" | "invalid" {
+  if (previous === next) return "unchanged";
+  return isTransitionAllowed(previous, next) ? "allowed" : "invalid";
+}
+
 /* -------------------------------------------------------------------------- */
 /* Predikat tampilan pembayaran (OR-B2)                                        */
 /* -------------------------------------------------------------------------- */

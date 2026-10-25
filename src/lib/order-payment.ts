@@ -44,7 +44,8 @@ export type FulfillResult = {
 async function collectDownloadFiles(
   order: Order,
 ): Promise<{ files: DownloadFile[]; note?: string; linkDays?: number; maxHits?: number }> {
-  const slugs = Array.from(new Set(order.items.map((it) => it.slug)));
+  const eligibleItems = order.items.filter((it) => it.fulfillment !== "jasa");
+  const slugs = Array.from(new Set(eligibleItems.map((it) => it.slug)));
   const products = await getProductsBySlugs(slugs);
 
   const files: DownloadFile[] = [];
@@ -289,7 +290,12 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
 
   const order = await getOrderById(orderId);
   if (!order) return { ok: false, reason: "not_found" };
-  if (order.payment?.status === "dibayar") {
+  const mixedService = order.items.some((item) => item.fulfillment === "jasa") && order.items.some((item) => item.fulfillment !== "jasa");
+  const component: "goods" | "service" | "order" = mixedService
+    ? order.payment?.status === "dibayar" ? "service" : "goods"
+    : "order";
+  const activePayment = component === "service" ? order.servicePayment : order.payment;
+  if (activePayment?.status === "dibayar") {
     return { ok: false, reason: "already_paid" };
   }
   // GAP-4: tolak order yang sudah final (tidak masuk akal ditagih lagi).
@@ -302,16 +308,24 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
   }
   // GAP-5: cegah invoice DOBEL — bila sudah ada invoice yang menunggu bayar
   // dengan tautan, kembalikan tautan itu (jangan buat invoice baru).
-  if (order.payment?.payUrl && order.payment.status === "menunggu") {
+  if (activePayment?.payUrl && activePayment.status === "menunggu") {
     return {
       ok: true,
-      payUrl: order.payment.payUrl,
-      invoiceId: order.payment.invoiceId,
-      expiresAt: order.payment.expiresAt,
+      payUrl: activePayment.payUrl,
+      invoiceId: activePayment.invoiceId,
+      expiresAt: activePayment.expiresAt,
       reused: true,
     };
   }
-  if (order.total <= 0) {
+  const isGoodsComponent = component === "goods";
+  const baseAmount = mixedService
+    ? order.items.filter((item) => (item.fulfillment !== "jasa") === isGoodsComponent).reduce((sum, item) => sum + item.subtotal, 0)
+    : order.subtotal;
+  const discountAmount = mixedService
+    ? order.items.filter((item) => (item.fulfillment !== "jasa") === isGoodsComponent).reduce((sum, item) => sum + (item.discountShare ?? 0), 0)
+    : order.coupon?.discount ?? 0;
+  const amountExpected = baseAmount - discountAmount;
+  if (amountExpected <= 0) {
     return { ok: false, reason: "no_amount" };
   }
 
@@ -327,15 +341,13 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
     description: `Pesanan LKTech ${order.id}`,
     items:
       order.coupon && order.coupon.discount > 0
-        ? [
+      ? mixedService
+        ? [{ quantity: 1, rate: amountExpected, description: `${isGoodsComponent ? "Item non-jasa" : "Jasa"} setelah alokasi diskon` }]
+        : [
             { quantity: 1, rate: order.subtotal, description: "Subtotal pesanan" },
-            {
-              quantity: 1,
-              rate: -order.coupon.discount,
-              description: `Diskon ${order.coupon.code}`,
-            },
+            { quantity: 1, rate: -order.coupon.discount, description: `Diskon ${order.coupon.code}` },
           ]
-        : [{ quantity: 1, rate: order.total, description: "Total pesanan" }],
+      : [{ quantity: 1, rate: amountExpected, description: mixedService ? (isGoodsComponent ? "Item non-jasa" : "Jasa") : "Total pesanan" }],
     extraData: { orderId: order.id },
   });
 
@@ -348,7 +360,11 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
     payUrl: invoice.payUrl,
     expiresAt,
     manual: true,
-  } as NonNullable<Order["payment"]>);
+    component,
+    baseAmount,
+    discountAmount,
+    amountExpected,
+  } as NonNullable<Order["payment"]>, component);
 
   return {
     ok: true,

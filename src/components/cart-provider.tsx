@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { cartItemKey, type CartItem } from "@/lib/cart";
+import { mergeCartItems } from "@/lib/cart-identity-pure";
 import { trackAddToCart } from "@/lib/analytics";
 import { useAuth } from "@/components/auth-provider";
 
@@ -138,13 +139,7 @@ export function setCartOwner(owner: string | null) {
     previousOwner === GUEST_OWNER && next !== GUEST_OWNER;
 
   if (migratingGuest && previousItems.length > 0) {
-    const bySlug = new Map(target.map((it) => [it.slug, { ...it }]));
-    for (const it of previousItems) {
-      const existing = bySlug.get(it.slug);
-      if (existing) existing.qty += it.qty;
-      else bySlug.set(it.slug, { ...it });
-    }
-    target = [...bySlug.values()];
+    target = mergeCartItems(target, previousItems);
     // Bersihkan keranjang guest setelah dipindahkan ke user.
     persist(GUEST_OWNER, []);
   }

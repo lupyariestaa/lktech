@@ -29,7 +29,7 @@ import {
   listOrderEmails,
 } from "@/lib/email-status";
 import { restoreCouponUsage } from "@/lib/coupons";
-import { shouldRestoreCoupon, isTransitionAllowed } from "@/lib/order-status-pure";
+import { shouldRestoreCoupon } from "@/lib/order-status-pure";
 import { getSiteSettings } from "@/lib/settings";
 import { releaseOrderDownload, createManualOrderInvoice } from "@/lib/order-payment";
 import { recordAdminAudit } from "@/lib/admin-audit";
@@ -335,28 +335,27 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    // OR-A3: validasi transisi terhadap matriks status (server-authoritative).
-    const before = await getOrderById(id);
-    if (!before) {
+    // The transition is validated atomically against the status read in tx.
+    const { previousStatus, changed, notFound, invalidTransition } = await updateOrderStatus(
+      id,
+      status as OrderStatus,
+      check.email,
+    );
+
+    if (notFound) {
       return NextResponse.json({ error: "Pesanan tidak ditemukan." }, { status: 404 });
     }
-    if (!isTransitionAllowed(before.status, status)) {
+    if (invalidTransition && previousStatus) {
       return NextResponse.json(
         {
-          error: `Perubahan status dari "${ORDER_STATUS_LABEL[before.status]}" ke "${ORDER_STATUS_LABEL[status as OrderStatus]}" tidak diizinkan.`,
+          error: `Perubahan status dari "${ORDER_STATUS_LABEL[previousStatus]}" ke "${ORDER_STATUS_LABEL[status as OrderStatus]}" tidak diizinkan. Status pesanan telah berubah; muat ulang lalu coba lagi.`,
           code: "invalid_transition",
-          from: before.status,
+          from: previousStatus,
           to: status,
         },
         { status: 409 },
       );
     }
-
-    const { previousStatus, changed } = await updateOrderStatus(
-      id,
-      status as OrderStatus,
-      check.email,
-    );
 
     // `EM-C3`: idempotensi — bila status tidak berubah, jangan kirim email lagi.
     if (!changed || previousStatus === status) {
@@ -453,15 +452,19 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Status tidak valid." }, { status: 400 });
       }
       for (const order of orders) {
-        if (!isTransitionAllowed(order.status, target)) {
-          skipped.push({ id: order.id, reason: "invalid_transition" });
-          continue;
-        }
-        const { previousStatus, changed } = await updateOrderStatus(
+        const { previousStatus, changed, notFound, invalidTransition } = await updateOrderStatus(
           order.id,
           target as OrderStatus,
           check.email,
         );
+        if (notFound) {
+          skipped.push({ id: order.id, reason: "not_found" });
+          continue;
+        }
+        if (invalidTransition) {
+          skipped.push({ id: order.id, reason: "invalid_transition" });
+          continue;
+        }
         if (!changed || previousStatus === target) {
           skipped.push({ id: order.id, reason: "unchanged" });
           continue;
@@ -582,8 +585,10 @@ export async function POST(req: Request) {
                 ? "Pesanan tidak ditemukan."
                 : res.reason === "final_status"
                   ? "Pesanan sudah final (dibatalkan/kedaluwarsa/selesai) — tidak bisa dibuat invoice."
-                  : res.reason === "no_amount"
+              : res.reason === "no_amount"
                     ? "Total pesanan 0 — tidak bisa dibuat invoice."
+                    : res.reason === "goods_payment_pending"
+                      ? "Invoice barang harus dibayar terlebih dahulu sebelum membuat invoice jasa."
                     : "Gagal membuat invoice manual.";
         const status = res.reason === "not_found" ? 404 : 409;
         return NextResponse.json({ error: msg, code: res.reason }, { status });

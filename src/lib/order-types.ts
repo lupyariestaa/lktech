@@ -7,6 +7,7 @@ import {
 import { coerceISODate } from "@/lib/order-time-pure";
 import { ORDER_STATUS_LIST } from "@/lib/order-status-pure";
 import type { PrintPricing } from "@/lib/product-types";
+import { normalizePrintFinishing } from "@/lib/order-item-display";
 
 // Re-export agar konsumen order cukup impor dari satu tempat.
 export type { FulfillmentType, OrderPayment };
@@ -69,6 +70,10 @@ export type OrderItem = {
   qty: number;
   /** Subtotal = price * qty. */
   subtotal: number;
+  /** Fulfillment snapshot per item; absent on historical orders. */
+  fulfillment?: FulfillmentType;
+  /** Proportional share of order coupon discount, in whole Rupiah. */
+  discountShare?: number;
   /** Slug varian terpilih (kosong untuk produk tunggal). */
   variantSlug?: string;
   /** Nama varian terpilih (kosong untuk produk tunggal). */
@@ -78,6 +83,8 @@ export type OrderItem = {
     heightM?: number;
     finishingIds: string[];
   };
+  /** Label finishing saat checkout; snapshot agar tetap terbaca setelah katalog berubah. */
+  printFinishing?: Array<{ id: string; name: string }>;
   printPricing?: PrintPricing;
 };
 
@@ -116,6 +123,8 @@ uid: string;
   status: OrderStatus;
 /** Info pembayaran online (bila ada). Order lama: undefined. */
   payment?: OrderPayment;
+  /** Additional invoice for the service component of a mixed order. */
+  servicePayment?: OrderPayment;
   /**
    * Catatan kurang bayar (OR-A6): nominal webhook < total order. Order tetap
    * `menunggu_bayar`; ini penanda agar admin melihatnya di panel "butuh perhatian".
@@ -170,6 +179,10 @@ export function normalizeOrderPayment(v: unknown): OrderPayment | undefined {
     method: str(d.method) || undefined,
     paidAt: str(d.paidAt) || undefined,
     manual: d.manual === true ? true : undefined,
+    component: d.component === "goods" || d.component === "service" || d.component === "order" ? d.component : undefined,
+    baseAmount: typeof d.baseAmount === "number" && Number.isSafeInteger(d.baseAmount) ? d.baseAmount : undefined,
+    discountAmount: typeof d.discountAmount === "number" && Number.isSafeInteger(d.discountAmount) ? d.discountAmount : undefined,
+    amountExpected: typeof d.amountExpected === "number" && Number.isSafeInteger(d.amountExpected) ? d.amountExpected : undefined,
   };
 }
 
@@ -198,6 +211,14 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
         price,
         qty,
         subtotal: num(it.subtotal) || price * qty,
+        fulfillment:
+          it.fulfillment === "instan" || it.fulfillment === "jasa" || it.fulfillment === "cetak"
+            ? it.fulfillment
+            : undefined,
+        discountShare:
+          typeof it.discountShare === "number" && Number.isSafeInteger(it.discountShare) && it.discountShare >= 0
+            ? it.discountShare
+            : undefined,
         variantSlug: str(it.variantSlug) || undefined,
         printOptions:
           rawPrintOptions
@@ -210,6 +231,7 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
               }
             : undefined,
         printPricing: normalizePrintPricing(it.printPricing),
+        printFinishing: normalizePrintFinishing(it.printFinishing),
         variantName: str(it.variantName) || undefined,
       };
     });
@@ -227,6 +249,7 @@ export function normalizeOrder(data: Record<string, unknown>): Order {
       : total;
 
   const payment = normalizeOrderPayment(data.payment);
+  const servicePayment = normalizeOrderPayment(data.servicePayment);
   const fulfillment =
     data.fulfillment === "instan" || data.fulfillment === "jasa" || data.fulfillment === "cetak"
       ? (data.fulfillment as FulfillmentType)
@@ -263,6 +286,7 @@ buyerName: str(data.buyerName),
     total,
 status,
     payment,
+    servicePayment,
     paymentMismatch:
       data.paymentMismatch && typeof data.paymentMismatch === "object"
         ? (() => {

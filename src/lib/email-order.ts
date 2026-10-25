@@ -3,6 +3,7 @@ import type { Order, OrderStatus } from "@/lib/order-types";
 import { ORDER_STATUS_LABEL } from "@/lib/order-types";
 import { formatRupiah, shortOrderCode } from "@/lib/format";
 import { SITE } from "@/lib/site";
+import { printSpecificationLines } from "@/lib/order-item-display";
 import {
   RESEND_ENDPOINT,
   getResendApiKey,
@@ -140,8 +141,11 @@ function itemsRowsHtml(order: Order): string {
       const variant = it.variantName
         ? ` <span style="color:#64748b">(${esc(it.variantName)})</span>`
         : "";
+      const details = printSpecificationLines(it)
+        .map((line) => `<br/><span style="color:#64748b;font-size:12px">${esc(line)}</span>`)
+        .join("");
       return `<tr>
-        <td style="padding:8px 0;color:#0a0f1e;font-size:14px">${esc(it.name)}${variant} <span style="color:#64748b">×${it.qty}</span></td>
+        <td style="padding:8px 0;color:#0a0f1e;font-size:14px">${esc(it.name)}${variant} <span style="color:#64748b">×${it.qty}</span>${details}</td>
         <td style="padding:8px 0;color:#0a0f1e;font-size:14px;font-weight:600;text-align:right;white-space:nowrap">${formatRupiah(it.subtotal)}</td>
       </tr>`;
     })
@@ -192,7 +196,10 @@ function confirmationText(order: Order): string {
   const items = order.items
     .map(
       (it) =>
-        `- ${it.name}${it.variantName ? ` (${it.variantName})` : ""} ×${it.qty} = ${formatRupiah(it.subtotal)}`,
+        [
+          `- ${it.name}${it.variantName ? ` (${it.variantName})` : ""} ×${it.qty} = ${formatRupiah(it.subtotal)}`,
+          ...printSpecificationLines(it).map((line) => `  ${line}`),
+        ].join("\n"),
     )
     .join("\n");
   const pricing: string[] = [];

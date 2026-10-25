@@ -14,6 +14,7 @@ import {
 } from "@/components/admin/orders/order-status-badge";
 import { BuyerAvatar } from "@/components/admin/orders/buyer-avatar";
 import { cn } from "@/lib/utils";
+import { printSpecificationLines } from "@/lib/order-item-display";
 
 /** Kartu pesanan (FASE O1) — tampilan seluler / preferensi. */
 export function OrderCard({
@@ -85,7 +86,10 @@ export function OrderCard({
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface px-4 py-3">
         <p className="text-xs text-slate-500">
           {order.items.length > 0
-            ? order.items.map((it) => `${it.name} ×${it.qty}`).join(", ")
+             ? order.items.map((it) => [
+                 `${it.name} ×${it.qty}`,
+                 ...printSpecificationLines(it),
+               ].join(" · ")).join(", ")
             : "Rincian item tidak tersedia."}
         </p>
         <p className="text-sm font-bold text-secondary">{formatRupiah(order.total)}</p>

@@ -1,6 +1,8 @@
 import type { Product, ProductVariant, PrintPricing } from "@/lib/product-types";
 import type { OrderItem } from "@/lib/order-types";
 import { formatPrice } from "@/lib/product-format";
+import { cartIdentityKey } from "@/lib/cart-identity-pure";
+import { printSpecificationLines } from "@/lib/order-item-display";
 
 /**
  * Satu item di keranjang (data minimal, disimpan di localStorage).
@@ -35,10 +37,7 @@ export type CartItem = {
  * berbeda tidak saling menimpa di keranjang.
  */
 export function cartItemKey(item: Pick<CartItem, "slug" | "variantSlug" | "printOptions">): string {
-  const base = item.variantSlug ? `${item.slug}::${item.variantSlug}` : item.slug;
-  return item.printOptions
-    ? `${base}::${item.printOptions.widthM ?? ""}x${item.printOptions.heightM ?? ""}::${[...item.printOptions.finishingIds].sort().join(",")}`
-    : base;
+  return cartIdentityKey(item);
 }
 
 /**
@@ -145,6 +144,9 @@ export function buildOrderMessage(
         it.subtotal,
       )}`,
     );
+    for (const detail of printSpecificationLines(it)) {
+      lines.push(`   ${sanitizeMessageText(detail)}`);
+    }
   });
   lines.push("");
 
@@ -191,6 +193,7 @@ export function buildCheckoutMessage(
     variantSlug: it.variantSlug,
     variantName: it.variantName,
     printOptions: it.printOptions,
+    printFinishing: it.printOptions?.finishingIds.map((id) => ({ id, name: id })),
     printPricing: it.printPricing,
   }));
   return buildOrderMessage(orderItems, buyer);

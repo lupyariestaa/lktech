@@ -17,7 +17,7 @@ import {
   validateCoupon,
 } from "@/lib/coupons";
 import { recordOrderEmailStatus, logOrderEmail } from "@/lib/email-status";
-import { fulfillmentTypeForCategories } from "@/lib/order-fulfillment";
+import { allocateDiscountByItem, fulfillmentTypeForCategory, summarizeFulfillment } from "@/lib/order-fulfillment";
 import { notifyOrderAwaitingConfirmation } from "@/lib/order-payment";
 import { createInvoice, isMayarConfigured, getMayarMode } from "@/lib/mayar";
 import { obs } from "@/lib/observability";
@@ -123,6 +123,7 @@ export async function performCheckout(
       });
     }
     categories.push(product.category);
+    const itemFulfillment = fulfillmentTypeForCategory(product.category);
 
     const evaluation = evaluatePurchase(product, {
       variantSlug: reqItem.variantSlug,
@@ -146,9 +147,18 @@ export async function performCheckout(
         price: evaluation.price,
         qty,
         subtotal: evaluation.price * qty,
+        fulfillment: itemFulfillment,
         variantSlug: evaluation.variantSlug,
         variantName: evaluation.variantName,
         ...(evaluation.printOptions ? { printOptions: evaluation.printOptions } : {}),
+        ...(evaluation.printOptions
+          ? {
+              printFinishing: evaluation.printOptions.finishingIds.flatMap((id) => {
+                const option = product.printConfig?.finishingOptions.find((item) => item.id === id);
+                return option ? [{ id: option.id, name: option.name }] : [];
+              }),
+            }
+          : {}),
         ...(evaluation.printPricing ? { printPricing: evaluation.printPricing } : {}),
       });
     } else {
@@ -158,6 +168,7 @@ export async function performCheckout(
         price: evaluation.price,
         qty,
         subtotal: evaluation.price * qty,
+        fulfillment: itemFulfillment,
       });
     }
   }
@@ -210,6 +221,14 @@ export async function performCheckout(
   }
 
   const total = Math.max(0, subtotal - discount);
+  const discountShares = allocateDiscountByItem(items.map((item) => item.subtotal), discount);
+  const pricedItems = items.map((item, index) => ({ ...item, discountShare: discountShares[index] }));
+  const hasService = pricedItems.some((item) => item.fulfillment === "jasa");
+  const hasGoods = pricedItems.some((item) => item.fulfillment !== "jasa");
+  const goodsInvoiceAmount = pricedItems.reduce(
+    (sum, item) => sum + (item.fulfillment === "jasa" ? 0 : item.subtotal - (item.discountShare ?? 0)),
+    0,
+  );
 
   // `KP-C1`/C2: reservasi kuota kupon ATOMIK sebelum membuat order
   // (single-use, kuota total, per-user, & kuota harian dicek di dalam transaksi).
@@ -230,12 +249,12 @@ export async function performCheckout(
     { subtotal, discount, couponCode: orderCoupon?.code },
   );
 
-  const fulfillment: FulfillmentType = fulfillmentTypeForCategories(categories);
-  if (fulfillment === "cetak" && (!isMayarConfigured() || total <= 0)) {
+  const fulfillment: FulfillmentType = summarizeFulfillment(categories);
+  if ((fulfillment === "cetak" || (hasGoods && hasService)) && (!isMayarConfigured() || goodsInvoiceAmount <= 0)) {
     if (couponId) await restoreCouponUsage(couponId, actor.uid);
     return fail(503, {
-      error: total <= 0
-        ? "Total pesanan cetak harus lebih dari Rp0 agar bisa dibayar melalui Mayar."
+      error: goodsInvoiceAmount <= 0
+        ? "Total item barang setelah diskon harus lebih dari Rp0 agar dapat dibayar melalui Mayar."
         : "Pembayaran Mayar belum tersedia. Pesanan cetak belum dibuat; coba lagi nanti.",
     });
   }
@@ -248,7 +267,7 @@ export async function performCheckout(
       buyerName,
       buyerEmail: actor.email,
       buyerPhotoUrl: buyerPhotoUrl || undefined,
-      items,
+      items: pricedItems,
       subtotal,
       coupon: orderCoupon,
       total,
@@ -265,9 +284,10 @@ export async function performCheckout(
   // ===== Produk digital/cetak: buat invoice Mayar =====
   let payUrl: string | null = null;
   let paymentWarning: string | null = null;
-  if (fulfillment === "instan" || fulfillment === "cetak") {
+  if (fulfillment === "instan" || fulfillment === "cetak" || (hasGoods && hasService)) {
     const payment: OrderPayment = { provider: "mayar", status: "belum_bayar" };
-    if (isMayarConfigured() && total > 0) {
+    const invoiceAmount = hasGoods && hasService ? goodsInvoiceAmount : total;
+    if (isMayarConfigured() && invoiceAmount > 0) {
       try {
         const mobile =
           (buyerProfile?.whatsapp ?? "").trim() || settings.whatsapp || "";
@@ -278,20 +298,22 @@ export async function performCheckout(
           mobile,
           description: `Pesanan LKTech ${order.id}`,
           items:
-            discount > 0 && orderCoupon
-              ? [
-                  { quantity: 1, rate: subtotal, description: "Subtotal pesanan" },
-                  {
-                    quantity: 1,
-                    rate: -discount,
-                    description: `Diskon ${orderCoupon.code}`,
-                  },
-                ]
-              : [{ quantity: 1, rate: total, description: "Total pesanan" }],
+            hasGoods && hasService
+              ? [{ quantity: 1, rate: invoiceAmount, description: "Item non-jasa setelah alokasi diskon" }]
+              : discount > 0 && orderCoupon
+                ? [
+                    { quantity: 1, rate: subtotal, description: "Subtotal pesanan" },
+                    { quantity: 1, rate: -discount, description: `Diskon ${orderCoupon.code}` },
+                  ]
+                : [{ quantity: 1, rate: total, description: "Total pesanan" }],
           extraData: { orderId: order.id },
         });
 
         payment.status = "menunggu";
+        payment.component = hasGoods && hasService ? "goods" : "order";
+        payment.baseAmount = hasGoods && hasService ? pricedItems.reduce((s, i) => s + (i.fulfillment === "jasa" ? 0 : i.subtotal), 0) : subtotal;
+        payment.discountAmount = hasGoods && hasService ? pricedItems.reduce((s, i) => s + (i.fulfillment === "jasa" ? 0 : (i.discountShare ?? 0)), 0) : discount;
+        payment.amountExpected = invoiceAmount;
         payment.invoiceId = invoice.invoiceId;
         payment.transactionId = invoice.transactionId;
         payment.payUrl = invoice.payUrl;

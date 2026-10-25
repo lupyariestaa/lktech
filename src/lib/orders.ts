@@ -3,13 +3,13 @@ import { getAdminDb } from "@/lib/firebase-admin";
 import { AggregateField, type Query, type QueryDocumentSnapshot } from "firebase-admin/firestore";
 import {
   isOrderExpired,
-  isPaidStatus,
   isPayableStatus,
   normalizeOrder,
   ORDER_STATUSES,
   type Order,
   type OrderStatus,
 } from "@/lib/order-types";
+import { evaluateStatusTransition } from "@/lib/order-status-pure";
 import {
   applyFilterAndSort,
   attentionReasons,
@@ -71,6 +71,7 @@ export async function createOrder(
   if (data.buyerPhotoUrl) payload.buyerPhotoUrl = data.buyerPhotoUrl;
   if (data.coupon) payload.coupon = data.coupon;
   if (data.payment) payload.payment = data.payment;
+  if (data.servicePayment) payload.servicePayment = data.servicePayment;
   if (data.fulfillment) payload.fulfillment = data.fulfillment;
 
   const ref = await db.collection(COLLECTION).add(payload);
@@ -557,12 +558,12 @@ export async function getOrdersAttentionSummary(): Promise<AttentionSummary> {
  * Mengembalikan `{ previousStatus, changed, notFound? }`:
  * - `previousStatus` — status SEBELUM perubahan (untuk idempotensi email `EM-C3`
  *   & pengembalian kuota kupon `KP-C2`).
- * - `changed` — `false` bila status sudah sama (no-op) atau order tak ada.
+ * - `changed` — `false` bila status sudah sama, transisi tak diizinkan, atau order tak ada.
  * - `notFound` — `true` bila order tidak ditemukan.
+ * - `invalidTransition` + `previousStatus` — status aktual tidak mengizinkan transisi.
  *
- * Catatan: validasi **transisi yang diizinkan** dilakukan di pemanggil (API admin)
- * memakai `isTransitionAllowed` dari `@/lib/order-status-pure`, agar pesan error
- * bisa jelas. Fungsi ini hanya menjaga atomisitas baca-tulis.
+ * Validasi transisi ejaan/status dan penulisan dilakukan dalam transaksi yang sama
+ * agar dua request bersamaan tidak dapat memakai status usang.
  */
 export async function updateOrderStatus(
   id: string,
@@ -572,6 +573,7 @@ export async function updateOrderStatus(
   previousStatus: OrderStatus | null;
   changed: boolean;
   notFound?: boolean;
+  invalidTransition?: boolean;
 }> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
@@ -590,8 +592,13 @@ export async function updateOrderStatus(
       ...data,
     }).status;
 
-    if (previousStatus === status) {
+    const transition = evaluateStatusTransition(previousStatus, status);
+    if (transition === "unchanged") {
       return { previousStatus, changed: false };
+    }
+
+    if (transition === "invalid") {
+      return { previousStatus, changed: false, invalidTransition: true };
     }
 
     tx.update(ref, {
@@ -615,11 +622,13 @@ export async function updateOrderStatus(
 export async function updateOrderPayment(
   id: string,
   payment: NonNullable<Order["payment"]>,
+  component: "goods" | "service" | "order" = "order",
 ): Promise<void> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
+  payment.component = component;
   await db.collection(COLLECTION).doc(id).update({
-    payment,
+    ...(component === "service" ? { servicePayment: payment } : { payment }),
     updatedAtISO: new Date().toISOString(),
   });
 }
@@ -661,7 +670,7 @@ export async function setOrderDownloadToken(
  */
 export async function markOrderPaid(
   id: string,
-  info: { amount?: number; method?: string; transactionId?: string; at?: string },
+  info: { amount?: number; method?: string; transactionId?: string; invoiceId?: string; at?: string },
   orderStatus: OrderStatus = "dibayar",
 ): Promise<{
   applied: boolean;
@@ -686,31 +695,44 @@ export async function markOrderPaid(
       });
 
       // Idempoten: sudah dibayar → tidak ada aksi.
-      if (current.payment?.status === "dibayar" || isPaidStatus(current.status)) {
+      const payRef = current.servicePayment?.invoiceId === info.invoiceId && info.invoiceId
+        ? current.servicePayment
+        : current.payment;
+      if (payRef?.status === "dibayar") {
         return { applied: false, order: current, reason: "already_paid" as const };
       }
+      if (!payRef || (info.invoiceId && payRef.invoiceId !== info.invoiceId)) {
+        return { applied: false, order: current, reason: "not_payable" as const };
+      }
 
-      // Guard status (OR-A2): status terminal / tak boleh dibayar → tolak.
-      if (!isPayableStatus(current.status)) {
+      const mixed = current.items.some((item) => item.fulfillment === "jasa") && current.items.some((item) => item.fulfillment !== "jasa");
+      const componentPayment = payRef.component === "service" || payRef.component === "goods";
+      // Mixed component invoices may settle independently; terminal orders remain blocked.
+      if ((!componentPayment && !isPayableStatus(current.status)) || ["dibatalkan", "kedaluwarsa", "selesai"].includes(current.status)) {
         return { applied: false, order: current, reason: "not_payable" as const };
       }
 
       const payment = {
-        provider: current.payment?.provider ?? "mayar",
+        ...payRef,
+        provider: payRef.provider ?? "mayar",
         status: "dibayar" as const,
-        invoiceId: current.payment?.invoiceId,
-        payUrl: current.payment?.payUrl,
-        expiresAt: current.payment?.expiresAt,
-        transactionId: info.transactionId ?? current.payment?.transactionId,
-        method: info.method ?? current.payment?.method,
-        amount: typeof info.amount === "number" ? info.amount : current.payment?.amount,
+        transactionId: info.transactionId ?? payRef.transactionId,
+        method: info.method ?? payRef.method,
+        amount: typeof info.amount === "number" ? info.amount : payRef.amount,
         paidAt: at,
         ...(current.payment?.manual ? { manual: true } : {}),
       };
 
+      const mixedGoodsPaid = mixed && payment.component === "goods";
+      const settled = mixedGoodsPaid ? current.servicePayment?.status === "dibayar" : payment.component === "service" && mixed
+        ? current.payment?.status === "dibayar"
+        : true;
+      const nextPayment = payRef.component === "service"
+        ? { payment: current.payment, servicePayment: payment }
+        : { payment, servicePayment: current.servicePayment };
       tx.update(ref, {
-        status: orderStatus,
-        payment,
+        ...(settled ? { status: orderStatus } : {}),
+        ...nextPayment,
         updatedAtISO: at,
         updatedBy: "system:markOrderPaid",
       });
@@ -719,7 +741,8 @@ export async function markOrderPaid(
         id: doc.id,
         ...(doc.data() as Record<string, unknown>),
         status: orderStatus,
-        payment,
+        ...nextPayment,
+        ...(settled ? { status: orderStatus } : {}),
       });
       return { applied: true, order };
     });

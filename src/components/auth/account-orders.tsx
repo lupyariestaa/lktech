@@ -12,6 +12,7 @@ import type { MyOrder } from "@/lib/order-api";
 import { formatPrice } from "@/lib/product-format";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { printSpecificationLines } from "@/lib/order-item-display";
 
 /** Tab "Pesanan": daftar pesanan + detail + pesan lagi. */
 export function AccountOrders({
@@ -161,6 +162,9 @@ export function AccountOrders({
                         {it.qty > 1 && (
                           <span className="ml-1 text-muted">×{it.qty}</span>
                         )}
+                        {printSpecificationLines(it).map((detail) => (
+                          <span key={detail} className="block text-xs text-muted">{detail}</span>
+                        ))}
                       </span>
                       <span className="shrink-0 font-medium text-secondary">
                         {formatPrice(it.subtotal)}

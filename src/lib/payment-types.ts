@@ -66,6 +66,14 @@ export type OrderPayment = {
   paidAt?: string;
   /** Invoice dibuat manual oleh admin (FASE P2), bukan dari checkout. */
   manual?: boolean;
+  /** Semantic component for multi-stage mixed-order payments. */
+  component?: "goods" | "service" | "order";
+  /** Item subtotal covered by this invoice before discount. */
+  baseAmount?: number;
+  /** Coupon discount deducted from this component. */
+  discountAmount?: number;
+  /** Exact expected amount for this specific invoice. */
+  amountExpected?: number;
 };
 
 /** Jenis fulfillment order: INSTAN (unduh) atau JASA (konsultasi). */

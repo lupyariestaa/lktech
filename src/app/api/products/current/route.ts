@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { getProductsBySlugs } from "@/lib/products";
-import { effectiveFulfillment } from "@/lib/order-fulfillment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/products/current?slugs=a,b,c&variants=slug:var,...
+ * GET /api/products/current?slugs=a,b,c
  *
  * OR-B3 — Ambil HARGA & KELAYAKAN terkini untuk item yang akan dimasukkan ulang
  * ke keranjang (mis. aksi "Pesan lagi" dari riwayat pesanan). Klien memakai ini
@@ -14,14 +13,13 @@ export const dynamic = "force-dynamic";
  * lalu checkout tetap memverifikasi ulang server (safety net).
  *
  * Aman & publik (hanya data produk publik). Mengembalikan per-slug:
- * `{ slug, exists, active, soldOut, price, variant?: {slug, name, price, soldOut, stock}, name }`.
- * Untuk produk multi-varian, `price` = harga varian yang diminta (bila ada) atau
- * varian termurah yang tersedia.
+ * `{ slug, exists, active, soldOut, price, variants[], printConfig, category, name }`.
+ * Seluruh varian dikembalikan agar pemanggil dapat memeriksa beberapa item dari
+ * produk yang sama (mis. beberapa konfigurasi bahan banner).
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const rawSlugs = url.searchParams.get("slugs") ?? "";
-  const rawVariants = url.searchParams.get("variants") ?? "";
 
   const slugs = Array.from(
     new Set(
@@ -36,13 +34,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ products: [] });
   }
 
-  // Peta varian yang diminta: `slug` → `variantSlug`.
-  const wantedVariants = new Map<string, string>();
-  for (const pair of rawVariants.split(",")) {
-    const [s, v] = pair.split(":").map((x) => x?.trim());
-    if (s && v) wantedVariants.set(s, v);
-  }
-
   try {
     const products = await getProductsBySlugs(slugs);
     const out = slugs.map((slug) => {
@@ -51,31 +42,35 @@ export async function GET(req: Request) {
         return { slug, exists: false, active: false, soldOut: true, price: 0 };
       }
 
-      const variantSlug = wantedVariants.get(slug);
       if (product.variants.length > 0) {
-        const variant =
-          product.variants.find((v) => v.slug === variantSlug) ??
-          product.variants.find((v) => !v.soldOut) ??
-          product.variants[0];
+        const variant = product.variants.find((v) => !v.soldOut) ?? product.variants[0];
         return {
           slug: product.slug,
           exists: true,
           name: product.name,
           active: product.active,
           soldOut: product.soldOut || Boolean(variant?.soldOut),
-          fulfillment: effectiveFulfillment(
-            product.category === "jasa" ? "jasa" : "instan",
-          ),
+          category: product.category,
           price: variant?.price ?? 0,
           variant: variant
             ? {
                 slug: variant.slug,
                 name: variant.name,
                 price: variant.price,
-                soldOut: variant.soldOut,
-                stock: variant.stock ?? null,
-              }
-            : null,
+              soldOut: variant.soldOut,
+              stock: variant.stock ?? null,
+              printPricing: variant.printPricing,
+            }
+          : null,
+          variants: product.variants.map((item) => ({
+            slug: item.slug,
+            name: item.name,
+            price: item.price,
+            soldOut: item.soldOut,
+            stock: item.stock ?? null,
+            printPricing: item.printPricing,
+          })),
+          printConfig: product.printConfig,
         };
       }
 
@@ -85,10 +80,9 @@ export async function GET(req: Request) {
         name: product.name,
         active: product.active,
         soldOut: product.soldOut,
-        fulfillment: effectiveFulfillment(
-          product.category === "jasa" ? "jasa" : "instan",
-        ),
+        category: product.category,
         price: product.price,
+        stock: product.stock ?? null,
       };
     });
 

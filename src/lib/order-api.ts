@@ -1,5 +1,6 @@
 import { getIdToken } from "@/lib/auth";
 import type { Order, OrderCoupon } from "@/lib/order-types";
+import type { Product } from "@/lib/product-types";
 
 /** Payload ringkas hasil checkout yang dikembalikan server. */
 export type CheckoutResult = {
@@ -90,7 +91,26 @@ export type CurrentProduct = {
   soldOut?: boolean;
   name?: string;
   price: number;
-  variant?: { slug: string; name: string; price: number; soldOut: boolean; stock: number | null } | null;
+  stock?: number | null;
+  variants?: Array<{
+    slug: string;
+    name: string;
+    price: number;
+    soldOut: boolean;
+    stock: number | null;
+    printPricing?: Order["items"][number]["printPricing"];
+  }>;
+  /** Backward-compatible field for callers that request a single variant. */
+  variant?: {
+    slug: string;
+    name: string;
+    price: number;
+    soldOut: boolean;
+    stock: number | null;
+    printPricing?: Order["items"][number]["printPricing"];
+  } | null;
+  category?: string;
+  printConfig?: Product["printConfig"];
 };
 
 /**
@@ -102,12 +122,7 @@ export async function fetchCurrentProducts(
 ): Promise<Map<string, CurrentProduct>> {
   const slugs = Array.from(new Set(items.map((it) => it.slug)));
   if (slugs.length === 0) return new Map();
-  const variants = items
-    .filter((it) => it.variantSlug)
-    .map((it) => `${it.slug}:${it.variantSlug}`)
-    .join(",");
   const params = new URLSearchParams({ slugs: slugs.join(",") });
-  if (variants) params.set("variants", variants);
 
   const res = await fetch(`/api/products/current?${params.toString()}`, {
     cache: "no-store",

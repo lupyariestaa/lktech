@@ -31,6 +31,7 @@ import { isTransitionAllowed } from "@/lib/order-status-pure";
 import { effectiveFulfillment } from "@/lib/order-fulfillment";
 import { PAYMENT_STATUS_LABEL, PAYMENT_STATUS_STYLE } from "@/lib/payment-types";
 import { formatRupiah, formatDateTime, shortOrderCode } from "@/lib/format";
+import { printSpecificationLines } from "@/lib/order-item-display";
 import { waLink } from "@/lib/whatsapp";
 import { ensureRecentAdminAuth } from "@/lib/admin-reauth";
 import { useToast } from "@/components/admin/toast";
@@ -228,29 +229,33 @@ export function OrderDetailBody({
       </div>
 
       {/* Pembayaran */}
-      {order.payment && (
+      {(order.payment || order.servicePayment) && (
         <div className="mt-4 rounded-2xl border border-slate-200 p-4">
           <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
             Pembayaran
           </p>
-          <dl className="mt-2 flex flex-col gap-1 text-xs">
+          {([...[order.payment ? [{ label: "Barang", payment: order.payment }] : []], ...[order.servicePayment ? [{ label: "Jasa", payment: order.servicePayment }] : []]].flat()).map(({ label, payment }) => (
+          <div key={label} className="mt-2 border-t border-slate-100 pt-2 first:border-0 first:pt-0">
+          <p className="text-xs font-semibold text-secondary">{label} · {PAYMENT_STATUS_LABEL[payment.status]}</p>
+          <dl className="mt-1 flex flex-col gap-1 text-xs">
             <Row
               label="Metode"
-              value={`${order.payment.provider}${order.payment.method ? ` · ${order.payment.method}` : ""}${order.payment.manual ? " · manual" : ""}`}
+              value={`${payment.provider}${payment.method ? ` · ${payment.method}` : ""}${payment.manual ? " · manual" : ""}`}
             />
-            {typeof order.payment.amount === "number" && (
-              <Row label="Nominal diterima" value={formatRupiah(order.payment.amount)} />
+            <Row label="Nominal tagihan" value={formatRupiah(payment.amountExpected ?? 0)} />
+            {typeof payment.amount === "number" && (
+              <Row label="Nominal diterima" value={formatRupiah(payment.amount)} />
             )}
-            {order.payment.paidAt && (
-              <Row label="Dibayar pada" value={formatDateTime(order.payment.paidAt)} />
+            {payment.paidAt && (
+              <Row label="Dibayar pada" value={formatDateTime(payment.paidAt)} />
             )}
-            {order.payment.expiresAt && (
-              <Row label="Kedaluwarsa" value={formatDateTime(order.payment.expiresAt)} />
+            {payment.expiresAt && (
+              <Row label="Kedaluwarsa" value={formatDateTime(payment.expiresAt)} />
             )}
           </dl>
-          {order.payment.payUrl && order.payment.status !== "dibayar" && (
+          {payment.payUrl && payment.status !== "dibayar" && (
             <a
-              href={order.payment.payUrl}
+              href={payment.payUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
@@ -259,6 +264,8 @@ export function OrderDetailBody({
               Buka halaman pembayaran
             </a>
           )}
+          </div>
+          ))}
         </div>
       )}
 
@@ -287,6 +294,9 @@ export function OrderDetailBody({
               {it.variantName && (
                 <p className="text-xs text-muted">Varian: {it.variantName}</p>
               )}
+              {printSpecificationLines(it).map((detail) => (
+                <p key={detail} className="text-xs text-muted">{detail}</p>
+              ))}
               <p className="text-xs text-muted">
                 {formatRupiah(it.price)} × {it.qty}
               </p>
@@ -380,9 +390,12 @@ export function OrderActionsBar({
       order.status === "diproses" ||
       order.status === "selesai");
 
+  const mixedServiceOrder = order.items.some((item) => item.fulfillment === "jasa") && order.items.some((item) => item.fulfillment !== "jasa");
   const canCreateInvoice =
-    order.payment?.status !== "dibayar" &&
-    order.status !== "dibayar" &&
+    (mixedServiceOrder
+      ? order.status !== "dibatalkan" && order.status !== "kedaluwarsa" && order.status !== "selesai" &&
+        (order.payment?.status !== "dibayar" || order.servicePayment?.status !== "dibayar")
+      : order.payment?.status !== "dibayar" && order.status !== "dibayar") &&
     order.status !== "dibatalkan" &&
     order.status !== "kedaluwarsa" &&
     order.status !== "selesai" &&
@@ -555,7 +568,7 @@ export function OrderActionsBar({
             ) : (
               <FileText className="h-4 w-4" />
             )}
-            Invoice manual
+            {mixedServiceOrder ? (order.payment?.status === "dibayar" ? "Invoice jasa" : "Invoice barang") : "Invoice manual"}
           </button>
         )}
 

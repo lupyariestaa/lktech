@@ -33,6 +33,41 @@ export function fulfillmentTypeForCategories(
   return "instan";
 }
 
+/** A legacy/root label for mixed orders; item-level fulfillment is authoritative. */
+export function summarizeFulfillment(categories: readonly string[]): FulfillmentType {
+  if (categories.includes("jasa")) return "jasa";
+  return fulfillmentTypeForCategories(categories);
+}
+
+/** Allocate an order-wide discount proportionally, with exact integer totals. */
+export function allocateDiscountByItem(
+  subtotals: readonly number[],
+  discount: number,
+): number[] {
+  if (!Number.isSafeInteger(discount) || discount < 0) {
+    throw new Error("Diskon harus berupa bilangan bulat non-negatif.");
+  }
+  if (subtotals.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+    throw new Error("Subtotal item harus berupa bilangan bulat non-negatif.");
+  }
+  const total = subtotals.reduce((sum, value) => sum + value, 0);
+  if (!Number.isSafeInteger(total) || !Number.isSafeInteger(discount * Math.max(...subtotals, 0))) {
+    throw new Error("Nominal terlalu besar untuk alokasi diskon yang aman.");
+  }
+  if (discount > total) throw new Error("Diskon melebihi subtotal order.");
+  if (discount === 0 || total === 0) return subtotals.map(() => 0);
+
+  const shares = subtotals.map((subtotal, index) => {
+    const raw = (discount * subtotal) / total;
+    const base = Math.floor(raw);
+    return { index, base, remainder: raw - base };
+  });
+  const remainder = discount - shares.reduce((sum, share) => sum + share.base, 0);
+  const ranking = [...shares].sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  for (let i = 0; i < remainder; i += 1) ranking[i].base += 1;
+  return shares.sort((a, b) => a.index - b.index).map((share) => share.base);
+}
+
 /**
  * Fulfillment EFEKTIF sebuah order untuk tampilan/aksi (OR-B7).
  * Order lama (dibuat sebelum fitur fulfillment) dapat `undefined` — padahal

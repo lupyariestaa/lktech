@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { getOrderById, markOrderPaid } from "@/lib/orders";
 import { fulfillOrder } from "@/lib/order-payment";
+import { notifyOrderAwaitingConfirmation } from "@/lib/order-payment";
 import { obs } from "@/lib/observability";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { OrderStatus } from "@/lib/order-types";
+import { validateMayarPayment } from "@/lib/mayar-webhook-pure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,8 +25,8 @@ export const dynamic = "force-dynamic";
  *    tidak ada, coba `data.productId` sebagai fallback (order id kita).
  * 3. **Idempoten & atomik**: `markOrderPaid` transaksional — tidak menerapkan
  *    perubahan bila order sudah lunas; webhook ganda aman.
- * 4. **Cocokkan nominal**: bila `amount` yang diterima KURANG dari `order.total`,
- *    JANGAN tandai lunas — catat mismatch & beri 200 agar Mayar tak retry.
+ * 4. **Cocokkan nominal**: nominal wajib hadir dan sama persis dengan `order.total`;
+ *    nominal hilang/tidak valid/tidak cocok tidak pernah menandai lunas.
  * 5. **Guard status terminal (OR-A2)**: pembayaran untuk order `dibatalkan`/
  *    `kedaluwarsa`/`selesai` TIDAK menimpa status — dicatat sebagai `payment_late`.
  * 6. Selalu balas **200 cepat** (kecuali 401 token salah / 503 DB); fulfillment
@@ -73,7 +75,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, ignored: "unhandled_event" });
   }
 
-  const { orderId, amount, method, transactionId } = payload;
+  const { orderId, amount, method, transactionId, invoiceId } = payload;
 
   try {
     const order = await getOrderById(orderId);
@@ -82,35 +84,47 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignored: "order_not_found" });
     }
 
-    // ===== 4. Cocokkan nominal (toleransi 0; fee ditanggung terpisah) =====
-    if (typeof amount === "number" && amount + 1 < order.total) {
+    // ===== 4. Validasi bukti pembayaran; jangan pernah menebak nominal =====
+    const matchedPayment = invoiceId && order.servicePayment?.invoiceId === invoiceId
+      ? order.servicePayment
+      : order.payment;
+    const validation = validateMayarPayment(
+      { amount, invoiceId, transactionId },
+      {
+        total: matchedPayment?.amountExpected ?? order.total,
+        invoiceId: matchedPayment?.invoiceId,
+        transactionId: matchedPayment?.transactionId,
+      },
+    );
+    if (!validation.ok) {
       console.error(
-        `[webhook/mayar] payment_mismatch order=${orderId} received=${amount} expected=${order.total}`,
+        `[webhook/mayar] payment_rejected order=${orderId} reason=${validation.reason} received=${amount ?? "?"} expected=${order.total}`,
       );
-      obs.paymentMismatch({ orderId, received: amount, expected: order.total });
-      // OR-A6: ini KURANG BAYAR (bukan "gagal") — status order dibiarkan
-      // `menunggu_bayar` agar pembeli bisa melunasi; cacat nominal dicatat.
+      if (validation.reason === "amount_mismatch" && typeof amount === "number" && amount < order.total) {
+        obs.paymentMismatch({ orderId, received: amount, expected: order.total });
+      }
       await db
         .collection("orders")
         .doc(orderId)
         .set(
           {
             paymentMismatch: {
-              received: amount,
-              expected: order.total,
+              ...(typeof amount === "number" ? { received: amount } : {}),
+        expected: matchedPayment?.amountExpected ?? order.total,
+              reason: validation.reason,
               atISO: new Date().toISOString(),
             },
           },
           { merge: true },
         );
-      return NextResponse.json({ ok: true, mismatch: true });
+      return NextResponse.json({ ok: true, rejected: validation.reason });
     }
 
     // ===== 3. Tandai lunas (idempoten, ATOMIK) → status `dibayar` =====
     const targetStatus: OrderStatus = "dibayar";
     const { applied, reason } = await markOrderPaid(
       orderId,
-      { amount: typeof amount === "number" ? amount : order.total, method, transactionId },
+      { amount: validation.amount, method, transactionId, invoiceId },
       targetStatus,
     );
 
@@ -124,7 +138,7 @@ export async function POST(req: Request) {
         );
         obs.paymentLate({
           orderId,
-          amount: typeof amount === "number" ? amount : order.total,
+          amount: validation.amount,
           orderStatus: order.status,
         });
         return NextResponse.json({ ok: true, not_payable: true });
@@ -136,11 +150,17 @@ export async function POST(req: Request) {
     // ===== 5. Fulfillment best-effort (unduhan + email) =====
     obs.paymentReceived({
       orderId,
-      amount: typeof amount === "number" ? amount : order.total,
+      amount: validation.amount,
       method,
     });
     try {
-      await fulfillOrder(orderId);
+      if (matchedPayment?.component === "goods") {
+        await fulfillOrder(orderId);
+      } else if (matchedPayment?.component === "service") {
+        await notifyOrderAwaitingConfirmation(order);
+      } else {
+        await fulfillOrder(orderId);
+      }
     } catch (err) {
       console.error("[webhook/mayar] fulfillment gagal:", err);
     }
@@ -200,7 +220,7 @@ function verifyToken(req: Request): boolean {
 /** Hasil ekstraksi event pembayaran dari payload Mentah. */
 function extractPaymentEvent(
   body: unknown,
-): { orderId: string; amount?: number; method?: string; transactionId?: string } | null {
+): { orderId: string; amount?: number; method?: string; transactionId?: string; invoiceId?: string } | null {
   if (!body || typeof body !== "object") return null;
   const root = body as Record<string, unknown>;
 
@@ -236,7 +256,9 @@ function extractPaymentEvent(
     orderId,
     amount: Number.isFinite(amount) ? amount : undefined,
     method: firstString(data.paymentMethod, data.channel, data.method) || undefined,
-    transactionId: firstString(data.id, data.transactionId) || undefined,
+    // In documented Mayar payloads `data.id` is the invoice ID.
+    invoiceId: firstString(data.id, data.invoiceId) || undefined,
+    transactionId: firstString(data.transactionId) || undefined,
   };
 }
 
