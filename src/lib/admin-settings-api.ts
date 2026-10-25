@@ -200,3 +200,56 @@ export async function runSeoAudit(
 export async function fetchLatestSeoAudit(): Promise<SeoAuditLatestResponse> {
   return adminFetch<SeoAuditLatestResponse>("/api/admin/seo/audit");
 }
+
+/* ---- Google Analytics 4 (fase D6, sumber terpisah dari GSC) ---- */
+
+export type Ga4Status = "not_configured" | "connected" | "no_data" | "partial" | "error";
+
+export type Ga4Summary = {
+  pageViews: number;
+  sessions: number;
+  activeUsers: number;
+  engagedSessions: number;
+  engagementRate: number;
+};
+
+export type Ga4Report = {
+  status: Ga4Status;
+  errorCode?:
+    | "invalid_credentials"
+    | "permission_denied"
+    | "quota_limited"
+    | "provider_unavailable"
+    | "request_timeout"
+    | "invalid_response"
+    | "request_failed";
+  range: { startDate: string; endDate: string };
+  fetchedAt: string;
+  summary?: Ga4Summary;
+  comparisonSummary?: Ga4Summary;
+  previousRange?: { startDate: string; endDate: string };
+  trend: Array<{ date: string; pageViews: number; sessions: number; activeUsers: number }>;
+  topPages: Array<{ path: string; pageViews: number; sessions: number; activeUsers: number }>;
+  conversions: Array<{ eventName: string; count: number }>;
+  /** Nama event konversi yang aktif (maks 3). */
+  conversionEvents: string[];
+  unavailableSections?: Array<"summary" | "trend" | "pages" | "conversions" | "comparison">;
+};
+
+export type Ga4ReportRequest = {
+  days?: number;
+  startDate?: string;
+  endDate?: string;
+};
+
+/**
+ * Laporan Google Analytics 4 (agregat). Endpoint terpisah dari Search Console:
+ * angka GA4 TIDAK digabung dengan GSC, agar asal data tetap jelas.
+ */
+export async function fetchGa4Report(options: Ga4ReportRequest = {}): Promise<Ga4Report> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(options)) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  return adminFetch<Ga4Report>(`/api/admin/seo/ga4?${params.toString()}`);
+}
