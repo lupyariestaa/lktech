@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { buildBannerProduct } from "./banner-placeholder-data.mjs";
 
 const env = readFileSync(resolve(process.cwd(), ".env.local"), "utf8");
 for (const line of env.split(/\r?\n/)) {
@@ -26,49 +27,6 @@ const ref = db.collection("products").doc(slug);
 const existing = await ref.get();
 if (existing.exists) throw new Error(`Produk ${slug} sudah ada; tidak ditimpa.`);
 
-await ref.create({
-  slug,
-  name: "Cetak Banner Gratis Desain",
-  tagline: "Cetak banner dengan bantuan desain gratis.",
-  description: "Produk percetakan banner. Hubungi admin untuk memastikan spesifikasi dan ketersediaan sebelum produk diaktifkan.",
-  category: "percetakan",
-  price: 0,
-  cover: "default",
-  gallery: [],
-  features: [],
-  specs: [],
-  tools: [],
-  includes: [],
-  process: [],
-  notes: ["Kirim brief desain melalui WhatsApp setelah checkout tersedia."],
-  variants: [{
-    slug: "flexi-240-gsm",
-    name: "Flexi 240 GSM",
-    price: 0,
-    highlight: false,
-    soldOut: false,
-    features: [],
-    specs: [],
-    includes: [],
-    limits: [],
-    printPricing: { method: "area", ratePerM2: 0 },
-  }],
-  printConfig: {
-    minWidthM: 0,
-    minHeightM: 0,
-    maxWidthM: 0,
-    maxHeightM: 0,
-    minPricePerUnit: 0,
-    finishingOptions: [
-      { id: "mata-ayam", name: "Mata ayam" },
-      { id: "lebih-bahan-selongsong", name: "Lebih bahan & selongsong / rongga" },
-    ],
-  },
-  soldOut: false,
-  featured: false,
-  active: false,
-  updatedAtISO: new Date().toISOString(),
-  updatedBy: "seed-script",
-});
+await ref.create(buildBannerProduct(new Date().toISOString()));
 
-console.log(`Produk ${slug} dibuat nonaktif di Firestore ${projectId}. Isi batas ukuran dan tarif vendor sebelum mengaktifkan.`);
+console.log(`Produk banner ${slug} dibuat aktif di Firestore ${projectId} menggunakan konfigurasi katalog yang disetujui.`);

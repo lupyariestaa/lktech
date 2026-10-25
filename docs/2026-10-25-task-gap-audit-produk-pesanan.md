@@ -196,7 +196,7 @@ Selesai pada perubahan kode/dokumentasi: konfigurasi production kini fail-closed
 
 ## Prioritas P2 — Kualitas konfigurasi produk dan pengalaman pengguna
 
-### [ ] GAP-10 — Seed banner masih berupa placeholder dan berbeda dari produk aktif
+### [x] GAP-10 — Seed banner berbeda dari konfigurasi produk aktif
 
 **Temuan**  
 `scripts/seed-product-banner.mjs` membuat produk nonaktif dengan harga dan ukuran nol. Ini aman sebagai placeholder, tetapi tidak merepresentasikan produk banner aktif.
@@ -205,13 +205,15 @@ Selesai pada perubahan kode/dokumentasi: konfigurasi production kini fail-closed
 Seed untuk setup baru tidak siap digunakan dan berpotensi membingungkan operator jika dianggap sebagai konfigurasi bisnis final.
 
 **Task penyelesaian**
-- Pertahankan perilaku nonaktif dan tanpa harga sampai data bisnis disetujui.
-- Tambahkan peringatan eksplisit bahwa konfigurasi tarif/ukuran perlu diisi, atau sediakan seed yang membaca parameter konfigurasi yang sudah disetujui.
-- Dokumentasikan perbedaan antara seed placeholder dan konfigurasi produksi.
-- Jangan memasukkan harga atau spesifikasi tanpa persetujuan bisnis.
+- Samakan seed dengan konfigurasi produk banner aktif yang telah disetujui.
+- Pastikan seed mencakup tarif bahan, batas ukuran, finishing, dan keterangan alur pesanan yang sama.
+- Jangan menimpa dokumen produk yang sudah ada.
 
 **Kriteria selesai**  
-Seed tidak memberi kesan bahwa produk siap dijual dengan data placeholder, dan operator tahu langkah setup selanjutnya.
+Seed untuk setup baru menghasilkan produk banner siap jual dengan konfigurasi yang sama dengan katalog aktif.
+
+**Penyelesaian**
+Selesai: setelah operator mengonfirmasi konfigurasi yang sudah ada di katalog aktif, seed diselaraskan agar menghasilkan produk aktif dengan varian Flexi 280 (Rp25.000/m²), Flexi 340 (Rp30.000/m²), Korea 440 (Rp40.000/m²), batas ukuran 0,5–100 m, finishing yang sama, dan keterangan layanan yang sama. Seed tetap menolak menimpa dokumen yang sudah ada. Konfigurasi dipisah ke helper murni dan dilindungi tes regresi; data bisnis disalin dari produk aktif, bukan dikarang.
 
 ### [ ] GAP-11 — Rasio gambar mengklaim gambar tidak dipotong, tetapi rendering memakai `object-cover`
 
