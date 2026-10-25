@@ -2,13 +2,16 @@ import "server-only";
 import crypto from "node:crypto";
 import {
   dateRange,
+  resolveReportRange,
+  previousDateRange,
+  buildDimensionFilters,
+  type GscFilters,
   buildQueryBody,
   normalizeGscRows,
   normalizeGscSummary,
   isValidGscResponse,
   parseServiceAccount,
   gscErrorCode,
-  reportStatus,
   type GscErrorCode,
   type GscRow,
 } from "@/lib/search-console-pure";
@@ -81,6 +84,7 @@ async function querySearchAnalytics(
   startDate: string,
   endDate: string,
   rowLimit?: number,
+  filters: GscFilters = {},
 ): Promise<Result<unknown>> {
   const siteUrl = process.env.GSC_SITE_URL?.trim();
   if (!siteUrl) return { ok: false, error: "invalid_credentials" };
@@ -90,7 +94,14 @@ async function querySearchAnalytics(
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify(buildQueryBody({ startDate, endDate, dimensions, rowLimit })),
+        body: JSON.stringify(buildQueryBody({
+          startDate,
+          endDate,
+          dimensions,
+          rowLimit,
+          searchType: filters.searchType,
+          dimensionFilterGroups: buildDimensionFilters(filters),
+        })),
         cache: "no-store",
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       },
@@ -111,29 +122,38 @@ export type SearchConsoleReport = {
   range: { startDate: string; endDate: string };
   fetchedAt: string;
   summary?: { clicks: number; impressions: number; ctr: number; averagePosition: number };
-  unavailableSections?: Array<"summary" | "queries" | "pages">;
+  unavailableSections?: Array<"summary" | "queries" | "pages" | "trend" | "comparison">;
   topQueries: GscRow[];
   topPages: GscRow[];
+  previousRange?: { startDate: string; endDate: string };
+  comparisonSummary?: { clicks: number; impressions: number; ctr: number; averagePosition: number };
+  trend: GscRow[];
 };
 
-export async function getSearchConsoleReport(days = 28): Promise<SearchConsoleReport> {
-  const range = dateRange(days, new Date());
+export async function getSearchConsoleReport(options: { days?: number; startDate?: string; endDate?: string; filters?: GscFilters } = {}): Promise<SearchConsoleReport> {
+  const now = new Date();
+  const range = resolveReportRange({ ...options, now }) ?? dateRange(options.days ?? 28, now);
   const fetchedAt = new Date().toISOString();
   const empty = {
     range,
     fetchedAt,
     topQueries: [] as GscRow[],
     topPages: [] as GscRow[],
+    trend: [] as GscRow[],
   };
   if (!isSearchConsoleConfigured()) return { ...empty, status: "not_configured" };
 
   const tokenResult = await getAccessToken();
   if (!tokenResult.ok) return { ...empty, status: "error", errorCode: tokenResult.error };
 
-  const [summaryResult, queriesResult, pagesResult] = await Promise.all([
-    querySearchAnalytics(tokenResult.data, [], range.startDate, range.endDate, 1),
-    querySearchAnalytics(tokenResult.data, ["query"], range.startDate, range.endDate, 25),
-    querySearchAnalytics(tokenResult.data, ["page"], range.startDate, range.endDate, 25),
+  const previousRange = previousDateRange(range);
+  const filters = options.filters ?? {};
+  const [summaryResult, queriesResult, pagesResult, trendResult, comparisonResult] = await Promise.all([
+    querySearchAnalytics(tokenResult.data, [], range.startDate, range.endDate, 1, filters),
+    querySearchAnalytics(tokenResult.data, ["query"], range.startDate, range.endDate, 100, filters),
+    querySearchAnalytics(tokenResult.data, ["page"], range.startDate, range.endDate, 100, filters),
+    querySearchAnalytics(tokenResult.data, ["date"], range.startDate, range.endDate, 1000, filters),
+    querySearchAnalytics(tokenResult.data, [], previousRange.startDate, previousRange.endDate, 1, filters),
   ]);
   const summary = summaryResult.ok ? normalizeGscSummary(summaryResult.data) : null;
   const topQueries = queriesResult.ok && isValidGscResponse(queriesResult.data)
@@ -142,31 +162,46 @@ export async function getSearchConsoleReport(days = 28): Promise<SearchConsoleRe
   const topPages = pagesResult.ok && isValidGscResponse(pagesResult.data)
     ? normalizeGscRows(pagesResult.data)
     : null;
+  const trend = trendResult.ok && isValidGscResponse(trendResult.data)
+    ? normalizeGscRows(trendResult.data)
+    : null;
+  const comparisonSummary = comparisonResult.ok ? normalizeGscSummary(comparisonResult.data) : null;
 
   const failures = [
     !summaryResult.ok ? summaryResult.error : summary === null ? "invalid_response" : null,
     !queriesResult.ok ? queriesResult.error : topQueries === null ? "invalid_response" : null,
     !pagesResult.ok ? pagesResult.error : topPages === null ? "invalid_response" : null,
+    !trendResult.ok ? trendResult.error : trend === null ? "invalid_response" : null,
+    !comparisonResult.ok ? comparisonResult.error : comparisonSummary === null ? "invalid_response" : null,
   ].filter((error): error is GscErrorCode => error !== null);
 
   const hasData = (summary?.impressions ?? 0) > 0 || (summary?.clicks ?? 0) > 0;
-  const status = reportStatus({ configured: true, failureCount: failures.length, hasData });
-  if (status === "error") {
+  const requiredFailures = [summary, topQueries, topPages].filter((value) => value === null).length;
+  const status = requiredFailures === 3
+    ? "error"
+    : failures.length > 0
+      ? "partial"
+      : hasData ? "connected" : "no_data";
+  if (requiredFailures === 3) {
     return { ...empty, status, errorCode: failures[0] };
   }
-  if (status === "partial") {
+  if (failures.length > 0) {
     const unavailableSections: SearchConsoleReport["unavailableSections"] = [];
     if (summary === null) unavailableSections.push("summary");
     if (topQueries === null) unavailableSections.push("queries");
     if (topPages === null) unavailableSections.push("pages");
+    if (trend === null) unavailableSections.push("trend");
+    if (comparisonSummary === null) unavailableSections.push("comparison");
     return {
       ...empty,
-      status: "partial",
+      status,
       errorCode: failures[0],
       ...(summary ? { summary } : {}),
+      ...(comparisonSummary !== null ? { comparisonSummary, previousRange } : {}),
       unavailableSections,
       topQueries: topQueries ?? [],
       topPages: topPages ?? [],
+      trend: trend ?? [],
     };
   }
 
@@ -174,7 +209,10 @@ export async function getSearchConsoleReport(days = 28): Promise<SearchConsoleRe
     ...empty,
     status,
     summary: summary!,
+    comparisonSummary: comparisonSummary!,
+    previousRange,
     topQueries: topQueries!,
     topPages: topPages!,
+    trend: trend!,
   };
 }

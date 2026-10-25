@@ -1,6 +1,6 @@
 # Planning Pengembangan Sistem SEO & Dashboard LKTech
 
-> **Status:** D1 implementasi kode dan regression test selesai; menunggu verifikasi production build bersih/rilis  
+> **Status:** D1 tervalidasi; D2 implementasi lokal tervalidasi, belum di-commit/push
 > **Disusun:** 25 Oktober 2026  
 > **Cakupan:** audit kondisi repo saat ini dan rencana pengembangan bertahap untuk SEO teknis, pengukuran, dan pengalaman dashboard admin.  
 > **Dokumen fondasi:** `docs/2026-10-12-seo-konten-mesin.md` mencatat pengerjaan fondasi SEO S0–S7. Dokumen ini melanjutkan fondasi tersebut, bukan menyatakan seluruh rekomendasi baru sudah dikerjakan.
@@ -64,7 +64,9 @@ Rekomendasi utama: kembangkan secara bertahap, dimulai dengan **ketepatan dan ke
 - `scripts/seo-pure.test.ts`, `scripts/seo-schema.test.ts`, dan `scripts/article-seo.test.ts` menguji sebagian logika SEO/structured data/artikel.
 - Perlu menambahkan tes untuk perilaku endpoint/UI: status integrasi, error versus data kosong, agregasi global versus top-N, filter, dan batas rentang.
 
-**Catatan kemajuan D1 (25 Oktober 2026):** implementasi menambahkan status laporan eksplisit, aggregate query terpisah dari top-N, satu access token per laporan, timeout dan kode error aman, validasi bentuk respons, empty/error/partial state, pencegahan response lama menimpa filter terbaru, serta pengecualian tiga hari terakhir pada preset GSC. Tes GSC (13) dan seluruh unit test (682), ESLint berkas terdampak, TypeScript, serta `git diff --check` lulus. `npm run build` berhasil compile dan TypeScript, lalu mencapai pembuatan halaman statis (120/161) tetapi proses shell melewati batas timeout 10 menit; build tidak dapat dicatat sebagai lulus. Karena gate build belum terkonfirmasi, D1 belum ditandai selesai/siap rilis.
+**Catatan kemajuan D1 (25 Oktober 2026):** implementasi menambahkan status laporan eksplisit, aggregate query terpisah dari top-N, satu access token per laporan, timeout dan kode error aman, validasi bentuk respons, empty/error/partial state, pencegahan response lama menimpa filter terbaru, serta pengecualian tiga hari terakhir pada preset GSC. Tes GSC awal (13), seluruh unit test saat itu (682), ESLint, TypeScript, dan `git diff --check` lulus. Build awal melewati timeout shell setelah 120/161 halaman, tetapi setelah build diulang pada verifikasi D2, production build selesai dengan 162/162 halaman statis; D1 dinyatakan tervalidasi.
+
+**Catatan kemajuan D2 (25 Oktober 2026):** implementasi lokal mencakup tanggal kustom tervalidasi (inklusif, maksimum 180 hari, jeda data tiga hari), pembanding periode setara, tren harian, filter negara/perangkat/jenis pencarian/query/URL, tabel sort/pagination, serta CSV formula-safe yang dibatasi pada 100 baris teratas yang diminta API. Tes khusus GSC (17), seluruh unit test (686), ESLint berkas terkait, TypeScript, `git diff --check`, dan production build (162/162 halaman statis) lulus. Belum di-commit atau di-push.
 
 ---
 
@@ -393,7 +395,7 @@ Tidak ada keputusan produk yang memblokir D1. Sebelum D2, implementasi perlu mem
 
 **D0 → D1 → D2 (periode kustom + filter + CSV wajib) → D3 → D4 on-demand → D5 → D6 opsional → D7.**
 
-Implementasi berikutnya tetap dimulai dari **D1: keandalan dan kebenaran data**. Setelah D1, D2 harus mencakup kebutuhan “lebih proper” yang diputuskan: preset dan tanggal kustom, pembanding setara, filter analitik, tabel yang dapat dieksplorasi, serta CSV aman. Jangan memperluas insight sebelum aggregate-versus-top-N dan status kegagalan dibereskan. D4 crawler on-demand dan D6 GA4 memiliki risiko/ketergantungan lebih tinggi dan tidak perlu menghambat dashboard GSC yang lebih baik.
+Implementasi dimulai dari **D1: keandalan dan kebenaran data**, lalu **D2: eksplorasi dan rentang analitik**. D2 mencakup kebutuhan “lebih proper” yang diputuskan: preset dan tanggal kustom, pembanding setara, filter analitik, tabel yang dapat dieksplorasi, serta CSV aman. Jangan memperluas insight sebelum aggregate-versus-top-N dan status kegagalan dibereskan. D4 crawler on-demand dan D6 GA4 memiliki risiko/ketergantungan lebih tinggi dan tidak perlu menghambat dashboard GSC yang lebih baik.
 
 ---
 

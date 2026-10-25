@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Search, TrendingUp } from "lucide-react";
-import { fetchSeoReport, type GscRow, type SearchConsoleReport } from "@/lib/admin-settings-api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Download, ExternalLink, Loader2, RefreshCw, Search, TrendingUp } from "lucide-react";
+import { fetchSeoReport, type GscRow, type SearchConsoleReport, type SeoReportRequest } from "@/lib/admin-settings-api";
 import { cn } from "@/lib/utils";
+import { LineChart } from "@/components/admin/line-chart";
+import { safeCsvCell } from "@/lib/search-console-pure";
 
 /** Format angka ringkas (mis. 1.2K). */
 function fmt(n: number): string {
@@ -16,6 +18,13 @@ function pct(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 
+function delta(current: number, previous: number): string {
+  const change = current - previous;
+  if (previous === 0) return change === 0 ? "0" : `+${fmt(change)} (basis sebelumnya 0)`;
+  const ratio = (change / previous) * 100;
+  return `${change > 0 ? "+" : ""}${fmt(change)} (${ratio > 0 ? "+" : ""}${ratio.toFixed(1)}%)`;
+}
+
 /**
  * Panel SEO (Search Console) — fase S6. Menampilkan query & halaman teratas
  * dari Google Search Console. Fail-safe: bila belum dikonfigurasi, tampilkan
@@ -26,14 +35,16 @@ export function SeoDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(28);
+  const [customRange, setCustomRange] = useState<{ startDate: string; endDate: string } | null>(null);
+  const [filters, setFilters] = useState<Pick<SeoReportRequest, "country" | "device" | "searchType" | "query" | "page">>({ searchType: "web" });
   const requestId = useRef(0);
 
-  const load = useCallback(async (d: number) => {
+  const load = useCallback(async (options: SeoReportRequest) => {
     const id = ++requestId.current;
     setLoading(true);
     setError(null);
     try {
-      const next = await fetchSeoReport(d);
+      const next = await fetchSeoReport(options);
       if (id === requestId.current) setReport(next);
     } catch (err) {
       if (id === requestId.current) {
@@ -49,7 +60,7 @@ export function SeoDashboard() {
     const id = ++requestId.current;
     (async () => {
       try {
-        const data = await fetchSeoReport(28);
+        const data = await fetchSeoReport({ days: 28, searchType: "web" });
         if (active && id === requestId.current) setReport(data);
       } catch (err) {
         if (active && id === requestId.current) {
@@ -67,7 +78,28 @@ export function SeoDashboard() {
 
   const onRange = (d: number) => {
     setDays(d);
-    void load(d);
+    setCustomRange(null);
+    void load({ days: d, ...filters });
+  };
+
+  const applyCustomRange = () => {
+    if (!customRange) return;
+    void load({ ...customRange, ...filters });
+  };
+  const applyFilters = (next: typeof filters) => {
+    setFilters(next);
+    void load({ ...(customRange ?? { days }), ...next });
+  };
+  const exportCsv = (rows: GscRow[], label: string) => {
+    const header = ["Item", "Klik", "Impresi", "CTR", "Posisi"].map(safeCsvCell).join(",");
+    const body = rows.map((row) => [row.keys?.[0] ?? "", row.clicks, row.impressions, row.ctr, row.position].map(safeCsvCell).join(","));
+    const blob = new Blob(["\uFEFF", [header, ...body].join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `gsc-${label}-${report?.range.startDate ?? "range"}-${report?.range.endDate ?? ""}.csv`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
   };
 
   const summary = report?.summary;
@@ -82,25 +114,43 @@ export function SeoDashboard() {
               key={d}
               type="button"
               onClick={() => onRange(d)}
-              aria-pressed={days === d}
+              aria-pressed={!customRange && days === d}
               className={cn(
                 "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
-                days === d ? "bg-primary text-white" : "text-slate-600 hover:text-primary",
+                !customRange && days === d ? "bg-primary text-white" : "text-slate-600 hover:text-primary",
               )}
             >
-              {d} hari
+                {d} hari
             </button>
           ))}
         </div>
         <button
           type="button"
-          onClick={() => load(days)}
+          onClick={() => load({ ...(customRange ?? { days }), ...filters })}
           disabled={loading}
           aria-label="Muat ulang data SEO"
           className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:border-primary/40 hover:text-primary"
         >
           <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} aria-hidden="true" />
         </button>
+      </div>
+
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="text-xs font-medium text-muted">Mulai tanggal
+          <input type="date" value={customRange?.startDate ?? ""} onChange={(e) => setCustomRange((r) => ({ startDate: e.target.value, endDate: r?.endDate ?? "" }))} className="mt-1 block w-full rounded-lg border border-slate-200 p-2 text-sm text-secondary" />
+        </label>
+        <label className="text-xs font-medium text-muted">Sampai tanggal
+          <input type="date" value={customRange?.endDate ?? ""} onChange={(e) => setCustomRange((r) => ({ startDate: r?.startDate ?? "", endDate: e.target.value }))} className="mt-1 block w-full rounded-lg border border-slate-200 p-2 text-sm text-secondary" />
+        </label>
+        <button type="button" onClick={applyCustomRange} disabled={!customRange?.startDate || !customRange.endDate || loading} className="self-end rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Terapkan tanggal</button>
+        <p className="self-end text-xs text-muted">Maksimal 180 hari; tanggal akhir minimal 3 hari sebelum hari ini. CSV berisi hingga 100 baris teratas.</p>
+        <input value={filters.country ?? ""} onChange={(e) => setFilters((f) => ({ ...f, country: e.target.value || undefined }))} placeholder="Negara (kode ISO 3 huruf)" className="rounded-lg border border-slate-200 p-2 text-sm" />
+        <select value={filters.device ?? ""} onChange={(e) => setFilters((f) => ({ ...f, device: (e.target.value || undefined) as SeoReportRequest["device"] }))} className="rounded-lg border border-slate-200 p-2 text-sm"><option value="">Semua perangkat</option><option value="DESKTOP">Desktop</option><option value="MOBILE">Mobile</option><option value="TABLET">Tablet</option></select>
+        <select value={filters.searchType ?? "web"} onChange={(e) => setFilters((f) => ({ ...f, searchType: e.target.value as SeoReportRequest["searchType"] }))} className="rounded-lg border border-slate-200 p-2 text-sm"><option value="web">Web</option><option value="image">Image</option><option value="video">Video</option><option value="news">News</option></select>
+        <button type="button" onClick={() => { setFilters({}); void load(customRange ?? { days }); }} className="rounded-lg border border-slate-200 p-2 text-sm text-secondary">Reset filter</button>
+        <input value={filters.query ?? ""} onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value || undefined }))} placeholder="Query mengandung…" className="rounded-lg border border-slate-200 p-2 text-sm" />
+        <input value={filters.page ?? ""} onChange={(e) => setFilters((f) => ({ ...f, page: e.target.value || undefined }))} placeholder="URL mengandung…" className="rounded-lg border border-slate-200 p-2 text-sm" />
+        <button type="button" onClick={() => applyFilters(filters)} disabled={loading} className="rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary disabled:opacity-50">Terapkan filter</button>
       </div>
 
       {loading && !report ? (
@@ -160,11 +210,28 @@ export function SeoDashboard() {
             />
           </div>
 
+          {summary && report.comparisonSummary && (
+            <p className="text-xs text-muted">
+              Dibanding {report.previousRange?.startDate} → {report.previousRange?.endDate}: klik {delta(summary.clicks, report.comparisonSummary.clicks)}, impresi {delta(summary.impressions, report.comparisonSummary.impressions)}.
+            </p>
+          )}
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 className="mb-3 text-sm font-bold text-secondary">Tren klik harian</h2>
+            <LineChart
+              points={report.trend.map((row) => ({ label: row.keys?.[0]?.slice(5) ?? "", full: row.keys?.[0] ?? "", value: row.clicks }))}
+              formatValue={fmt}
+              ariaLabel="Tren klik Search Console per hari"
+              emptyLabel={report.unavailableSections?.includes("trend") ? "Tren gagal dimuat." : "Belum ada data tren."}
+            />
+          </section>
+
           <div className="grid gap-5 lg:grid-cols-2">
             <RowTable
               title="Query teratas"
               icon={<Search className="h-4 w-4" aria-hidden="true" />}
               rows={report.topQueries}
+              onExport={() => exportCsv(report.topQueries, "queries")}
               emptyHint={report.unavailableSections?.includes("queries")
                 ? "Data query gagal dimuat; coba muat ulang."
                 : "Belum ada data query pada rentang ini."}
@@ -173,6 +240,7 @@ export function SeoDashboard() {
               title="Halaman teratas"
               icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
               rows={report.topPages}
+              onExport={() => exportCsv(report.topPages, "pages")}
               emptyHint={report.unavailableSections?.includes("pages")
                 ? "Data halaman gagal dimuat; coba muat ulang."
                 : "Belum ada data halaman pada rentang ini."}
@@ -242,18 +310,31 @@ function RowTable({
   rows,
   emptyHint,
   isUrl = false,
+  onExport,
 }: {
   title: string;
   icon: React.ReactNode;
   rows: GscRow[];
   emptyHint: string;
   isUrl?: boolean;
+  onExport: () => void;
 }) {
+  const [sortBy, setSortBy] = useState<"clicks" | "impressions" | "position">("clicks");
+  const [page, setPage] = useState(0);
+  const sortedRows = useMemo(() => [...rows].sort((a, b) => {
+    const difference = sortBy === "position" ? a.position - b.position : b[sortBy] - a[sortBy];
+    return difference || (a.keys?.[0] ?? "").localeCompare(b.keys?.[0] ?? "");
+  }), [rows, sortBy]);
+  const pageSize = 20;
+  const pageCount = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const visiblePage = Math.min(page, pageCount - 1);
+  const pageRows = sortedRows.slice(visiblePage * pageSize, (visiblePage + 1) * pageSize);
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5">
-      <h2 className="flex items-center gap-1.5 text-sm font-bold text-secondary">
-        {icon} {title}
-      </h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-1.5 text-sm font-bold text-secondary">{icon} {title}</h2>
+        <button type="button" onClick={onExport} disabled={!rows.length} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-secondary disabled:opacity-50"><Download className="h-3.5 w-3.5" aria-hidden="true" /> CSV</button>
+      </div>
       {rows.length === 0 ? (
         <p className="mt-3 text-xs text-muted">{emptyHint}</p>
       ) : (
@@ -262,13 +343,13 @@ function RowTable({
             <thead className="text-muted">
               <tr className="border-b border-slate-100">
                 <th className="py-2 pr-3 font-medium">{isUrl ? "Halaman" : "Query"}</th>
-                <th className="py-2 px-2 text-right font-medium tabular-nums">Klik</th>
-                <th className="py-2 px-2 text-right font-medium tabular-nums">Impresi</th>
-                <th className="py-2 pl-2 text-right font-medium tabular-nums">Posisi</th>
+                <th className="py-2 px-2 text-right font-medium tabular-nums"><button type="button" onClick={() => { setSortBy("clicks"); setPage(0); }} aria-pressed={sortBy === "clicks"}>Klik{sortBy === "clicks" ? " ↓" : ""}</button></th>
+                <th className="py-2 px-2 text-right font-medium tabular-nums"><button type="button" onClick={() => { setSortBy("impressions"); setPage(0); }} aria-pressed={sortBy === "impressions"}>Impresi{sortBy === "impressions" ? " ↓" : ""}</button></th>
+                <th className="py-2 pl-2 text-right font-medium tabular-nums"><button type="button" onClick={() => { setSortBy("position"); setPage(0); }} aria-pressed={sortBy === "position"}>Posisi{sortBy === "position" ? " ↑" : ""}</button></th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => {
+              {pageRows.map((r, i) => {
                 const key = r.keys?.[0] ?? "—";
                 return (
                   <tr key={`${key}-${i}`} className="border-b border-slate-50 last:border-0">
@@ -295,6 +376,15 @@ function RowTable({
               })}
             </tbody>
           </table>
+          {pageCount > 1 && (
+            <div className="mt-3 flex items-center justify-between text-xs text-muted">
+              <span>{visiblePage * pageSize + 1}–{Math.min((visiblePage + 1) * pageSize, sortedRows.length)} dari {sortedRows.length}</span>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setPage(visiblePage - 1)} disabled={visiblePage === 0} className="rounded border border-slate-200 px-2 py-1 disabled:opacity-40">Sebelumnya</button>
+                <button type="button" onClick={() => setPage(visiblePage + 1)} disabled={visiblePage >= pageCount - 1} className="rounded border border-slate-200 px-2 py-1 disabled:opacity-40">Berikutnya</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

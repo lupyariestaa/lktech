@@ -3,6 +3,11 @@ import assert from "node:assert/strict";
 import {
   parseServiceAccount,
   dateRange,
+  resolveReportRange,
+  previousDateRange,
+  parseGscFilters,
+  buildDimensionFilters,
+  safeCsvCell,
   buildQueryBody,
   normalizeGscRows,
   normalizeGscSummary,
@@ -50,10 +55,52 @@ test("dateRange: clamp rentang", () => {
 
 test("buildQueryBody: rowLimit clamp & dimensi", () => {
   const b = buildQueryBody({ startDate: "a", endDate: "b", dimensions: ["query"], rowLimit: 999 });
-  assert.equal(b.rowLimit, 100);
+  assert.equal(b.rowLimit, 999);
   assert.deepEqual(b.dimensions, ["query"]);
   const b2 = buildQueryBody({ startDate: "a", endDate: "b", dimensions: ["page"] });
   assert.equal(b2.rowLimit, 25);
+  assert.equal(buildQueryBody({ startDate: "a", endDate: "b", rowLimit: 99_999 }).rowLimit, 25_000);
+});
+
+test("resolveReportRange: rentang custom inklusif, jeda GSC, dan validasi batas", () => {
+  const now = new Date("2026-10-25T12:00:00Z");
+  assert.deepEqual(resolveReportRange({ startDate: "2026-10-01", endDate: "2026-10-22", now }), {
+    startDate: "2026-10-01", endDate: "2026-10-22",
+  });
+  assert.equal(resolveReportRange({ startDate: "2026-02-30", endDate: "2026-03-02", now }), null);
+  assert.equal(resolveReportRange({ startDate: "2026-10-02", endDate: "2026-10-01", now }), null);
+  assert.equal(resolveReportRange({ startDate: "2026-10-01", endDate: "2026-10-23", now }), null);
+  assert.equal(resolveReportRange({ startDate: "2026-01-01", endDate: "2026-10-01", now }), null);
+  assert.equal(resolveReportRange({ days: "invalid", now })?.startDate, "2026-09-25");
+});
+
+test("previousDateRange: periode sebelumnya memiliki panjang yang sama dan tidak overlap", () => {
+  assert.deepEqual(previousDateRange({ startDate: "2026-10-01", endDate: "2026-10-07" }), {
+    startDate: "2026-09-24", endDate: "2026-09-30",
+  });
+});
+
+test("GSC filters: validasi query param dan bangun filter API", () => {
+  const filters = parseGscFilters(new URLSearchParams("country=idn&device=mobile&searchType=image&query=poster&page=%2Fproduk"));
+  assert.deepEqual(filters, {
+    country: "idn", device: "MOBILE", searchType: "image", queryContains: "poster", pageContains: "/produk",
+  });
+  assert.equal(parseGscFilters(new URLSearchParams("country=ID")), null);
+  assert.equal(parseGscFilters(new URLSearchParams("country=idn&unknown=value")), null);
+  assert.equal(parseGscFilters(new URLSearchParams("device=mobile&device=desktop")), null);
+  assert.deepEqual(buildDimensionFilters(filters!), [{ filters: [
+    { dimension: "country", operator: "equals", expression: "idn" },
+    { dimension: "device", operator: "equals", expression: "MOBILE" },
+    { dimension: "query", operator: "contains", expression: "poster" },
+    { dimension: "page", operator: "contains", expression: "/produk" },
+  ] }]);
+  assert.equal(buildQueryBody({ startDate: "a", endDate: "b", searchType: filters!.searchType }).type, "image");
+});
+
+test("safeCsvCell: quote CSV dan cegah formula injection", () => {
+  assert.equal(safeCsvCell('a,"b'), '"a,""b"');
+  assert.equal(safeCsvCell("=HYPERLINK(\"x\")"), '"\'=HYPERLINK(""x"")"');
+  assert.equal(safeCsvCell("-1"), '"\'-1"');
 });
 
 test("normalizeGscRows: parsing & buang kosong", () => {

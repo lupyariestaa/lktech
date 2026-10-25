@@ -115,12 +115,30 @@ export type SearchConsoleReport = {
   range: { startDate: string; endDate: string };
   fetchedAt: string;
   summary?: { clicks: number; impressions: number; ctr: number; averagePosition: number };
-  unavailableSections?: Array<"summary" | "queries" | "pages">;
+  unavailableSections?: Array<"summary" | "queries" | "pages" | "trend" | "comparison">;
   topQueries: GscRow[];
   topPages: GscRow[];
+  previousRange?: { startDate: string; endDate: string };
+  comparisonSummary?: { clicks: number; impressions: number; ctr: number; averagePosition: number };
+  trend: GscRow[];
 };
 
-/** Laporan Search Console (query & halaman teratas). */
-export async function fetchSeoReport(days = 28): Promise<SearchConsoleReport> {
-  return adminFetch<SearchConsoleReport>(`/api/admin/seo?days=${days}`);
+export type SeoReportRequest = {
+  days?: number;
+  startDate?: string;
+  endDate?: string;
+  country?: string;
+  device?: "DESKTOP" | "MOBILE" | "TABLET";
+  searchType?: "web" | "image" | "video" | "news";
+  query?: string;
+  page?: string;
+};
+
+/** Laporan Search Console dengan filter yang divalidasi ulang di server. */
+export async function fetchSeoReport(options: SeoReportRequest = {}): Promise<SearchConsoleReport> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(options)) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  return adminFetch<SearchConsoleReport>(`/api/admin/seo?${params.toString()}`);
 }

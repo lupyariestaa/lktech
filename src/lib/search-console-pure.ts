@@ -62,15 +62,7 @@ export function parseServiceAccount(raw: string | undefined | null): ServiceAcco
 
 /** Rentang N hari untuk GSC; mengecualikan 3 hari terakhir yang rawan belum matang. */
 export function dateRange(days: number, now: Date): { startDate: string; endDate: string } {
-  const safeDays = Math.min(Math.max(Math.floor(days) || 28, 1), 180);
-  const end = new Date(now);
-  const start = new Date(now);
-  // -3 hari: GSC performance data lazim tertunda 2–3 hari.
-  end.setUTCDate(end.getUTCDate() - 3);
-  start.setTime(end.getTime());
-  start.setUTCDate(start.getUTCDate() - (safeDays - 1));
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  return { startDate: fmt(start), endDate: fmt(end) };
+  return resolveReportRange({ days, now })!;
 }
 
 export function reportStatus(input: {
@@ -84,19 +76,120 @@ export function reportStatus(input: {
   return input.hasData ? "connected" : "no_data";
 }
 
-/** Body permintaan `searchanalytics.query` (top queries/pages). */
+/** Body permintaan Search Analytics; rowLimit mengikuti batas API GSC (25.000). */
 export function buildQueryBody(options: {
   startDate: string;
   endDate: string;
   dimensions: string[];
   rowLimit?: number;
+  searchType?: "web" | "image" | "video" | "news";
+  dimensionFilterGroups?: Array<{ filters: Array<{ dimension: string; operator: string; expression: string }> }>;
 }): Record<string, unknown> {
   return {
     startDate: options.startDate,
     endDate: options.endDate,
     dimensions: options.dimensions,
-    rowLimit: Math.min(Math.max(options.rowLimit ?? 25, 1), 100),
+    rowLimit: Math.min(Math.max(options.rowLimit ?? 25, 1), 25_000),
+    ...(options.searchType ? { type: options.searchType } : {}),
+    ...(options.dimensionFilterGroups?.length ? { dimensionFilterGroups: options.dimensionFilterGroups } : {}),
   };
+}
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+export const MAX_CUSTOM_RANGE_DAYS = 180;
+export const GSC_DATA_LAG_DAYS = 3;
+
+function validDay(value: string): boolean {
+  if (!ISO_DAY.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+export function resolveReportRange(input: {
+  days?: unknown;
+  startDate?: unknown;
+  endDate?: unknown;
+  now: Date;
+}): { startDate: string; endDate: string } | null {
+  const start = typeof input.startDate === "string" ? input.startDate : "";
+  const end = typeof input.endDate === "string" ? input.endDate : "";
+  if (start || end) {
+    if (!validDay(start) || !validDay(end) || start > end) return null;
+    const latest = new Date(input.now);
+    latest.setUTCHours(0, 0, 0, 0);
+    latest.setUTCDate(latest.getUTCDate() - GSC_DATA_LAG_DAYS);
+    const latestDay = latest.toISOString().slice(0, 10);
+    if (end > latestDay) return null;
+    const startDate = new Date(`${start}T00:00:00.000Z`);
+    const endDate = new Date(`${end}T00:00:00.000Z`);
+    const spanDays = Math.floor((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1;
+    if (spanDays > MAX_CUSTOM_RANGE_DAYS) return null;
+    return { startDate: start, endDate: end };
+  }
+  const days = input.days === undefined ? 28 : Number(input.days);
+  const safeDays = Math.min(Math.max(Math.floor(days) || 28, 1), 180);
+  const rangeEnd = new Date(input.now);
+  rangeEnd.setUTCHours(0, 0, 0, 0);
+  rangeEnd.setUTCDate(rangeEnd.getUTCDate() - GSC_DATA_LAG_DAYS);
+  const startDate = new Date(rangeEnd);
+  startDate.setUTCDate(startDate.getUTCDate() - (safeDays - 1));
+  return { startDate: startDate.toISOString().slice(0, 10), endDate: rangeEnd.toISOString().slice(0, 10) };
+}
+
+export function previousDateRange(range: { startDate: string; endDate: string }): { startDate: string; endDate: string } {
+  const start = new Date(`${range.startDate}T00:00:00.000Z`);
+  const end = new Date(`${range.endDate}T00:00:00.000Z`);
+  const span = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  end.setUTCDate(end.getUTCDate() - span);
+  start.setUTCDate(start.getUTCDate() - span);
+  return { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) };
+}
+
+export type GscFilters = {
+  country?: string;
+  device?: "DESKTOP" | "MOBILE" | "TABLET";
+  searchType?: "web" | "image" | "video" | "news";
+  queryContains?: string;
+  pageContains?: string;
+};
+
+export function buildDimensionFilters(filters: GscFilters): Array<{ filters: Array<{ dimension: string; operator: string; expression: string }> }> {
+  const dimensions: Array<{ dimension: string; operator: string; expression: string }> = [];
+  if (filters.country) dimensions.push({ dimension: "country", operator: "equals", expression: filters.country.toLowerCase() });
+  if (filters.device) dimensions.push({ dimension: "device", operator: "equals", expression: filters.device });
+  if (filters.queryContains) dimensions.push({ dimension: "query", operator: "contains", expression: filters.queryContains });
+  if (filters.pageContains) dimensions.push({ dimension: "page", operator: "contains", expression: filters.pageContains });
+  return dimensions.length ? [{ filters: dimensions }] : [];
+}
+
+export function parseGscFilters(params: URLSearchParams): GscFilters | null {
+  const country = params.get("country")?.trim().toLowerCase() ?? "";
+  const device = params.get("device")?.trim().toUpperCase() ?? "";
+  const searchType = params.get("searchType")?.trim().toLowerCase() ?? "";
+  const queryContains = params.get("query")?.trim() ?? "";
+  const pageContains = params.get("page")?.trim() ?? "";
+  const allowed = new Set(["days", "startDate", "endDate", "country", "device", "searchType", "query", "page"]);
+  for (const key of params.keys()) if (!allowed.has(key)) return null;
+  if (params.getAll("days").length > 1 || params.getAll("startDate").length > 1 || params.getAll("endDate").length > 1
+    || params.getAll("country").length > 1 || params.getAll("device").length > 1 || params.getAll("searchType").length > 1
+    || params.getAll("query").length > 1 || params.getAll("page").length > 1) return null;
+  if (country && !/^[a-z]{3}$/.test(country)) return null;
+  if (device && !["DESKTOP", "MOBILE", "TABLET"].includes(device)) return null;
+  if (searchType && !["web", "image", "video", "news"].includes(searchType)) return null;
+  if (queryContains.length > 100 || pageContains.length > 300) return null;
+  return {
+    ...(country ? { country } : {}),
+    ...(device ? { device: device as GscFilters["device"] } : {}),
+    ...(searchType ? { searchType: searchType as GscFilters["searchType"] } : {}),
+    ...(queryContains ? { queryContains } : {}),
+    ...(pageContains ? { pageContains } : {}),
+  };
+}
+
+export function safeCsvCell(value: unknown): string {
+  let text = String(value ?? "");
+  if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
 }
 
 /** Normalisasi respons GSC mentah → `GscRow[]` (buang baris kosong). */
