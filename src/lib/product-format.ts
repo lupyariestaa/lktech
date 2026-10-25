@@ -59,9 +59,16 @@ export function findVariant(
  * - Produk tunggal → harga produk.
  */
 export function productPriceLabel(
-  product: Pick<Product, "variants" | "price">,
+  product: Pick<Product, "variants" | "price" | "category">,
 ): string {
   if (!hasVariants(product)) return formatPrice(product.price);
+
+  if (product.category === "percetakan") {
+    const rates = product.variants.flatMap((variant) =>
+      variant.printPricing?.method === "area" ? [variant.printPricing.ratePerM2] : [],
+    );
+    return rates.length ? `Mulai ${formatPrice(Math.min(...rates))} / m²` : formatPrice(product.price);
+  }
 
   const min = cheapestVariant(product);
   const max = priciestVariant(product);

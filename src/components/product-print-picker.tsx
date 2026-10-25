@@ -59,7 +59,7 @@ export function ProductPrintPicker({ product }: { product: Product }) {
     <div className="grid max-w-xl gap-4 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
       <label className="grid gap-2 text-sm font-medium text-secondary">Bahan / jenis cetak
         <select className={field} value={variantSlug} onChange={(event) => setVariantSlug(event.target.value)}>
-          {variants.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+          {variants.map((item) => <option key={item.slug} value={item.slug}>{item.name} — {item.printPricing?.method === "area" ? `${formatPrice(item.printPricing.ratePerM2)} / m²` : "Per lembar"}</option>)}
         </select>
       </label>
       {pricing?.method === "area" && <div className="grid grid-cols-2 gap-3">
