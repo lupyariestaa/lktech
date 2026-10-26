@@ -15,6 +15,8 @@
 > **⚠️ Penting:** agar email terkirim ke **pembeli umum**, domain harus **diverifikasi di Resend** (§10). Saat ini `EMAIL_FROM=LKTech <onboarding@resend.dev>` → hanya terkirim ke alamat terdaftar Resend. Kode sudah siap & aman (best-effort); email admin tetap berjalan.
 >
 > **🟢 Webhook status pengiriman (`EM-P2`, kode 2026-10-26):** endpoint `/api/webhooks/resend` (verifikasi tanda tangan **Svix**, **fail-safe** — hanya aktif bila `RESEND_WEBHOOK_SECRET` diisi) menangkap `delivered/bounced/complained` dan mencatatnya pada riwayat email order. Aktivasi = langkah pemilik (`TUGAS-MANUAL.md` M7).
+>
+> **🟢 Pratinjau template (`EM-P3`, kode 2026-10-26):** fungsi penyusun dipisah dari pengiriman (`renderOrderConfirmationEmail`/`renderOrderPaidEmail`/`renderOrderStatusEmail`) sehingga dashboard dapat menampilkan email **persis seperti yang akan dikirim**. `GET /api/admin/email/preview` bersifat **read-only** (admin-only) dan memakai **pesanan contoh** (`buildSampleOrder()`) — **tidak pernah mengirim** dan tanpa masukan pengguna. UI di **Pengaturan → Notifikasi**.
 
 ---
 

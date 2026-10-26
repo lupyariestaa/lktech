@@ -111,7 +111,7 @@ Ketiga sistem berfungsi & punya fondasi arsitektur yang baik (agregasi/perhitung
 ### 3.2 Pengembangan proper
 - **[EM-P1] Kirim ulang email + riwayat email per order** (tombol di detail order; subkoleksi `orders/{id}/emails`).
 - **[EM-P2] Webhook Resend** (`email.delivered/bounced/complained`) untuk status pengiriman nyata & deteksi bounce. — 🟢 **kode selesai (2026-10-26)**: `/api/webhooks/resend` (tanda tangan Svix, fail-safe), indeks `email_sends` + riwayat `delivered/bounced`; aktivasi butuh `RESEND_WEBHOOK_SECRET`.
-- **[EM-P3] Pratinjau/dry-run template email pembeli** di dashboard.
+- **[EM-P3] Pratinjau/dry-run template email pembeli** di dashboard. — 🟢 **kode selesai (2026-10-26)**: fungsi `render*` dipisah dari pengiriman, endpoint read-only `/api/admin/email/preview` (memakai `buildSampleOrder()` — tidak pernah mengirim) + UI pemilih template/status di Pengaturan → Notifikasi.
 
 ---
 

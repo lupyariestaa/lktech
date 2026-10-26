@@ -28,6 +28,7 @@ peningkatan visual dashboard.
 - `rate-limit.ts`: `checkRateLimit()` memakai **Upstash REST** bila `UPSTASH_REDIS_REST_URL`/`_TOKEN` diisi; jika tidak → fallback in-memory.
 - Dipakai endpoint publik `POST /api/coupons/validate` & `POST /api/products/[slug]/reviews`.
 - **Webhook Resend** (`EM-P2`): 🟢 **kode selesai (2026-10-26)** — `/api/webhooks/resend` (verifikasi Svix, fail-safe) mencatat `delivered/bounced`. Aktivasi butuh `RESEND_WEBHOOK_SECRET` + domain terverifikasi (`TUGAS-MANUAL.md` M7).
+- **Pratinjau template email pembeli** (`EM-P3`): 🟢 **kode selesai (2026-10-26)** — `/api/admin/email/preview` (read-only, pesanan contoh) + UI di Pengaturan → Notifikasi.
 
 ### O3 — Validasi Env "Fail Loud" ✅
 - `env-check.ts`: `logEnvHealth()` dipanggil sekali di `instrumentation.ts` (startup).

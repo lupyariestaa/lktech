@@ -310,7 +310,7 @@ NILAI RENDAH ──────────────────────�
 | `KP-P2` | Kupon lanjutan (`appliesToSlugs`/`minItems`) | Menunggu bundling (Tema 1.2) |
 | `KP-P3`/`XL-3` | Rate-limit terdistribusi | Perlu akun Upstash |
 | `EM-P2` | Webhook Resend (delivered/bounced/complained) | 🟢 kode SELESAI (2026-10-26) — aktivasi butuh signing secret `RESEND_WEBHOOK_SECRET` + domain terverifikasi |
-| `EM-P3` | Pratinjau template email | Nice-to-have |
+| `EM-P3` | Pratinjau template email | 🟢 kode SELESAI (2026-10-26) — endpoint dry-run `/api/admin/email/preview` (read-only, pesanan contoh) + UI di Pengaturan → Notifikasi |
 | `KP-M4` | Anti-enumeration kode kupon | ✅ SELESAI (2026-10-13) — rate-limit IP + tolak cepat + observability |
 
 ---

@@ -49,7 +49,7 @@
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (2026-10-26):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` (2026-10-26, belum di-commit):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
+> 🎯 **TASK AKTIF (2026-10-26):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26):** endpoint dry-run `/api/admin/email/preview` + UI di halaman Notifikasi. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -116,6 +116,19 @@
 - **Aktivasi butuh pemilik (M7):** isi `RESEND_WEBHOOK_SECRET` + daftarkan URL `https://<domain>/api/webhooks/resend` di dashboard Resend.
 
 **Sisa manual (owner):** M7 (Resend webhook), uji browser S4/SEO, verifikasi staging/produksi + popup Google.
+
+---
+
+## 📧 SESI INI — Pratinjau Template Email Pembeli (`EM-P3`) — SELESAI (kode, 2026-10-26)
+
+**Status: ✅ SELESAI (kode).** Commit `eea1a38`. Gate: `test:email-preview` (**6**) · unit **828/828** · `tsc` ✅ · ESLint ✅ · `build` ✅.
+
+- **Penyusunan dipisah dari pengiriman:** `src/lib/email-order.ts` mengekspor `renderOrderConfirmationEmail`, `renderOrderPaidEmail`, `renderOrderStatusEmail` (mengembalikan `EmailTemplate = { subject, text, html }`), plus `buildSampleOrder()` (pesanan contoh deterministik berisi kupon + item cetak) dan `SAMPLE_DOWNLOAD_LINK`. Fungsi `send*` kini memakai `render*` yang sama (satu sumber kebenaran).
+- **Endpoint dry-run `GET /api/admin/email/preview`** (admin-only, `src/app/api/admin/email/preview/route.ts`): **read-only & tidak pernah mengirim** — hanya menyusun template dari **pesanan contoh**, tidak membaca data nyata & tidak memanggil Resend. Query `?template=confirmation|paid|status[&status=...]`. Whitelist via modul murni `src/lib/email-preview-pure.ts`; `Cache-Control: no-store`.
+- **UI di halaman Notifikasi** (`settings-notifikasi.tsx`): pemilih template/status, menampilkan subjek + HTML (`dangerouslySetInnerHTML` — aman karena berasal dari pesanan contoh, bukan masukan pengguna) + versi teks `<details>`. Klien `fetchEmailPreview` di `src/lib/admin-settings-api.ts`.
+- **Tes:** `scripts/email-preview.test.ts` (`test:email-preview`, 6) — guard murni + wiring (memastikan endpoint tak punya jalur kirim/`fetch(`).
+
+**Sisa manual (owner):** buka Pengaturan → Notifikasi, ganti-ganti template/status, dan pastikan tampilan sesuai harapan.
 
 ---
 
