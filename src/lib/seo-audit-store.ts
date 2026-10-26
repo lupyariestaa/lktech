@@ -15,6 +15,10 @@ import type { SeoAuditReport } from "@/lib/seo-audit-pure";
 const COLLECTION = "seo_audits";
 /** Jumlah run terakhir yang disimpan (sisanya dihapus). */
 export const SEO_AUDIT_RETENTION = 10;
+/** Jumlah dokumen yang diperiksa per putaran saat memangkas. */
+const PRUNE_BATCH = 40;
+/** Batas putaran agar pemangkasan tetap berhenti walau data sangat banyak. */
+const PRUNE_MAX_ROUNDS = 50;
 
 export type StoredSeoAudit = {
   id: string;
@@ -24,7 +28,13 @@ export type StoredSeoAudit = {
   report: SeoAuditReport;
 };
 
-/** Simpan satu hasil audit + jaga retensi. Best-effort. */
+/**
+ * Simpan satu hasil audit. Best-effort.
+ *
+ * Pemangkasan retensi TIDAK dilakukan di sini (AUD-08): jalankan
+ * `pruneSeoAudits()` terpisah — mis. lewat `after()` di route — agar respons
+ * audit tidak menunggu pekerjaan pembersihan.
+ */
 export async function saveSeoAudit(
   report: SeoAuditReport,
   actor: string,
@@ -41,27 +51,41 @@ export async function saveSeoAudit(
       summary: report.summary,
       report,
     });
-    await pruneOldAudits();
   } catch (err) {
     console.error("[seo-audit-store] gagal menyimpan hasil audit:", err);
   }
 }
 
-/** Hapus run lama di luar retensi. Best-effort. */
-async function pruneOldAudits(): Promise<void> {
+/**
+ * Hapus run lama di luar retensi. Best-effort.
+ *
+ * AUD-07: satu query hanya melihat sejumlah dokumen teratas, jadi pemangkasan
+ * DIULANG sampai tidak ada lagi dokumen melebihi retensi (bukan sekali pangkas
+ * yang menyisakan dokumen lama). Dibatasi `PRUNE_MAX_ROUNDS` putaran agar tetap
+ * berhenti walau jumlah dokumen sangat besar.
+ */
+export async function pruneSeoAudits(): Promise<void> {
   const db = getAdminDb();
   if (!db) return;
+  const pageSize = SEO_AUDIT_RETENTION + PRUNE_BATCH;
   try {
-    const snap = await db
-      .collection(COLLECTION)
-      .orderBy("createdAt", "desc")
-      .limit(SEO_AUDIT_RETENTION + 20)
-      .get();
-    const stale = snap.docs.slice(SEO_AUDIT_RETENTION);
-    if (stale.length === 0) return;
-    const batch = db.batch();
-    for (const doc of stale) batch.delete(doc.ref);
-    await batch.commit();
+    for (let round = 0; round < PRUNE_MAX_ROUNDS; round += 1) {
+      const snap = await db
+        .collection(COLLECTION)
+        .orderBy("createdAt", "desc")
+        .limit(pageSize)
+        .get();
+      const stale = snap.docs.slice(SEO_AUDIT_RETENTION);
+      if (stale.length === 0) return;
+      const batch = db.batch();
+      for (const doc of stale) batch.delete(doc.ref);
+      await batch.commit();
+      // Halaman belum penuh → tidak ada dokumen lama tersisa.
+      if (snap.docs.length < pageSize) return;
+    }
+    console.warn(
+      "[seo-audit-store] pemangkasan mencapai batas putaran; sebagian hasil lama mungkin tersisa.",
+    );
   } catch (err) {
     console.warn("[seo-audit-store] gagal memangkas hasil audit lama:", err);
   }

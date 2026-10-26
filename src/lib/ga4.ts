@@ -5,6 +5,7 @@ import { observeProvider } from "@/lib/seo-observability";
 import {
   GA4_SUMMARY_METRICS,
   buildRunReportBody,
+  defaultGa4Range,
   ga4ErrorCode,
   ga4Status,
   isValidGa4Response,
@@ -152,7 +153,10 @@ export type Ga4Report = {
 /** Laporan GA4 dengan struktur TERPISAH dari Search Console. */
 export async function getGa4Report(options: { days?: number; startDate?: string; endDate?: string } = {}): Promise<Ga4Report> {
   const now = new Date();
-  const range = resolveGa4Range({ ...options, now })!;
+  // AUD-05: jangan paksa (`!`) nilai yang bisa `null`. Bila rentang tak valid,
+  // pakai rentang default yang selalu sah (endpoint tetap memvalidasi & menolak
+  // rentang kustom tak valid dengan 400 sebelum memanggil fungsi ini).
+  const range = resolveGa4Range({ ...options, now }) ?? defaultGa4Range(now);
   const fetchedAt = new Date().toISOString();
   const conversionEvents = configuredConversionEvents();
   const empty = {
@@ -245,16 +249,19 @@ export async function getGa4Report(options: { days?: number; startDate?: string;
 
   const requiredFailures = [summary, trendRows, pageRows].filter((value) => value === null).length;
   const hasData = (summary?.pageViews ?? 0) > 0 || (summary?.sessions ?? 0) > 0;
-  const status = ga4Status({ configured: true, failureCount: countFailures([summary, trendRows, pageRows, comparisonSummary, conversionRows]), requiredCount: 3, hasData });
+  // AUD-06: SATU keputusan status. Hanya kegagalan bagian WAJIB (ringkasan,
+  // tren, halaman) yang menentukan `error`/`partial`; bagian opsional
+  // (pembanding, konversi) menandai `partial` lewat `unavailableSections`.
+  const status = ga4Status({ configured: true, failureCount: requiredFailures, requiredCount: 3, hasData });
 
-  if (requiredFailures === 3) {
+  if (status === "error") {
     const firstError = [summaryR, trendR, pagesR].find((r) => !r.ok) as { ok: false; error: Ga4ErrorCode } | undefined;
     return { ...empty, status: "error", errorCode: firstError?.error ?? "invalid_response" };
   }
 
   const optionalFailures =
     comparisonSummary === null || (conversionEvents.length > 0 && conversionRows === null);
-  if (optionalFailures || requiredFailures > 0) {
+  if (status === "partial" || optionalFailures) {
     const unavailableSections: NonNullable<Ga4Report["unavailableSections"]> = [];
     if (summary === null) unavailableSections.push("summary");
     if (trendRows === null) unavailableSections.push("trend");
@@ -283,10 +290,6 @@ export async function getGa4Report(options: { days?: number; startDate?: string;
     topPages,
     conversions,
   };
-}
-
-function countFailures(values: unknown[]): number {
-  return values.filter((value) => value === null).length;
 }
 
 /** GA4 memakai "YYYYMMDD" untuk dimensi `date`; ubah ke "YYYY-MM-DD". */

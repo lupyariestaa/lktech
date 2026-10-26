@@ -1,6 +1,8 @@
 import { adminFetch } from "@/lib/admin-fetch";
 import type { SeoInsight, SeoInsightConfig, SeoInsightDecision } from "@/lib/seo-insights-pure";
 import type { AuditInventoryGroup, SeoAuditReport } from "@/lib/seo-audit-pure";
+import type { ObservabilitySnapshot } from "@/lib/seo-observability-pure";
+import type { SeoFeature } from "@/lib/seo-flags-pure";
 
 /** Status integrasi (fase S5). Tanpa rahasia — hanya boolean/mode. */
 export type IntegrationsStatus = {
@@ -252,4 +254,19 @@ export async function fetchGa4Report(options: Ga4ReportRequest = {}): Promise<Ga
     if (value !== undefined && value !== "") params.set(key, String(value));
   }
   return adminFetch<Ga4Report>(`/api/admin/seo/ga4?${params.toString()}`);
+}
+
+/* ---- Observabilitas & kill switch SEO (fase D7) ---- */
+
+export type SeoObservabilityResponse = {
+  observability: ObservabilitySnapshot;
+  flags: Record<SeoFeature, boolean>;
+};
+
+/**
+ * Metrik operasional SEO (per-proses) + status kill switch fitur. Tanpa data
+ * sensitif: hanya provider, status, kode error aman, latency, dan waktu.
+ */
+export async function fetchSeoObservability(): Promise<SeoObservabilityResponse> {
+  return adminFetch<SeoObservabilityResponse>("/api/admin/seo/observability");
 }

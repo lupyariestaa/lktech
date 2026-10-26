@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getGa4Report } from "@/lib/ga4";
-import { resolveGa4Range } from "@/lib/ga4-pure";
+import { checkGa4QueryParams, resolveGa4Range } from "@/lib/ga4-pure";
 
 import { isSeoFeatureEnabledFromEnv, seoFeatureDisabledResponse } from "@/lib/seo-flags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
-
-const ALLOWED_PARAMS = new Set(["days", "startDate", "endDate"]);
 
 /**
  * GET /api/admin/seo/ga4?days=28 — laporan Google Analytics 4 (fase D6).
@@ -25,13 +23,9 @@ export async function GET(req: Request) {
   if (!isSeoFeatureEnabledFromEnv("ga4")) return seoFeatureDisabledResponse("ga4");
 
   const params = new URL(req.url).searchParams;
-  for (const key of params.keys()) {
-    if (!ALLOWED_PARAMS.has(key)) {
-      return NextResponse.json({ error: "Parameter tidak dikenal." }, { status: 400 });
-    }
-    if (params.getAll(key).length > 1) {
-      return NextResponse.json({ error: "Parameter ganda tidak diizinkan." }, { status: 400 });
-    }
+  const paramError = checkGa4QueryParams(params);
+  if (paramError) {
+    return NextResponse.json({ error: paramError }, { status: 400 });
   }
 
   const hasCustomRange = params.has("startDate") || params.has("endDate");

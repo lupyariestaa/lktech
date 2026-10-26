@@ -93,6 +93,23 @@ export function normalizePropertyId(raw: string | undefined | null): string | nu
   return /^\d{1,20}$/.test(id) ? id : null;
 }
 
+/** Parameter kueri yang diizinkan pada endpoint GA4. */
+export const GA4_QUERY_PARAMS = ["days", "startDate", "endDate"] as const;
+
+/**
+ * Validasi parameter kueri endpoint GA4 (AUD-04): tolak parameter tak dikenal &
+ * parameter ganda. Mengembalikan pesan galat (untuk respons 400) atau `null`
+ * bila parameter sah. Murni agar dapat diuji tanpa menjalankan route.
+ */
+export function checkGa4QueryParams(params: URLSearchParams): string | null {
+  const allowed = new Set<string>(GA4_QUERY_PARAMS);
+  for (const key of params.keys()) {
+    if (!allowed.has(key)) return "Parameter tidak dikenal.";
+    if (params.getAll(key).length > 1) return "Parameter ganda tidak diizinkan.";
+  }
+  return null;
+}
+
 /**
  * Resolusi rentang tanggal GA4. Perilaku mirror `resolveReportRange` GSC:
  * - rentang kustom inklusif, maksimum `GA4_MAX_RANGE_DAYS`, tanggal akhir tidak
@@ -120,14 +137,32 @@ export function resolveGa4Range(input: {
     if (spanDays > GA4_MAX_RANGE_DAYS) return null;
     return { startDate: start, endDate: end };
   }
-  const days = input.days === undefined ? GA4_DEFAULT_RANGE_DAYS : Number(input.days);
-  const safeDays = Math.min(Math.max(Math.floor(days) || GA4_DEFAULT_RANGE_DAYS, 1), GA4_MAX_RANGE_DAYS);
-  const rangeEnd = new Date(input.now);
+  return presetGa4Range(input.now, input.days);
+}
+
+/**
+ * Rentang preset (hari, inklusif) dengan jeda data GA4; `days` di-clamp
+ * `1..GA4_MAX_RANGE_DAYS`, nilai tak valid jatuh ke default. Selalu menghasilkan
+ * rentang yang sah (tidak pernah `null`).
+ */
+function presetGa4Range(now: Date, days: unknown): Ga4Range {
+  const requested = days === undefined ? GA4_DEFAULT_RANGE_DAYS : Number(days);
+  const safeDays = Math.min(Math.max(Math.floor(requested) || GA4_DEFAULT_RANGE_DAYS, 1), GA4_MAX_RANGE_DAYS);
+  const rangeEnd = new Date(now);
   rangeEnd.setUTCHours(0, 0, 0, 0);
   rangeEnd.setUTCDate(rangeEnd.getUTCDate() - GA4_DATA_LAG_DAYS);
   const startDate = new Date(rangeEnd);
   startDate.setUTCDate(startDate.getUTCDate() - (safeDays - 1));
   return { startDate: startDate.toISOString().slice(0, 10), endDate: rangeEnd.toISOString().slice(0, 10) };
+}
+
+/**
+ * Rentang default GA4 (preset `GA4_DEFAULT_RANGE_DAYS`). Dipakai sebagai fallback
+ * aman bila rentang yang diminta ternyata tidak valid — sehingga pemanggil tidak
+ * perlu memaksa (`!`) sebuah nilai yang bisa `null`.
+ */
+export function defaultGa4Range(now: Date): Ga4Range {
+  return presetGa4Range(now, GA4_DEFAULT_RANGE_DAYS);
 }
 
 /** Periode pembanding setara sebelumnya (panjang sama, tanpa tumpang tindih). */

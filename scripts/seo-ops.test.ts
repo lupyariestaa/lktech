@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  SEO_PROVIDER_LOG_EVENT,
   buildProviderLogEvent,
   createMetricsRegistry,
   recordProviderCall,
@@ -56,16 +57,16 @@ test("metrics: latency negatif/tak valid diklem", () => {
 });
 
 test("log event: hanya kunci aman, tanpa detail permintaan", () => {
+  assert.equal(SEO_PROVIDER_LOG_EVENT, "seo.provider_call");
   const failure = buildProviderLogEvent({ provider: "GSC", ok: false, errorCode: "request_timeout", latencyMs: 1234 });
   assert.deepEqual(failure, {
-    event: "seo.provider_call",
     provider: "gsc",
     ok: false,
     errorCode: "request_timeout",
     latencyMs: 1234,
   });
   const success = buildProviderLogEvent({ provider: "ga4", ok: true, latencyMs: 10 });
-  assert.deepEqual(success, { event: "seo.provider_call", provider: "ga4", ok: true, latencyMs: 10 });
+  assert.deepEqual(success, { provider: "ga4", ok: true, latencyMs: 10 });
   const serialized = JSON.stringify(failure);
   for (const forbidden of ["Bearer", "private_key", "access_token", "https://", "query", "page"]) {
     assert.equal(serialized.includes(forbidden), false, `log memuat "${forbidden}"`);

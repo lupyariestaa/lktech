@@ -141,18 +141,22 @@ export function snapshotMetrics(registry: MetricsRegistry, at?: Date): Observabi
   };
 }
 
+/** Nama event observability untuk pemanggilan provider SEO. */
+export const SEO_PROVIDER_LOG_EVENT = "seo.provider_call";
+
 /**
- * Bangun event log AMAN untuk satu pemanggilan provider. Kunci dibatasi agar
- * detail permintaan (query/URL/token) tidak pernah ikut tercatat.
+ * Bangun properti log AMAN untuk satu pemanggilan provider (dipakai bersama
+ * `logEvent`). Kunci dibatasi agar detail permintaan (query/URL/token) tidak
+ * pernah ikut tercatat. Nama event TIDAK disertakan di sini karena menjadi
+ * argumen `logEvent` (menghindari duplikasi `event` pada JSON log).
  */
 export function buildProviderLogEvent(input: {
   provider: string;
   ok: boolean;
   errorCode?: string;
   latencyMs: number;
-}): Record<string, unknown> {
+}): Record<string, string | number | boolean> {
   return {
-    event: "seo.provider_call",
     provider: String(input.provider ?? "").trim().toLowerCase() || "unknown",
     ok: input.ok,
     ...(input.ok ? {} : { errorCode: String(input.errorCode ?? "unknown") }),

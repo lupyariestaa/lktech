@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
 import { seoAuditRunSchema } from "@/lib/api-schemas";
 import { guardAdminMutation } from "@/lib/admin-rate-limit";
@@ -12,7 +12,7 @@ import {
   type AuditInventoryGroup,
 } from "@/lib/seo-inventory";
 import { emptyAuditReport, runSeoAudit } from "@/lib/seo-crawler";
-import { getLatestSeoAudit, saveSeoAudit } from "@/lib/seo-audit-store";
+import { getLatestSeoAudit, pruneSeoAudits, saveSeoAudit } from "@/lib/seo-audit-store";
 import { isSeoFeatureEnabledFromEnv, seoFeatureDisabledResponse } from "@/lib/seo-flags";
 
 export const runtime = "nodejs";
@@ -114,6 +114,9 @@ export async function POST(req: Request) {
 
   if (parsed.data.save !== false) {
     await saveSeoAudit(report, check.email);
+    // AUD-08: pangkas retensi setelah respons dikirim (bukan bagian dari jalur
+    // kritis audit), andalkan `after()` Next agar tetap berjalan di serverless.
+    after(() => pruneSeoAudits());
   }
 
   await recordAdminAudit({

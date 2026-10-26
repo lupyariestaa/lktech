@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  SEO_PROVIDER_LOG_EVENT,
   buildProviderLogEvent,
   createMetricsRegistry,
   recordProviderCall,
@@ -8,6 +9,7 @@ import {
   type ObservabilitySnapshot,
   type ProviderResult,
 } from "@/lib/seo-observability-pure";
+import { logEvent } from "@/lib/observability";
 
 /**
  * Observabilitas SEO server-side (fase D7).
@@ -39,7 +41,12 @@ export async function observeProvider<T extends ProviderResult>(
 
   recordProviderCall(registry, { provider, ok: result.ok, errorCode, latencyMs });
   if (!result.ok) {
-    console.warn(JSON.stringify(buildProviderLogEvent({ provider, ok: false, errorCode, latencyMs })));
+    // Log terstruktur satu baris dengan tag `[obs]` (fase P6) agar konsisten
+    // dengan event server lain dan mudah difilter di log Vercel/Sentry.
+    logEvent(
+      SEO_PROVIDER_LOG_EVENT,
+      buildProviderLogEvent({ provider, ok: false, errorCode, latencyMs }),
+    );
   }
   return result;
 }

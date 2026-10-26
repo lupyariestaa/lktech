@@ -64,6 +64,7 @@
     "scripts/seo-workflow.test.ts",
     "scripts/ga4.test.ts",
     "scripts/seo-ops.test.ts",
+    "scripts/seo-endpoints.test.ts",
     "scripts/seo-metadata.test.ts",
     "scripts/stats.test.ts",
     "scripts/payment-metrics.test.ts",

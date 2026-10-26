@@ -44,6 +44,7 @@
     "test:seo-workflow": "node --experimental-strip-types --test scripts/seo-workflow.test.ts",
     "test:ga4": "node --experimental-strip-types --test scripts/ga4.test.ts",
     "test:seo-ops": "node --experimental-strip-types --test scripts/seo-ops.test.ts",
+    "test:seo-endpoints": "node --experimental-strip-types --test scripts/seo-endpoints.test.ts",
     "test:seo-metadata": "node --experimental-strip-types --test scripts/seo-metadata.test.ts",
     "test:stats": "node --experimental-strip-types --test scripts/stats.test.ts",
     "test:pwa": "node --experimental-strip-types --test scripts/pwa.test.ts",
