@@ -37,6 +37,8 @@ export type EmailResult = {
   error?: string;
   /** Jumlah percobaan kirim (termasuk yang gagal) — untuk observability. */
   attempts?: number;
+  /** Id email dari Resend (`EM-P2`) — untuk korelasi webhook delivered/bounced. */
+  id?: string;
 };
 
 /** Apakah pengiriman email dikonfigurasi. */
@@ -100,7 +102,19 @@ async function sendEmail(params: {
         }),
       });
 
-      if (res.ok) return { ok: true, attempts: attempt };
+      if (res.ok) {
+        // Id Resend dipakai untuk mengorelasikan webhook delivered/bounced
+        // (`EM-P2`). Best-effort: bila respons tak memuat id, kirim tetap sukses.
+        const id = await res
+          .json()
+          .then((body: unknown) =>
+            body && typeof body === "object" && typeof (body as { id?: unknown }).id === "string"
+              ? (body as { id: string }).id
+              : undefined,
+          )
+          .catch(() => undefined);
+        return { ok: true, attempts: attempt, id };
+      }
 
       const errText = await res.text().catch(() => "");
       lastError = `Resend ${res.status}`;

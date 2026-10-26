@@ -756,13 +756,21 @@ function emailBadge(status?: string) {
   if (!status) return <span className="text-xs text-muted">Belum dikirim</span>;
   const map: Record<string, string> = {
     sent: "bg-emerald-50 text-emerald-600",
+    delivered: "bg-emerald-50 text-emerald-600",
+    delivery_delayed: "bg-amber-50 text-amber-600",
     skipped: "bg-slate-100 text-slate-500",
     failed: "bg-rose-50 text-rose-600",
+    bounced: "bg-rose-50 text-rose-600",
+    complained: "bg-amber-50 text-amber-600",
   };
   const label: Record<string, string> = {
     sent: "Terkirim",
+    delivered: "Diterima",
+    delivery_delayed: "Tertunda",
     skipped: "Dilewati",
     failed: "Gagal",
+    bounced: "Pantul",
+    complained: "Ditandai spam",
   };
   return (
     <span

@@ -1,5 +1,6 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { indexEmailSend } from "@/lib/email-events";
 import type { EmailResult } from "@/lib/email-order";
 
 /**
@@ -140,6 +141,16 @@ export async function logOrderEmail(
       });
   } catch (err) {
     console.error("[email-status] gagal menulis riwayat email:", err);
+  }
+
+  // `EM-P2`: indeks id Resend agar webhook delivered/bounced bisa menemukan
+  // order ini. Best-effort & hanya bila Resend mengembalikan id.
+  if (entry.result.ok && entry.result.id) {
+    await indexEmailSend(entry.result.id, {
+      orderId,
+      kind: entry.kind,
+      to: entry.to,
+    });
   }
 }
 

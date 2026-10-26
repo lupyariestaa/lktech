@@ -48,6 +48,12 @@ export type BackupBundle = {
     truncated?: boolean;
     /** Sumber yang datanya dipotong (bila `truncated`). */
     truncatedSources?: BackupSource[];
+    /** Batas dokumen per sumber saat ekspor (angka acuan admin, ADM-07). */
+    cap?: number;
+    /** Jumlah dokumen per sumber dalam bundle ini (ADM-07). */
+    perSourceCounts?: Array<{ source: BackupSource; count: number }>;
+    /** Sumber yang mendekati `cap` (≥ 80%) tetapi belum dipotong (ADM-07). */
+    nearLimitSources?: BackupSource[];
   };
   data: Partial<Record<BackupSource, unknown[]>>;
 };
@@ -117,6 +123,35 @@ export function summarizeBackup(bundle: BackupBundle): Array<{ source: BackupSou
 
 /** Batas jumlah dokumen yang boleh ditulis saat IMPOR (anti-overload). */
 export const IMPORT_CAP = 5000;
+
+/**
+ * Batas dokumen per sumber saat EKSPOR (anti-overload). Angka ini adalah
+ * **acuan operasional** yang ditampilkan ke admin (ADM-07); ekspor menyimpan
+ * satu angka batas agar perilaku "mendekati batas" dapat diprediksi.
+ */
+export const EXPORT_CAP = 5000;
+
+/** Ambang "mendekati batas" ekspor (fraksi dari `EXPORT_CAP`). */
+export const BACKUP_NEAR_LIMIT_RATIO = 0.8;
+
+/**
+ * Nilai kedekatan batas ekspor per sumber (murni, ADM-07).
+ * - `nearLimit`: `count` ≥ 80% `cap` tetapi belum dipotong.
+ * - `overLimit`: `count` ≥ `cap` (praktisnya: sumber yang dipotong).
+ */
+export function assessExportLimits(
+  counts: ReadonlyArray<{ source: BackupSource; count: number }>,
+  cap: number = EXPORT_CAP,
+): { nearLimit: BackupSource[]; overLimit: BackupSource[] } {
+  const nearLimit: BackupSource[] = [];
+  const overLimit: BackupSource[] = [];
+  const safeCap = Math.max(1, cap);
+  for (const { source, count } of counts) {
+    if (count >= safeCap) overLimit.push(source);
+    else if (count >= safeCap * BACKUP_NEAR_LIMIT_RATIO) nearLimit.push(source);
+  }
+  return { nearLimit, overLimit };
+}
 
 /**
  * Batas aman satu dokumen snapshot (ADM-12). Firestore membatasi 1 MiB per

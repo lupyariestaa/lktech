@@ -5,7 +5,10 @@ import {
   summarizeBackup,
   sanitizeBackupRow,
   planImport,
+  assessExportLimits,
   IMPORT_CAP,
+  EXPORT_CAP,
+  BACKUP_NEAR_LIMIT_RATIO,
   SETTINGS_DOC_ID,
   BACKUP_VERSION,
   BACKUP_SOURCES,
@@ -197,4 +200,48 @@ test("planImport: blokir admins tidak memblokir sumber lain", () => {
     assert.equal(plan.operations[0].source, "products");
     assert.equal(plan.skipped, 1);
   }
+});
+
+/* ---------- Batas ekspor & kedekatan batas (ADM-07) ---------- */
+
+test("assessExportLimits: mendeteksi dekat & melewati batas ekspor", () => {
+  const cap = 100;
+  const { nearLimit, overLimit } = assessExportLimits(
+    [
+      { source: "products", count: 79 }, // di bawah ambang 80%
+      { source: "orders", count: Math.ceil(cap * BACKUP_NEAR_LIMIT_RATIO) }, // tepat ambang
+      { source: "users", count: cap }, // mencapai batas
+      { source: "reviews", count: cap + 5 }, // melewati batas
+    ],
+    cap,
+  );
+  assert.deepEqual(nearLimit, ["orders"]);
+  assert.deepEqual(overLimit, ["users", "reviews"]);
+});
+
+test("assessExportLimits: batas default = EXPORT_CAP & sumber kosong aman", () => {
+  assert.equal(EXPORT_CAP, 5000);
+  assert.equal(BACKUP_NEAR_LIMIT_RATIO, 0.8);
+  const { nearLimit, overLimit } = assessExportLimits([], EXPORT_CAP);
+  assert.deepEqual(nearLimit, []);
+  assert.deepEqual(overLimit, []);
+});
+
+test("validateBackupBundle: menerima meta dengan field batas ekspor (ADM-07)", () => {
+  const r = validateBackupBundle(
+    bundle({
+      meta: {
+        version: BACKUP_VERSION,
+        createdAtISO: "2026-11-01T00:00:00Z",
+        by: "a@b.com",
+        sources: ["products"],
+        cap: EXPORT_CAP,
+        perSourceCounts: [{ source: "products", count: 2 }],
+        nearLimitSources: ["orders"],
+      },
+    }),
+  );
+  assert.equal(r.ok, true);
+  // Field tambahan tidak ikut tersimpan di bundle tervalidasi (aman).
+  if (r.ok) assert.equal("cap" in r.bundle.meta, false);
 });

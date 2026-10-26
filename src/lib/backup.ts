@@ -6,13 +6,17 @@ import { getOwnerEmails } from "@/lib/admins";
 import {
   BACKUP_SOURCES,
   BACKUP_VERSION,
+  EXPORT_CAP,
+  assessExportLimits,
   chunkSnapshotRows,
   planImport,
+  summarizeBackup,
   type BackupBundle,
   type BackupSource,
   type ImportPlan,
   type ImportPolicy,
 } from "@/lib/backup-pure";
+import { logEvent } from "@/lib/observability";
 
 /**
  * Ekspor/impor BACKUP (fase S7). Server-only.
@@ -34,9 +38,6 @@ const COLLECTION_SOURCES: BackupSource[] = [
   "reviews",
   "admins",
 ];
-
-/** Batas dokumen per sumber saat ekspor (anti-overload). */
-const EXPORT_CAP = 5000;
 
 /** Batas operasi per WriteBatch saat impor (Firestore maks 500). */
 const IMPORT_BATCH_SIZE = 400;
@@ -88,12 +89,29 @@ export async function exportBackup(
     }
   }
 
+  const perSourceCounts = summarizeBackup({ meta: { version: BACKUP_VERSION, createdAtISO: "", by, sources: valid }, data });
+  const { nearLimit, overLimit } = assessExportLimits(perSourceCounts, EXPORT_CAP);
+
+  // ADM-07: catat angka batas ekspor sebagai observability terstruktur (tanpa PII)
+  // agar angka kuota tidak "tak terlihat" dan alarm bisa dipicu sebelum batas terlampaui.
+  logEvent("backup_export", {
+    cap: EXPORT_CAP,
+    sources: valid.length,
+    truncated: truncatedSources.length > 0,
+    nearLimit: nearLimit.length,
+    overLimit: overLimit.length,
+    rows: perSourceCounts.reduce((sum, s) => sum + s.count, 0),
+  });
+
   return {
     meta: {
       version: BACKUP_VERSION,
       createdAtISO: new Date().toISOString(),
       by,
       sources: valid,
+      cap: EXPORT_CAP,
+      perSourceCounts,
+      ...(nearLimit.length > 0 ? { nearLimitSources: nearLimit } : {}),
       ...(truncatedSources.length > 0
         ? { truncated: true, truncatedSources }
         : {}),

@@ -20,6 +20,10 @@ test("header proteksi clickjacking, CSP minimal, dan HSTS", async ({ request }) 
   expect(headers["content-security-policy-report-only"]).toContain(
     "connect-src 'self'",
   );
+  // Laporan pelanggaran dikumpulkan lewat endpoint aman (ADM-05).
+  expect(headers["content-security-policy-report-only"]).toContain(
+    "report-uri /api/csp-report",
+  );
   expect(headers["strict-transport-security"]).toContain("max-age=31536000");
   expect(headers["x-content-type-options"]).toBe("nosniff");
 });

@@ -27,6 +27,9 @@ const REPORT_ONLY_CSP = [
   "style-src 'self' 'unsafe-inline'",
   "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://www.google-analytics.com https://region1.google-analytics.com https://vitals.vercel-insights.com https://*.ingest.sentry.io https://api.cloudinary.com",
   "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://www.youtube.com https://www.youtube-nocookie.com",
+  // Kumpulkan pelanggaran nyata lewat endpoint aman (ADM-05) agar langkah
+  // berikutnya (enforce penuh) berbasis bukti, bukan tebakan.
+  "report-uri /api/csp-report",
 ].join("; ");
 
 const nextConfig: NextConfig = {

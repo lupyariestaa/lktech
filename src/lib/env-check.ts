@@ -39,6 +39,7 @@ export function checkEnv(): { missingRequired: string[]; missingOptional: string
     { key: "MAYAR_API_KEY", required: false, note: "pembayaran online (fallback WhatsApp)" },
     { key: "DOWNLOAD_TOKEN_SECRET", required: false, note: "unduhan digital" },
     { key: "RESEND_API_KEY", required: false, note: "email transaksional" },
+    { key: "RESEND_WEBHOOK_SECRET", required: false, note: "webhook status email (delivered/bounced)" },
     { key: "CRON_SECRET", required: false, note: "cron kedaluwarsa & pengingat" },
     { key: "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", required: false, note: "upload media" },
     { key: "CLOUDINARY_API_KEY", required: false, note: "upload media" },

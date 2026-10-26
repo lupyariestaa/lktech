@@ -62,6 +62,13 @@ export async function GET(req: Request) {
         sources: sources.join(","),
         truncatedSources: bundle.meta.truncatedSources ?? [],
       });
+    } else if ((bundle.meta.nearLimitSources ?? []).length > 0) {
+      // ADM-07: peringatan dini sebelum batas ekspor benar-benar terpotong.
+      alertBackupLimit("export", {
+        sources: sources.join(","),
+        cap: bundle.meta.cap ?? null,
+        nearLimitSources: bundle.meta.nearLimitSources ?? [],
+      });
     }
     await recordAdminAudit({
       action: "settings.backup_export",
