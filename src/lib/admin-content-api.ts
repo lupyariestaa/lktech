@@ -17,3 +17,14 @@ export async function saveSiteContent(
   );
   return data.content;
 }
+
+/** Angka statistik turunan yang objektif (S4): jumlah proyek/layanan/kota. */
+export type DerivedStatCounts = {
+  counts: { projects: number; services: number; locations: number };
+  asOf: string;
+};
+
+/** Ambil angka turunan terkini dari sumber data (read-only, admin). */
+export async function fetchDerivedStatCounts(): Promise<DerivedStatCounts> {
+  return adminFetch<DerivedStatCounts>("/api/admin/stats/derived");
+}

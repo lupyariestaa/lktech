@@ -9,6 +9,7 @@ import {
   type ServiceDetail,
 } from "@/lib/content";
 import { SERVICES as HARDCODED_SERVICES } from "@/lib/services";
+import type { StatSource } from "@/lib/stats-pure";
 
 /** Layanan lengkap (kartu + detail) yang dapat dikelola dari dashboard. */
 export type ManagedService = Service & {
@@ -97,6 +98,12 @@ export type ManagedStat = {
   featured?: boolean;
   /** Keterangan sumber/periode singkat (opsional, tidak wajib). */
   note?: string;
+  /**
+   * Penanda angka TURUNAN (S4). Bila diisi, nilai angka dikelola lewat tombol
+   * "Sinkronkan angka turunan" dari sumber objektif (jumlah proyek/layanan/kota)
+   * — bukan diisi manual. Item tanpa penanda ini murni manual.
+   */
+  source?: StatSource;
 };
 
 /** Satu teknologi pada marquee "Teknologi yang kami gunakan". */

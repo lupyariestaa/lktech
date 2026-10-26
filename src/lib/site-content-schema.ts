@@ -111,6 +111,9 @@ const statSchema = z.object({
   verified: z.boolean().optional(),
   featured: z.boolean().optional(),
   note: z.string().max(200).optional(),
+  // Penanda angka turunan (S4). Ditulis inline (bukan impor `src`) agar berkas
+  // ini tetap dapat dimuat langsung oleh tes Node — selaras `stats-pure.ts`.
+  source: z.enum(["projects", "services", "locations"]).optional(),
 });
 
 const technologySchema = z.object({

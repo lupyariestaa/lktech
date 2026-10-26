@@ -1,6 +1,6 @@
 # Planning Pengembangan — Section Statistik Angka (`#statistik`)
 
-> **Status:** **Disetujui & diimplementasikan (S1–S3 inti)** — S4 (angka turunan) belum dikerjakan. Lihat §13.
+> **Status:** **Disetujui & diimplementasikan (S1–S4)** — lihat §13.
 > **Disusun:** 26 Oktober 2026
 > **Cakupan:** section "30+ Proyek Dikerjakan · 20+ Klien Puas · 3 Layanan Inti · 100% Komitmen" pada halaman beranda (`/`) dan "Tentang Kami" (`/tentang`).
 > **Dokumen terkait:** `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` (prinsip UI/UX beranda), `docs/2026-10-25-planning-pengembangan-seo-dashboard.md` (gaya perencanaan & prinsip kejujuran data).
@@ -287,25 +287,30 @@ Audit kondisi saat ini dilakukan dari kode & skema di repo (`content.ts`, `conte
 
 ## 13. Status implementasi (diperbarui)
 
-Disetujui oleh pemilik produk dan dikerjakan sekaligus (S1–S3 inti).
+Disetujui oleh pemilik produk dan dikerjakan sekaligus (S1–S4).
 
 | Fase | Status | Catatan |
 |---|---|---|
 | S1 — Integritas & kejujuran data | ✅ Selesai | `verified` per item (mode ketat aktif bila ada `verified:true`); guard nilai; hero memakai `featured` (fallback label lama); caption memakai `statsAsOf`. |
 | S2 — Validasi & editor | ✅ Selesai | `min/max/step`, pratinjau tayang, preset sufiks, batas label/jumlah, tombol "Tandai semua terverifikasi", editor periode. |
 | S3 — Presentasi & aksesibilitas | ✅ Selesai | `Intl` pemisah ribuan, grid adaptif (1/2/3/item banyak), `aria-labelledby` + `sr-only`, catatan per item. |
-| S4 — Angka turunan | ⏸ Belum | Menunggu keputusan terpisah (K5). |
+| S4 — Angka turunan | ✅ Selesai | Sumber objektif (proyek/layanan/kota) dengan penanda `source` + tombol **Sinkronkan angka turunan** (manual). "Klien Puas"/klaim sosial tetap manual. |
 
 **Berkas yang berubah/baru:**
-- Baru: `src/lib/stats-pure.ts` (logika murni) + `scripts/stats.test.ts` (11 tes).
-- Ubah: `src/components/sections/stats.tsx`, `src/components/sections/hero.tsx`, `src/lib/content-types.ts`, `src/lib/site-content.ts`, `src/lib/site-content-schema.ts`, `src/components/admin/content-extra-manager.tsx`, `tsconfig.json`, `package.json` (`test:stats`).
+- Baru: `src/lib/stats-pure.ts` (logika murni + `STAT_SOURCES`/`applyDerivedCounts`), `src/app/api/admin/stats/derived/route.ts`, `scripts/stats.test.ts` (18 tes).
+- Ubah: `src/components/sections/stats.tsx`, `src/components/sections/hero.tsx`, `src/lib/content-types.ts`, `src/lib/site-content.ts`, `src/lib/site-content-schema.ts`, `src/lib/admin-content-api.ts`, `src/components/admin/content-extra-manager.tsx`, `tsconfig.json`, `package.json` (`test:stats`).
 
-**Keputusan yang diterapkan (default rekomendasi):** K1 per-item `verified`; K2 soft-limit 8; K3 `note`+`featured` (ikon ditunda); K4 `statsAsOf`; K5 tunda; K6 integer 0–1.000.000, sufiks ≤ 8.
+**Keputusan yang diterapkan:** K1 per-item `verified`; K2 soft-limit 8; K3 `note`+`featured` (ikon ditunda); K4 `statsAsOf`; **K5 = (b) hanya angka objektif** (proyek/layanan/kota) dengan penanda sumber + sinkron manual, tanpa penjadwalan otomatis; K6 integer 0–1.000.000, sufiks ≤ 8.
 
-**Kompatibilitas:** data lama tetap tayang (mode lama) sampai admin mencentang minimal satu "Terverifikasi"; setelah itu hanya angka terverifikasi yang tampil.
+**Angka turunan (S4):**
+- `ManagedStat.source?: "projects" | "services" | "locations"`. Item tanpa penanda = manual.
+- Endpoint `GET /api/admin/stats/derived` (dilindungi admin, read-only) mengembalikan `{ counts, asOf }` dari `getProjects()`, `SERVICES`, `getLocationSlugs()`.
+- Editor: dropdown "Sumber angka" per item + tombol "Sinkronkan angka turunan" (memperbarui nilai item turunan; item manual tidak disentuh). Hanya sumber objektif yang didukung.
+- "Klien Puas"/klaim sosial **tidak** dapat dijadikan turunan (tidak ada di `STAT_SOURCES`).
+
+**Kompatibilitas:** data lama tetap tayang (mode lama) sampai admin mencentang minimal satu "Terverifikasi"; setelah itu hanya angka terverifikasi yang tampil. Field `source` opsional sehingga data lama tetap valid.
 
 ### Sisa / tindak lanjut
-- S4 (angka turunan) menunggu keputusan K5.
 - Opsi `icon` per stat belum dikerjakan (ditunda untuk menghindari ikon tak dikenal).
-- Verifikasi manual di staging: tampilan 3–8 item, pembaca layar, dan nilai `statsAsOf` nyata.
+- Verifikasi manual di staging: tampilan 3–8 item, pembaca layar, nilai `statsAsOf` nyata, dan sinkronisasi angka turunan pada data produksi.
 

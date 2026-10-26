@@ -29,6 +29,43 @@ export const STAT_MAX_LABEL = 40;
 export const STAT_SUFFIX_PRESETS = ["", "+", "%", "k+"] as const;
 
 /**
+ * Sumber angka TURUNAN yang didukung (S4). Sengaja HANYA angka objektif yang
+ * dapat dihitung dari data yang sudah ada — "Klien Puas" dan sejenisnya TIDAK
+ * ada di sini dan tetap diisi manual.
+ */
+export const STAT_SOURCES = ["projects", "services", "locations"] as const;
+export type StatSource = (typeof STAT_SOURCES)[number];
+
+/** Penjelasan sumber untuk UI (menerangkan asal angka). */
+export const STAT_SOURCE_LABEL: Record<StatSource, string> = {
+  projects: "Proyek (data portofolio)",
+  services: "Layanan (daftar layanan)",
+  locations: "Kota (daftar kota)",
+};
+
+/** Label statistik default saat sebuah item ditandai sebagai turunan. */
+export const STAT_SOURCE_DEFAULT_LABEL: Record<StatSource, string> = {
+  projects: "Proyek Dikerjakan",
+  services: "Layanan Inti",
+  locations: "Kota Terlayani",
+};
+
+/** Sufiks default untuk angka turunan (jumlah). */
+export const STAT_SOURCE_DEFAULT_SUFFIX: Record<StatSource, string> = {
+  projects: "+",
+  services: "",
+  locations: "+",
+};
+
+/** True bila `value` adalah sumber turunan yang dikenal. */
+export function isStatSource(value: unknown): value is StatSource {
+  return (
+    typeof value === "string" &&
+    (STAT_SOURCES as readonly string[]).includes(value)
+  );
+}
+
+/**
  * Bulatkan & batasi nilai statistik ke rentang wajar (`0..STAT_MAX_VALUE`).
  * `NaN`/bukan angka → `fallback` (default 0).
  */
@@ -87,6 +124,29 @@ export function unverifiedCount(list: readonly ManagedStat[]): number {
   return list.filter((stat) => stat.verified !== true).length;
 }
 
+/**
+ * Terapkan angka turunan (S4) ke daftar stat. Hanya item dengan `source` yang
+ * dikenal yang diperbarui; item manual TIDAK disentuh. Nilai di-clamp lewat
+ * `clampStatValue`. Mengembalikan daftar BARU + jumlah item yang berubah
+ * (untuk umpan balik editor). Bila angka sumber tak tersedia, nilai lama
+ * dipertahankan.
+ */
+export function applyDerivedCounts(
+  list: readonly ManagedStat[],
+  counts: Partial<Record<StatSource, number>>,
+): { stats: ManagedStat[]; changed: number } {
+  let changed = 0;
+  const stats = list.map((stat) => {
+    const source = stat.source;
+    if (!isStatSource(source)) return stat;
+    const next = clampStatValue(counts[source], stat.value);
+    if (next === stat.value) return stat;
+    changed += 1;
+    return { ...stat, value: next };
+  });
+  return { stats, changed };
+}
+
 /** Validasi daftar statistik untuk editor. Kembalikan pesan pertama bila tak sah. */
 export function validateStats(list: readonly ManagedStat[]): string | null {
   if (list.length > STAT_MAX_ITEMS) {
@@ -105,6 +165,9 @@ export function validateStats(list: readonly ManagedStat[]): string | null {
     }
     if (stat.suffix.length > STAT_MAX_SUFFIX) {
       return `Sufiks maksimal ${STAT_MAX_SUFFIX} karakter (mis. +, %, k+).`;
+    }
+    if (stat.source !== undefined && !isStatSource(stat.source)) {
+      return "Sumber angka turunan tidak dikenal.";
     }
   }
   const featured = list.filter((stat) => stat.featured === true).length;

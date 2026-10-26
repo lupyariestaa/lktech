@@ -13,7 +13,7 @@ import {
   type ManagedWhyUs,
   type SiteContent,
 } from "@/lib/content-types";
-import { clampStatValue } from "@/lib/stats-pure";
+import { clampStatValue, isStatSource } from "@/lib/stats-pure";
 import { unstable_cache } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 
@@ -205,6 +205,8 @@ function normalizeStat(raw: unknown): ManagedStat | null {
   if (typeof d.featured === "boolean") stat.featured = d.featured;
   const note = str(d.note).trim();
   if (note) stat.note = note;
+  // Penanda angka turunan hanya disimpan bila sumbernya dikenal (S4).
+  if (isStatSource(d.source)) stat.source = d.source;
   return stat;
 }
 

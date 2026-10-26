@@ -1,10 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  applyDerivedCounts,
   clampStatValue,
   featuredStat,
   formatStatNumber,
   hasVerificationFlags,
+  isStatSource,
   publishableStats,
   unverifiedCount,
   validateStats,
@@ -12,9 +14,15 @@ import {
   STAT_MAX_LABEL,
   STAT_MAX_SUFFIX,
   STAT_MAX_VALUE,
+  STAT_SOURCES,
+  STAT_SOURCE_DEFAULT_LABEL,
+  STAT_SOURCE_LABEL,
 } from "../src/lib/stats-pure.ts";
 import type { ManagedStat } from "../src/lib/content-types.ts";
 import { siteContentSchema } from "../src/lib/site-content-schema.ts";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 
 /**
  * Uji logika statistik angka (bagian statistik/AUD section beranda) —
@@ -152,4 +160,82 @@ test("skema konten selaras dengan batas stats-pure", () => {
     }).success,
     true,
   );
+});
+
+test("isStatSource: mengenali hanya sumber turunan yang didukung", () => {
+  for (const source of STAT_SOURCES) {
+    assert.equal(isStatSource(source), true);
+    assert.ok(STAT_SOURCE_LABEL[source].length > 0);
+    assert.ok(STAT_SOURCE_DEFAULT_LABEL[source].length > 0);
+  }
+  assert.equal(isStatSource("clients"), false);
+  assert.equal(isStatSource(""), false);
+  assert.equal(isStatSource(undefined), false);
+  // "Klien Puas" TIDAK boleh menjadi sumber turunan.
+  assert.equal((STAT_SOURCES as readonly string[]).includes("clients"), false);
+});
+
+test("applyDerivedCounts: memperbarui item turunan, membiarkan manual", () => {
+  const list = [
+    stat({ label: "Proyek", source: "projects", value: 1 }),
+    stat({ label: "Layanan", source: "services", value: 999 }),
+    stat({ label: "Klien Puas", value: 20 }),
+  ];
+  const { stats, changed } = applyDerivedCounts(list, { projects: 30, services: 3 });
+  assert.equal(changed, 2);
+  assert.equal(stats[0].value, 30);
+  assert.equal(stats[1].value, 3);
+  // Item manual tidak disentuh.
+  assert.equal(stats[2].value, 20);
+  assert.equal(stats[2].source, undefined);
+});
+
+test("applyDerivedCounts: selaras → changed 0; sumber hilang → nilai lama", () => {
+  const list = [stat({ label: "Proyek", source: "projects", value: 30 })];
+  assert.equal(applyDerivedCounts(list, { projects: 30 }).changed, 0);
+
+  const missing = applyDerivedCounts(list, {});
+  assert.equal(missing.changed, 0);
+  assert.equal(missing.stats[0].value, 30);
+});
+
+test("applyDerivedCounts: mengklamp nilai sumber & membulatkan", () => {
+  const list = [stat({ label: "Proyek", source: "projects", value: 0 })];
+  const { stats } = applyDerivedCounts(list, { projects: STAT_MAX_VALUE + 500 });
+  assert.equal(stats[0].value, STAT_MAX_VALUE);
+});
+
+test("validateStats: menolak sumber turunan tak dikenal", () => {
+  const bad = [stat({ label: "Proyek", source: "clients" as never })];
+  assert.match(validateStats(bad) ?? "", /Sumber angka turunan/);
+  assert.equal(validateStats([stat({ label: "Proyek", source: "projects" })]), null);
+});
+
+test("skema konten: menerima sumber turunan yang dikenal, menolak yang tidak", () => {
+  assert.equal(
+    siteContentSchema.safeParse({
+      stats: [{ value: 30, label: "Proyek", source: "projects" }],
+    }).success,
+    true,
+  );
+  assert.equal(
+    siteContentSchema.safeParse({
+      stats: [{ value: 30, label: "Klien", source: "clients" }],
+    }).success,
+    false,
+  );
+});
+
+test("wiring: endpoint angka turunan dilindungi admin & hanya sumber objektif", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const route = readFileSync(
+    resolve(here, "..", "src/app/api/admin/stats/derived/route.ts"),
+    "utf8",
+  );
+  assert.match(route, /requireAdmin\(req\)/);
+  assert.match(route, /getProjects\(\)/);
+  assert.match(route, /SERVICES\.length/);
+  assert.match(route, /getLocationSlugs\(\)\.length/);
+  // Tidak boleh menurunkan "Klien Puas"/klaim sosial (hanya jumlah objektif).
+  assert.doesNotMatch(route, /counts\.(clients|satisfied)|getClients/);
 });

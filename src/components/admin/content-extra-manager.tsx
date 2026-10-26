@@ -18,16 +18,23 @@ import {
   type ManagedWhyUs,
 } from "@/lib/content-types";
 import {
+  applyDerivedCounts,
   formatStatNumber,
   hasVerificationFlags,
+  isStatSource,
   publishableStats,
   STAT_MAX_LABEL,
   STAT_MAX_ITEMS,
   STAT_MAX_SUFFIX,
   STAT_MAX_VALUE,
+  STAT_SOURCES,
+  STAT_SOURCE_DEFAULT_LABEL,
+  STAT_SOURCE_DEFAULT_SUFFIX,
+  STAT_SOURCE_LABEL,
   STAT_SUFFIX_PRESETS,
   validateStats,
 } from "@/lib/stats-pure";
+import { fetchDerivedStatCounts } from "@/lib/admin-content-api";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
@@ -323,6 +330,45 @@ export function ContentExtraManager() {
                   ))}
                 </div>
 
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,240px)_1fr] sm:items-end">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-muted">
+                      Sumber angka
+                    </span>
+                    <select
+                      value={isStatSource(item.source) ? item.source : ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (!isStatSource(value)) {
+                          update({ source: undefined });
+                          return;
+                        }
+                        const patch: Partial<ManagedStat> = { source: value };
+                        if (!item.label.trim()) {
+                          patch.label = STAT_SOURCE_DEFAULT_LABEL[value];
+                        }
+                        if (!item.suffix) {
+                          patch.suffix = STAT_SOURCE_DEFAULT_SUFFIX[value];
+                        }
+                        update(patch);
+                      }}
+                      className={fieldBase}
+                    >
+                      <option value="">Manual (diisi sendiri)</option>
+                      {STAT_SOURCES.map((source) => (
+                        <option key={source} value={source}>
+                          Turunan — {STAT_SOURCE_LABEL[source]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="text-[11px] text-muted">
+                    {isStatSource(item.source)
+                      ? `Angka ini dihitung dari ${STAT_SOURCE_LABEL[item.source]}. Gunakan tombol “Sinkronkan angka turunan” untuk memperbarui; “Klien Puas” dan klaim lain tetap manual.`
+                      : "Hanya angka objektif (jumlah proyek/layanan/kota) yang boleh dijadikan turunan."}
+                  </p>
+                </div>
+
                 <label className="flex flex-col gap-1">
                   <span className="text-xs font-medium text-muted">
                     Keterangan / sumber (opsional)
@@ -360,32 +406,12 @@ export function ContentExtraManager() {
             )}
             renderPreview={(draft) => <StatsPreview items={draft} />}
             renderToolbar={(draft, replace) => (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    replace(draft.map((s) => ({ ...s, verified: true })))
-                  }
-                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
-                >
-                  Tandai semua terverifikasi
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    replace(
-                      draft.map((s) => ({
-                        ...s,
-                        verified: false,
-                        featured: false,
-                      })),
-                    )
-                  }
-                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-500"
-                >
-                  Kosongkan verifikasi
-                </button>
-              </>
+              <StatsToolbar
+                items={draft}
+                replace={replace}
+                disabled={loadFailed}
+                onError={reject}
+              />
             )}
             validate={validateStats}
           />
@@ -580,6 +606,88 @@ function ListEditor<T extends { [k: string]: unknown }>({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Toolbar editor statistik (S4): aksi massal verifikasi + sinkronisasi angka
+ * turunan objektif. Sinkronisasi selalu MANUAL (tombol), tidak ada penjadwalan.
+ */
+function StatsToolbar({
+  items,
+  replace,
+  disabled,
+  onError,
+}: {
+  items: ManagedStat[];
+  replace: (items: ManagedStat[]) => void;
+  disabled?: boolean;
+  onError: (msg: string | null) => void;
+}) {
+  const [syncing, setSyncing] = useState(false);
+  const [syncedAt, setSyncedAt] = useState<string | null>(null);
+  const derivedCount = items.filter((stat) => isStatSource(stat.source)).length;
+
+  const sync = async () => {
+    setSyncing(true);
+    onError(null);
+    try {
+      const { counts, asOf } = await fetchDerivedStatCounts();
+      const { stats } = applyDerivedCounts(items, counts);
+      replace(stats);
+      setSyncedAt(asOf);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Gagal menyinkronkan angka turunan.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => void sync()}
+        disabled={disabled || syncing || derivedCount === 0}
+        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-50"
+      >
+        {syncing ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        ) : (
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+        )}
+        Sinkronkan angka turunan
+      </button>
+      <button
+        type="button"
+        onClick={() => replace(items.map((s) => ({ ...s, verified: true })))}
+        className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary"
+      >
+        Tandai semua terverifikasi
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          replace(items.map((s) => ({ ...s, verified: false, featured: false })))
+        }
+        className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-500"
+      >
+        Kosongkan verifikasi
+      </button>
+      {derivedCount === 0 ? (
+        <span className="text-[11px] text-muted">
+          Belum ada angka turunan. Pilih “Sumber angka” pada salah satu item.
+        </span>
+      ) : syncedAt ? (
+        <span className="text-[11px] text-emerald-600">
+          Angka turunan disinkronkan {new Date(syncedAt).toLocaleString("id-ID")} — simpan untuk menerapkan.
+        </span>
+      ) : (
+        <span className="text-[11px] text-muted">
+          {derivedCount} angka turunan siap disinkronkan dari sumber data.
+        </span>
+      )}
+    </>
   );
 }
 
