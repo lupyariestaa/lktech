@@ -33,6 +33,19 @@ const bodySchema = z.object({
   slugs: z.array(z.string().trim().max(200)).max(50).optional(),
   /** Total jumlah item (qty) di keranjang (validasi `minItems`). Opsional. */
   itemCount: z.number().int().min(0).max(100000).optional(),
+  /**
+   * Rincian item keranjang (slug + subtotal) — `KP-P2`. Bila ada & kupon dibatasi
+   * `appliesToSlugs`, diskon dihitung atas item yang memenuhi syarat saja.
+   */
+  items: z
+    .array(
+      z.object({
+        slug: z.string().trim().max(200),
+        subtotal: z.number().finite().min(0).max(1_000_000_000),
+      }),
+    )
+    .max(100)
+    .optional(),
 });
 
 /**
@@ -119,6 +132,7 @@ export async function POST(req: Request) {
       singleUseConsumed: usageSnapshot.singleUseConsumed,
       slugs: parsed.data.slugs,
       itemCount: parsed.data.itemCount,
+      items: parsed.data.items,
     });
 
     if (!result.ok) {

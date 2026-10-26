@@ -18,6 +18,17 @@ export class CouponSessionError extends Error {
 }
 
 /**
+ * Konteks keranjang untuk validasi kupon (`FASE P3` + `KP-P2`).
+ * `items` membawa subtotal per item agar diskon bundel dihitung atas item yang
+ * memenuhi syarat saja (`eligibleSubtotal`).
+ */
+export type CouponCartContext = {
+  slugs?: string[];
+  itemCount?: number;
+  items?: Array<{ slug: string; subtotal: number }>;
+};
+
+/**
  * Validasi kode kupon di server untuk subtotal tertentu.
  * Mengembalikan hasil validasi (diskon dihitung server).
  *
@@ -25,13 +36,13 @@ export class CouponSessionError extends Error {
  * - Melempar `Error` biasa bila gagal jaringan / server (tidak diketahui sah/tidak).
  * - Mengembalikan `{ valid:false, reason }` bila kode tak sah (jawaban definitif).
  *
- * `context` (opsional, FASE P3) membawa isi keranjang agar kupon BUNDEL
- * (`appliesToSlugs`/`minItems`) ikut divalidasi dengan benar.
+ * `context` (opsional) membawa isi keranjang agar kupon BUNDEL
+ * (`appliesToSlugs`/`minItems`) & diskon `eligibleSubtotal` dihitung dengan benar.
  */
 export async function validateCouponRequest(
   code: string,
   subtotal: number,
-  context?: { slugs?: string[]; itemCount?: number },
+  context?: CouponCartContext,
 ): Promise<CouponValidationResult> {
   const token = await getIdToken();
   if (!token) throw new CouponSessionError();
@@ -49,6 +60,7 @@ export async function validateCouponRequest(
         subtotal,
         slugs: context?.slugs,
         itemCount: context?.itemCount,
+        items: context?.items,
       }),
     });
   } catch {
@@ -79,7 +91,7 @@ export type BestCouponSuggestion = {
  */
 export async function suggestBestCouponRequest(
   subtotal: number,
-  context?: { slugs?: string[]; itemCount?: number },
+  context?: CouponCartContext,
 ): Promise<BestCouponSuggestion> {
   const token = await getIdToken();
   if (!token) throw new CouponSessionError();
@@ -94,6 +106,7 @@ export async function suggestBestCouponRequest(
       subtotal,
       slugs: context?.slugs,
       itemCount: context?.itemCount,
+      items: context?.items,
     }),
   });
 

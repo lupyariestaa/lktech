@@ -206,6 +206,9 @@ export async function performCheckout(
       singleUseConsumed: usageSnapshot.singleUseConsumed,
       slugs: items.map((it) => it.slug),
       itemCount: items.reduce((n, it) => n + it.qty, 0),
+      // `KP-P2`: sertakan subtotal per item agar diskon kupon bundel dihitung
+      // atas item yang memenuhi syarat saja (`eligibleSubtotal`).
+      items: items.map((it) => ({ slug: it.slug, subtotal: it.subtotal })),
     });
     if (!result.ok) {
       return fail(409, { error: result.reason, code: "coupon_invalid" });

@@ -21,6 +21,16 @@ const bodySchema = z.object({
   subtotal: z.number().finite().min(0).max(1_000_000_000),
   slugs: z.array(z.string().trim().max(200)).max(50).optional(),
   itemCount: z.number().int().min(0).max(100000).optional(),
+  /** Rincian item keranjang (slug + subtotal) — `KP-P2` (diskon eligible). */
+  items: z
+    .array(
+      z.object({
+        slug: z.string().trim().max(200),
+        subtotal: z.number().finite().min(0).max(1_000_000_000),
+      }),
+    )
+    .max(100)
+    .optional(),
 });
 
 /**
@@ -95,6 +105,7 @@ export async function POST(req: Request) {
         singleUseConsumed: snap.singleUseConsumed,
         slugs: parsed.data.slugs,
         itemCount: parsed.data.itemCount,
+        items: parsed.data.items,
       });
       if (picked && (!best || picked.discount > best.discount)) {
         best = picked;

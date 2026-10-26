@@ -15,6 +15,7 @@ import {
 // (`@/lib/coupons`) tetap bekerja.
 export {
   computeDiscount,
+  computeEligibleSubtotal,
   validateCoupon,
   pickBestCoupon,
   pickTier,
@@ -22,6 +23,7 @@ export {
   jakartaDateKey,
 } from "@/lib/coupon-pure";
 export type {
+  CouponCartItem,
   CouponValidation,
   CouponTier as CouponTierPure,
 } from "@/lib/coupon-pure";

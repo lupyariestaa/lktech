@@ -91,6 +91,13 @@ export function CartView({ promoCode }: { promoCode?: string }) {
     [items, subtotal],
   );
 
+  // `KP-P2`: rincian item (slug + subtotal) untuk diskon kupon bundel atas
+  // `eligibleSubtotal` (hanya item yang memenuhi syarat).
+  const couponItems = useMemo(
+    () => items.map((it) => ({ slug: it.slug, subtotal: it.price * it.qty })),
+    [items],
+  );
+
   useEffect(() => {
     if (!appliedCoupon) return;
     let active = true;
@@ -101,6 +108,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
         const res = await validateCouponRequest(appliedCoupon.code, subtotal, {
           slugs,
           itemCount,
+          items: couponItems,
         });
         if (!active) return;
         if (res.valid) {
@@ -163,7 +171,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
       try {
         const slugs = Array.from(new Set(items.map((it) => it.slug)));
         const itemCount = items.reduce((n, it) => n + it.qty, 0);
-        const hint = await suggestBestCouponRequest(subtotal, { slugs, itemCount });
+        const hint = await suggestBestCouponRequest(subtotal, { slugs, itemCount, items: couponItems });
         if (active) setBestHint(hint);
       } catch {
         if (active) setBestHint(null);
@@ -495,6 +503,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
                 promoCode={promoCode}
                 slugs={Array.from(new Set(items.map((it) => it.slug)))}
                 itemCount={items.reduce((n, it) => n + it.qty, 0)}
+                items={couponItems}
                 notice={couponNotice}
                 bestHint={visibleBestHint}
               />

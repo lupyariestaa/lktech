@@ -202,6 +202,8 @@ export function CouponForm({
       limitPerUser: payload.limitPerUser,
       perDayLimit: payload.perDayLimit,
       assignedEmail: payload.assignedEmail,
+      appliesToSlugs: payload.appliesToSlugs,
+      minItems: payload.minItems,
     });
     if (!validation.ok) {
       setFieldErrors(validation.errors);
@@ -622,15 +624,25 @@ export function CouponForm({
                       onChange={(e) =>
                         set(
                           "appliesToSlugs",
-                          e.target.value
-                            .split("\n")
-                            .map((s) => s.trim())
-                            .filter(Boolean),
+                          Array.from(
+                            new Set(
+                              e.target.value
+                                .split("\n")
+                                .map((s) => s.trim())
+                                .filter(Boolean),
+                            ),
+                          ),
                         )
                       }
                       placeholder={"template-landing-page-bisnis\naplikasi-kasir-sederhana"}
-                      className={cn(field, "resize-none font-mono text-xs")}
+                      className={cn(
+                        field,
+                        "resize-none font-mono text-xs",
+                        fieldBorder("appliesToSlugs"),
+                      )}
+                      {...fieldA11y("appliesToSlugs")}
                     />
+                    {renderFieldError("appliesToSlugs")}
                   </label>
                   <label className="flex flex-col gap-1.5">
                     <span className={labelCls}>Minimal jumlah item (qty)</span>
@@ -642,8 +654,10 @@ export function CouponForm({
                         set("minItems", e.target.value ? Number(e.target.value) : undefined)
                       }
                       placeholder="mis. 2"
-                      className={field}
+                      className={cn(field, fieldBorder("minItems"))}
+                      {...fieldA11y("minItems")}
                     />
+                    {renderFieldError("minItems")}
                   </label>
                 </div>
               </Section>

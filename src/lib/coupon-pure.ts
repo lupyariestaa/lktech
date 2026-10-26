@@ -23,6 +23,21 @@ export type CouponTier = {
 export type CouponAudienceName = "semua" | "baru" | "lama";
 
 /**
+ * Item keranjang minimal untuk aturan BUNDEL (`KP-P2`). Dipakai menghitung
+ * `eligibleSubtotal` — bagian subtotal yang benar-benar memenuhi syarat kupon.
+ * `subtotal` diutamakan; bila kosong, dihitung dari `price × qty`.
+ */
+export type CouponCartItem = {
+  slug: string;
+  /** Subtotal baris (harga × qty), Rupiah. */
+  subtotal?: number;
+  /** Harga satuan (fallback bila `subtotal` tak ada). */
+  price?: number;
+  /** Qty (fallback bila `subtotal` tak ada). */
+  qty?: number;
+};
+
+/**
  * Subset kupon yang dibutuhkan validasi. Generic `T` memastikan objek yang
  * dikembalikan tetap bertipe asli pemanggil (mis. `Coupon` dengan `id`/`code`).
  */
@@ -60,6 +75,12 @@ export type CouponValidationContext = {
   userUsageCount?: number;
   slugs?: readonly string[];
   itemCount?: number;
+  /**
+   * Item keranjang (slug + subtotal) — `KP-P2`. Bila diberikan & kupon dibatasi
+   * `appliesToSlugs`, diskon dihitung atas `eligibleSubtotal` (hanya item yang
+   * memenuhi syarat), bukan seluruh subtotal keranjang.
+   */
+  items?: readonly CouponCartItem[];
   // ---- Konteks lanjutan (C1) ----
   /** Email pembeli (lowercase) — untuk cek `assignedEmail`. */
   buyerEmail?: string;
@@ -95,6 +116,50 @@ export function jakartaDateKey(now: Date = new Date()): string {
   const m = parts.find((p) => p.type === "month")?.value ?? "00";
   const d = parts.find((p) => p.type === "day")?.value ?? "00";
   return `${y}-${m}-${d}`;
+}
+
+/** Batas jumlah slug produk untuk kupon bundel (selaras schema server). */
+export const MAX_COUPON_SLUGS = 50;
+/** Panjang maksimum satu slug produk. */
+export const MAX_COUPON_SLUG_LEN = 200;
+
+/**
+ * Subtotal baris satu item keranjang (Rupiah, ≥ 0). Memakai `subtotal` bila ada,
+ * jika tidak `price × qty`.
+ */
+function lineSubtotal(item: CouponCartItem): number {
+  if (typeof item.subtotal === "number" && Number.isFinite(item.subtotal)) {
+    return Math.max(0, Math.floor(item.subtotal));
+  }
+  const price =
+    typeof item.price === "number" && Number.isFinite(item.price) ? item.price : 0;
+  const qty = typeof item.qty === "number" && Number.isFinite(item.qty) ? item.qty : 0;
+  return Math.max(0, Math.floor(price * qty));
+}
+
+/**
+ * Subtotal yang MEMENUHI SYARAT kupon bundel (`KP-P2`).
+ *
+ * - Tanpa `appliesToSlugs` (atau daftar kosong) → mengembalikan `null`
+ *   (artinya: kupon TIDAK dibatasi produk → pemanggil memakai subtotal penuh).
+ * - Dengan daftar → jumlah subtotal baris yang `slug`-nya ada di daftar.
+ *
+ * Dipakai agar **diskon bundel hanya dihitung atas item yang relevan**, bukan
+ * seluruh keranjang (perbaikan `P3-2`).
+ */
+export function computeEligibleSubtotal(
+  items: readonly CouponCartItem[] | undefined,
+  appliesToSlugs?: readonly string[],
+): number | null {
+  if (!appliesToSlugs || appliesToSlugs.length === 0) return null;
+  // Tanpa rincian item, batas bundel tak bisa dihitung → pakai subtotal penuh
+  // (backward-compatible untuk pemanggil yang hanya mengirim `slugs`).
+  if (!items) return null;
+  let sum = 0;
+  for (const item of items) {
+    if (appliesToSlugs.includes(item.slug)) sum += lineSubtotal(item);
+  }
+  return Math.max(0, sum);
 }
 
 /**
@@ -282,7 +347,7 @@ export function validateCoupon<T extends ValidatableCoupon>(
   }
 
   const bundle = checkBundleRules(coupon, {
-    slugs: opts.slugs,
+    slugs: opts.slugs ?? opts.items?.map((it) => it.slug),
     itemCount: opts.itemCount,
   });
   if (!bundle.ok) return { ok: false, reason: bundle.reason };
@@ -320,7 +385,11 @@ export function validateCoupon<T extends ValidatableCoupon>(
     }
   }
 
-  const discount = computeDiscount(coupon, opts.subtotal);
+  // `KP-P2`: untuk kupon bundel, diskon dihitung atas `eligibleSubtotal`
+  // (hanya item yang memenuhi `appliesToSlugs`), bukan seluruh keranjang.
+  // `minSpend` tetap diukur terhadap subtotal keranjang penuh (syarat belanja).
+  const discountBase = computeEligibleSubtotal(opts.items, coupon.appliesToSlugs) ?? opts.subtotal;
+  const discount = computeDiscount(coupon, discountBase);
   if (discount <= 0) {
     return { ok: false, reason: "Kode promo tidak memberi diskon untuk pesanan ini." };
   }
@@ -370,6 +439,9 @@ export type CouponFormValues = {
   perDayLimit?: number;
   assignedEmail?: string;
   singleUse?: boolean;
+  // ---- Kupon bundel (`KP-P2`) ----
+  appliesToSlugs?: readonly string[];
+  minItems?: number;
 };
 
 export type CouponFormErrors = Partial<
@@ -384,7 +456,9 @@ export type CouponFormErrors = Partial<
     | "usageLimit"
     | "limitPerUser"
     | "perDayLimit"
-    | "assignedEmail",
+    | "assignedEmail"
+    | "appliesToSlugs"
+    | "minItems",
     string
   >
 >;
@@ -471,6 +545,25 @@ export function validateCouponForm(v: CouponFormValues): CouponFormValidation {
 
   if (v.assignedEmail && !/.+@.+\..+/.test(v.assignedEmail.trim())) {
     errors.assignedEmail = "Email penerima tidak valid.";
+  }
+
+  // Kupon bundel (`KP-P2`): daftar produk & minimal item.
+  if (v.appliesToSlugs && v.appliesToSlugs.length > 0) {
+    if (v.appliesToSlugs.length > MAX_COUPON_SLUGS) {
+      errors.appliesToSlugs = `Maksimal ${MAX_COUPON_SLUGS} produk.`;
+    } else if (
+      v.appliesToSlugs.some((s) => !s.trim() || s.trim().length > MAX_COUPON_SLUG_LEN)
+    ) {
+      errors.appliesToSlugs = "Slug produk tidak valid (kosong/terlalu panjang).";
+    } else if (new Set(v.appliesToSlugs.map((s) => s.trim())).size !== v.appliesToSlugs.length) {
+      errors.appliesToSlugs = "Slug produk duplikat — hapus yang berulang.";
+    }
+  }
+
+  if (v.minItems !== undefined && v.minItems !== null) {
+    if (!isFiniteNumber(v.minItems) || !Number.isInteger(v.minItems) || v.minItems < 0) {
+      errors.minItems = "Minimal item harus bilangan bulat ≥ 0.";
+    }
   }
 
   // Rentang tanggal: mulai harus sebelum berakhir.

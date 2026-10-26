@@ -46,6 +46,7 @@ export function CartCoupon({
   promoCode,
   slugs,
   itemCount,
+  items,
   notice,
   bestHint,
 }: {
@@ -60,6 +61,8 @@ export function CartCoupon({
   slugs?: string[];
   /** Total jumlah item (qty) di keranjang (validasi `minItems`). */
   itemCount?: number;
+  /** Rincian item (slug + subtotal) — diskon bundel atas `eligibleSubtotal` (`KP-P2`). */
+  items?: Array<{ slug: string; subtotal: number }>;
   /** Pesan info/peringatan dari induk (mis. kupon dicabut otomatis). */
   notice?: string | null;
   /** Saran kode terbaik (C3). */
@@ -95,6 +98,7 @@ export function CartCoupon({
       const result = await validateCouponRequest(value, subtotal, {
         slugs,
         itemCount,
+        items,
       });
       if (!result.valid) {
         setError(result.reason);
