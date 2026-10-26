@@ -39,9 +39,21 @@ type RawResponse = {
 };
 
 /** Satu permintaan HTTP dengan timeout & batas body. Tanpa mengikuti redirect. */
-async function requestOnce(url: string, limits: SeoAuditLimits): Promise<RawResponse> {
+async function requestOnce(url: string, limits: SeoAuditLimits, deadlineMs: number): Promise<RawResponse> {
+  const remaining = deadlineMs - Date.now();
+  if (remaining <= 0) {
+    // Anggaran waktu audit habis: jangan mulai permintaan baru.
+    return {
+      status: 0,
+      location: null,
+      contentType: null,
+      xRobotsTag: null,
+      html: null,
+      error: "budget_exceeded",
+    };
+  }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), limits.timeoutMs);
+  const timer = setTimeout(() => controller.abort(), Math.min(limits.timeoutMs, remaining));
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -134,6 +146,7 @@ async function fetchPage(
   origin: string,
   startUrl: string,
   limits: SeoAuditLimits,
+  deadlineMs: number,
 ): Promise<{
   httpStatus: number;
   finalUrl: string | null;
@@ -161,7 +174,20 @@ async function fetchPage(
   }
 
   for (let hop = 0; hop <= limits.maxRedirects; hop += 1) {
-    const res = await requestOnce(current, limits);
+    const res = await requestOnce(current, limits, deadlineMs);
+
+    if (res.error === "budget_exceeded") {
+      return {
+        httpStatus: 0,
+        finalUrl: current,
+        redirected,
+        redirectExternal: false,
+        contentType: null,
+        xRobotsTag: null,
+        html: null,
+        fetchError: "budget_exceeded",
+      };
+    }
 
     if (res.error) {
       return {
@@ -244,12 +270,15 @@ async function mapWithConcurrency<T, R>(
 async function fetchSitemapPaths(
   origin: string,
   limits: SeoAuditLimits,
+  deadlineMs: number,
 ): Promise<{ paths: Set<string>; checked: boolean; error: string | null }> {
   const sitemapUrl = `${origin.replace(/\/+$/, "")}/sitemap.xml`;
   if (!isSameOriginAllowed(origin, sitemapUrl)) {
     return { paths: new Set(), checked: false, error: "blocked_origin" };
   }
-  const res = await requestOnce(sitemapUrl, { ...limits, maxBodyBytes: 2 * 1024 * 1024 });
+  // Sitemap dibatasi satu timeout agar tidak menghabiskan seluruh anggaran audit.
+  const sitemapDeadline = Math.min(deadlineMs, Date.now() + limits.timeoutMs);
+  const res = await requestOnce(sitemapUrl, { ...limits, maxBodyBytes: 2 * 1024 * 1024 }, sitemapDeadline);
   if (res.error) return { paths: new Set(), checked: false, error: res.error };
   if (res.status >= 400) return { paths: new Set(), checked: false, error: `http_${res.status}` };
   if (!res.html) return { paths: new Set(), checked: false, error: "empty_sitemap" };
@@ -270,13 +299,16 @@ export async function runSeoAudit(input: {
   const limits: SeoAuditLimits = { ...DEFAULT_SEO_AUDIT_LIMITS, ...(input.limits ?? {}) };
   const origin = input.origin.replace(/\/+$/, "");
   const startedAt = new Date().toISOString();
+  // Anggaran waktu total: menjamin respons selesai sebelum `maxDuration` route.
+  const deadline = Date.now() + Math.max(0, limits.budgetMs);
 
-  const sitemap = await fetchSitemapPaths(origin, limits);
+  const sitemap = await fetchSitemapPaths(origin, limits, deadline);
 
   const pages = await mapWithConcurrency(input.items, limits.concurrency, async (item) => {
     const checkedAt = new Date().toISOString();
     const base = { path: item.path, group: item.group, checkedAt };
     const url = `${origin}${item.path}`;
+    const inSitemap = sitemap.paths.has(item.path) || sitemap.paths.has(item.path.replace(/\/$/, ""));
 
     if (!isSameOriginAllowed(origin, url)) {
       const facts: SeoAuditPageFacts = {
@@ -292,8 +324,22 @@ export async function runSeoAudit(input: {
       return analyzePage(facts, origin);
     }
 
-    const result = await fetchPage(origin, url, limits);
-    const inSitemap = sitemap.paths.has(item.path) || sitemap.paths.has(item.path.replace(/\/$/, ""));
+    // Anggaran habis sebelum URL ini dimulai → tandai `not_checked`, bukan error.
+    if (Date.now() >= deadline) {
+      const facts: SeoAuditPageFacts = {
+        ...base,
+        httpStatus: 0,
+        fetchError: "budget_exceeded",
+        finalUrl: null,
+        redirected: false,
+        redirectExternal: false,
+        html: null,
+        inSitemap,
+      };
+      return analyzePage(facts, origin);
+    }
+
+    const result = await fetchPage(origin, url, limits, deadline);
 
     const facts: SeoAuditPageFacts = {
       ...base,

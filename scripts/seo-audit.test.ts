@@ -275,6 +275,64 @@ test("buildAuditReport: menyusun laporan bertipe dengan versi aturan", () => {
   assert.ok(report.limitations.length >= 3);
 });
 
+/* ---------- Anggaran waktu audit (AUD-01) ---------- */
+
+test("DEFAULT_SEO_AUDIT_LIMITS: menyertakan anggaran waktu positif", () => {
+  assert.ok(Number.isFinite(DEFAULT_SEO_AUDIT_LIMITS.budgetMs));
+  assert.ok(DEFAULT_SEO_AUDIT_LIMITS.budgetMs > 0);
+});
+
+test("analyzePage: budget_exceeded → not_checked (bukan fetch_failed)", () => {
+  const page = analyzePage(
+    facts({ httpStatus: 0, fetchError: "budget_exceeded", html: null, finalUrl: null, inSitemap: true }),
+    ORIGIN,
+  );
+  assert.deepEqual(codes(page), ["not_checked"]);
+  assert.equal(page.issues[0].severity, "low");
+  assert.equal(page.inSitemap, true);
+});
+
+test("summarizeAudit: halaman not_checked tidak dihitung sebagai error", () => {
+  const unchecked = analyzePage(
+    facts({ httpStatus: 0, fetchError: "budget_exceeded", html: null, finalUrl: null, inSitemap: true }),
+    ORIGIN,
+  );
+  const okPage = analyzePage(
+    facts({
+      html: "<html><head><title>Judul contoh yang cukup panjang</title>" +
+        '<meta name="description" content="' + "D".repeat(80) + '">' +
+        `<link rel="canonical" href="${ORIGIN}/blog/contoh">` +
+        '<meta property="og:title" content="t"><meta property="og:description" content="d">' +
+        '<meta property="og:image" content="https://lktech.id/og.png"></head></html>',
+    }),
+    ORIGIN,
+  );
+  const summary = summarizeAudit([unchecked, okPage]);
+  assert.equal(summary.errors, 0);
+  assert.equal(summary.byCode.not_checked, 1);
+});
+
+test("buildAuditReport: menandai budgetExceeded & menambah keterbatasan", () => {
+  const page = analyzePage(
+    facts({ httpStatus: 0, fetchError: "budget_exceeded", html: null, finalUrl: null, inSitemap: true }),
+    ORIGIN,
+  );
+  const report = buildAuditReport({
+    origin: ORIGIN,
+    pages: [page],
+    startedAt: "2026-10-25T00:00:00.000Z",
+    finishedAt: "2026-10-25T00:00:45.000Z",
+    truncated: false,
+    inventorySize: 5,
+    sitemapChecked: true,
+    limits: DEFAULT_SEO_AUDIT_LIMITS,
+  });
+  assert.equal(report.budgetExceeded, true);
+  assert.equal(report.unchecked, 1);
+  assert.ok(report.limitations.some((l) => /batas waktu audit/i.test(l)));
+  assert.equal(report.limits.budgetMs, DEFAULT_SEO_AUDIT_LIMITS.budgetMs);
+});
+
 /* ---------- Skema API ---------- */
 
 test("seoAuditRunSchema: menerima opsi sah & menolak yang tak dikenal", () => {

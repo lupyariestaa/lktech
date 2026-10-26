@@ -229,6 +229,13 @@ export function SeoAuditPanel() {
             {meta?.actor ? ` oleh ${meta.actor}` : ""}
           </p>
 
+          {report.budgetExceeded && (
+            <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Batas waktu audit tercapai: {report.unchecked} URL tidak diperiksa. Jalankan ulang atau pilih
+              grup inventaris yang lebih kecil agar semua URL tercakup.
+            </div>
+          )}
+
           {report.grouped.length === 0 ? (
             <p className="flex items-center gap-1.5 text-xs text-emerald-700">
               <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Tidak ada masalah yang terdeteksi pada URL ini.

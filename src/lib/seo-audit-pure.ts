@@ -46,7 +46,8 @@ export type SeoAuditIssueCode =
   | "description_length"
   | "og_incomplete"
   | "jsonld_invalid"
-  | "not_in_sitemap";
+  | "not_in_sitemap"
+  | "not_checked";
 
 export const SEO_AUDIT_ISSUE_LABEL: Record<SeoAuditIssueCode, string> = {
   fetch_failed: "Gagal mengambil halaman",
@@ -63,6 +64,7 @@ export const SEO_AUDIT_ISSUE_LABEL: Record<SeoAuditIssueCode, string> = {
   og_incomplete: "Open Graph tidak lengkap",
   jsonld_invalid: "JSON-LD tidak dapat diparse",
   not_in_sitemap: "Tidak ditemukan di sitemap",
+  not_checked: "Tidak diperiksa (batas waktu audit)",
 };
 
 export type SeoAuditIssue = {
@@ -117,6 +119,12 @@ export type SeoAuditLimits = {
   maxRedirects: number;
   /** Maksimum permintaan paralel. */
   concurrency: number;
+  /**
+   * Anggaran waktu TOTAL untuk seluruh audit (ms), termasuk pengambilan sitemap.
+   * Setelah terlampaui, URL yang belum diproses ditandai `not_checked` (bukan
+   * dianggap error halaman) sehingga respons tetap selesai sebelum batas fungsi.
+   */
+  budgetMs: number;
 };
 
 export const DEFAULT_SEO_AUDIT_LIMITS: SeoAuditLimits = {
@@ -125,6 +133,8 @@ export const DEFAULT_SEO_AUDIT_LIMITS: SeoAuditLimits = {
   maxBodyBytes: 512 * 1024,
   maxRedirects: 3,
   concurrency: 4,
+  /** Sisa ~15s untuk simpan hasil + audit log sebelum `maxDuration` route (60s). */
+  budgetMs: 45_000,
 };
 
 /** Batas rentang panjang judul (heuristik, bukan aturan resmi Google). */
@@ -374,7 +384,15 @@ function push(
 export function analyzePage(facts: SeoAuditPageFacts, origin: string): SeoAuditPage {
   const issues: SeoAuditIssue[] = [];
 
-  if (facts.fetchError || facts.httpStatus === 0) {
+  if (facts.fetchError === "budget_exceeded") {
+    push(issues, {
+      code: "not_checked",
+      severity: "low",
+      message:
+        "Halaman tidak diperiksa karena batas waktu audit tercapai. Jalankan ulang atau pilih grup yang lebih kecil.",
+      detail: "budget_exceeded",
+    });
+  } else if (facts.fetchError || facts.httpStatus === 0) {
     push(issues, {
       code: "fetch_failed",
       severity: "critical",
@@ -627,9 +645,11 @@ export function summarizeAudit(pages: readonly SeoAuditPage[]): SeoAuditSummary 
   let inSitemap = 0;
 
   for (const page of pages) {
+    const unchecked = page.issues.some((issue) => issue.code === "not_checked");
     if (page.inSitemap) inSitemap += 1;
     if (page.issues.length === 0) ok += 1;
-    if (page.httpStatus === 0 || page.httpStatus >= 400) errors += 1;
+    // Halaman yang sengaja dilewati karena batas waktu BUKAN error halaman.
+    if (!unchecked && (page.httpStatus === 0 || page.httpStatus >= 400)) errors += 1;
     for (const issue of page.issues) {
       bySeverity[issue.severity] += 1;
       byCode[issue.code] = (byCode[issue.code] ?? 0) + 1;
@@ -709,6 +729,10 @@ export type SeoAuditReport = {
   sitemapChecked: boolean;
   /** Error sitemap (kode aman), bila ada — membedakan "tidak ada di sitemap" dari "sitemap gagal". */
   sitemapError?: string | null;
+  /** `true` bila sebagian URL tidak diperiksa karena batas waktu audit tercapai. */
+  budgetExceeded: boolean;
+  /** Jumlah URL yang tidak diperiksa karena batas waktu. */
+  unchecked: number;
   limits: SeoAuditLimits;
   summary: SeoAuditSummary;
   grouped: SeoAuditGroupedIssue[];
@@ -739,6 +763,8 @@ export function buildAuditReport(input: {
   const pages = sortAuditPages(input.pages);
   const start = Date.parse(input.startedAt);
   const end = Date.parse(input.finishedAt);
+  const unchecked = pages.filter((page) => page.issues.some((issue) => issue.code === "not_checked")).length;
+  const budgetExceeded = unchecked > 0;
   return {
     ruleVersion: SEO_AUDIT_RULE_VERSION,
     origin: input.origin,
@@ -749,10 +775,17 @@ export function buildAuditReport(input: {
     inventorySize: input.inventorySize,
     sitemapChecked: input.sitemapChecked,
     sitemapError: input.sitemapError ?? null,
+    budgetExceeded,
+    unchecked,
     limits: input.limits,
     summary: summarizeAudit(pages),
     grouped: groupIssuesByCode(pages),
     pages,
-    limitations: [...SEO_AUDIT_BASE_LIMITATIONS],
+    limitations: budgetExceeded
+      ? [
+          ...SEO_AUDIT_BASE_LIMITATIONS,
+          "Sebagian halaman tidak diperiksa karena batas waktu audit; jalankan ulang atau pilih grup inventaris yang lebih kecil.",
+        ]
+      : [...SEO_AUDIT_BASE_LIMITATIONS],
   };
 }
