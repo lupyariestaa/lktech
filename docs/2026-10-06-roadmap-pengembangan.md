@@ -217,9 +217,9 @@ Mengubah pembeli sekali menjadi pelanggan berulang, dan pengunjung menjadi audie
 - Catat aksi admin penting (ubah status order, hapus/produk, ubah pengaturan, blokir user, moderasi ulasan) ke `admin_audit/{id}`.
 - Halaman `/admin/audit` dengan filter. (Pola sudah ada di `media_audit`.)
 
-### 4.2 [P1] Rate-limit Terdistribusi + Webhook Email — ✅ (rate-limit) / ⏳ (webhook)
+### 4.2 [P1] Rate-limit Terdistribusi + Webhook Email — ✅ (rate-limit) / 🟢 (webhook kode, aktivasi owner)
 - ✅ `rate-limit.ts` kini mendukung **Upstash Redis** (opsional, fail-safe → fallback in-memory).
-- ⏳ **Webhook Resend** (`delivered/bounced/complained`) — ditunda (butuh domain terverifikasi, backlog `EM-P2`).
+- 🟢 **Webhook Resend** (`delivered/bounced/complained`) — **kode selesai (2026-10-26, `EM-P2`)**: endpoint `/api/webhooks/resend` dengan verifikasi tanda tangan **Svix** (fail-safe: menolak bila `RESEND_WEBHOOK_SECRET` kosong), indeks `email_sends` + riwayat `delivered/bounced` pada order. **Aktivasi oleh pemilik:** isi signing secret + daftarkan URL webhook (`TUGAS-MANUAL.md` M7).
 
 ### 4.3 [P2] Agregasi Harian Analitik — ✅ SELESAI
 - `analytics_daily/{date}` (backlog `AN-P3`) — diimplementasikan sebagai materialisasi
@@ -309,8 +309,7 @@ NILAI RENDAH ──────────────────────�
 | `AN-P3` | Agregasi harian `analytics_daily` | ✅ SELESAI (2026-10-13) — materialisasi + fallback LIVE |
 | `KP-P2` | Kupon lanjutan (`appliesToSlugs`/`minItems`) | Menunggu bundling (Tema 1.2) |
 | `KP-P3`/`XL-3` | Rate-limit terdistribusi | Perlu akun Upstash |
-| `EM-P2` | Outbox + webhook Resend | Perlu domain terverifikasi +
- webhook |
+| `EM-P2` | Webhook Resend (delivered/bounced/complained) | 🟢 kode SELESAI (2026-10-26) — aktivasi butuh signing secret `RESEND_WEBHOOK_SECRET` + domain terverifikasi |
 | `EM-P3` | Pratinjau template email | Nice-to-have |
 | `KP-M4` | Anti-enumeration kode kupon | ✅ SELESAI (2026-10-13) — rate-limit IP + tolak cepat + observability |
 

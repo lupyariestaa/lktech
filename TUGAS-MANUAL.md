@@ -23,6 +23,7 @@
 | M4 | Env opsional (GA4 / GSC API / Upstash / WA) | akun masing-masing | 🟡 Rendah | 🔄 Sebagian (GA4 ✅ · Upstash ✅) |
 | M5 | Backfill agregat analitik 90 hari (sekali) | — | 🟡 Rendah | ✅ Selesai |
 | M6 | Firestore Rules republish (A4) | Firebase Console | 🟢 Ditunda | ✅ Selesai |
+| M7 | Aktifkan webhook Resend (status delivered/bounced) | Resend dashboard + env | 🟡 Rendah | ⬜ Belum |
 
 Legenda status: ⬜ Belum · 🔄 Sedang · ✅ Selesai · ⏭️ Ditunda
 
@@ -145,6 +146,26 @@ Composite **indexes** terpisah dari rules (lihat langkah opsional di atas).
 
 ---
 
+## M7 — Aktifkan webhook Resend (status pengiriman nyata)
+
+**Guna:** mengetahui email benar-benar **terkirim/pantul (bounce)** — kode `EM-P2`
+sudah terpasang & **fail-safe** (menolak semua request bila secret belum diisi).
+
+**Prasyarat:** **M3** (domain di Resend sudah terverifikasi).
+
+- [ ] Buka https://resend.com → **Webhooks** → **Add Webhook**.
+- [ ] URL: `https://<domain-anda>/api/webhooks/resend`.
+- [ ] Pilih event: `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.bounced`, `email.complained`.
+- [ ] Salin **Signing Secret** (format `whsec_...`).
+- [ ] Vercel → Settings → Environment Variables (**Production**): `RESEND_WEBHOOK_SECRET` = signing secret → **Redeploy**.
+- [ ] Resend → tombol **Send test event** → harus **200**.
+- [ ] Uji: kirim email order → buka `/admin/orders` → detail order → riwayat email menampilkan status **Diterima/Pantul**.
+
+**Status:** ⬜ Belum
+**Catatan:** tanpa `RESEND_WEBHOOK_SECRET`, endpoint sengaja membalas **503** (tidak menerima payload tak terverifikasi). Verifikasi memakai tanda tangan **Svix** (tanpa dependensi baru).
+
+---
+
 ## Catatan tugas baru
 
 > Tambahkan tugas manual baru di sini saat muncul (mis. butuh akun lain,
@@ -163,3 +184,4 @@ Composite **indexes** terpisah dari rules (lihat langkah opsional di atas).
 | 2026-10-14 | **M1 ✅ Selesai** — GSC terverifikasi + sitemap tersubmit (via field admin, tanpa kode). |
 | 2026-10-14 | **M6 ✅ Selesai** — Firestore Rules deny-all terbaru dipublish. |
 | 2026-10-15 | **M4 🔄 Sebagian** — GA4 (`G-HQDT6937K4`) + Upstash terpasang; GSC API ditunda (butuh Google Cloud). |
+| 2026-10-26 | **M7 ditambahkan** — aktifkan webhook Resend (`EM-P2`); kode fail-safe sudah terpasang, butuh signing secret + domain terverifikasi (M3). |

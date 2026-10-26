@@ -358,6 +358,15 @@ dan E2E `e2e/security-headers.spec.ts` mengunci keberadaan header tersebut.
 **Enforce belum aktif** karena masih perlu nonce/hash untuk inline script Next
 + JSON-LD dan verifikasi runtime semua origin (editor/media/preview).
 
+**Status implementasi (2026-10-26):** 🟡 **Sebagian (increment aman).**
+Kebijakan report-only kini menunjuk `report-uri /api/csp-report`, dan endpoint
+publik baru `src/app/api/csp-report/route.ts` mengumpulkan pelanggaran nyata
+(muatan dibatasi 32 KB, maks 20 entri, **hanya origin** — path/query/token
+dibuang) lalu mencatatnya via `logEvent("csp_violation")`. Tujuannya: langkah
+**enforce penuh menjadi berbasis bukti**, bukan tebakan. Parser murni
+`src/lib/csp-report-pure.ts` + `test:csp` (6). Enforce penuh **masih** menunggu
+nonce/hash + verifikasi runtime; jangan di-*enforce* tanpa bukti tersebut.
+
 **Bukti:**
 
 - `next.config.ts:42-55` hanya memasang `X-Content-Type-Options`,
@@ -421,6 +430,16 @@ menolak kelebihan + alarm Sentry di 80%, **rate-limit aksi destruktif** per uid
 backup** dikirim saat ekspor/impor terpotong atau gagal sebagian. Re-auth aksi
 sensitif sudah selesai di P1C. Sisa kecil: kuota backup belum punya angka
 provider (hanya alarm batas internal 5.000 baris).
+
+**Status implementasi (2026-10-26):** 🟢 **Angka batas backup kini eksplisit &
+terlihat.** Batas ekspor dijadikan satu sumber `EXPORT_CAP` (5.000/sumber) di
+`backup-pure.ts`; ekspor mencatat `cap`, `perSourceCounts`, dan `nearLimitSources`
+ke `bundle.meta`, memancarkan `logEvent("backup_export")` (tanpa PII), dan
+route memberi alarm **peringatan dini** saat ada sumber ≥ 80% batas (belum
+terpotong), bukan hanya saat terpotong. Helper murni `assessExportLimits` +
+`test:backup` (28). Catatan: backup adalah ekspor Firestore (diunduh), **tidak
+ada** kuota "provider" eksternal — batas mengikat adalah `EXPORT_CAP` internal
+dan kuota Firestore itu sendiri.
 
 **Bukti:**
 

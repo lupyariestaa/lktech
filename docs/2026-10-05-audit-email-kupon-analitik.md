@@ -110,7 +110,7 @@ Ketiga sistem berfungsi & punya fondasi arsitektur yang baik (agregasi/perhitung
 
 ### 3.2 Pengembangan proper
 - **[EM-P1] Kirim ulang email + riwayat email per order** (tombol di detail order; subkoleksi `orders/{id}/emails`).
-- **[EM-P2] Outbox + retry/backoff + webhook Resend** (`email.delivered/bounced/complained`) untuk status pengiriman nyata & deteksi bounce.
+- **[EM-P2] Webhook Resend** (`email.delivered/bounced/complained`) untuk status pengiriman nyata & deteksi bounce. — 🟢 **kode selesai (2026-10-26)**: `/api/webhooks/resend` (tanda tangan Svix, fail-safe), indeks `email_sends` + riwayat `delivered/bounced`; aktivasi butuh `RESEND_WEBHOOK_SECRET`.
 - **[EM-P3] Pratinjau/dry-run template email pembeli** di dashboard.
 
 ---
@@ -309,7 +309,7 @@ P3 (skala & polish)
 - **DoD:** sesuai item yang dipilih.
 
 ### FASE R7 — Skala, QA & deploy
-- [~] (Opsional) `AN-P3` agregasi harian; `KP-P3`/`XL-3` rate-limit distribusi; `EM-P2` outbox/webhook — **ditunda** (butuh infra tambahan; dicatat sebagai backlog).
+- [~] (Opsional) `AN-P3` agregasi harian ✅ (2026-10-13); `KP-P3`/`XL-3` rate-limit distribusi (butuh Upstash); `EM-P2` **outbox/webhook Resend** 🟢 kode selesai (2026-10-26) — aktivasi butuh `RESEND_WEBHOOK_SECRET`.
 - [x] `tsc`/`lint`/`build` bersih.
 - [x] Checklist DoD §9.
 - [x] Dokumentasi: status → ✅ + update `docs/README.md` & `TASK-SELANJUTNYA.md` + tandai temuan teratasi.

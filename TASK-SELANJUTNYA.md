@@ -1,7 +1,11 @@
 # Task Selanjutnya — LKTech Website
 
 > Dokumentasi ini mencatat pekerjaan yang **belum terselesaikan** & rencana lanjutan.
-> Terakhir diperbarui: sesi **Audit Dashboard Admin** (2026-10-24; ADM-10/14/20/24/25 ✅ kode; ADM-15/16/17 🟡 parsial; ADM-21/22 kode diperbaiki, ADM-23 perlu uji browser; P1 CSP/kuota + staging/produksi/popup Google masih terbuka).
+> Terakhir diperbarui: sesi **Tindak lanjut Audit SEO (AUD-02…AUD-10) + Section Statistik S4** (2026-10-26). Sesi-sesi bertanggal 2026-10-26 di bawah merangkumnya.
+>
+> 🧭 **Tindak lanjut audit SEO (AUD-02…AUD-10) ✅ SELESAI (kode, 2026-10-26):** commit `6f5f7ea` — observabilitas memakai `logEvent` terstruktur, panel **Status & observabilitas**, validasi parameter GA4 di logika murni, fallback `defaultGa4Range`, satu keputusan status GA4, `pruneSeoAudits()` lewat `after()`, `.env.example` bersih, dan gating `SEO_DISABLED_FEATURES` di server. Tes `test:seo-ops` (5) + `test:seo-endpoints` (9); unit 799/799; build & tsc hijau.
+>
+> 📊 **Section Statistik S1–S4 ✅ SELESAI (kode, 2026-10-26):** commit `4fa882e` — `docs/2026-10-26-planning-pengembangan-section-statistik.md` — integritas `verified`, validasi & editor, presentasi a11y, dan **S4 angka turunan objektif** (proyek/layanan/kota) dengan tombol sinkron **manual**; "Klien Puas" tetap manual. Tes `test:stats` (18).
 >
 > 🗺️ **Arah pengembangan jangka menengah–panjang:** lihat **[`docs/2026-10-06-roadmap-pengembangan.md`](docs/2026-10-06-roadmap-pengembangan.md)** (peta tema: Konversi & Closing · Retensi · Kepercayaan & Skala · Operasional). Rekomendasi utama: **Pembayaran online (P0)** → **Ulasan & rating (P0)** → Retensi.
 >
@@ -45,7 +49,7 @@
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF:** audit diff; commit kode dan docs terpisah. Jangan push. Owner perlu uji browser Back/a11y, staging/production + Google re-auth popup, jadwal cron restore, CSP enforcement, backup provider quota; backfill `createdAtISO`; uji data >5.000; putuskan server-side user export/search lead. Homepage F0–F8 + F6 jangan diubah. Detail: audit dashboard + [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md).
+> 🎯 **TASK AKTIF (2026-10-26):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` (2026-10-26, belum di-commit):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -64,7 +68,58 @@
 
 ---
 
-## 🛡️ SESI INI — Audit Dashboard Admin (2026-10-21/24) — P0 + P1B/P1C/P1D SELESAI KODE; ADM-12 ✅; P1E E2E EMULATOR ✅; SISA P1 & P2–P3 TERBUKA
+## 🧭 SESI INI — Tindak lanjut Audit SEO (AUD-02…AUD-10) — SELESAI (kode, 2026-10-26)
+
+**Status: ✅ SELESAI.** Commit `6f5f7ea` (di-push). 15 berkas, +497/−51. Dokumen rujukan: [`docs/2026-10-25-planning-pengembangan-seo-dashboard.md`](docs/2026-10-25-planning-pengembangan-seo-dashboard.md).
+
+- **AUD-02:** observabilitas provider memakai `logEvent` terstruktur (event `seo.provider_call`), tanpa kunci `event` duplikat di properti.
+- **AUD-03:** panel baru **Status & observabilitas** (`src/components/admin/seo-ops-panel.tsx`) yang membaca `/api/admin/seo/observability` (kill switch + metrik per-provider; tanpa data sensitif).
+- **AUD-04:** validasi parameter GA4 dipindah ke logika murni `checkGa4QueryParams` + `GA4_QUERY_PARAMS`; route memakainya.
+- **AUD-05:** `defaultGa4Range(now)` sebagai fallback aman (hapus non-null assertion `!`).
+- **AUD-06:** satu keputusan status GA4 dari kegagalan bagian **wajib**; hapus `countFailures`.
+- **AUD-07/08:** `pruneSeoAudits()` terpisah dari `saveSeoAudit` (loop berbatas) & dijadwalkan via `after()` setelah respons.
+- **AUD-09:** `.env.example` bersih dari karakter rusak (`U+FFFD` = 0).
+- **AUD-10:** halaman `/admin/seo` meresolusi `SEO_DISABLED_FEATURES` di server + `FeatureDisabledNotice` (bukan galat 503).
+- **Tes:** `test:seo-ops` (5) + `test:seo-endpoints` (9, baru). Gate: unit **799/799** · `tsc` ✅ · ESLint ✅ · `build` ✅.
+
+**Sisa manual (owner):** uji browser panel observabilitas & kill switch.
+
+---
+
+## 📊 SESI INI — Section Statistik S1–S4 (angka turunan objektif) — SELESAI (kode, 2026-10-26)
+
+**Status: ✅ SELESAI.** Commit `4fa882e` (di-push). 9 berkas, +365/−36. Dokumen: [`docs/2026-10-26-planning-pengembangan-section-statistik.md`](docs/2026-10-26-planning-pengembangan-section-statistik.md) §13.
+
+- **S1–S3** (sebelumnya, commit `8820bea`): penanda `verified` per item, guard nilai, `featured` menggantikan regex label hero, caption `statsAsOf`; validasi & editor (min/max/step, pratinjau, preset sufiks); presentasi a11y (pemisah ribuan `Intl`, grid adaptif, `aria`).
+- **S4:** sumber turunan **objektif** saja — jumlah proyek/layanan/kota.
+  - `src/lib/stats-pure.ts`: `STAT_SOURCES`, `StatSource`, label/sufiks default, `isStatSource`, `applyDerivedCounts`, validasi `source`.
+  - `GET /api/admin/stats/derived` (admin, read-only) → `{ counts, asOf }` dari `getProjects()`, `SERVICES`, `getLocationSlugs()`.
+  - Editor: dropdown **"Sumber angka"** per item + tombol **"Sinkronkan angka turunan"** (manual, tanpa penjadwalan). Item manual tidak disentuh; **"Klien Puas"/klaim sosial tetap manual**.
+- **Tes:** `test:stats` (**18**). Gate: unit **799/799** · `tsc` ✅ · ESLint ✅ · `build` ✅.
+
+**Sisa manual (owner):** nilai nyata di Firestore produksi, centang "Terverifikasi" di `/admin/content`, uji pembaca layar & layout 3–8 item, `statsAsOf`, dan sinkronisasi angka turunan.
+
+---
+
+## 🛡️ SESI INI — Increment P1 Audit Admin + Webhook Resend (EM-P2) — SELESAI (kode, 2026-10-26)
+
+**Status: ✅ SELESAI (kode).** Gate: unit **822/822** · `test:csp` (6) · `test:resend-webhook` (14) · `test:backup` (28) · `tsc` ✅ · ESLint ✅ · `build` ✅.
+
+**A. Increment aman P1 audit admin (`docs/2026-10-21-audit-dashboard-admin.md`)**
+- **ADM-05 (CSP):** kebijakan `Report-Only` kini menunjuk `report-uri /api/csp-report`; endpoint publik `src/app/api/csp-report/route.ts` mengumpulkan pelanggaran nyata (muatan ≤ 32 KB, maks 20 entri, **hanya origin** — path/query/token dibuang) lalu `logEvent("csp_violation")`. Parser murni `src/lib/csp-report-pure.ts`. **Enforce penuh tetap belum dilakukan** (butuh nonce/hash + verifikasi runtime semua origin).
+- **ADM-07 (angka batas backup):** batas ekspor menjadi satu sumber `EXPORT_CAP` (5.000/sumber); ekspor mencatat `cap`/`perSourceCounts`/`nearLimitSources` + `logEvent("backup_export")`; route memberi **peringatan dini** saat sumber ≥ 80% batas (belum terpotong). Helper murni `assessExportLimits` (+ `assessExportLimits`/`deliveryStatusFor` tes).
+
+**B. Webhook Resend (`EM-P2`) — kode fail-safe**
+- `src/lib/resend-webhook-pure.ts`: verifikasi tanda tangan **Svix** (HMAC-SHA256 via `node:crypto`, tanpa dependensi baru) + klasifikasi event + parser payload.
+- `src/app/api/webhooks/resend/route.ts`: **fail-safe** — menolak **503** bila `RESEND_WEBHOOK_SECRET` kosong, **401** bila tanda tangan/stempel waktu tak sah; memproses `email.sent/delivered/delivery_delayed/bounced/complained`; selalu 2xx untuk payload sah (agar tak di-retry).
+- `src/lib/email-events.ts`: indeks `email_sends` (**doc id = id Resend**) → mengorelasikan event ke order + menambah riwayat `delivered/bounced` di `orders/{id}/emails`. `sendEmail` menyimpan `id` Resend; badge status email (dialog order) menampilkan `delivered/bounced/…`.
+- **Aktivasi butuh pemilik (M7):** isi `RESEND_WEBHOOK_SECRET` + daftarkan URL `https://<domain>/api/webhooks/resend` di dashboard Resend.
+
+**Sisa manual (owner):** M7 (Resend webhook), uji browser S4/SEO, verifikasi staging/produksi + popup Google.
+
+---
+
+## 🛡️ SESI SEBELUMNYA — Audit Dashboard Admin (2026-10-21/24) — P0 + P1B/P1C/P1D SELESAI KODE; ADM-12 ✅; P1E E2E EMULATOR ✅; SISA P1 & P2–P3 TERBUKA
 
 **Status: ✅ Audit selesai; ✅ P0 (ADM-01/02); 🟡 P1A (ADM-06 ✅, ADM-05/07 sebagian); ✅ P1B (ADM-04 revoke logout); ✅ P1C kode (ADM-03/04/08/12 + re-auth); 🟡 P1D kode (ADM-09/13 ✅, ADM-05/07 sebagian); ✅ ADM-12 UI+job restore/worker `6f8bba1`; ✅ P1E E2E auth Firebase Emulator 9/9; ⏳ sisa P1 (CSP/kuota) + staging/produksi + P2–P3.** Dokumen:
 [`docs/2026-10-21-audit-dashboard-admin.md`](docs/2026-10-21-audit-dashboard-admin.md).
@@ -1507,7 +1562,7 @@ Menuntaskan seluruh temuan audit (`docs/2026-10-05-audit-email-kupon-analitik.md
 
 **⚠️ Wajib manual:** publish ulang **Firestore Rules** (koleksi baru: `couponCodes`, subkoleksi `orders/{id}/emails` & `coupons/{id}/redemptions`) + uji browser + deploy.
 
-**Backlog (ditunda):** `AN-P3` (agregasi harian), `KP-P3`/`XL-3` (rate-limit terdistribusi Redis/Upstash), `EM-P2` (outbox + webhook Resend).
+**Backlog:** `AN-P3` (agregasi harian) ✅ materialisasi `analytics_daily`; `KP-P3`/`XL-3` (rate-limit terdistribusi Redis/Upstash); `EM-P2` (webhook Resend) 🟢 **kode selesai 2026-10-26** — aktivasi butuh `RESEND_WEBHOOK_SECRET` + domain terverifikasi (lihat `TUGAS-MANUAL.md` M7).
 
 ---
 
@@ -1860,7 +1915,7 @@ Upgrade menyeluruh sidebar dashboard admin berdasarkan
 
 #### 0. Remediasi Audit Email/Kupon/Analitik — ✅ SELESAI (R0–R7)
 Lihat `docs/2026-10-05-audit-email-kupon-analitik.md`. Seluruh temuan kritis/mayor ditangani.
-**Backlog opsional (butuh infra):** `AN-P3` agregasi harian `analytics_daily`, `KP-P3`/`XL-3` rate-limit terdistribusi (Redis/Upstash), `EM-P2` outbox + webhook Resend.
+**Backlog opsional (butuh infra):** `AN-P3` agregasi harian `analytics_daily` ✅ (2026-10-13), `KP-P3`/`XL-3` rate-limit terdistribusi (Redis/Upstash), `EM-P2` webhook Resend 🟢 kode selesai (2026-10-26; aktivasi butuh `RESEND_WEBHOOK_SECRET`, lihat `TUGAS-MANUAL.md` M7).
 
 #### 1. Analytics & Monitoring
 - [x] Pasang **Vercel Analytics** (`@vercel/analytics` + `<Analytics />` di `layout.tsx`). ⚠️ **Aktifkan di dashboard Vercel** (Project → Analytics) agar data mulai terkumpul.

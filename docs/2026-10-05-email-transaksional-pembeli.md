@@ -13,6 +13,8 @@
 > Temuan teratasi: ET-01..ET-08.
 
 > **⚠️ Penting:** agar email terkirim ke **pembeli umum**, domain harus **diverifikasi di Resend** (§10). Saat ini `EMAIL_FROM=LKTech <onboarding@resend.dev>` → hanya terkirim ke alamat terdaftar Resend. Kode sudah siap & aman (best-effort); email admin tetap berjalan.
+>
+> **🟢 Webhook status pengiriman (`EM-P2`, kode 2026-10-26):** endpoint `/api/webhooks/resend` (verifikasi tanda tangan **Svix**, **fail-safe** — hanya aktif bila `RESEND_WEBHOOK_SECRET` diisi) menangkap `delivered/bounced/complained` dan mencatatnya pada riwayat email order. Aktivasi = langkah pemilik (`TUGAS-MANUAL.md` M7).
 
 ---
 
