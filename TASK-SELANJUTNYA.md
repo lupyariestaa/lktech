@@ -49,7 +49,7 @@
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (2026-10-26):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26):** endpoint dry-run `/api/admin/email/preview` + UI di halaman Notifikasi. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
+> 🎯 **TASK AKTIF (2026-10-26):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -129,6 +129,20 @@
 - **Tes:** `scripts/email-preview.test.ts` (`test:email-preview`, 6) — guard murni + wiring (memastikan endpoint tak punya jalur kirim/`fetch(`).
 
 **Sisa manual (owner):** buka Pengaturan → Notifikasi, ganti-ganti template/status, dan pastikan tampilan sesuai harapan.
+
+---
+
+## 🎟️ SESI INI — Kupon Lanjutan: Diskon Bundel `eligibleSubtotal` (`KP-P2`) — SELESAI (kode, 2026-10-26)
+
+**Status: ✅ SELESAI (kode).** Commit `c8964a4`. Menutup backlog `P3-2` ("diskon bundel atas seluruh subtotal"). Gate: `test:bundle` (**20**) · `test:coupon` (42) · unit **839/839** · `tsc` ✅ · ESLint ✅ · `build` ✅.
+
+- **Masalah lama:** kupon bundel (`appliesToSlugs`) memvalidasi syarat keranjang, tetapi **diskon dihitung atas seluruh subtotal keranjang** — pembeli mendapat diskon dari item yang tak relevan.
+- **Perbaikan (`eligibleSubtotal`):** `computeEligibleSubtotal(items, appliesToSlugs)` (murni di `coupon-pure.ts`) menjumlahkan subtotal **hanya** item yang slug-nya memenuhi `appliesToSlugs`. `validateCoupon` memakai nilai ini sebagai basis diskon (`null` = tanpa batasan → subtotal penuh, **backward-compatible**). `minSpend` tetap diukur terhadap subtotal keranjang penuh.
+- **Penerapan saat checkout:** `checkout.ts` mengirim `items: [{ slug, subtotal }]`; endpoint `/api/coupons/validate` & `/api/coupons/best` menerima `items`; klien (`coupon-api.ts`, `cart-coupon.tsx`, `cart-view.tsx`) menyertakan rincian item. Server tetap **server-authoritative** (klien hanya memberi konteks).
+- **Validasi form (`validateCouponForm`):** menambah aturan untuk field bundel — maks 50 slug, slug non-kosong ≤ 200 karakter, tanpa duplikat, `minItems` bilangan bulat ≥ 0; pesan error ditampilkan di form admin.
+- **Tes:** `test:bundle` diperluas (9 → **20**) — `computeEligibleSubtotal`, diskon eligible vs full, `minSpend` basis, & validasi form bundel.
+
+**Sisa manual (owner):** buat kupon bundel di `/admin/coupons` (isi slug produk + min item) lalu uji di keranjang — pastikan diskon hanya memberi efek pada item syarat.
 
 ---
 
@@ -1154,7 +1168,7 @@ Audit QA atas hasil P3 & P4 menemukan **5 gap**; **3 diperbaiki** (2 backlog/cat
 | **P4-1** | Stok vs kelayakan beli tak konsisten (`stock:0` masih bisa dibeli) | ✅ **Diperbaiki** — stok MENGIKAT bila diisi: `isStockOut` (soldOut atau `stock ≤ 0`) & `effectiveStock`; checkout tolak `qty > stock` (`*_insufficient_stock`) & `stock ≤ 0` (`*_out_of_stock`); badge "Stok habis" konsisten |
 | **P4-2** | Dead export `productTotalStock` | ✅ **Diperbaiki** — dipakai untuk badge ringkas "Sisa N" multi-varian di kartu produk |
 | **P3-3** | Kupon bundel tak dicabut saat syarat hilang dari keranjang | ✅ **Diperbaiki** — re-validasi otomatis saat isi keranjang berubah (best-effort; checkout tetap safety net di server) |
-| **P3-2** | Diskon bundel atas seluruh subtotal (`eligibleSubtotal`) | ⏸️ **Backlog** (`KP-P2`) — sesuai dokumen §4 |
+| **P3-2** | Diskon bundel atas seluruh subtotal (`eligibleSubtotal`) | ✅ **Diperbaiki (2026-10-26, `KP-P2`)** — diskon bundel kini atas `eligibleSubtotal` (item yang memenuhi syarat saja); lihat sesi di atas |
 | **P4-3** | `social-proof.tsx` + `server-only` | 🔵 **Catatan** (aman, hanya dipakai server) |
 
 **Verifikasi:** `npx tsc --noEmit` bersih ✅ · `npx eslint .` bersih ✅ · `npm run build` sukses ✅ (69 halaman) · test (metrics 6 · fulfillment 5 · downloads 5 · expiry 5 · bundle 9 · **stock 12**) lolos ✅.

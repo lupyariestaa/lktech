@@ -106,7 +106,7 @@ Memperpendek jalan dari minat → pembayaran, dan memungkinkan penjualan tanpa k
 **Rancangan:**
 - Field produk: `bundlesWith: string[]` (slug) & `relatedSlugs`.
 - Section **"Sering dibeli bersama"** di detail produk (server-rendered, ambil dari keranjang historis ATAU kurasi manual admin).
-- **"Diskon bundel"**: kupon khusus yang mensyaratkan ≥2 produk tertentu (`appliesToSlugs` + `minItems` → perluas `Coupon` model, lihat backlog `KP-P2`).
+- **"Diskon bundel"**: kupon khusus yang mensyaratkan ≥2 produk tertentu (`appliesToSlugs` + `minItems` → model `Coupon`, ✅ `KP-P2` 2026-10-26, diskon atas `eligibleSubtotal`).
 
 ### 1.3 [P1] Urgency & Trust Badges
 **Rancangan:**
@@ -307,7 +307,7 @@ NILAI RENDAH ──────────────────────�
 | Kode | Item | Alasan ditunda |
 | --- | --- | --- |
 | `AN-P3` | Agregasi harian `analytics_daily` | ✅ SELESAI (2026-10-13) — materialisasi + fallback LIVE |
-| `KP-P2` | Kupon lanjutan (`appliesToSlugs`/`minItems`) | Menunggu bundling (Tema 1.2) |
+| `KP-P2` | Kupon lanjutan (`appliesToSlugs`/`minItems`/`eligibleSubtotal`) | 🟢 SELESAI (2026-10-26) — diskon bundel dihitung atas `eligibleSubtotal` (item yang memenuhi syarat saja), `minItems`/`appliesToSlugs`, validasi form & tes murni |
 | `KP-P3`/`XL-3` | Rate-limit terdistribusi | Perlu akun Upstash |
 | `EM-P2` | Webhook Resend (delivered/bounced/complained) | 🟢 kode SELESAI (2026-10-26) — aktivasi butuh signing secret `RESEND_WEBHOOK_SECRET` + domain terverifikasi |
 | `EM-P3` | Pratinjau template email | 🟢 kode SELESAI (2026-10-26) — endpoint dry-run `/api/admin/email/preview` (read-only, pesanan contoh) + UI di Pengaturan → Notifikasi |

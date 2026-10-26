@@ -163,7 +163,7 @@ Ketiga sistem berfungsi & punya fondasi arsitektur yang baik (agregasi/perhitung
 
 ### 4.2 Pengembangan proper
 - **[KP-P1] Prefill kode dari URL** (`/keranjang?promo=LAUNCH`) + halaman **`/promo`** publik + badge "ada promo" di produk.
-- **[KP-P2] Model kupon lanjutan**: `appliesToSlugs`/kategori/`minItems` + `eligibleSubtotal`.
+- **[KP-P2] Model kupon lanjutan**: `appliesToSlugs`/kategori/`minItems` + `eligibleSubtotal`. — 🟢 **SELESAI (2026-10-26)**: `appliesToSlugs`/`minItems` + diskon bundel kini dihitung atas **`eligibleSubtotal`** (hanya item yang memenuhi syarat, bukan seluruh keranjang); validasi form admin untuk field bundel; tes murni (`test:bundle`).
 - **[KP-P3] Rate-limit terdistribusi** (Redis/Upstash) — saat ini in-memory per-instance.
 
 ---

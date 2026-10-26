@@ -163,7 +163,8 @@ Handler:
 - Keranjang: saran tambah item (cross-sell) bila relasi ada.
 
 ### 4.3 Diskon bundel
-- Perluas model kupon (backlog `KP-P2`): `appliesToSlugs?: string[]`, `minItems?: number`, `eligibleSubtotal`.
+- Model kupon (`KP-P2`, ✅ 2026-10-26): `appliesToSlugs?: string[]`, `minItems?: number`, `eligibleSubtotal`.
+- Diskon bundel **hanya dihitung atas `eligibleSubtotal`** — subtotal item yang memenuhi `appliesToSlugs` (bukan seluruh keranjang); `minSpend` tetap diukur terhadap subtotal keranjang penuh.
 - Validasi bundel di server (`validateCoupon`) — hanya berlaku bila keranjang memenuhi syarat.
 
 ---
