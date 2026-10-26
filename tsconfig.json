@@ -55,6 +55,7 @@
     "scripts/admin-session-wiring.test.ts",
     "scripts/csp-report.test.ts",
     "scripts/resend-webhook.test.ts",
+    "scripts/email-preview.test.ts",
     "scripts/seo-pure.test.ts",
     "scripts/trusted-url.test.ts",
     "scripts/settings-form-pure.test.ts",

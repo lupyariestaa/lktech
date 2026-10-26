@@ -3,6 +3,10 @@ import type { SeoInsight, SeoInsightConfig, SeoInsightDecision } from "@/lib/seo
 import type { AuditInventoryGroup, SeoAuditReport } from "@/lib/seo-audit-pure";
 import type { ObservabilitySnapshot } from "@/lib/seo-observability-pure";
 import type { SeoFeature } from "@/lib/seo-flags-pure";
+import type {
+  EmailPreviewStatus,
+  EmailPreviewTemplate,
+} from "@/lib/email-preview-pure";
 
 /** Status integrasi (fase S5). Tanpa rahasia — hanya boolean/mode. */
 export type IntegrationsStatus = {
@@ -35,6 +39,30 @@ export async function testIntegration(
     method: "POST",
     body: JSON.stringify({ service }),
   });
+}
+
+/* ---- Pratinjau template email pembeli (`EM-P3`) ---- */
+
+export type EmailPreviewResponse = {
+  template: EmailPreviewTemplate;
+  /** Selalu `true` — pratinjau memakai pesanan contoh, bukan data nyata. */
+  sample: true;
+  subject: string;
+  text: string;
+  html: string;
+};
+
+/**
+ * Ambil pratinjau (dry-run) template email pembeli. Read-only — server hanya
+ * menyusun template dari pesanan contoh & tidak mengirim email apa pun.
+ */
+export async function fetchEmailPreview(
+  template: EmailPreviewTemplate,
+  status?: EmailPreviewStatus,
+): Promise<EmailPreviewResponse> {
+  const params = new URLSearchParams({ template });
+  if (status) params.set("status", status);
+  return adminFetch<EmailPreviewResponse>(`/api/admin/email/preview?${params.toString()}`);
 }
 
 /* ---- Manajemen admin (fase S4) ---- */

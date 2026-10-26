@@ -1,5 +1,5 @@
 import "server-only";
-import type { Order, OrderStatus } from "@/lib/order-types";
+import type { Order, OrderItem, OrderStatus } from "@/lib/order-types";
 import { ORDER_STATUS_LABEL } from "@/lib/order-types";
 import { formatRupiah, shortOrderCode } from "@/lib/format";
 import { SITE } from "@/lib/site";
@@ -39,6 +39,17 @@ export type EmailResult = {
   attempts?: number;
   /** Id email dari Resend (`EM-P2`) — untuk korelasi webhook delivered/bounced. */
   id?: string;
+};
+
+/**
+ * Template email yang siap dikirim ATAU dipratinjau (`EM-P3`).
+ * Memisahkan PENYUSUNAN pesan dari PENGIRIMAN agar dashboard bisa melihat
+ * persis apa yang akan dikirim, tanpa memanggil Resend.
+ */
+export type EmailTemplate = {
+  subject: string;
+  text: string;
+  html: string;
 };
 
 /** Apakah pengiriman email dikonfigurasi. */
@@ -287,18 +298,24 @@ function confirmationHtml(order: Order): string {
 }
 
 /**
+ * Susun template email konfirmasi pesanan (dipakai pengiriman & pratinjau).
+ */
+export function renderOrderConfirmationEmail(order: Order): EmailTemplate {
+  return {
+    subject: `Pesanan ${shortOrderCode(order.id)} diterima — ${SITE.name}`,
+    text: confirmationText(order),
+    html: confirmationHtml(order),
+  };
+}
+
+/**
  * Email konfirmasi pesanan ke pembeli (setelah checkout berhasil).
  * Best-effort — tidak melempar error.
  */
 export async function sendOrderConfirmationToBuyer(
   order: Order,
 ): Promise<EmailResult> {
-  return sendEmail({
-    to: order.buyerEmail,
-    subject: `Pesanan ${shortOrderCode(order.id)} diterima — ${SITE.name}`,
-    text: confirmationText(order),
-    html: confirmationHtml(order),
-  });
+  return sendEmail({ to: order.buyerEmail, ...renderOrderConfirmationEmail(order) });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -370,6 +387,18 @@ function orderPaidHtml(order: Order, downloadLink?: string): string {
 }
 
 /**
+ * Susun template "pembayaran diterima" (dipakai pengiriman & pratinjau).
+ * `downloadLink` opsional — bila kosong, blok unduhan diganti keterangan proses.
+ */
+export function renderOrderPaidEmail(order: Order, downloadLink?: string): EmailTemplate {
+  return {
+    subject: `Pembayaran diterima — ${SITE.name} (${shortOrderCode(order.id)})`,
+    text: orderPaidText(order, downloadLink),
+    html: orderPaidHtml(order, downloadLink),
+  };
+}
+
+/**
  * Email "pembayaran diterima" ke pembeli, dengan link unduhan bila tersedia
  * (FASE P1). Best-effort — tidak melempar error.
  */
@@ -377,12 +406,7 @@ export async function sendOrderPaidToBuyer(
   order: Order,
   downloadLink?: string,
 ): Promise<EmailResult> {
-  return sendEmail({
-    to: order.buyerEmail,
-    subject: `Pembayaran diterima — ${SITE.name} (${shortOrderCode(order.id)})`,
-    text: orderPaidText(order, downloadLink),
-    html: orderPaidHtml(order, downloadLink),
-  });
+  return sendEmail({ to: order.buyerEmail, ...renderOrderPaidEmail(order, downloadLink) });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -496,6 +520,26 @@ function statusHtml(order: Order, status: Exclude<OrderStatus, "baru">): string 
 }
 
 /**
+ * Susun template email update status (dipakai pengiriman & pratinjau).
+ * Mengembalikan `null` untuk status `baru` (tidak pernah dikirim) atau status
+ * yang tak punya salinan (`EM-H2`).
+ */
+export function renderOrderStatusEmail(
+  order: Order,
+  status: OrderStatus,
+): EmailTemplate | null {
+  if (status === "baru") return null;
+  const copy = STATUS_COPY[status as Exclude<OrderStatus, "baru">];
+  if (!copy) return null;
+  const key = status as Exclude<OrderStatus, "baru">;
+  return {
+    subject: `Pesanan ${shortOrderCode(order.id)} ${copy.subject} — ${SITE.name}`,
+    text: statusText(order, key),
+    html: statusHtml(order, key),
+  };
+}
+
+/**
  * Email update status pesanan ke pembeli.
  * Status "baru" dilewati (konfirmasi sudah dikirim saat checkout).
  * Best-effort — tidak melempar error.
@@ -506,18 +550,69 @@ export async function sendOrderStatusToBuyer(
 ): Promise<EmailResult> {
   if (status === "baru") return { ok: false, skipped: true };
 
+  const template = renderOrderStatusEmail(order, status);
+
   // `EM-H2`: guard runtime — bila kelak ada status baru tanpa entri
   // STATUS_COPY, jangan throw; kembalikan error yang tercatat.
-  const copy = STATUS_COPY[status as Exclude<OrderStatus, "baru">];
-  if (!copy) {
+  if (!template) {
     console.error("[email-order] status tanpa STATUS_COPY:", status);
     return { ok: false, error: "status_unknown" };
   }
 
-  return sendEmail({
-    to: order.buyerEmail,
-    subject: `Pesanan ${shortOrderCode(order.id)} ${copy.subject} — ${SITE.name}`,
-    text: statusText(order, status as Exclude<OrderStatus, "baru">),
-    html: statusHtml(order, status as Exclude<OrderStatus, "baru">),
-  });
+  return sendEmail({ to: order.buyerEmail, ...template });
+}
+
+/* -------------------------------------------------------------------------- */
+/* 3. Pesanan contoh untuk PRATINJAU (`EM-P3`)                                 */
+/* -------------------------------------------------------------------------- */
+
+/** Tautan unduhan contoh untuk pratinjau template "Pembayaran diterima". */
+export const SAMPLE_DOWNLOAD_LINK = `${SITE.url}/unduhan/CONTOH-TOKEN-PRATINJAU`;
+
+/**
+ * Pesanan contoh (deterministik) untuk pratinjau template di dashboard.
+ *
+ * Sengaja memuat kupon + item cetak (dengan spesifikasi) agar seluruh cabang
+ * tampilan (diskon, baris ukuran/finishing, link unduhan) ikut terlihat.
+ * TIDAK menyentuh data nyata & tidak pernah memengaruhi order sungguhan.
+ */
+export function buildSampleOrder(): Order {
+  const items: OrderItem[] = [
+    {
+      slug: "banner-flexi-premium",
+      name: "Banner Flexi Premium",
+      price: 45000,
+      qty: 2,
+      subtotal: 90000,
+      fulfillment: "jasa",
+      variantName: "Flexi China 280gr",
+      printOptions: { widthM: 3, heightM: 1, finishingIds: ["mata-ayam"] },
+      printFinishing: [{ id: "mata-ayam", name: "Mata Ayam" }],
+    },
+    {
+      slug: "template-undangan-digital",
+      name: "Template Undangan Digital",
+      price: 35000,
+      qty: 1,
+      subtotal: 35000,
+      fulfillment: "instan",
+    },
+  ];
+  const subtotal = 125000;
+  const discount = 12500;
+  return {
+    id: "contohpratinjau",
+    uid: "uid-contoh",
+    buyerName: "Budi Santoso",
+    buyerEmail: "pembeli@contoh.id",
+    items,
+    subtotal,
+    coupon: { code: "CONTOH10", type: "percent", discount },
+    total: subtotal - discount,
+    status: "diproses",
+    fulfillment: "jasa",
+    whatsapp: "6281234567890",
+    message: "Pesanan contoh untuk pratinjau (tidak dikirim).",
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
 }
