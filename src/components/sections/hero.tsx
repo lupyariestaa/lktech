@@ -27,6 +27,7 @@ import { trackCtaClick } from "@/lib/analytics";
 import { waLink, WA_MESSAGES } from "@/lib/whatsapp";
 import { COMPANY } from "@/lib/content";
 import { isDefaultStats } from "@/lib/content-types";
+import { featuredStat, publishableStats } from "@/lib/stats-pure";
 import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
 import { useIntroDone, useIntroSkip } from "@/components/intro-gate";
@@ -642,9 +643,12 @@ export function Hero() {
   }, [mountScene, pointerX, pointerY]);
 
   // Kejujuran data (FASE H2): klaim sosial di bawah CTA hanya ditampilkan bila
-  // berasal dari data NYATA — bukan stat placeholder bawaan.
-  const honestStats = isDefaultStats(stats) ? [] : stats;
-  const clientStat = honestStats.find((s) => /klien/i.test(s.label));
+  // berasal dari data NYATA & boleh tayang — bukan stat placeholder bawaan.
+  // `featuredStat` memakai penanda `featured` eksplisit (fallback label "klien"
+  // hanya untuk data lama), sehingga mengganti label tidak lagi menyembunyikan
+  // baris sosial secara diam-diam (AUD section statistik).
+  const honestStats = publishableStats(stats, isDefaultStats(stats));
+  const clientStat = featuredStat(honestStats);
 
   return (
     <section

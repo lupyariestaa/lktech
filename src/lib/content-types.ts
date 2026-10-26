@@ -80,11 +80,23 @@ export type ManagedProcess = {
   description: string;
 };
 
-/** Satu statistik marketing pada beranda. */
+/**
+ * Satu statistik marketing pada beranda.
+ *
+ * Prinsip kejujuran: `verified` adalah penanda EKSPLISIT bahwa angka sudah
+ * benar (bukan sekadar "berbeda dari contoh"). Begitu ada item bertanda
+ * `verified: true`, hanya item terverifikasi yang tayang (lihat `stats-pure.ts`).
+ */
 export type ManagedStat = {
   value: number;
   suffix: string;
   label: string;
+  /** Tampil hanya bila `true` (dipakai saat mode verifikasi aktif). */
+  verified?: boolean;
+  /** Statistik sorotan untuk trust bar hero (maksimum satu). */
+  featured?: boolean;
+  /** Keterangan sumber/periode singkat (opsional, tidak wajib). */
+  note?: string;
 };
 
 /** Satu teknologi pada marquee "Teknologi yang kami gunakan". */
@@ -107,6 +119,8 @@ export type SiteContent = {
   whyUs: ManagedWhyUs[];
   process: ManagedProcess[];
   stats: ManagedStat[];
+  /** Tanggal periode data statistik (ISO, opsional) — tampil di caption. */
+  statsAsOf?: string;
   technologies: ManagedTechnology[];
 };
 

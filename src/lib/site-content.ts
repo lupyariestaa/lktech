@@ -13,6 +13,7 @@ import {
   type ManagedWhyUs,
   type SiteContent,
 } from "@/lib/content-types";
+import { clampStatValue } from "@/lib/stats-pure";
 import { unstable_cache } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 
@@ -193,12 +194,18 @@ function normalizeStat(raw: unknown): ManagedStat | null {
   const d = raw as Record<string, unknown>;
   const label = str(d.label).trim();
   if (!label) return null;
-  const valueRaw = typeof d.value === "number" ? d.value : Number(d.value);
-  return {
-    value: Number.isFinite(valueRaw) ? valueRaw : 0,
+  const stat: ManagedStat = {
+    value: clampStatValue(d.value, 0),
     suffix: str(d.suffix),
     label,
   };
+  // Field opsional hanya disertakan bila benar-benar ada, agar data lama
+  // (tanpa penanda) tetap terdeteksi sebagai "mode lama" oleh stats-pure.
+  if (typeof d.verified === "boolean") stat.verified = d.verified;
+  if (typeof d.featured === "boolean") stat.featured = d.featured;
+  const note = str(d.note).trim();
+  if (note) stat.note = note;
+  return stat;
 }
 
 function normalizeTechnology(raw: unknown): ManagedTechnology | null {
@@ -241,6 +248,7 @@ export function normalizeSiteContent(raw: Record<string, unknown>): SiteContent 
     whyUs: normalizeList(raw.whyUs, normalizeWhyUs, defaults.whyUs),
     process: normalizeList(raw.process, normalizeProcess, defaults.process),
     stats: normalizeList(raw.stats, normalizeStat, defaults.stats),
+    statsAsOf: str(raw.statsAsOf).trim() || undefined,
     technologies: normalizeList(
       raw.technologies,
       normalizeTechnology,
@@ -305,6 +313,7 @@ export async function saveSiteContent(
         whyUs: content.whyUs,
         process: content.process,
         stats: content.stats,
+        statsAsOf: content.statsAsOf ?? "",
         technologies: content.technologies,
         updatedAtISO: new Date().toISOString(),
         updatedBy,

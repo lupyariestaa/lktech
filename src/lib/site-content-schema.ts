@@ -1,6 +1,14 @@
 import { z } from "zod";
 
 /**
+ * Batas nilai statistik — diselaraskan dengan `src/lib/stats-pure.ts`.
+ * Ditaruh inline (bukan impor) agar berkas ini tetap dapat dimuat langsung
+ * oleh Node pada tes tanpa resolver alias/ekstensi (lihat `scripts/*.test.ts`).
+ */
+const STAT_MAX_VALUE = 1_000_000;
+const STAT_MAX_SUFFIX = 8;
+
+/**
  * Skema payload `PUT /api/admin/content` (ADM-14).
  *
  * Tujuan:
@@ -97,9 +105,12 @@ const processSchema = z.object({
 });
 
 const statSchema = z.object({
-  value: z.number().finite(),
-  suffix: z.string().max(40).optional(),
+  value: z.number().int().min(0).max(STAT_MAX_VALUE),
+  suffix: z.string().max(STAT_MAX_SUFFIX).optional(),
   label: z.string().trim().min(1).max(MAX_SHORT),
+  verified: z.boolean().optional(),
+  featured: z.boolean().optional(),
+  note: z.string().max(200).optional(),
 });
 
 const technologySchema = z.object({
@@ -131,6 +142,7 @@ export const siteContentSchema = z.object({
   whyUs: z.array(whyUsSchema).max(MAX_ITEMS).optional(),
   process: z.array(processSchema).max(MAX_ITEMS).optional(),
   stats: z.array(statSchema).max(MAX_ITEMS).optional(),
+  statsAsOf: z.string().max(40).optional(),
   technologies: z.array(technologySchema).max(MAX_ITEMS).optional(),
 });
 
