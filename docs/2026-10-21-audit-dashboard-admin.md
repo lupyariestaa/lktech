@@ -1106,7 +1106,35 @@ otorisasi helper), lalu integration test route dengan Firebase Auth emulator/
 custom token, lalu E2E admin dengan akun uji dan storage state. Tambahkan matrix
 route → role yang diuji.
 
+**Status implementasi (2026-10-27):** 🟢 **Matrix otorisasi route admin selesai
+(statis) — `npm run test:admin-authz` (58 test).**
+
+- **Sweep menyeluruh** (bukan beberapa route tertentu): men-enumerasi SEMUA
+  `src/app/api/admin/**/route.ts` (**43 route**) & memverifikasi **setiap** handler
+  HTTP (GET/POST/PUT/PATCH/DELETE) mengimpor `@/lib/admin-guard` dan memanggil
+  guard otorisasi (`requireAdmin`/`requireOwner`/`requireFreshAdmin`/
+  `requireFreshOwner`). Route admin baru tanpa guard → CI **GAGAL** (regresi
+  keamanan tertangkap).
+- **Matrix route → role:** rute OWNER-only diuji per-handler & diberi penjaga
+  anti-downgrade: `backup` (GET/POST `requireFreshOwner`), `backup/snapshots`
+  (GET `requireOwner`, POST `requireFreshOwner`), `backup/snapshots/[jobId]`
+  (GET/POST `requireOwner`), `admins` (POST/DELETE `requireFreshOwner`). Handler
+  OWNER **tidak boleh** memakai `requireAdmin`/`requireFreshAdmin`.
+- **Re-auth matrix:** aksi sensitif wajib guard fresh — broadcast POST, orders
+  POST/DELETE, backup GET/POST, mulai restore, kelola admin.
+- **Exception terdokumentasi & ditest tidak-usang:** `DELETE /api/admin/session`
+  (logout) sengaja tanpa guard agar tetap jalan saat token kedaluwarsa; ia hanya
+  mencabut sesi milik identitas yang diverifikasi (`resolveLogoutIdentity`).
+- Uji ini **tidak menduplikasi** yang sudah ada: planImport (`test:backup`),
+  JSON-LD (`test:seo-schema`), CSV injection (`test:csv`), revoke sesi/RBAC
+  (`test:admin-security`).
+- **Masih di luar cakupan (backlog):** E2E terhadap project staging/produksi
+  nyata, popup re-auth Google di browser, dan integration test ber-kredensial
+  (Firebase Auth emulator) untuk seluruh matrix. Increment ini menutup celah
+  "route tanpa guard lolos CI" tanpa infrastruktur E2E.
+
 ---
+
 
 ### ADM-27 · 🔵 Rendah · Dokumentasi admin dan copy login sudah usang
 
@@ -1376,7 +1404,7 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
 - 🟡 ADM-18 — idempotency + cursor batch selesai kode (anti-duplikat, tombol “lanjutkan batch”); sisa queue/status per penerima.
 - ✅ ADM-20 — loading/error/suspense admin.
 - 🟡 ADM-21/22 — focus/label/main/live region diperbaiki; verifikasi aksesibilitas manual masih perlu.
-- ADM-26 — test otorisasi/route/E2E admin.
+- 🟡 ADM-26 — matrix otorisasi route admin selesai (sweep statis 43 route + role/re-auth); sisa E2E ber-kredensial/staging.
 
 ### P3 — polish & operasional
 

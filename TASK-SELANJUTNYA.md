@@ -49,7 +49,7 @@
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (2026-10-27):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **`ADM-28` race slug produk/proyek selesai kode (2026-10-27):** create atomik `create()` → 409 `slug_taken`. **`ADM-18` broadcast email selesai kode (2026-10-27):** cursor batch anti-duplikat + tombol “lanjutkan batch”. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, uji broadcast batch, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
+> 🎯 **TASK AKTIF (2026-10-27):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **`ADM-28` race slug produk/proyek selesai kode (2026-10-27):** create atomik `create()` → 409 `slug_taken`. **`ADM-18` broadcast email selesai kode (2026-10-27):** cursor batch anti-duplikat + tombol “lanjutkan batch”. **`ADM-26` matrix otorisasi route admin selesai kode (2026-10-27):** sweep statis 43 route (setiap handler wajib guard) + matrix role/re-auth (`test:admin-authz`). **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, uji broadcast batch, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -146,7 +146,23 @@
 
 ---
 
-## 🔒 SESI INI — Reservasi Slug Atomik Produk/Proyek (`ADM-28`) — SELESAI (kode, 2026-10-27)
+## 🧪 SESI INI — Matrix Otorisasi Route Admin (`ADM-26`) — SELESAI (kode, 2026-10-27)
+
+**Status: ✅ SELESAI (kode).** Commit `47627cf`. Menutup `ADM-26` (tidak ada test otorisasi/matrix route admin). Gate: `test:admin-authz` (**58**) · unit **917/917** · `tsc` ✅ · ESLint ✅ · `build` ✅.
+
+- **Masalah lama:** audit menemukan regresi keamanan paling berbahaya (route admin tanpa guard, aksi sensitif tanpa re-auth) **tidak bisa tertangkap CI**; belum ada matrix route → role.
+- **Sweep menyeluruh:** `scripts/admin-authz.test.ts` men-enumerasi **SEMUA** `src/app/api/admin/**/route.ts` (**43 route**) & memverifikasi **setiap** handler HTTP (GET/POST/PUT/PATCH/DELETE) mengimpor `@/lib/admin-guard` dan memanggil guard otorisasi. **Route admin baru tanpa guard → tes GAGAL.**
+- **Matrix route → role:** rute OWNER-only diuji per-handler + penjaga anti-downgrade — `backup` (GET/POST `requireFreshOwner`), `backup/snapshots` (GET `requireOwner`, POST `requireFreshOwner`), `backup/snapshots/[jobId]` (GET/POST `requireOwner`), `admins` (POST/DELETE `requireFreshOwner`); handler OWNER **tidak boleh** memakai guard ADMIN biasa.
+- **Re-auth matrix:** aksi sensitif wajib guard fresh — broadcast POST, orders POST/DELETE, backup GET/POST, mulai restore, kelola admin.
+- **Exception terdokumentasi & ditest tidak-usang:** `DELETE /api/admin/session` (logout) sengaja tanpa guard agar tetap jalan saat token kedaluwarsa; hanya mencabut sesi identitas terverifikasi (`resolveLogoutIdentity`).
+- **Tes:** `scripts/admin-authz.test.ts` (`test:admin-authz`, 58). **Tidak menduplikasi** uji yang sudah ada: planImport (`test:backup`), JSON-LD (`test:seo-schema`), CSV injection (`test:csv`), revoke sesi/RBAC (`test:admin-security`).
+- **Di luar cakupan (backlog):** E2E ber-kredensial/staging + popup re-auth Google di browser. Increment ini menutup celah "route tanpa guard lolos CI" tanpa infrastruktur E2E.
+
+**Sisa manual (owner):** tidak ada (uji statis otomatis). Opsional: jalankan E2E emulator (`test:admin-auth-e2e`) di lingkungan dengan Firebase Emulator.
+
+---
+
+## 🔒 SESI SEBELUMNYA — Reservasi Slug Atomik Produk/Proyek (`ADM-28`) — SELESAI (kode, 2026-10-27)
 
 **Status: ✅ SELESAI (kode).** Commit `0cfd57d`. Menutup `ADM-28` (race slug produk/proyek). Gate: `test:admin-slug` (**7**) · unit **846/846** · `tsc` ✅ · ESLint ✅ · `build` ✅.
 
@@ -162,7 +178,7 @@
 
 ---
 
-## 📨 SESI INI — Broadcast Email: Cursor Batch Anti-Duplikat (`ADM-18`) — SELESAI (kode, 2026-10-27)
+## 📨 SESI SEBELUMNYA — Broadcast Email: Cursor Batch Anti-Duplikat (`ADM-18`) — SELESAI (kode, 2026-10-27)
 
 **Status: ✅ SELESAI (kode).** Commit `627197a`. Menutup `ADM-18` (broadcast tanpa cursor batch → risiko email ganda). Gate: `test:broadcast-batch` (**13**) · unit **859/859** · `tsc` ✅ · ESLint ✅ · `build` ✅.
 
