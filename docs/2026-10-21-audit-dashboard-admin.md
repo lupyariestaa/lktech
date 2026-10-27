@@ -1134,6 +1134,23 @@ peringatan.
 **Rekomendasi:** bedakan alur create vs update; create memakai transaksi/`create`
 untuk mereservasi slug, update memakai `expectedVersion`; test dua request bersamaan.
 
+**Status implementasi (2026-10-27):** ✅ **Selesai (kode) untuk reservasi create.**
+
+- Produk/proyek **baru** disimpan via `create()` atomik Firestore
+  (`saveProduct`/`saveProject` menerima `opts.create`) → slug yang sudah ada
+  ditolak `SlugTakenError` → route POST membalas **409** `{ code: "slug_taken" }`.
+  Pembaruan tetap `set(..., { merge: true })` (backward-compatible).
+- Intent create dikirim klien (`src/lib/admin-api.ts` mengirim `create: true` bila
+  UI `isNew`; manager produk/proyek meneruskan `{ create: isNew }`).
+- Helper murni `src/lib/slug-reserve-pure.ts` (`isAlreadyExistsError` mengenali
+  kode `6`/`"already-exists"`/`"ALREADY_EXISTS"`, termasuk lewat `cause`;
+  `SlugTakenError`). Fallback: verifikasi eksistensi dokumen bila kode error tak
+  dikenali, agar gangguan jaringan tidak salah dilaporkan sebagai slug bentrok.
+- Tes `npm run test:admin-slug` (7): logika murni + wiring (create atomik, 409,
+  intent klien).
+- **Di luar cakupan:** `expectedVersion` (optimistic concurrency) → dilacak di
+  **ADM-11**.
+
 ---
 
 ## 9. Rekomendasi Batch & Urutan Eksekusi

@@ -49,7 +49,7 @@
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (2026-10-26):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
+> 🎯 **TASK AKTIF (2026-10-27):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **`ADM-28` race slug produk/proyek selesai kode (2026-10-27):** create atomik `create()` → 409 `slug_taken`. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -143,6 +143,22 @@
 - **Tes:** `test:bundle` diperluas (9 → **20**) — `computeEligibleSubtotal`, diskon eligible vs full, `minSpend` basis, & validasi form bundel.
 
 **Sisa manual (owner):** buat kupon bundel di `/admin/coupons` (isi slug produk + min item) lalu uji di keranjang — pastikan diskon hanya memberi efek pada item syarat.
+
+---
+
+## 🔒 SESI INI — Reservasi Slug Atomik Produk/Proyek (`ADM-28`) — SELESAI (kode, 2026-10-27)
+
+**Status: ✅ SELESAI (kode).** Commit `0cfd57d`. Menutup `ADM-28` (race slug produk/proyek). Gate: `test:admin-slug` (**7**) · unit **846/846** · `tsc` ✅ · ESLint ✅ · `build` ✅.
+
+- **Masalah lama:** POST `/api/admin/products` & `/api/admin/projects` membuat/memperbarui dengan `set(..., { merge: true })` tanpa memeriksa ketersediaan slug di jalur create → dua admin/tab yang membuat slug sama bisa saling menimpa.
+- **Perbaikan (create vs update):** `saveProduct`/`saveProject` menerima `opts.create`; saat create dipakai `ref.create(payload)` **atomik** Firestore — gagal bila dokumen sudah ada → `SlugTakenError` → route membalas **409** `{ code: "slug_taken" }`. Pembaruan tetap `set(..., { merge: true })` (backward-compatible).
+- **Intent dari klien:** `admin-api.ts` mengirim `create: true` bila UI `isNew`; manager produk/proyek meneruskan `{ create: isNew }`. Server tetap otoritatif (hanya mempercayai `create` sebagai niat, bukan izin).
+- **Helper murni:** `src/lib/slug-reserve-pure.ts` — `isAlreadyExistsError` (kode `6` / `"already-exists"` / `"ALREADY_EXISTS"`, termasuk lewat `cause`) + kelas `SlugTakenError`. Fallback: verifikasi eksistensi dokumen bila kode error tak dikenali (agar gangguan jaringan tak salah dilaporkan sebagai slug bentrok).
+- **Tes:** `scripts/admin-slug.test.ts` (`test:admin-slug`, 7) — logika murni + wiring (create atomik, 409, intent klien).
+
+**Catatan:** `expectedVersion`/optimistic concurrency tetap **di luar cakupan** ADM-28 (dilacak sebagai `ADM-11` — lebih besar & lintas-modul).
+
+**Sisa manual (owner):** buat produk/proyek baru dengan slug yang sudah ada → pastikan server menolak (409) alih-alih menimpa.
 
 ---
 
