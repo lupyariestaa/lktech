@@ -76,6 +76,8 @@ export function ProjectsManager() {
   } = useAsyncList<StoredProject>(fetchProjects, "Gagal memuat proyek.");
   const [editing, setEditing] = useState<Project | null>(null);
   const [isNew, setIsNew] = useState(false);
+  // ADM-11: versi dokumen yang sedang diedit (null untuk proyek baru).
+  const [editingVersion, setEditingVersion] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<StoredProject | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -90,6 +92,7 @@ export function ProjectsManager() {
   const onNew = () => {
     setEditing({ ...emptyProject });
     setIsNew(true);
+    setEditingVersion(null);
   };
 
   const onEdit = (p: StoredProject) => {
@@ -97,6 +100,7 @@ export function ProjectsManager() {
     void _id;
     setEditing({ ...rest });
     setIsNew(false);
+    setEditingVersion(p.version ?? null);
   };
 
   const confirmDelete = async () => {
@@ -164,7 +168,14 @@ export function ProjectsManager() {
     setSaving(true);
     setError(null);
     try {
-      await saveProject({ ...editing, slug, year }, { create: isNew });
+      await saveProject(
+        { ...editing, slug, year },
+        {
+          create: isNew,
+          // ADM-11: sertakan versi saat mengubah agar tak menimpa perubahan admin lain.
+          expectedVersion: isNew ? undefined : editingVersion,
+        },
+      );
       setEditing(null);
       await load({ silent: true });
       toast.success(isNew ? "Proyek dibuat." : "Proyek diperbarui.");

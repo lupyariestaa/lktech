@@ -25,12 +25,18 @@ export function useSiteContent() {
    * Karena itu `commit` diblokir selama `loadFailed` true.
    */
   const [loadFailed, setLoadFailed] = useState(false);
+  /**
+   * ADM-11: versi dokumen konten yang dimuat terakhir. Dikirim balik saat
+   * menyimpan; server menolak (409) bila admin lain sudah menyimpan lebih dulu.
+   */
+  const [version, setVersion] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await fetchSiteContent();
-      setContent(data);
+      setContent(data.content);
+      setVersion(data.version);
       setError(null);
       setLoadFailed(false);
     } catch (err) {
@@ -50,7 +56,8 @@ export function useSiteContent() {
       try {
         const data = await fetchSiteContent();
         if (!active) return;
-        setContent(data);
+        setContent(data.content);
+        setVersion(data.version);
         setError(null);
         setLoadFailed(false);
       } catch (err) {
@@ -91,8 +98,9 @@ export function useSiteContent() {
       setSaving(true);
       setError(null);
       try {
-        const saved = await saveSiteContent(next);
-        setContent(saved);
+        const saved = await saveSiteContent(next, version);
+        setContent(saved.content);
+        setVersion(saved.version);
         toast.success(opts?.successMessage ?? "Perubahan berhasil disimpan.");
         return true;
       } catch (err) {
@@ -105,7 +113,7 @@ export function useSiteContent() {
         setSaving(false);
       }
     },
-    [content, toast, loadFailed],
+    [content, toast, loadFailed, version],
   );
 
   /**

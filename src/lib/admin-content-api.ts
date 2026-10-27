@@ -1,21 +1,32 @@
 import { adminFetch } from "@/lib/admin-fetch";
 import type { SiteContent } from "@/lib/content-types";
 
-/** Mengambil konten situs terbaru (SEGAR, admin) untuk dashboard. */
-export async function fetchSiteContent(): Promise<SiteContent> {
-  const data = await adminFetch<{ content: SiteContent }>("/api/admin/content");
-  return data.content;
+/** Mengambil konten situs terbaru (SEGAR, admin) + versi optimistic lock (ADM-11). */
+export async function fetchSiteContent(): Promise<{
+  content: SiteContent;
+  version: string | null;
+}> {
+  return adminFetch<{ content: SiteContent; version: string | null }>(
+    "/api/admin/content",
+  );
 }
 
-/** Menyimpan seluruh konten situs. Mengembalikan konten yang sudah dinormalkan. */
+/**
+ * Menyimpan seluruh konten situs. `version` (ADM-11) = versi yang dimuat
+ * terakhir; server menolak (409) bila admin lain sudah menyimpan lebih dulu.
+ * Mengembalikan konten ternormalisasi + versi baru.
+ */
 export async function saveSiteContent(
   content: SiteContent,
-): Promise<SiteContent> {
-  const data = await adminFetch<{ ok: boolean; content: SiteContent }>(
+  version?: string | null,
+): Promise<{ content: SiteContent; version: string | null }> {
+  return adminFetch<{ ok: boolean; content: SiteContent; version: string | null }>(
     "/api/admin/content",
-    { method: "PUT", body: JSON.stringify(content) },
+    {
+      method: "PUT",
+      body: JSON.stringify({ ...content, expectedVersion: version ?? undefined }),
+    },
   );
-  return data.content;
 }
 
 /** Angka statistik turunan yang objektif (S4): jumlah proyek/layanan/kota. */

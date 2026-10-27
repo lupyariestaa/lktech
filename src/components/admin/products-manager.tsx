@@ -88,6 +88,8 @@ export function ProductsManager() {
   } = useAsyncList<StoredProduct>(fetchProducts, "Gagal memuat produk.");
   const [editing, setEditing] = useState<Product | null>(null);
   const [isNew, setIsNew] = useState(false);
+  // ADM-11: versi dokumen yang sedang diedit (null untuk produk baru).
+  const [editingVersion, setEditingVersion] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<StoredProduct | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -101,6 +103,7 @@ export function ProductsManager() {
   const onNew = () => {
     setEditing({ ...emptyProduct });
     setIsNew(true);
+    setEditingVersion(null);
     setError(null);
   };
 
@@ -109,6 +112,7 @@ export function ProductsManager() {
     void _id;
     setEditing({ ...rest });
     setIsNew(false);
+    setEditingVersion(p.version ?? null);
     setError(null);
   };
 
@@ -233,7 +237,11 @@ export function ProductsManager() {
     setSaving(true);
     setError(null);
     try {
-      await saveProduct(editing, { create: isNew });
+      await saveProduct(editing, {
+        create: isNew,
+        // ADM-11: sertakan versi saat mengubah agar tak menimpa perubahan admin lain.
+        expectedVersion: isNew ? undefined : editingVersion,
+      });
       setEditing(null);
       await load({ silent: true });
       toast.success(isNew ? "Produk dibuat." : "Produk diperbarui.");

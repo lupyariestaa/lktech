@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
-import { getAdminDb } from "@/lib/firebase-admin";
 import {
-  readSiteSettings,
+  readSiteSettingsDoc,
+  saveSiteSettings,
   mergeSettings,
-  SETTINGS_DOC_ID,
 } from "@/lib/settings";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 import { settingsSchema } from "@/lib/api-schemas";
@@ -16,6 +15,7 @@ import {
 } from "@/lib/email-order";
 import type { SiteSettings } from "@/lib/settings-types";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { VersionConflictError } from "@/lib/optimistic-lock-pure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,14 +33,14 @@ export async function GET(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  const settings = await readSiteSettings();
+  const { settings, version } = await readSiteSettingsDoc();
   const emailHealth = {
     configured: isBuyerEmailConfigured,
     testOnly: isBuyerEmailTestOnly,
     from: getBuyerEmailFrom(),
   };
   return NextResponse.json(
-    { settings, emailHealth },
+    { settings, emailHealth, version },
     { headers: { "Cache-Control": "no-store, max-age=0" } },
   );
 }
@@ -52,20 +52,15 @@ export async function PUT(req: Request) {
   const check = await requireAdmin(req);
   if (!check.ok) return check.response;
 
-  const db = getAdminDb();
-  if (!db) {
-    return NextResponse.json(
-      { error: "Admin SDK tidak tersedia." },
-      { status: 503 },
-    );
-  }
-
-  let body: Partial<SiteSettings>;
+  let body: Partial<SiteSettings> & { expectedVersion?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
+
+  // ADM-11: versi yang dimuat klien terakhir (opsional; absen = tanpa cek).
+  const expectedVersion = body.expectedVersion;
 
   const parsed = settingsSchema.safeParse(body);
   if (!parsed.success) {
@@ -88,17 +83,7 @@ export async function PUT(req: Request) {
   const settings = mergeSettings(parsed.data);
 
   try {
-    await db
-      .collection("settings")
-      .doc(SETTINGS_DOC_ID)
-      .set(
-        {
-          ...settings,
-          updatedAtISO: new Date().toISOString(),
-          updatedBy: check.email,
-        },
-        { merge: true },
-      );
+    const version = await saveSiteSettings(settings, check.email, expectedVersion);
 
     // Pastikan halaman publik yang menampilkan kontak langsung segar
     // (kontak dipakai di footer/beranda & halaman kontak).
@@ -115,8 +100,19 @@ export async function PUT(req: Request) {
       target: "site",
     });
 
-    return NextResponse.json({ ok: true, settings });
+    return NextResponse.json({ ok: true, settings, version });
   } catch (err) {
+    if (err instanceof VersionConflictError) {
+      // ADM-11: admin lain sudah menyimpan lebih dulu → jangan timpa.
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          currentVersion: err.currentVersion,
+        },
+        { status: 409 },
+      );
+    }
     console.error("[api/admin/settings] PUT gagal:", err);
     return NextResponse.json(
       { error: "Gagal menyimpan pengaturan." },

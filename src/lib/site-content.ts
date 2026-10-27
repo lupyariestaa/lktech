@@ -16,6 +16,8 @@ import {
 import { clampStatValue, isStatSource } from "@/lib/stats-pure";
 import { unstable_cache } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
+import { readVersion } from "@/lib/optimistic-lock-pure";
+import { writeVersioned } from "@/lib/optimistic-lock";
 
 const COLLECTION = "content";
 export const CONTENT_DOC_ID = "site";
@@ -281,6 +283,32 @@ export async function readSiteContent(): Promise<SiteContent> {
 }
 
 /**
+ * Seperti `readSiteContent`, tetapi juga mengembalikan field `version`
+ * (ADM-11) untuk form admin sebagai `expectedVersion`.
+ */
+export async function readSiteContentDoc(): Promise<{
+  content: SiteContent;
+  version: string | null;
+}> {
+  try {
+    const { getAdminDb } = await import("@/lib/firebase-admin");
+    const db = getAdminDb();
+    if (!db) return { content: defaultSiteContent(), version: null };
+
+    const snap = await db.collection(COLLECTION).doc(CONTENT_DOC_ID).get();
+    if (!snap.exists) return { content: defaultSiteContent(), version: null };
+
+    return {
+      content: normalizeSiteContent(snap.data() as Record<string, unknown>),
+      version: readVersion(snap.data()),
+    };
+  } catch (err) {
+    console.error("[site-content] gagal memuat:", err);
+    return { content: defaultSiteContent(), version: null };
+  }
+}
+
+/**
  * Versi ber-CACHE untuk pembaca PUBLIK.
  *
  * `getSiteContent()` dipanggil di root layout (SETIAP halaman) → tanpa cache,
@@ -294,32 +322,32 @@ export const getSiteContent = unstable_cache(
   { tags: [CACHE_TAGS.content], revalidate: 300 },
 );
 
-/** Menyimpan seluruh konten situs sebagai satu dokumen. */
+/**
+ * Menyimpan seluruh konten situs dengan optimistic concurrency (ADM-11).
+ * Melempar `VersionConflictError` bila `expectedVersion` tak cocok → route 409.
+ * Mengembalikan versi BARU.
+ */
 export async function saveSiteContent(
   content: SiteContent,
   updatedBy: string,
-): Promise<void> {
-  const { getAdminDb } = await import("@/lib/firebase-admin");
-  const db = getAdminDb();
-  if (!db) throw new Error("Admin SDK tidak tersedia.");
-
-  await db
-    .collection(COLLECTION)
-    .doc(CONTENT_DOC_ID)
-    .set(
-      {
-        services: content.services,
-        faqs: content.faqs,
-        pricing: content.pricing,
-        hero: content.hero,
-        whyUs: content.whyUs,
-        process: content.process,
-        stats: content.stats,
-        statsAsOf: content.statsAsOf ?? "",
-        technologies: content.technologies,
-        updatedAtISO: new Date().toISOString(),
-        updatedBy,
-      },
-      { merge: true },
-    );
+  expectedVersion?: unknown,
+): Promise<string> {
+  return writeVersioned({
+    collection: COLLECTION,
+    docId: CONTENT_DOC_ID,
+    data: {
+      services: content.services,
+      faqs: content.faqs,
+      pricing: content.pricing,
+      hero: content.hero,
+      whyUs: content.whyUs,
+      process: content.process,
+      stats: content.stats,
+      statsAsOf: content.statsAsOf ?? "",
+      technologies: content.technologies,
+      updatedAtISO: new Date().toISOString(),
+      updatedBy,
+    },
+    expectedVersion,
+  });
 }

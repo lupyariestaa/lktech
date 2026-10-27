@@ -3,6 +3,8 @@ import { unstable_cache } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import type { Project, ProjectMetric, StoredProject } from "@/lib/project-types";
 import { isAlreadyExistsError, SlugTakenError } from "@/lib/slug-reserve-pure";
+import { readVersion, newVersionToken } from "@/lib/optimistic-lock-pure";
+import { writeVersioned } from "@/lib/optimistic-lock";
 
 export type { Project, StoredProject, ProjectMetric };
 
@@ -106,7 +108,7 @@ export async function getProjectCategories(): Promise<string[]> {
   return ["Semua", ...Array.from(new Set(projects.map((p) => p.category)))];
 }
 
-/** Mengambil semua proyek untuk dashboard (termasuk id dokumen). */
+/** Mengambil semua proyek untuk dashboard (termasuk id dokumen + versi). */
 export async function getStoredProjects(): Promise<StoredProject[]> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
@@ -114,7 +116,11 @@ export async function getStoredProjects(): Promise<StoredProject[]> {
 
   const snap = await db.collection(COLLECTION).get();
   return snap.docs
-    .map((doc) => ({ id: doc.id, ...normalizeProject(doc.data()) }))
+    .map((doc) => ({
+      id: doc.id,
+      ...normalizeProject(doc.data()),
+      version: readVersion(doc.data()),
+    }))
     .sort(sortProjects);
 }
 
@@ -122,27 +128,31 @@ export async function getStoredProjects(): Promise<StoredProject[]> {
  * Menyimpan (buat/perbarui) proyek berdasarkan slug.
  *
  * `opts.create` (ADM-28): saat **membuat proyek baru**, pakai `create()` atomik
- * yang menolak bila slug sudah dipakai (`SlugTakenError` → 409). Tanpa opsi ini
- * perilaku lama `set({ merge: true })` dipertahankan untuk pembaruan.
+ * yang menolak bila slug sudah dipakai (`SlugTakenError` → 409).
+ *
+ * `opts.expectedVersion` (ADM-11): saat **memperbarui**, tulis dalam transaksi &
+ * tolak bila versi dokumen sudah berubah (`VersionConflictError` → 409).
+ * Mengembalikan versi BARU.
  */
 export async function saveProject(
   project: Project,
   updatedBy: string,
-  opts?: { create?: boolean },
-): Promise<void> {
+  opts?: { create?: boolean; expectedVersion?: unknown },
+): Promise<string> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
 
-  const payload: Record<string, unknown> = {
-    ...project,
-    updatedAtISO: new Date().toISOString(),
-    updatedBy,
-  };
-
   const ref = db.collection(COLLECTION).doc(project.slug);
   if (opts?.create) {
     // Reservasi slug secara ATOMIK: gagal bila dokumen sudah ada (ADM-28).
+    const version = newVersionToken();
+    const payload: Record<string, unknown> = {
+      ...project,
+      updatedAtISO: new Date().toISOString(),
+      updatedBy,
+      version,
+    };
     try {
       await ref.create(payload);
     } catch (err) {
@@ -151,10 +161,19 @@ export async function saveProject(
       if (snap?.exists) throw new SlugTakenError(project.slug);
       throw err;
     }
-    return;
+    return version;
   }
 
-  await ref.set(payload, { merge: true });
+  return writeVersioned({
+    collection: COLLECTION,
+    docId: project.slug,
+    data: {
+      ...project,
+      updatedAtISO: new Date().toISOString(),
+      updatedBy,
+    },
+    expectedVersion: opts?.expectedVersion,
+  });
 }
 
 /** Menghapus proyek berdasarkan slug. */

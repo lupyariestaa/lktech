@@ -28,6 +28,8 @@ export function SettingsKontak() {
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // ADM-11: versi dokumen yang dimuat form (dikirim balik saat simpan).
+  const [version, setVersion] = useState<string | null>(null);
   useRegisterDirty(dirty);
 
   useEffect(() => {
@@ -35,7 +37,10 @@ export function SettingsKontak() {
     (async () => {
       try {
         const data = await fetchSettingsWithHealth();
-        if (active) setSettings(data.settings);
+        if (active) {
+          setSettings(data.settings);
+          setVersion(data.version);
+        }
       } catch (err) {
         if (active) {
           setError(err instanceof Error ? err.message : "Gagal memuat.");
@@ -92,8 +97,9 @@ export function SettingsKontak() {
     setError(null);
     setSaved(false);
     try {
-      const res = await saveSettings(settings);
+      const res = await saveSettings(settings, version);
       setSettings(res.settings);
+      setVersion(res.version);
       setSaved(true);
       setDirty(false);
       toast.success("Pengaturan tersimpan.");

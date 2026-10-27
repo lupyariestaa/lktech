@@ -3,7 +3,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-guard";
 import {
   normalizeSiteContent,
-  readSiteContent,
+  readSiteContentDoc,
   saveSiteContent,
 } from "@/lib/site-content";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/lib/site-content-schema";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { VersionConflictError } from "@/lib/optimistic-lock-pure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,9 +27,9 @@ export async function GET(req: Request) {
   if (!check.ok) return check.response;
 
   try {
-    const content = await readSiteContent();
+    const { content, version } = await readSiteContentDoc();
     return NextResponse.json(
-      { content },
+      { content, version },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (err) {
@@ -76,6 +77,12 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
+  // ADM-11: versi yang dimuat klien terakhir (opsional; absen = tanpa cek).
+  const expectedVersion =
+    body && typeof body === "object"
+      ? (body as { expectedVersion?: unknown }).expectedVersion
+      : undefined;
+
   const parsed = siteContentSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -92,7 +99,7 @@ export async function PUT(req: Request) {
   );
 
   try {
-    await saveSiteContent(content, check.email);
+    const version = await saveSiteContent(content, check.email, expectedVersion);
     await recordAdminAudit({
       action: "content.update",
       actor: check.email,
@@ -108,10 +115,21 @@ export async function PUT(req: Request) {
     revalidatePath("/kontak");
 
     return NextResponse.json(
-      { ok: true, content },
+      { ok: true, content, version },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (err) {
+    if (err instanceof VersionConflictError) {
+      // ADM-11: admin lain sudah menyimpan lebih dulu → jangan timpa.
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          currentVersion: err.currentVersion,
+        },
+        { status: 409 },
+      );
+    }
     console.error("[api/admin/content] PUT gagal:", err);
     return NextResponse.json(
       { error: "Gagal menyimpan konten." },

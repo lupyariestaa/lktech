@@ -17,6 +17,7 @@ import { sanitizeSlug } from "@/lib/utils";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { guardAdminMutation } from "@/lib/admin-rate-limit";
 import { SlugTakenError } from "@/lib/slug-reserve-pure";
+import { VersionConflictError } from "@/lib/optimistic-lock-pure";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
@@ -60,6 +61,12 @@ export async function POST(req: Request) {
     typeof rawBody === "object" &&
     rawBody !== null &&
     (rawBody as Record<string, unknown>).create === true;
+
+  // ADM-11: versi dokumen yang dimuat klien terakhir (opsional).
+  const expectedVersion =
+    typeof rawBody === "object" && rawBody !== null
+      ? (rawBody as Record<string, unknown>).expectedVersion
+      : undefined;
 
   const parsed = productSchema.safeParse(rawBody);
   if (!parsed.success) {
@@ -181,7 +188,10 @@ export async function POST(req: Request) {
   };
 
   try {
-    await saveProduct(product, check.email, { create: wantsCreate });
+    const version = await saveProduct(product, check.email, {
+      create: wantsCreate,
+      expectedVersion,
+    });
     revalidateTag(CACHE_TAGS.products, REVALIDATE_NOW);
     revalidatePath("/produk");
     revalidatePath(`/produk/${product.slug}`);
@@ -191,11 +201,21 @@ export async function POST(req: Request) {
       target: product.slug,
       meta: { name: product.name },
     });
-    return NextResponse.json({ ok: true, product });
+    return NextResponse.json({ ok: true, product, version });
   } catch (err) {
     if (err instanceof SlugTakenError) {
       return NextResponse.json(
         { error: err.message, code: "slug_taken" },
+        { status: 409 },
+      );
+    }
+    if (err instanceof VersionConflictError) {
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          currentVersion: err.currentVersion,
+        },
         { status: 409 },
       );
     }

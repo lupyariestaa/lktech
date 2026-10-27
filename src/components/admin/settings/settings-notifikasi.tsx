@@ -39,6 +39,8 @@ export function SettingsNotifikasi() {
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // ADM-11: versi dokumen yang dimuat form (dikirim balik saat simpan).
+  const [version, setVersion] = useState<string | null>(null);
 
   // Pratinjau template email pembeli (`EM-P3`) — read-only, pakai pesanan contoh.
   const [previewTemplate, setPreviewTemplate] = useState<EmailPreviewTemplate>("confirmation");
@@ -55,6 +57,7 @@ export function SettingsNotifikasi() {
         if (active) {
           setSettings(data.settings);
           setHealth(data.emailHealth);
+          setVersion(data.version);
         }
       } catch (err) {
         if (active) {
@@ -108,8 +111,9 @@ export function SettingsNotifikasi() {
     setError(null);
     setSaved(false);
     try {
-      const res = await saveSettings(settings);
+      const res = await saveSettings(settings, version);
       setSettings(res.settings);
+      setVersion(res.version);
       setSaved(true);
       setDirty(false);
       toast.success("Pengaturan notifikasi tersimpan.");

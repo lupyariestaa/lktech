@@ -514,20 +514,30 @@ export type EmailHealth = {
   from: string;
 };
 
-/** Pengaturan + status kesehatan email (untuk banner peringatan). */
+/** Pengaturan + status kesehatan email + versi optimistic lock (ADM-11). */
 export async function fetchSettingsWithHealth(): Promise<{
   settings: SiteSettings;
   emailHealth: EmailHealth;
+  version: string | null;
 }> {
-  return adminFetch<{ settings: SiteSettings; emailHealth: EmailHealth }>(
-    "/api/admin/settings",
-  );
+  return adminFetch<{
+    settings: SiteSettings;
+    emailHealth: EmailHealth;
+    version: string | null;
+  }>("/api/admin/settings");
 }
 
-export async function saveSettings(settings: SiteSettings) {
-  return adminFetch<{ ok: boolean; settings: SiteSettings }>(
+/**
+ * Simpan pengaturan. `version` (ADM-11) = versi yang dimuat form terakhir;
+ * server menolak (409) bila admin lain sudah menyimpan lebih dulu.
+ */
+export async function saveSettings(settings: SiteSettings, version?: string | null) {
+  return adminFetch<{ ok: boolean; settings: SiteSettings; version: string | null }>(
     "/api/admin/settings",
-    { method: "PUT", body: JSON.stringify(settings) },
+    {
+      method: "PUT",
+      body: JSON.stringify({ ...settings, expectedVersion: version ?? undefined }),
+    },
   );
 }
 
@@ -540,13 +550,21 @@ export async function fetchProjects(): Promise<StoredProject[]> {
 
 export async function saveProject(
   project: Project,
-  opts?: { create?: boolean },
+  opts?: { create?: boolean; expectedVersion?: string | null },
 ) {
-  return adminFetch<{ ok: boolean; project: Project }>("/api/admin/projects", {
-    method: "POST",
-    // ADM-28: `create: true` memicu reservasi slug atomik di server.
-    body: JSON.stringify({ ...project, create: opts?.create === true }),
-  });
+  return adminFetch<{ ok: boolean; project: Project; version?: string | null }>(
+    "/api/admin/projects",
+    {
+      method: "POST",
+      // ADM-28: `create: true` memicu reservasi slug atomik di server.
+      // ADM-11: `expectedVersion` mencegah menimpa perubahan admin lain.
+      body: JSON.stringify({
+        ...project,
+        create: opts?.create === true,
+        expectedVersion: opts?.expectedVersion ?? undefined,
+      }),
+    },
+  );
 }
 
 export async function deleteProject(slug: string) {
@@ -565,13 +583,21 @@ export async function fetchProducts(): Promise<StoredProduct[]> {
 
 export async function saveProduct(
   product: Product,
-  opts?: { create?: boolean },
+  opts?: { create?: boolean; expectedVersion?: string | null },
 ) {
-  return adminFetch<{ ok: boolean; product: Product }>("/api/admin/products", {
-    method: "POST",
-    // ADM-28: `create: true` memicu reservasi slug atomik di server.
-    body: JSON.stringify({ ...product, create: opts?.create === true }),
-  });
+  return adminFetch<{ ok: boolean; product: Product; version?: string | null }>(
+    "/api/admin/products",
+    {
+      method: "POST",
+      // ADM-28: `create: true` memicu reservasi slug atomik di server.
+      // ADM-11: `expectedVersion` mencegah menimpa perubahan admin lain.
+      body: JSON.stringify({
+        ...product,
+        create: opts?.create === true,
+        expectedVersion: opts?.expectedVersion ?? undefined,
+      }),
+    },
+  );
 }
 
 export async function deleteProduct(slug: string) {

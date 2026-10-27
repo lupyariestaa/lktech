@@ -7,6 +7,8 @@ import {
 } from "@/lib/settings-types";
 import { normalizePhone } from "@/lib/whatsapp";
 import { CACHE_TAGS } from "@/lib/cache-tags";
+import { readVersion } from "@/lib/optimistic-lock-pure";
+import { writeVersioned } from "@/lib/optimistic-lock";
 
 /** ID dokumen pengaturan di Firestore. */
 export const SETTINGS_DOC_ID = "site";
@@ -76,6 +78,54 @@ export async function readSiteSettings(): Promise<SiteSettings> {
     console.error("[settings] gagal memuat:", err);
     return DEFAULT_SETTINGS;
   }
+}
+
+/**
+ * Seperti `readSiteSettings`, tetapi juga mengembalikan field `version`
+ * (ADM-11) yang dikirim ke form admin sebagai `expectedVersion`.
+ */
+export async function readSiteSettingsDoc(): Promise<{
+  settings: SiteSettings;
+  version: string | null;
+}> {
+  try {
+    const { getAdminDb } = await import("@/lib/firebase-admin");
+    const db = getAdminDb();
+    if (!db) return { settings: DEFAULT_SETTINGS, version: null };
+
+    const snap = await db.collection("settings").doc(SETTINGS_DOC_ID).get();
+    if (!snap.exists) return { settings: DEFAULT_SETTINGS, version: null };
+
+    return {
+      settings: mergeSettings(snap.data() as Partial<SiteSettings>),
+      version: readVersion(snap.data()),
+    };
+  } catch (err) {
+    console.error("[settings] gagal memuat:", err);
+    return { settings: DEFAULT_SETTINGS, version: null };
+  }
+}
+
+/**
+ * Menyimpan pengaturan situs dengan optimistic concurrency (ADM-11).
+ * Melempar `VersionConflictError` bila `expectedVersion` tak cocok → route 409.
+ * Mengembalikan versi BARU agar klien dapat menyimpan tanpa memuat ulang.
+ */
+export async function saveSiteSettings(
+  settings: SiteSettings,
+  updatedBy: string,
+  expectedVersion?: unknown,
+): Promise<string> {
+  return writeVersioned({
+    collection: "settings",
+    docId: SETTINGS_DOC_ID,
+    data: {
+      ...settings,
+      updatedAtISO: new Date().toISOString(),
+      updatedBy,
+    },
+    expectedVersion,
+  });
 }
 
 /**

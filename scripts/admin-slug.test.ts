@@ -70,12 +70,12 @@ test("ADM-28: penyimpanan membuat dokumen baru via create() atomik", () => {
   for (const rel of ["src/lib/products.ts", "src/lib/projects.ts"]) {
     const src = read(rel);
     assert.match(src, /import \{ isAlreadyExistsError, SlugTakenError \}/);
-    assert.match(src, /opts\?:\s*\{\s*create\?:\s*boolean\s*\}/);
+    assert.match(src, /opts\?:\s*\{\s*create\?:\s*boolean;/);
     assert.match(src, /if \(opts\?\.create\)/);
     assert.match(src, /\.create\(payload\)/);
     assert.match(src, /throw new SlugTakenError\(/);
-    // Pembaruan tetap memakai merge (backward-compatible).
-    assert.match(src, /\.set\(payload, \{ merge: true \}\)/);
+    // ADM-11: pembaruan ditulis via transaksi ber-versi (menggantikan set merge).
+    assert.match(src, /writeVersioned/);
   }
 });
 
@@ -87,7 +87,10 @@ test("ADM-28: route POST membaca intent create & membalas 409 slug_taken", () =>
     const src = read(rel);
     assert.match(src, /import \{ SlugTakenError \} from "@\/lib\/slug-reserve-pure"/);
     assert.match(src, /\.create === true/);
-    assert.match(src, /await save(Product|Project)\([^)]*\{ create: wantsCreate \}\)/);
+    assert.match(
+      src,
+      /await save(Product|Project)\(\s*\w+,\s*check\.email,\s*\{\s*create: wantsCreate/,
+    );
     assert.match(src, /err instanceof SlugTakenError/);
     assert.match(src, /code: "slug_taken"/);
     assert.match(src, /status: 409/);
@@ -96,15 +99,15 @@ test("ADM-28: route POST membaca intent create & membalas 409 slug_taken", () =>
 
 test("ADM-28: klien mengirim intent create & UI memakai flag isNew", () => {
   const api = read("src/lib/admin-api.ts");
-  assert.match(api, /opts\?:\s*\{\s*create\?:\s*boolean\s*\}/);
+  assert.match(api, /opts\?:\s*\{\s*create\?:\s*boolean;\s*expectedVersion\?/);
   assert.match(api, /create: opts\?\.create === true/);
 
   assert.match(
     read("src/components/admin/products-manager.tsx"),
-    /saveProduct\(editing, \{ create: isNew \}\)/,
+    /saveProduct\(editing, \{\s*create: isNew,/,
   );
   assert.match(
     read("src/components/admin/projects-manager.tsx"),
-    /saveProject\(\{ \.\.\.editing, slug, year \}, \{ create: isNew \}\)/,
+    /saveProject\(\s*\{ \.\.\.editing, slug, year \},\s*\{\s*create: isNew,/,
   );
 });

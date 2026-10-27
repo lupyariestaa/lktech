@@ -14,6 +14,8 @@ import { unstable_cache } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { normalizeRatingSummary } from "@/lib/review-types";
 import { isAlreadyExistsError, SlugTakenError } from "@/lib/slug-reserve-pure";
+import { readVersion, newVersionToken } from "@/lib/optimistic-lock-pure";
+import { writeVersioned } from "@/lib/optimistic-lock";
 
 /** Normalisasi `ratingSummary` produk (FASE R) — re-export tipe aman-klien. */
 function normalizeProductRatingSummary(
@@ -397,7 +399,7 @@ export async function getProductSlugs(): Promise<string[]> {
   return products.map((p) => p.slug);
 }
 
-/** Semua produk untuk dashboard (termasuk yang tidak aktif). */
+/** Semua produk untuk dashboard (termasuk yang tidak aktif + versi). */
 export async function getStoredProducts(): Promise<StoredProduct[]> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
@@ -405,7 +407,11 @@ export async function getStoredProducts(): Promise<StoredProduct[]> {
 
   const snap = await db.collection(COLLECTION).get();
   return snap.docs
-    .map((doc) => ({ id: doc.id, ...normalizeProduct(doc.data()) }))
+    .map((doc) => ({
+      id: doc.id,
+      ...normalizeProduct(doc.data()),
+      version: readVersion(doc.data()),
+    }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -415,14 +421,16 @@ export async function getStoredProducts(): Promise<StoredProduct[]> {
  * `opts.create` (ADM-28): saat **membuat produk baru**, pakai `create()` atomik
  * Firestore yang menolak bila dokumen sudah ada → `SlugTakenError` (route
  * memetakan ke 409), sehingga dua admin tak bisa menimpa produk ber-slug sama.
- * Tanpa opsi ini (atau `create: false`), perilaku lama `set({ merge: true })`
- * dipertahankan untuk pembaruan.
+ *
+ * `opts.expectedVersion` (ADM-11): saat **memperbarui**, tulis dalam transaksi &
+ * tolak bila versi dokumen sudah berubah (`VersionConflictError` → 409).
+ * Mengembalikan versi BARU.
  */
 export async function saveProduct(
   product: Product,
   updatedBy: string,
-  opts?: { create?: boolean },
-): Promise<void> {
+  opts?: { create?: boolean; expectedVersion?: unknown },
+): Promise<string> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
@@ -481,6 +489,8 @@ export async function saveProduct(
   const ref = db.collection(COLLECTION).doc(product.slug);
   if (opts?.create) {
     // Reservasi slug secara ATOMIK: gagal bila dokumen sudah ada (ADM-28).
+    const version = newVersionToken();
+    payload.version = version;
     try {
       await ref.create(payload);
     } catch (err) {
@@ -490,10 +500,15 @@ export async function saveProduct(
       if (snap?.exists) throw new SlugTakenError(product.slug);
       throw err;
     }
-    return;
+    return version;
   }
 
-  await ref.set(payload, { merge: true });
+  return writeVersioned({
+    collection: COLLECTION,
+    docId: product.slug,
+    data: payload,
+    expectedVersion: opts?.expectedVersion,
+  });
 }
 
 export async function deleteProductBySlug(slug: string): Promise<void> {

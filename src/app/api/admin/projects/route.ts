@@ -13,6 +13,7 @@ import { sanitizeSlug } from "@/lib/utils";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { SlugTakenError } from "@/lib/slug-reserve-pure";
+import { VersionConflictError } from "@/lib/optimistic-lock-pure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,12 @@ export async function POST(req: Request) {
     rawBody !== null &&
     (rawBody as Record<string, unknown>).create === true;
 
+  // ADM-11: versi dokumen yang dimuat klien terakhir (opsional).
+  const expectedVersion =
+    typeof rawBody === "object" && rawBody !== null
+      ? (rawBody as Record<string, unknown>).expectedVersion
+      : undefined;
+
   const parsed = projectSchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json(
@@ -93,7 +100,10 @@ export async function POST(req: Request) {
   };
 
   try {
-    await saveProject(project, check.email, { create: wantsCreate });
+    const version = await saveProject(project, check.email, {
+      create: wantsCreate,
+      expectedVersion,
+    });
     await recordAdminAudit({
       action: "project.save",
       actor: check.email,
@@ -104,11 +114,21 @@ export async function POST(req: Request) {
     revalidatePath("/portofolio");
     revalidatePath(`/portofolio/${slug}`);
     revalidatePath("/");
-    return NextResponse.json({ ok: true, project });
+    return NextResponse.json({ ok: true, project, version });
   } catch (err) {
     if (err instanceof SlugTakenError) {
       return NextResponse.json(
         { error: err.message, code: "slug_taken" },
+        { status: 409 },
+      );
+    }
+    if (err instanceof VersionConflictError) {
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          currentVersion: err.currentVersion,
+        },
         { status: 409 },
       );
     }

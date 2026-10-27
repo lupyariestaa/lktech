@@ -235,5 +235,5 @@ export type Product = {
   waMessage?: string;
 };
 
-/** Produk tersimpan di Firestore (dengan id dokumen). */
-export type StoredProduct = Product & { id: string };
+/** Produk tersimpan di Firestore (dengan id dokumen + versi optimistic lock). */
+export type StoredProduct = Product & { id: string; version?: string | null };

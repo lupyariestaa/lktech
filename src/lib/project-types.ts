@@ -35,4 +35,5 @@ export type Project = {
 };
 
 /** Proyek tersimpan di Firestore (dengan id dokumen). */
-export type StoredProject = Project & { id: string };
+/** Proyek tersimpan di Firestore (dengan id dokumen + versi optimistic lock). */
+export type StoredProject = Project & { id: string; version?: string | null };
