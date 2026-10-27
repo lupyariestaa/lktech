@@ -20,6 +20,10 @@ import { validateBroadcast } from "@/lib/newsletter-pure";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { normalizeBroadcastIdempotencyKey } from "@/lib/broadcast-idempotency-pure";
 import {
+  nextBroadcastBatch,
+  normalizeBroadcastCursor,
+} from "@/lib/broadcast-batch-pure";
+import {
   beginBroadcastRequest,
   completeBroadcastRequest,
   markBroadcastRequestIndeterminate,
@@ -84,6 +88,11 @@ export async function POST(req: Request) {
 
   const action = body.action === "test" ? "test" : "send";
 
+  // ADM-18: kursor batch (email terakhir yang sudah diproses). Bila ada, ini
+  // adalah kelanjutan kampanye yang sama — bukan percobaan baru.
+  const cursor = normalizeBroadcastCursor(body.cursor);
+  const isContinuation = action === "send" && cursor !== null;
+
   // Broadcast massal = aksi sensitif → wajib re-auth Google yang masih baru.
   if (action === "send") {
     const fresh = assertFreshAuth(check);
@@ -91,9 +100,11 @@ export async function POST(req: Request) {
   }
 
   // ADM-07: batasi spam/kuota email. Broadcast massal lebih ketat daripada uji.
+  // ADM-18: kelanjutan batch memakai bucket terpisah & limit lebih longgar
+  // (tiap batch tetap dibatasi kursor + kuota harian, jadi total tetap terukur).
   const rl = await checkRateLimit(
-    `broadcast-${action}:${check.uid}`,
-    action === "test" ? 10 : 5,
+    `broadcast-${isContinuation ? "continue" : action}:${check.uid}`,
+    isContinuation ? 60 : action === "test" ? 10 : 5,
     10 * 60 * 1000,
   );
   if (!rl.ok) {
@@ -252,11 +263,31 @@ export async function POST(req: Request) {
     );
   }
 
+  // ADM-18: ambil JENDELA penerima SETELAH kursor (anti-timeout + anti-duplikat).
+  // Batch berikutnya hanya berisi email `> cursor` sehingga penerima yang sudah
+  // diproses tidak pernah dikirim ulang saat "lanjutkan batch".
+  const chunk = nextBroadcastBatch(recipients, cursor, BROADCAST_MAX_PER_RUN);
+
+  if (chunk.batch.length === 0) {
+    // Kursor sudah di ujung → tak ada yang dikirim (idempoten & aman).
+    await releaseBroadcastRequest(requestId).catch(() => {});
+    return NextResponse.json({
+      ok: true,
+      sent: 0,
+      failed: 0,
+      recipients: 0,
+      total: recipients.length,
+      cursor: chunk.nextCursor,
+      remaining: 0,
+      done: true,
+      truncated: false,
+      replayed: false,
+    });
+  }
+
   // ADM-07: guard kuota harian (opt-in via BROADCAST_DAILY_QUOTA). Reserve
-  // sejumlah email yang benar-benar akan dicoba (maks per-run).
-  const quota = await reserveBroadcastQuota(
-    Math.min(recipients.length, BROADCAST_MAX_PER_RUN),
-  );
+  // sejumlah email yang benar-benar akan dicoba pada batch ini.
+  const quota = await reserveBroadcastQuota(chunk.batch.length);
   if (!quota.ok) {
     await releaseBroadcastRequest(requestId).catch(() => {});
     if (quota.code === "quota_exceeded") {
@@ -285,7 +316,7 @@ export async function POST(req: Request) {
   let result: Awaited<ReturnType<typeof sendBroadcast>>;
   try {
     result = await sendBroadcast({
-      recipients,
+      recipients: chunk.batch,
       subject: draft.subject,
       body: draft.body,
       ctaLabel: draft.ctaLabel,
@@ -322,7 +353,11 @@ export async function POST(req: Request) {
     sent: result.sent,
     failed: result.failed,
     recipients: result.requested,
-    truncated: result.truncated ?? false,
+    total: recipients.length,
+    cursor: chunk.nextCursor,
+    remaining: chunk.remaining,
+    done: chunk.done,
+    truncated: !chunk.done,
   };
 
   // Simpan hasil lebih dulu agar retry setelah response hilang mengembalikan
@@ -351,6 +386,8 @@ export async function POST(req: Request) {
       recipients: result.requested,
       subject: draft.subject,
       idempotencyKey: idempotencyKey.slice(0, 12),
+      remaining: chunk.remaining,
+      done: chunk.done,
     },
   });
 

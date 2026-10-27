@@ -6,6 +6,7 @@ import {
   getFromEmail,
   getReplyTo,
 } from "@/lib/email-config";
+import { BROADCAST_MAX_PER_RUN } from "@/lib/broadcast-batch-pure";
 
 /**
  * BROADCAST EMAIL (Tema 2.2, FASE R2) — kirim email promo/konten ke daftar
@@ -20,8 +21,11 @@ const apiKey = getResendApiKey();
 const fromEmail = getFromEmail();
 const replyTo = getReplyTo();
 
-/** Batas kirim per pemanggilan (cegah timeout serverless) - F-N7. */
-export const BROADCAST_MAX_PER_RUN = 200;
+/**
+ * Batas kirim per pemanggilan (cegah timeout serverless) - F-N7/ADM-18.
+ * Sumber tunggal di `broadcast-batch-pure` (dipakai jendela batch & kuota).
+ */
+export { BROADCAST_MAX_PER_RUN };
 
 /** Apakah provider email broadcast dikonfigurasi (untuk guard sebelum kirim). */
 export function isBroadcastConfigured(): boolean {
@@ -33,10 +37,8 @@ export type BroadcastResult = {
   skipped?: boolean;
   sent: number;
   failed: number;
-  /** Jumlah penerima yang DIMINTA (bisa > diproses bila melebihi batas). */
+  /** Jumlah penerima yang DIMINTA pada batch ini. */
   requested: number;
-  /** `true` bila pemrosesan dihentikan karena batas per-run. */
-  truncated?: boolean;
   error?: string;
 };
 
@@ -138,13 +140,14 @@ async function sendOne(
 }
 
 /**
- * Kirim broadcast ke daftar penerima. Untuk setiap penerima, isi sama; hanya
- * tautan unsubscribe yang dipersonalisasi (via `unsubUrlFor`).
+ * Kirim broadcast ke DAFTAR PENERIMA YANG DIBERIKAN (satu batch). Untuk setiap
+ * penerima, isi sama; hanya tautan unsubscribe yang dipersonalisasi (via
+ * `unsubUrlFor`).
  *
- * F-N7: dibatasi `BROADCAST_MAX_PER_RUN` per pemanggilan (anti-timeout); bila
- * penerima melebihi batas, `truncated=true` & sisanya harus dikirim pada batch
- * berikutnya (sementara: admin mengirim ulang ke segmen yang sama — penerima
- * yang sudah terkirim tetap ikut; lihat catatan di TASK).
+ * ADM-18: fungsi ini TIDAK lagi memotong daftar sendiri — pemanggil (route)
+ * memakai `nextBroadcastBatch` untuk memilih jendela penerima & mengelola kursor
+ * anti-duplikat. Dengan begitu batch tetap kecil (anti-timeout) sekaligus bisa
+ * "lanjutkan batch" tanpa mengirim ulang penerima yang sudah diproses.
  */
 export async function sendBroadcast(params: {
   recipients: string[];
@@ -161,12 +164,9 @@ export async function sendBroadcast(params: {
     return { ok: false, skipped: true, sent: 0, failed: 0, requested };
   }
 
-  const targets = params.recipients.slice(0, BROADCAST_MAX_PER_RUN);
-  const truncated = requested > targets.length;
-
   let sent = 0;
   let failed = 0;
-  for (const to of targets) {
+  for (const to of params.recipients) {
     const unsubUrl = params.unsubUrlFor(to);
     const html = buildBroadcastHtml({
       subject: params.subject,
@@ -187,7 +187,7 @@ export async function sendBroadcast(params: {
     else failed += 1;
   }
 
-  return { ok: failed === 0, sent, failed, requested, truncated };
+  return { ok: failed === 0, sent, failed, requested };
 }
 
 /**

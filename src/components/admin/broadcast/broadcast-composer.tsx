@@ -75,14 +75,22 @@ export function BroadcastComposer() {
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+  // ADM-18: kursor batch (email terakhir diproses) & sisa penerima. `remaining`
+  // bukan-nol menandakan kampanye masih berlanjut (ada batch berikutnya).
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [remaining, setRemaining] = useState(0);
   // Satu key untuk satu percobaan. Key dipertahankan saat retry agar server
   // mengembalikan hasil yang sama, bukan mengirim email dua kali (ADM-07).
   const idempotencyKeyRef = useRef(createBroadcastIdempotencyKey());
 
-  // Konten berubah = percobaan baru. Tanpa ini, retry setelah edit akan
-  // ditolak server sebagai `idempotency_conflict`.
+  // Konten berubah = kampanye baru. Reset kursor & key agar tidak melanjutkan
+  // batch lama; tanpa key baru, retry setelah edit ditolak `idempotency_conflict`.
   useEffect(() => {
-    idempotencyKeyRef.current = createBroadcastIdempotencyKey();
+    (async () => {
+      idempotencyKeyRef.current = createBroadcastIdempotencyKey();
+      setCursor(null);
+      setRemaining(0);
+    })();
   }, [subject, body, segment, ctaLabel, ctaUrl]);
 
   const loadCounts = () => {
@@ -154,18 +162,36 @@ export function BroadcastComposer() {
       const res = await sendBroadcastRequest({
         ...payload(),
         idempotencyKey: idempotencyKeyRef.current,
+        cursor,
       });
-      toast.success(
-        `${res.replayed ? "Sudah terkirim sebelumnya" : "Terkirim"}: ${res.sent}` +
-          (res.failed ? ` · gagal ${res.failed}` : "") +
-          (res.truncated ? " · dibatasi per-batch" : "") +
-          ".",
-      );
-      idempotencyKeyRef.current = createBroadcastIdempotencyKey();
-      setSubject("");
-      setBody("");
-      setCtaLabel("");
-      setCtaUrl("");
+      // ADM-18: server mengembalikan `done` + kursor batch. Bila belum selesai,
+      // pertahankan draft & tawarkan "lanjutkan batch" (tak mengirim ulang).
+      const done = res.done !== false;
+      if (done) {
+        toast.success(
+          `${res.replayed ? "Sudah terkirim sebelumnya" : "Terkirim"}: ${res.sent}` +
+            (res.failed ? ` · gagal ${res.failed}` : "") +
+            ".",
+        );
+        idempotencyKeyRef.current = createBroadcastIdempotencyKey();
+        setSubject("");
+        setBody("");
+        setCtaLabel("");
+        setCtaUrl("");
+        setCursor(null);
+        setRemaining(0);
+      } else {
+        toast.success(
+          `Batch terkirim: ${res.sent}` +
+            (res.failed ? ` · gagal ${res.failed}` : "") +
+            ` · sisa ${res.remaining ?? 0} penerima.`,
+        );
+        setCursor(res.cursor ?? null);
+        setRemaining(res.remaining ?? 0);
+        // Key BARU untuk batch berikutnya. Bila batch gagal, `catch` di bawah
+        // TIDAK memajukan kursor → retry memakai key & kursor yang sama.
+        idempotencyKeyRef.current = createBroadcastIdempotencyKey();
+      }
       setConfirm(false);
       loadCounts();
     } catch (err) {
@@ -292,6 +318,15 @@ export function BroadcastComposer() {
           </p>
         )}
 
+        {remaining > 0 && (
+          <p className="flex items-start gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-xs text-amber-700">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Segmen melebihi batas sekali kirim. Lanjutkan untuk mengirim{" "}
+            {remaining} penerima berikutnya — penerima yang sudah diproses
+            TIDAK dikirim ulang.
+          </p>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -320,20 +355,26 @@ export function BroadcastComposer() {
             className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
           >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Kirim Broadcast
+            {remaining > 0 ? `Lanjutkan (sisa ${remaining})` : "Kirim Broadcast"}
           </button>
         </div>
       </div>
 
       <ConfirmDialog
         open={confirm}
-        title={`Kirim broadcast ke "${BROADCAST_SEGMENT_LABEL[segment]}"?`}
-        description={
-          recipientsForSegment !== null
-            ? `Email akan dikirim ke ± ${recipientsForSegment} pelanggan. Tindakan ini tidak dapat dibatalkan.`
-            : "Email akan dikirim ke pelanggan pada segmen terpilih."
+        title={
+          remaining > 0
+            ? `Lanjutkan kirim ke "${BROADCAST_SEGMENT_LABEL[segment]}"?`
+            : `Kirim broadcast ke "${BROADCAST_SEGMENT_LABEL[segment]}"?`
         }
-        confirmLabel="Ya, kirim"
+        description={
+          remaining > 0
+            ? `Batch berikutnya dikirim ke sisa ${remaining} penerima. Penerima yang sudah menerima tidak akan dikirim ulang.`
+            : recipientsForSegment !== null
+              ? `Email akan dikirim ke ± ${recipientsForSegment} pelanggan. Bila melebihi batas sekali kirim, kampanye dilanjutkan per batch (tanpa mengirim ulang). Tindakan ini tidak dapat dibatalkan.`
+              : "Email akan dikirim ke pelanggan pada segmen terpilih."
+        }
+        confirmLabel={remaining > 0 ? "Ya, lanjutkan" : "Ya, kirim"}
         busy={sending}
         tone="default"
         onConfirm={doSend}

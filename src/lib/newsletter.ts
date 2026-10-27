@@ -145,6 +145,9 @@ export async function getBroadcastOverview(): Promise<{
 /**
  * Kumpulkan email penerima untuk segmen tertentu (hanya yang aktif/subscribed
  * & belum unsubscribe). Sumber "pernah beli" dari koleksi `orders` (F-N9).
+ *
+ * ADM-18: hasil diurutkan naik & unik agar batch berbasis kursor stabil (batch
+ * berikutnya hanya mengambil email `> kursor` — penerima lama tak dikirim ulang).
  */
 export async function resolveSegmentEmails(
   segment: BroadcastSegment,
@@ -156,8 +159,8 @@ export async function resolveSegmentEmails(
   const emails = subs
     .filter((s) => !s.unsubscribed)
     .filter((s) => matchesSegment(segment, buyers.has(s.email.toLowerCase())))
-    .map((s) => s.email);
-  return Array.from(new Set(emails));
+    .map((s) => s.email.toLowerCase());
+  return Array.from(new Set(emails)).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 /** Secret HMAC untuk tautan unsubscribe. */

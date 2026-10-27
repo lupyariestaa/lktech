@@ -43,9 +43,17 @@ export type SendBroadcastResult = {
   failed: number;
   recipients: number;
   truncated?: boolean;
+  /** ADM-18: total penerima segmen. */
+  total?: number;
+  /** ADM-18: kursor batch (email terakhir diproses) untuk kelanjutan. */
+  cursor?: string | null;
+  /** ADM-18: sisa penerima setelah batch ini. */
+  remaining?: number;
+  /** ADM-18: true bila seluruh segmen sudah diproses. */
+  done?: boolean;
 };
 
-/** Kirim broadcast ke segmen. */
+/** Kirim broadcast ke segmen (satu batch; ADM-18 memakai `cursor` untuk lanjut). */
 export async function sendBroadcastRequest(input: {
   subject: string;
   body: string;
@@ -54,6 +62,8 @@ export async function sendBroadcastRequest(input: {
   ctaUrl?: string;
   /** ADM-07: key stabil selama satu percobaan; retry tidak mengirim ganda. */
   idempotencyKey: string;
+  /** ADM-18: email terakhir yang sudah diproses (null = mulai dari awal). */
+  cursor?: string | null;
 }): Promise<SendBroadcastResult & { replayed?: boolean }> {
   return adminFetch("/api/admin/broadcast", {
     method: "POST",

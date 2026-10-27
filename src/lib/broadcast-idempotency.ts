@@ -30,6 +30,14 @@ export type BroadcastStoredResult = {
   failed: number;
   recipients: number;
   truncated?: boolean;
+  /** ADM-18: kursor batch (email terakhir diproses) untuk "lanjutkan batch". */
+  cursor?: string | null;
+  /** ADM-18: true bila seluruh segmen selesai (tak ada sisa). */
+  done?: boolean;
+  /** ADM-18: total penerima pada segmen (setelah kursor). */
+  total?: number;
+  /** ADM-18: sisa penerima setelah batch ini. */
+  remaining?: number;
 };
 
 export type BeginBroadcastRequestResult =
@@ -65,6 +73,12 @@ function parseStoredResult(v: unknown): BroadcastStoredResult | null {
     failed: d.failed,
     recipients: d.recipients,
     ...(d.truncated === true ? { truncated: true } : {}),
+    ...(typeof d.cursor === "string" || d.cursor === null
+      ? { cursor: d.cursor as string | null }
+      : {}),
+    ...(typeof d.done === "boolean" ? { done: d.done } : {}),
+    ...(typeof d.total === "number" ? { total: d.total } : {}),
+    ...(typeof d.remaining === "number" ? { remaining: d.remaining } : {}),
   };
 }
 
