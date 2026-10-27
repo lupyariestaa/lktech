@@ -877,7 +877,7 @@ audit per aksi tetap dibatasi 1.000 dokumen.
 
 ---
 
-### ADM-18 · 🟡 Sedang · Broadcast email sinkron, tanpa idempotency/cursor batch
+### ADM-18 · 🟡 Sedang · ✅ Selesai kode · Broadcast email sinkron, tanpa idempotency/cursor batch
 
 **Status:** 🟢 Terverifikasi untuk desain; 🟡 Dugaan untuk timeout aktual
 tergantung platform.
@@ -1092,7 +1092,7 @@ robots.txt saja.
 
 ## 7. Temuan Testing, Dokumentasi & Operasional
 
-### ADM-26 · 🟡 Sedang · Tidak ada E2E/integration test admin atau test otorisasi
+### ADM-26 · 🟡 Sedang · ✅ Selesai kode · Tidak ada E2E/integration test admin atau test otorisasi
 
 **Status:** 🟢 Terverifikasi — konfigurasi dan isi test.
 
@@ -1186,7 +1186,7 @@ insiden, environment). Cantumkan pemilik dan langkah verifikasi.
 
 ## 8. Backlog Rendah Tambahan
 
-### ADM-28 · 🔵 Rendah · Race slug produk/proyek: POST tidak memeriksa ketersediaan
+### ADM-28 · 🔵 Rendah · ✅ Selesai kode · Race slug produk/proyek: POST tidak memeriksa ketersediaan
 
 **Status:** 🟢 Terverifikasi — kode.
 
