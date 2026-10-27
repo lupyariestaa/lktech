@@ -218,6 +218,18 @@ test("attentionReasons: kurang bayar & belum dipenuhi", () => {
   assert.equal(attentionReasons(paidWithToken, NOW).includes("belum_dipenuhi"), false);
 });
 
+test("attentionReasons: invoice evidence issue is not labeled as underpayment", () => {
+  const issue = order({
+    id: "invoice-issue",
+    status: "menunggu_bayar",
+    paymentMismatch: { received: 100_000, expected: 100_000, reason: "invoice_mismatch" },
+    paymentIssue: { reason: "invoice_mismatch" },
+  });
+  const reasons = attentionReasons(issue, NOW);
+  assert.equal(reasons.includes("kurang_bayar"), false);
+  assert.ok(reasons.includes("masalah_pembayaran"));
+});
+
 test("sortOrders: tanggal & total", () => {
   const a = order({ id: "a", total: 100, createdAt: "2026-10-01T00:00:00Z" });
   const b = order({ id: "b", total: 300, createdAt: "2026-10-03T00:00:00Z" });

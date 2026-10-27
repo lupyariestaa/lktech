@@ -24,7 +24,8 @@ export type FilterableOrder = {
     expiresAt?: string;
     paidAt?: string;
   } | null;
-  paymentMismatch?: { received?: number; expected?: number; atISO?: string } | null;
+  paymentMismatch?: { received?: number; expected?: number; reason?: string; atISO?: string } | null;
+  paymentIssue?: { reason?: string; atISO?: string } | null;
   downloadTokenId?: string;
   coupon?: { code?: string } | null;
   createdAt?: string;
@@ -256,7 +257,14 @@ export function attentionReasons(
     }
   }
 
-  if (order.paymentMismatch) reasons.push("kurang_bayar");
+  if (order.paymentMismatch &&
+    typeof order.paymentMismatch.received === "number" &&
+    typeof order.paymentMismatch.expected === "number" &&
+    order.paymentMismatch.received < order.paymentMismatch.expected &&
+    (!order.paymentMismatch.reason || order.paymentMismatch.reason === "amount_mismatch")) {
+    reasons.push("kurang_bayar");
+  }
+  if (order.paymentIssue) reasons.push("masalah_pembayaran");
 
   if (
     order.fulfillment !== "jasa" &&
@@ -280,6 +288,7 @@ export const ATTENTION_LABEL: Record<string, string> = {
   jasa_menunggu: "Jasa belum dikonfirmasi > 24 jam",
   bayar_segera: "Pembayaran kedaluwarsa < 6 jam",
   kurang_bayar: "Nominal kurang bayar",
+  masalah_pembayaran: "Bukti pembayaran perlu ditinjau",
   belum_dipenuhi: "Dibayar, belum dipenuhi",
   email_gagal: "Email gagal terkirim",
 };

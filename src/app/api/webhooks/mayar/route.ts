@@ -6,7 +6,8 @@ import { notifyOrderAwaitingConfirmation } from "@/lib/order-payment";
 import { obs } from "@/lib/observability";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { OrderStatus } from "@/lib/order-types";
-import { validateMayarPayment } from "@/lib/mayar-webhook-pure";
+import { extractMayarPaymentEvent, validateMayarPayment } from "@/lib/mayar-webhook-pure";
+import { FieldValue } from "firebase-admin/firestore";
 import { timingSafeEqual } from "node:crypto";
 import { webhookTokenConfiguration } from "@/lib/webhook-security-pure";
 
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const payload = extractPaymentEvent(body);
+  const payload = extractMayarPaymentEvent(body);
   if (!payload) {
     // Event yang tidak kita tangani — balas 200 agar tidak di-retry.
     return NextResponse.json({ ok: true, ignored: "unhandled_event" });
@@ -105,23 +106,29 @@ export async function POST(req: Request) {
       console.error(
         `[webhook/mayar] payment_rejected order=${orderId} reason=${validation.reason} received=${amount ?? "?"} expected=${order.total}`,
       );
-      if (validation.reason === "amount_mismatch" && typeof amount === "number" && amount < order.total) {
-        obs.paymentMismatch({ orderId, received: amount, expected: order.total });
-      }
-      await db
-        .collection("orders")
-        .doc(orderId)
-        .set(
-          {
-            paymentMismatch: {
-              ...(typeof amount === "number" ? { received: amount } : {}),
-        expected: matchedPayment?.amountExpected ?? order.total,
-              reason: validation.reason,
-              atISO: new Date().toISOString(),
-            },
+      const rejectedAt = new Date().toISOString();
+      const mismatchExpected = matchedPayment?.amountExpected ?? order.total;
+      const isUnderpayment = validation.reason === "amount_mismatch" &&
+        typeof amount === "number" && amount < mismatchExpected;
+      if (isUnderpayment) {
+        obs.paymentMismatch({ orderId, received: amount!, expected: mismatchExpected });
+        await db.collection("orders").doc(orderId).set({
+          paymentMismatch: {
+            received: amount,
+            expected: mismatchExpected,
+            reason: validation.reason,
+            atISO: rejectedAt,
           },
-          { merge: true },
-        );
+          paymentIssue: FieldValue.delete(),
+        }, { merge: true });
+      } else {
+        // Preserve the distinction: invoice/transaction evidence failures are
+        // not underpayments and must not show the "Nominal kurang bayar" UI.
+        await db.collection("orders").doc(orderId).set({
+          paymentMismatch: FieldValue.delete(),
+          paymentIssue: { reason: validation.reason, atISO: rejectedAt },
+        }, { merge: true });
+      }
       return NextResponse.json({ ok: true, rejected: validation.reason });
     }
 
@@ -222,57 +229,6 @@ function verifyToken(req: Request): boolean {
   });
 }
 
-/** Hasil ekstraksi event pembayaran dari payload Mentah. */
-function extractPaymentEvent(
-  body: unknown,
-): { orderId: string; amount?: number; method?: string; transactionId?: string; invoiceId?: string } | null {
-  if (!body || typeof body !== "object") return null;
-  const root = body as Record<string, unknown>;
-
-  const event = typeof root.event === "string" ? root.event : "";
-  // Hanya tangani event pembayaran diterima.
-  if (event && event !== "payment.received") return null;
-
-  const data =
-    root.data && typeof root.data === "object"
-      ? (root.data as Record<string, unknown>)
-      : root;
-
-  // Korelasi order: extraData.orderId (di-echo) atau productId (fallback).
-  const extra =
-    data.extraData && typeof data.extraData === "object"
-      ? (data.extraData as Record<string, unknown>)
-      : undefined;
-  const orderId = firstString(
-    extra?.orderId,
-    data.orderId,
-    data.productId,
-  );
-  if (!orderId) return null;
-
-  const amount =
-    typeof data.amount === "number"
-      ? data.amount
-      : typeof data.amount === "string"
-        ? Number(data.amount)
-        : undefined;
-
-  return {
-    orderId,
-    amount: Number.isFinite(amount) ? amount : undefined,
-    method: firstString(data.paymentMethod, data.channel, data.method) || undefined,
-    // In documented Mayar payloads `data.id` is the invoice ID.
-    invoiceId: firstString(data.id, data.invoiceId) || undefined,
-    transactionId: firstString(data.transactionId) || undefined,
-  };
-}
-
-function firstString(...vals: unknown[]): string {
-  for (const v of vals) {
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-  return "";
-}
 
 /** GET untuk cek ketersihan endpoint (tidak membocorkan apa pun). */
 export function GET() {

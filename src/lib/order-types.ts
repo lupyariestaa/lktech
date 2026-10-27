@@ -135,6 +135,12 @@ uid: string;
   paymentMismatch?: {
     received?: number;
     expected?: number;
+    reason?: string;
+    atISO?: string;
+  };
+  /** Payment webhook was rejected for evidence other than amount mismatch. */
+  paymentIssue?: {
+    reason?: string;
     atISO?: string;
   };
   /** Jalur fulfillment: unduh, jasa, atau pickup cetak. */
@@ -305,10 +311,28 @@ status,
                 typeof m.expected === "number" && Number.isFinite(m.expected)
                   ? m.expected
                   : undefined,
+              reason: str(m.reason) || undefined,
               atISO: str(m.atISO) || undefined,
             };
           })()
         : undefined,
+    paymentIssue: (() => {
+      const explicitIssue = data.paymentIssue && typeof data.paymentIssue === "object"
+        ? data.paymentIssue as Record<string, unknown>
+        : undefined;
+      const legacyMismatch = data.paymentMismatch && typeof data.paymentMismatch === "object"
+        ? data.paymentMismatch as Record<string, unknown>
+        : undefined;
+      const issue = explicitIssue ?? (legacyMismatch &&
+        str(legacyMismatch.reason) !== "amount_mismatch" &&
+        !(typeof legacyMismatch.received === "number" && typeof legacyMismatch.expected === "number" &&
+          legacyMismatch.received < legacyMismatch.expected)
+        ? legacyMismatch
+        : undefined);
+      return issue
+        ? { reason: str(issue.reason) || undefined, atISO: str(issue.atISO) || undefined }
+        : undefined;
+    })(),
     fulfillment,
     downloadTokenId: str(data.downloadTokenId) || undefined,
     whatsapp: str(data.whatsapp),

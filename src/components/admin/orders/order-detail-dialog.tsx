@@ -270,13 +270,26 @@ export function OrderDetailBody({
         </div>
       )}
 
-      {order.paymentMismatch && (
+      {order.paymentMismatch &&
+        (!order.paymentMismatch.reason || order.paymentMismatch.reason === "amount_mismatch") &&
+        order.paymentMismatch.received !== undefined &&
+        order.paymentMismatch.received < (order.paymentMismatch.expected ?? order.total) && (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-800">
           <p className="font-semibold">Nominal kurang bayar</p>
           <p className="mt-1">
             Diterima {formatRupiah(order.paymentMismatch.received ?? 0)} dari{" "}
             {formatRupiah(order.paymentMismatch.expected ?? order.total)}. Order tetap
             menunggu bayar — tindak lanjuti manual.
+          </p>
+        </div>
+      )}
+
+      {order.paymentIssue && (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-800">
+          <p className="font-semibold">Bukti pembayaran perlu ditinjau</p>
+          <p className="mt-1">
+            Webhook pembayaran ditolak ({order.paymentIssue.reason ?? "alasan tidak diketahui"}).
+            Pesanan belum ditandai lunas; cocokkan bukti pembayaran melalui Mayar.
           </p>
         </div>
       )}

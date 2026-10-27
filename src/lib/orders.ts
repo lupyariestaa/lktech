@@ -1,6 +1,6 @@
 import "server-only";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { AggregateField, type Query, type QueryDocumentSnapshot } from "firebase-admin/firestore";
+import { AggregateField, FieldValue, type Query, type QueryDocumentSnapshot } from "firebase-admin/firestore";
 import {
   isOrderExpired,
   isPayableStatus,
@@ -504,6 +504,7 @@ export type AttentionSummary = {
   jasa_menunggu: number;
   bayar_segera: number;
   kurang_bayar: number;
+  masalah_pembayaran: number;
   belum_dipenuhi: number;
   email_gagal: number;
   total: number;
@@ -515,6 +516,7 @@ export async function getOrdersAttentionSummary(): Promise<AttentionSummary> {
     jasa_menunggu: 0,
     bayar_segera: 0,
     kurang_bayar: 0,
+    masalah_pembayaran: 0,
     belum_dipenuhi: 0,
     email_gagal: 0,
     total: 0,
@@ -832,6 +834,8 @@ export async function markOrderPaid(
       tx.update(ref, {
         ...(settled ? { status: orderStatus } : {}),
         ...nextPayment,
+        paymentMismatch: FieldValue.delete(),
+        paymentIssue: FieldValue.delete(),
         updatedAtISO: at,
         updatedBy: "system:markOrderPaid",
       });
@@ -841,6 +845,8 @@ export async function markOrderPaid(
         ...(doc.data() as Record<string, unknown>),
         status: orderStatus,
         ...nextPayment,
+        paymentMismatch: undefined,
+        paymentIssue: undefined,
         ...(settled ? { status: orderStatus } : {}),
       });
       return { applied: true, order };

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 // @ts-expect-error Node strip-types runner needs explicit extension.
-import { validateMayarPayment } from "../src/lib/mayar-webhook-pure.ts";
+import { extractMayarPaymentEvent, validateMayarPayment } from "../src/lib/mayar-webhook-pure.ts";
 
 const order = { total: 125000, invoiceId: "inv-123", transactionId: "txn-456" };
 
@@ -40,13 +40,49 @@ test("rejects invoice or transaction reference mismatches", () => {
   });
 });
 
-test("requires invoice evidence when the order has a stored Mayar invoice", () => {
+test("allows omitted invoice reference but keeps amount and order reference required", () => {
   assert.deepEqual(validateMayarPayment({ amount: 125000 }, order), {
-    ok: false,
-    reason: "invoice_missing",
+    ok: true,
+    amount: 125000,
   });
   assert.deepEqual(validateMayarPayment({ amount: 125000 }, { total: 125000 }), {
     ok: true,
     amount: 125000,
+  });
+});
+
+test("extracts Mayar event while keeping data.id separate from invoiceId", () => {
+  assert.deepEqual(extractMayarPaymentEvent({
+    event: "payment.received",
+    data: {
+      id: "webhook-789",
+      amount: "125000",
+      extraData: { orderId: "order-123" },
+      transactionId: "txn-456",
+    },
+  }), {
+    orderId: "order-123",
+    amount: 125000,
+    method: undefined,
+    invoiceId: undefined,
+    webhookId: "webhook-789",
+    transactionId: "txn-456",
+  });
+});
+
+test("rejects explicitly mismatched invoice reference", () => {
+  const parsed = extractMayarPaymentEvent({
+    event: "payment.received",
+    data: {
+      id: "webhook-789",
+      invoiceId: "other-invoice",
+      amount: 125000,
+      extraData: { orderId: "order-123" },
+    },
+  });
+  assert.equal(parsed?.invoiceId, "other-invoice");
+  assert.deepEqual(validateMayarPayment({ amount: parsed?.amount, invoiceId: parsed?.invoiceId }, order), {
+    ok: false,
+    reason: "invoice_mismatch",
   });
 });
