@@ -876,6 +876,26 @@ parsial yang membingungkan. Resend berulang juga merusak reputasi domain.
 cursor batch, status per penerima, retry terbatas, dan tombol “lanjutkan batch”
 yang tidak mengirim ulang. Batasi/test di lingkungan Resend yang sesuai.
 
+**Status implementasi (2026-10-27):** ✅ **Selesai (kode) untuk idempotency +
+cursor batch + tombol “lanjutkan batch”.**
+
+- Idempotency per-batch sudah ada sejak ADM-07 (`broadcast_requests/{hash}`,
+  status `processing`/`completed`/`indeterminate`, key wajib).
+- **Cursor batch (ADM-18):** segmen dipecah jadi batch ≤ `BROADCAST_MAX_PER_RUN`
+  (200). Kursor berbasis **email** (bukan offset) — batch berikutnya hanya berisi
+  email `> kursor`, sehingga penerima yang sudah diproses **tidak pernah dikirim
+  ulang** meski daftar berubah. Helper murni `src/lib/broadcast-batch-pure.ts`
+  (`nextBroadcastBatch`, `normalizeBroadcastCursor`).
+- `resolveSegmentEmails` mengurutkan email naik (kursor stabil); `email-broadcast`
+  tak lagi memotong daftar sendiri; route memilih jendela & mengembalikan
+  `cursor`/`done`/`remaining`/`total`; klien memakai key baru per batch + tombol
+  **“Lanjutkan (sisa N)”** tanpa mengirim ulang. Bucket rate-limit terpisah untuk
+  kelanjutan; kuota harian direservasi per batch.
+- Tes `npm run test:broadcast-batch` (13): logika murni + wiring.
+- **Masih di luar cakupan (backlog):** queue/background job penuh + status per
+  penerima (retry otomatis server-side). Increment ini menutup risiko utama
+  (duplikat email & status parsial membingungkan) tanpa infrastruktur queue.
+
 ---
 
 ### ADM-19 · 🔵 Rendah · Admin mewarisi provider publik, analytics, PWA, dan structured data
@@ -1353,7 +1373,7 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
 - 🟡 ADM-15 — paging user + cached summary; sisa search index/backfill dan ekspor server.
 - 🟡 ADM-16 — paging lead + dashboard summary; sisa filter server-side.
 - 🟡 ADM-17 — review aggregate + audit order; sisa paging newsletter/media dan filter audit cap.
-- ADM-18 — queue broadcast + idempotency.
+- 🟡 ADM-18 — idempotency + cursor batch selesai kode (anti-duplikat, tombol “lanjutkan batch”); sisa queue/status per penerima.
 - ✅ ADM-20 — loading/error/suspense admin.
 - 🟡 ADM-21/22 — focus/label/main/live region diperbaiki; verifikasi aksesibilitas manual masih perlu.
 - ADM-26 — test otorisasi/route/E2E admin.
@@ -1366,7 +1386,7 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
 - ✅ ADM-24 — pertahankan `next` saat sesi kedaluwarsa.
 - ✅ ADM-25 — noindex admin + `X-Robots-Tag`; crawl eksternal belum diuji.
 - ADM-27 — dokumentasi/runbook/copy login.
-- ADM-28 — reservasi slug.
+- ✅ ADM-28 — reservasi slug (create atomik → 409 `slug_taken`).
 
 ---
 

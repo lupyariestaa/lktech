@@ -49,7 +49,7 @@
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (2026-10-27):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **`ADM-28` race slug produk/proyek selesai kode (2026-10-27):** create atomik `create()` → 409 `slug_taken`. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
+> 🎯 **TASK AKTIF (2026-10-27):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **`ADM-28` race slug produk/proyek selesai kode (2026-10-27):** create atomik `create()` → 409 `slug_taken`. **`ADM-18` broadcast email selesai kode (2026-10-27):** cursor batch anti-duplikat + tombol “lanjutkan batch”. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, uji broadcast batch, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -159,6 +159,21 @@
 **Catatan:** `expectedVersion`/optimistic concurrency tetap **di luar cakupan** ADM-28 (dilacak sebagai `ADM-11` — lebih besar & lintas-modul).
 
 **Sisa manual (owner):** buat produk/proyek baru dengan slug yang sudah ada → pastikan server menolak (409) alih-alih menimpa.
+
+---
+
+## 📨 SESI INI — Broadcast Email: Cursor Batch Anti-Duplikat (`ADM-18`) — SELESAI (kode, 2026-10-27)
+
+**Status: ✅ SELESAI (kode).** Commit `627197a`. Menutup `ADM-18` (broadcast tanpa cursor batch → risiko email ganda). Gate: `test:broadcast-batch` (**13**) · unit **859/859** · `tsc` ✅ · ESLint ✅ · `build` ✅.
+
+- **Masalah lama:** `sendBroadcast` memotong daftar ke 200 penerima sendiri; bila segmen >200, admin harus "kirim ulang ke segmen yang sama" → **penerima yang sudah terkirim menerima lagi** (duplikat + reputasi domain rusak).
+- **Perbaikan (cursor batch berbasis email):** segmen dipecah jadi batch ≤ `BROADCAST_MAX_PER_RUN` (200). Batch berikutnya **hanya berisi email `> kursor`**, jadi penerima yang sudah diproses tak pernah dikirim ulang (monoton). Helper murni `src/lib/broadcast-batch-pure.ts` (`nextBroadcastBatch`, `normalizeBroadcastCursor`).
+- **Alur:** `resolveSegmentEmails` mengurutkan email naik (kursor stabil) → route memilih jendela via `nextBroadcastBatch` & mengembalikan `cursor`/`done`/`remaining`/`total` → UI menyimpan kursor, memakai **key idempotency baru per batch**, dan menampilkan tombol **“Lanjutkan (sisa N)”** yang tidak mengirim ulang. Jika batch gagal, kursor **tidak** maju → retry memakai key & kursor sama (aman). `email-broadcast` tak lagi memotong daftar sendiri.
+- **Kuota & rate-limit:** kuota harian direservasi **per batch** (`chunk.batch.length`); kelanjutan memakai bucket rate-limit terpisah (`broadcast-continue`, limit lebih longgar) karena tiap batch tetap dibatasi kursor + kuota.
+- **Tes:** `scripts/broadcast-batch.test.ts` (`test:broadcast-batch`, 13) — logika murni (kursor, lanjutan tanpa tumpang tindih, penerima baru tak dikirim ulang, daftar tak terurut) + wiring.
+- **Di luar cakupan (backlog):** queue/background job penuh + status per penerima (retry otomatis server-side). Increment ini menutup risiko utama tanpa infrastruktur queue.
+
+**Sisa manual (owner):** buat segmen >200 penerima di `/admin/broadcast`, kirim, lalu tekan “Lanjutkan” → pastikan penerima batch pertama tidak menerima email kedua kali.
 
 ---
 
