@@ -49,7 +49,7 @@
 >
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
-> 🎯 **TASK AKTIF (2026-10-27):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **`ADM-28` race slug produk/proyek selesai kode (2026-10-27):** create atomik `create()` → 409 `slug_taken`. **`ADM-18` broadcast email selesai kode (2026-10-27):** cursor batch anti-duplikat + tombol “lanjutkan batch”. **`ADM-26` matrix otorisasi route admin selesai kode (2026-10-27):** sweep statis 43 route (setiap handler wajib guard) + matrix role/re-auth (`test:admin-authz`). **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, uji broadcast batch, tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
+> 🎯 **TASK AKTIF (2026-10-27):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **`ADM-28` race slug produk/proyek selesai kode (2026-10-27):** create atomik `create()` → 409 `slug_taken`. **`ADM-18` broadcast email selesai kode (2026-10-27):** cursor batch anti-duplikat + tombol “lanjutkan batch”. **`ADM-26` matrix otorisasi route admin selesai kode (2026-10-27):** sweep statis 43 route (setiap handler wajib guard) + matrix role/re-auth (`test:admin-authz`). **`ADM-11` optimistic concurrency selesai kode (2026-10-27):** field `version` + `expectedVersion` (transaksi Firestore) untuk settings/content/produk/proyek → 409 `version_conflict`. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, uji broadcast batch, uji konflik ADM-11 (dua tab admin), tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -146,7 +146,23 @@
 
 ---
 
-## 🧪 SESI INI — Matrix Otorisasi Route Admin (`ADM-26`) — SELESAI (kode, 2026-10-27)
+## 🔐 SESI INI — Optimistic Concurrency `version`/`expectedVersion` (`ADM-11`) — SELESAI (kode, 2026-10-27)
+
+**Status: ✅ SELESAI (kode).** Commit `ad30c0e`. Menutup `ADM-11` (tidak ada optimistic concurrency → dua admin saling menimpa). Gate: `test:optimistic-lock` (**15**) · `test:admin-slug` (**7**) · unit **932/932** · `tsc` ✅ · ESLint ✅ · `build` ✅ (203 halaman).
+
+- **Masalah lama:** settings, content, produk, dan proyek disimpan dengan `set(..., { merge: true })`; form admin memuat data sekali → tab lama dapat menimpa perubahan tab baru tanpa peringatan.
+- **Perbaikan:** setiap dokumen menyimpan field `version` (token unik, `newVersionToken()` = `crypto.randomUUID`). Klien mengirim `expectedVersion` (versi yang dimuat terakhir); server menulis dalam **transaksi Firestore** (`writeVersioned`) — baca → cek versi → tulis versi baru — dan menolak bila versi sudah berubah → `VersionConflictError` → HTTP **409** `{ code: "version_conflict", currentVersion }`.
+- **Kompatibel mundur:** `expectedVersion` absen/`null` = TANPA pemeriksaan → impor backup, seed, dan pemanggil lama tetap boleh menulis.
+- **Server:** `readSiteSettingsDoc()`/`readSiteContentDoc()` + `saveSiteSettings`/`saveSiteContent` ber-versi; `saveProduct`/`saveProject` menerima `opts.expectedVersion`; GET admin mengembalikan `version`. Route `settings/content/products/projects` menangkap `VersionConflictError` → 409.
+- **Klien:** `admin-api.ts`/`admin-content-api.ts` mengirim `expectedVersion` & mengembalikan `version`; form settings (kontak/seo/notifikasi/lanjutan), `use-site-content.ts`, dan manager produk/proyek (`editingVersion`) menyimpan versi dari fetch dan mengirim balik saat simpan.
+- **Helper murni:** `src/lib/optimistic-lock-pure.ts` (`checkOptimisticVersion`, `readVersion`, `normalizeExpectedVersion`, `newVersionToken`, `VersionConflictError`) + `src/lib/optimistic-lock.ts` (`writeVersioned` via `db.runTransaction`).
+- **Tes:** `scripts/optimistic-lock.test.ts` (`test:optimistic-lock`, 15) — logika murni + wiring; `test:admin-slug` diperbarui mengikuti kode baru (tetap menguji intent ADM-28 create atomik + 409).
+
+**Sisa manual (owner):** uji dua-tab admin — buka dokumen yang sama di dua tab, simpan di tab A lalu tab B; tab B harus menerima 409 dan diminta muat ulang (tidak menimpa).
+
+---
+
+## 🧪 SESI SEBELUMNYA — Matrix Otorisasi Route Admin (`ADM-26`) — SELESAI (kode, 2026-10-27)
 
 **Status: ✅ SELESAI (kode).** Commit `47627cf`. Menutup `ADM-26` (tidak ada test otorisasi/matrix route admin). Gate: `test:admin-authz` (**58**) · unit **917/917** · `tsc` ✅ · ESLint ✅ · `build` ✅.
 

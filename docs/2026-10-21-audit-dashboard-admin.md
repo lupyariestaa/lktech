@@ -570,11 +570,34 @@ yang memakai definisi “completed”, sehingga keputusan support/CRM salah.
 
 ---
 
-### ADM-11 · 🟡 Sedang · Tidak ada optimistic concurrency; dua admin saling menimpa
+### ADM-11 · 🟡 Sedang · ✅ Selesai kode · Tidak ada optimistic concurrency; dua admin saling menimpa
 
-**Status:** 🟢 Terverifikasi — kode.
+**Status:** 🟢 Terverifikasi — kode (2026-10-27).
 
-**Bukti:**
+**Status implementasi (2026-10-27):**
+
+- Field `version` (token unik, `newVersionToken()` = `crypto.randomUUID`) kini
+  disimpan di setiap dokumen yang dapat diedit admin: `settings`, `content`,
+  produk, dan proyek.
+- Klien mengirim `expectedVersion` (versi yang dimuat terakhir). Server menulis
+  di dalam **transaksi Firestore** (`writeVersioned`) dan menolak bila versi
+  sudah berubah → `VersionConflictError` → HTTP **409**
+  `{ code: "version_conflict", currentVersion }`.
+- `expectedVersion` absen/`null` = TANPA pemeriksaan → kompatibel mundur: impor
+  backup, seed, dan pemanggil lama tetap boleh menulis.
+- GET admin mengembalikan `version`; form/hook menyimpannya dan mengirim balik
+  saat simpan; setelah sukses klien menyimpan versi BARU.
+- Berkas: `src/lib/optimistic-lock-pure.ts`, `src/lib/optimistic-lock.ts`;
+  `src/lib/{settings,site-content,products,projects}.ts`;
+  `src/app/api/admin/{settings,content,products,projects}/route.ts`;
+  `src/lib/{admin-api,admin-content-api}.ts`; form settings +
+  `use-site-content.ts` + `products-manager.tsx`/`projects-manager.tsx`.
+- Tes: `npm run test:optimistic-lock` (15) + pembaruan `test:admin-slug` (7);
+  unit 932/932; `tsc`, ESLint, dan `next build` lulus.
+- **Sisa manual owner:** uji dua-tab admin (buka dokumen yang sama di dua tab,
+  simpan di tab A lalu tab B → tab B harus menerima 409 dan diminta muat ulang).
+
+**Bukti (kondisi sebelum perbaikan):**
 
 - `src/app/api/admin/settings/route.ts:88-101` — `.set(..., { merge: true })`
   dengan `updatedAtISO` informasional; tidak ada versi/`If-Match`.
@@ -1397,7 +1420,7 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
 ### P2 — skala, keandalan, UX inti
 
 - ✅ ADM-10 — metrik user hanya order berstatus berbayar; regression tests tersedia.
-- ADM-11 — version/If-Match untuk settings/content/produk/proyek.
+- ✅ ADM-11 — version/expectedVersion (optimistic concurrency) untuk settings/content/produk/proyek; sisa uji dua-tab manual.
 - 🟡 ADM-15 — paging user + cached summary; sisa search index/backfill dan ekspor server.
 - 🟡 ADM-16 — paging lead + dashboard summary; sisa filter server-side.
 - 🟡 ADM-17 — review aggregate + audit order; sisa paging newsletter/media dan filter audit cap.
