@@ -13,6 +13,7 @@ import type {
 import { unstable_cache } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { normalizeRatingSummary } from "@/lib/review-types";
+import { isAlreadyExistsError, SlugTakenError } from "@/lib/slug-reserve-pure";
 
 /** Normalisasi `ratingSummary` produk (FASE R) — re-export tipe aman-klien. */
 function normalizeProductRatingSummary(
@@ -408,10 +409,19 @@ export async function getStoredProducts(): Promise<StoredProduct[]> {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Menyimpan (buat/perbarui) produk berdasarkan slug. */
+/**
+ * Menyimpan (buat/perbarui) produk berdasarkan slug.
+ *
+ * `opts.create` (ADM-28): saat **membuat produk baru**, pakai `create()` atomik
+ * Firestore yang menolak bila dokumen sudah ada → `SlugTakenError` (route
+ * memetakan ke 409), sehingga dua admin tak bisa menimpa produk ber-slug sama.
+ * Tanpa opsi ini (atau `create: false`), perilaku lama `set({ merge: true })`
+ * dipertahankan untuk pembaruan.
+ */
 export async function saveProduct(
   product: Product,
   updatedBy: string,
+  opts?: { create?: boolean },
 ): Promise<void> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
@@ -468,7 +478,22 @@ export async function saveProduct(
     if (payload[key] === undefined) delete payload[key];
   }
 
-  await db.collection(COLLECTION).doc(product.slug).set(payload, { merge: true });
+  const ref = db.collection(COLLECTION).doc(product.slug);
+  if (opts?.create) {
+    // Reservasi slug secara ATOMIK: gagal bila dokumen sudah ada (ADM-28).
+    try {
+      await ref.create(payload);
+    } catch (err) {
+      if (isAlreadyExistsError(err)) throw new SlugTakenError(product.slug);
+      // Fallback: sebagian SDK membungkus kode berbeda — verifikasi eksistensi.
+      const snap = await ref.get().catch(() => null);
+      if (snap?.exists) throw new SlugTakenError(product.slug);
+      throw err;
+    }
+    return;
+  }
+
+  await ref.set(payload, { merge: true });
 }
 
 export async function deleteProductBySlug(slug: string): Promise<void> {

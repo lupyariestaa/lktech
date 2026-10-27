@@ -538,10 +538,14 @@ export async function fetchProjects(): Promise<StoredProject[]> {
   return data.projects;
 }
 
-export async function saveProject(project: Project) {
+export async function saveProject(
+  project: Project,
+  opts?: { create?: boolean },
+) {
   return adminFetch<{ ok: boolean; project: Project }>("/api/admin/projects", {
     method: "POST",
-    body: JSON.stringify(project),
+    // ADM-28: `create: true` memicu reservasi slug atomik di server.
+    body: JSON.stringify({ ...project, create: opts?.create === true }),
   });
 }
 
@@ -559,10 +563,14 @@ export async function fetchProducts(): Promise<StoredProduct[]> {
   return data.products;
 }
 
-export async function saveProduct(product: Product) {
+export async function saveProduct(
+  product: Product,
+  opts?: { create?: boolean },
+) {
   return adminFetch<{ ok: boolean; product: Product }>("/api/admin/products", {
     method: "POST",
-    body: JSON.stringify(product),
+    // ADM-28: `create: true` memicu reservasi slug atomik di server.
+    body: JSON.stringify({ ...product, create: opts?.create === true }),
   });
 }
 

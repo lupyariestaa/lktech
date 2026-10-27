@@ -12,6 +12,7 @@ import { projectSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { SlugTakenError } from "@/lib/slug-reserve-pure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +48,12 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
+
+  // ADM-28: intent "buat proyek baru" dari klien → reservasi slug atomik.
+  const wantsCreate =
+    typeof rawBody === "object" &&
+    rawBody !== null &&
+    (rawBody as Record<string, unknown>).create === true;
 
   const parsed = projectSchema.safeParse(rawBody);
   if (!parsed.success) {
@@ -86,13 +93,12 @@ export async function POST(req: Request) {
   };
 
   try {
-    const existed = await isSlugTaken(slug);
-    await saveProject(project, check.email);
+    await saveProject(project, check.email, { create: wantsCreate });
     await recordAdminAudit({
       action: "project.save",
       actor: check.email,
       target: slug,
-      meta: { title, created: !existed },
+      meta: { title, created: wantsCreate },
     });
     revalidateTag(CACHE_TAGS.projects, REVALIDATE_NOW);
     revalidatePath("/portofolio");
@@ -100,6 +106,12 @@ export async function POST(req: Request) {
     revalidatePath("/");
     return NextResponse.json({ ok: true, project });
   } catch (err) {
+    if (err instanceof SlugTakenError) {
+      return NextResponse.json(
+        { error: err.message, code: "slug_taken" },
+        { status: 409 },
+      );
+    }
     console.error("[api/admin/projects] POST gagal:", err);
     return NextResponse.json(
       { error: "Gagal menyimpan proyek." },

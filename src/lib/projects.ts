@@ -2,6 +2,7 @@ import { PROJECTS as DEFAULT_PROJECTS } from "@/lib/content";
 import { unstable_cache } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import type { Project, ProjectMetric, StoredProject } from "@/lib/project-types";
+import { isAlreadyExistsError, SlugTakenError } from "@/lib/slug-reserve-pure";
 
 export type { Project, StoredProject, ProjectMetric };
 
@@ -117,10 +118,17 @@ export async function getStoredProjects(): Promise<StoredProject[]> {
     .sort(sortProjects);
 }
 
-/** Menyimpan (buat/perbarui) proyek berdasarkan slug. */
+/**
+ * Menyimpan (buat/perbarui) proyek berdasarkan slug.
+ *
+ * `opts.create` (ADM-28): saat **membuat proyek baru**, pakai `create()` atomik
+ * yang menolak bila slug sudah dipakai (`SlugTakenError` → 409). Tanpa opsi ini
+ * perilaku lama `set({ merge: true })` dipertahankan untuk pembaruan.
+ */
 export async function saveProject(
   project: Project,
   updatedBy: string,
+  opts?: { create?: boolean },
 ): Promise<void> {
   const { getAdminDb } = await import("@/lib/firebase-admin");
   const db = getAdminDb();
@@ -132,10 +140,21 @@ export async function saveProject(
     updatedBy,
   };
 
-  await db
-    .collection(COLLECTION)
-    .doc(project.slug)
-    .set(payload, { merge: true });
+  const ref = db.collection(COLLECTION).doc(project.slug);
+  if (opts?.create) {
+    // Reservasi slug secara ATOMIK: gagal bila dokumen sudah ada (ADM-28).
+    try {
+      await ref.create(payload);
+    } catch (err) {
+      if (isAlreadyExistsError(err)) throw new SlugTakenError(project.slug);
+      const snap = await ref.get().catch(() => null);
+      if (snap?.exists) throw new SlugTakenError(project.slug);
+      throw err;
+    }
+    return;
+  }
+
+  await ref.set(payload, { merge: true });
 }
 
 /** Menghapus proyek berdasarkan slug. */

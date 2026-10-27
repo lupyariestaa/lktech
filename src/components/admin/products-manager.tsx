@@ -233,7 +233,7 @@ export function ProductsManager() {
     setSaving(true);
     setError(null);
     try {
-      await saveProduct(editing);
+      await saveProduct(editing, { create: isNew });
       setEditing(null);
       await load({ silent: true });
       toast.success(isNew ? "Produk dibuat." : "Produk diperbarui.");

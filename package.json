@@ -32,6 +32,7 @@
     "test:admin-session": "node --experimental-strip-types --test scripts/admin-session-wiring.test.ts",
     "test:admin-security": "node --experimental-strip-types --test scripts/admin-rbac-session.test.ts",
     "test:admin-p1": "node --experimental-strip-types --test scripts/admin-p1.test.ts",
+    "test:admin-slug": "node --experimental-strip-types --test scripts/admin-slug.test.ts",
     "test:csp": "node --experimental-strip-types --test scripts/csp-report.test.ts",
     "test:resend-webhook": "node --experimental-strip-types --test scripts/resend-webhook.test.ts",
     "test:email-preview": "node --experimental-strip-types --test scripts/email-preview.test.ts",

@@ -164,7 +164,7 @@ export function ProjectsManager() {
     setSaving(true);
     setError(null);
     try {
-      await saveProject({ ...editing, slug, year });
+      await saveProject({ ...editing, slug, year }, { create: isNew });
       setEditing(null);
       await load({ silent: true });
       toast.success(isNew ? "Proyek dibuat." : "Proyek diperbarui.");

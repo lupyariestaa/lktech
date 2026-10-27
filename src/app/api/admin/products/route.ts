@@ -16,6 +16,7 @@ import { productSchema } from "@/lib/api-schemas";
 import { sanitizeSlug } from "@/lib/utils";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { guardAdminMutation } from "@/lib/admin-rate-limit";
+import { SlugTakenError } from "@/lib/slug-reserve-pure";
 import { CACHE_TAGS, REVALIDATE_NOW } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
@@ -53,6 +54,12 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
+
+  // ADM-28: intent "buat produk baru" dari klien → reservasi slug atomik.
+  const wantsCreate =
+    typeof rawBody === "object" &&
+    rawBody !== null &&
+    (rawBody as Record<string, unknown>).create === true;
 
   const parsed = productSchema.safeParse(rawBody);
   if (!parsed.success) {
@@ -174,7 +181,7 @@ export async function POST(req: Request) {
   };
 
   try {
-    await saveProduct(product, check.email);
+    await saveProduct(product, check.email, { create: wantsCreate });
     revalidateTag(CACHE_TAGS.products, REVALIDATE_NOW);
     revalidatePath("/produk");
     revalidatePath(`/produk/${product.slug}`);
@@ -186,6 +193,12 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, product });
   } catch (err) {
+    if (err instanceof SlugTakenError) {
+      return NextResponse.json(
+        { error: err.message, code: "slug_taken" },
+        { status: 409 },
+      );
+    }
     console.error("[api/admin/products] POST gagal:", err);
     return NextResponse.json({ error: "Gagal menyimpan produk." }, { status: 500 });
   }
