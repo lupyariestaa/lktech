@@ -34,6 +34,7 @@
     "test:admin-p1": "node --experimental-strip-types --test scripts/admin-p1.test.ts",
     "test:admin-slug": "node --experimental-strip-types --test scripts/admin-slug.test.ts",
     "test:broadcast-batch": "node --experimental-strip-types --test scripts/broadcast-batch.test.ts",
+    "test:admin-authz": "node --experimental-strip-types --test scripts/admin-authz.test.ts",
     "test:csp": "node --experimental-strip-types --test scripts/csp-report.test.ts",
     "test:resend-webhook": "node --experimental-strip-types --test scripts/resend-webhook.test.ts",
     "test:email-preview": "node --experimental-strip-types --test scripts/email-preview.test.ts",
