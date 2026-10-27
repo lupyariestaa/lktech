@@ -1421,6 +1421,7 @@ Inisiatif Tema 3 (lanjutan). Dokumen fase: `docs/2026-10-05-laporan-crm-mini.md`
 - **Unduhan produk digital:** ✅ aktif (`DOWNLOAD_TOKEN_SECRET` terisi, / fallback `MAYAR_API_KEY`).
 - **Email ke pembeli:** ⚠️ hanya ke email terdaftar Resend (`lupyariestaa@gmail.com`) — domain belum terverifikasi. **SKIP** sengaja (butuh beli domain). Email ke pembeli umum = 403, dilog, **tidak menggagalkan order**.
 - **Webhook:** ✅ `POST /api/webhooks/mayar` menerima `payment.received` (log Vercel terbukti `POST 200`).
+- **Catatan regresi Mayar (2026-10-27):** Jangan memetakan `data.id` menjadi ID invoice; Mayar mendokumentasikannya sebagai ID webhook. Webhook kini hanya mencocokkan `invoiceId` jika field invoice eksplisit hadir, tetapi nominal exact, order correlation, token webhook (konfigurasi production fail-closed), dan status payable tetap diwajibkan. Dashboard membedakan nominal mismatch dari isu bukti invoice/transaksi. Pesanan lama yang pernah ditolak **tidak otomatis direkonsiliasi**; verifikasi dan proses ulang webhook/provider atau rekonsiliasi terkontrol tetap diperlukan. Tes: `npm run test:mayar-webhook`, `npm run test:orders`.
 
 ### Cek cepat (endpoint diagnostik)
 ```
