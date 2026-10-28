@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
-import { isMayarConfigured, getMayarMode } from "@/lib/mayar";
+import { getMayarApiHost, isMayarConfigured, getMayarMode } from "@/lib/mayar";
 import { isDownloadConfigured } from "@/lib/downloads";
 import { isBuyerEmailConfigured } from "@/lib/email-order";
 import { webhookTokenConfiguration } from "@/lib/webhook-security-pure";
@@ -29,6 +29,7 @@ export async function GET(req: Request) {
       mayar: {
         configured: isMayarConfigured(),
         mode: getMayarMode(),
+        apiHost: getMayarApiHost(),
         webhookTokenSet: Boolean(process.env.MAYAR_WEBHOOK_TOKEN?.trim()),
         webhookSecure: webhookTokenConfiguration(process.env.NODE_ENV, process.env.MAYAR_WEBHOOK_TOKEN).secure,
       },

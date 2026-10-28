@@ -19,7 +19,7 @@ import {
 import { recordOrderEmailStatus, logOrderEmail } from "@/lib/email-status";
 import { allocateDiscountByItem, fulfillmentTypeForCategory, summarizeFulfillment } from "@/lib/order-fulfillment";
 import { notifyOrderAwaitingConfirmation } from "@/lib/order-payment";
-import { createInvoice, isMayarConfigured, getMayarMode } from "@/lib/mayar";
+import { createInvoice, getMayarApiHost, getMayarErrorStatus, isMayarConfigured, getMayarMode } from "@/lib/mayar";
 import { obs } from "@/lib/observability";
 import type { CheckoutInput } from "@/lib/order-schema";
 import type { InvoiceRecovery, OrderCoupon, OrderItem, OrderPayment } from "@/lib/order-types";
@@ -350,7 +350,14 @@ export async function performCheckout(
         await recordInvoiceRecovery(order.id, { ...recovery, state: "linked", invoiceId: invoice.invoiceId, transactionId: invoice.transactionId, payUrl: invoice.payUrl, expiresAt: payment.expiresAt, updatedAt: new Date().toISOString() });
         order = { ...order, payment };
       } catch (payErr) {
-        console.error("[checkout] gagal membuat invoice Mayar:", payErr);
+        const mayarStatus = getMayarErrorStatus(payErr);
+        console.error("[checkout] gagal membuat invoice Mayar:", {
+          orderId: order.id,
+          mode: getMayarMode(),
+          apiHost: getMayarApiHost(),
+          status: mayarStatus ?? null,
+          error: payErr instanceof Error ? payErr.message : "unknown_error",
+        });
         const partialInvoice = payment.invoiceId
           ? {
               invoiceId: payment.invoiceId,
@@ -370,8 +377,9 @@ export async function performCheckout(
         } catch (recoveryErr) {
           console.error("[checkout] gagal mencatat invoice orphan:", order.id, recoveryErr);
         }
-        paymentWarning =
-          `Status invoice otomatis sedang diperiksa. Jangan membuat pembayaran ulang; hubungi admin dengan kode pesanan ${order.id}.`;
+        paymentWarning = mayarStatus === 401 || mayarStatus === 403
+          ? `Invoice Mayar belum berhasil dibuat (HTTP ${mayarStatus}, mode ${getMayarMode()}). Jangan membayar atau membuat invoice ulang dulu; hubungi admin dengan kode pesanan ${order.id}.`
+          : `Invoice Mayar belum berhasil dibuat. Jangan membayar atau membuat invoice ulang dulu; hubungi admin dengan kode pesanan ${order.id}.`;
       }
     } else if (!isMayarConfigured()) {
       paymentWarning =

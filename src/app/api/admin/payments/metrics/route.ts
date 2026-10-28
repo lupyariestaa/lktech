@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getPaymentMetrics } from "@/lib/payment-analytics";
 import { clampDays } from "@/lib/payment-metrics-pure";
-import { isMayarConfigured, getMayarMode } from "@/lib/mayar";
+import { getMayarApiHost, isMayarConfigured, getMayarMode } from "@/lib/mayar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +25,7 @@ export async function GET(req: Request) {
       health: {
         configured: isMayarConfigured(),
         mode: getMayarMode(),
+        apiHost: getMayarApiHost(),
         webhookTokenSet: Boolean(process.env.MAYAR_WEBHOOK_TOKEN?.trim()),
       },
       days,

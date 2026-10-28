@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isMayarConfigured, getMayarMode } from "@/lib/mayar";
+import { getMayarApiHost, isMayarConfigured, getMayarMode } from "@/lib/mayar";
 import { isDownloadConfigured } from "@/lib/downloads";
 import { isBuyerEmailConfigured } from "@/lib/email-order";
 import { webhookTokenConfiguration } from "@/lib/webhook-security-pure";
@@ -19,6 +19,7 @@ export function GET() {
       /** true = MAYAR_API_KEY terisi → invoice otomatis aktif. */
       configured: isMayarConfigured(),
       mode: getMayarMode(),
+      apiHost: getMayarApiHost(),
       /** true = verifikasi token webhook diaktifkan. */
       webhookTokenSet: Boolean(process.env.MAYAR_WEBHOOK_TOKEN?.trim()),
       webhookSecure: webhookTokenConfiguration(process.env.NODE_ENV, process.env.MAYAR_WEBHOOK_TOKEN).secure,

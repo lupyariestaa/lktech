@@ -65,7 +65,8 @@ export function CartView({ promoCode }: { promoCode?: string }) {
   /** Jenis hasil checkout terakhir, untuk pesan penutup yang tepat. */
   const [doneKind, setDoneKind] = useState<"bayar" | "jasa" | "wa">("wa");
   /** Alasan server saat checkout jatuh ke fallback WhatsApp (bila ada). */
-  const [fallbackWarning, setFallbackWarning] = useState<string | null>(null);
+  const [checkoutWarning, setCheckoutWarning] = useState<string | null>(null);
+  const [checkoutOrderCode, setCheckoutOrderCode] = useState<string | null>(null);
 
   // FASE P5: deteksi bila pembeli datang dari email pengingat keranjang
   // (`/keranjang?ref=reminder`) untuk mengukur pemulihan.
@@ -216,6 +217,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
         user.displayName ?? "",
         appliedCoupon?.code,
       );
+      if (warning) setCheckoutOrderCode(order.id);
 
       trackCheckout({
         items: items.reduce((n, it) => n + it.qty, 0),
@@ -273,7 +275,7 @@ export function CartView({ promoCode }: { promoCode?: string }) {
 
       // Fallback (gateway belum aktif / gagal) → alur WhatsApp seperti semula.
       // `warning` dari server menjelaskan ALASANNYA (agar tidak membingungkan).
-      if (warning) setFallbackWarning(warning);
+      if (warning) setCheckoutWarning(warning);
       const url = waLink(order.message, order.whatsapp);
       const opened = window.open(url, "_blank", "noopener,noreferrer");
       if (!opened) {
@@ -309,9 +311,11 @@ export function CartView({ promoCode }: { promoCode?: string }) {
               body: "Terima kasih! Pesanan jasa Anda kami terima dan akan segera dikonfirmasi. Tim kami akan menghubungi Anda untuk langkah selanjutnya. Rincian juga kami kirim ke email Anda.",
             }
           : {
-              title: "Pesanan dikirim",
-              body: "Pesanan Anda sudah diteruskan ke WhatsApp kami. Lanjutkan percakapan di WhatsApp untuk menyelesaikan pembayaran. Rincian pesanan juga kami kirimkan ke email Anda.",
-            };
+            title: checkoutWarning ? "Pesanan tersimpan, invoice belum dibuat" : "Pesanan dikirim",
+            body: checkoutWarning
+              ? `Pesanan ${checkoutOrderCode ?? "Anda"} sudah tersimpan, tetapi invoice Mayar belum berhasil dibuat. Jangan bayar dulu; hubungi admin dengan kode pesanan tersebut.`
+              : "Pesanan Anda sudah diteruskan ke WhatsApp kami. Lanjutkan percakapan di WhatsApp untuk menyelesaikan pembayaran. Rincian pesanan juga kami kirimkan ke email Anda.",
+          };
     return (
       <div className="mx-auto max-w-2xl px-6 py-28 text-center">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-emerald-50 text-emerald-600">
@@ -319,9 +323,9 @@ export function CartView({ promoCode }: { promoCode?: string }) {
         </span>
         <h1 className="mt-6 text-2xl font-bold text-secondary">{copy.title}</h1>
         <p className="mt-2 text-sm text-muted">{copy.body}</p>
-        {doneKind === "wa" && fallbackWarning && (
+        {checkoutWarning && (
           <p className="mx-auto mt-4 max-w-md rounded-2xl bg-amber-50 px-4 py-3 text-xs text-amber-700">
-            {fallbackWarning}
+            {checkoutWarning} {checkoutOrderCode ? `Kode pesanan: ${checkoutOrderCode}.` : ""}
           </p>
         )}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

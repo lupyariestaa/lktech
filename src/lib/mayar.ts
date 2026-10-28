@@ -52,6 +52,20 @@ function getBaseUrl(): string {
   return DEFAULT_BASE_URLS[getMayarMode()];
 }
 
+/** Host Mayar aktif (aman untuk diagnostik; tidak memuat kredensial/path). */
+export function getMayarApiHost(): string {
+  try {
+    return new URL(getBaseUrl()).host;
+  } catch {
+    return "unknown";
+  }
+}
+
+/** Status HTTP Mayar tanpa menampilkan body/provider detail ke pembeli. */
+export function getMayarErrorStatus(error: unknown): number | undefined {
+  return error instanceof MayarError ? error.status : undefined;
+}
+
 /** Berapa menit invoice berlaku sebelum kedaluwarsa (default 24 jam). */
 export function getInvoiceTtlMinutes(): number {
   const raw = Number(process.env.MAYAR_INVOICE_TTL_MINUTES);
@@ -210,9 +224,10 @@ export async function getInvoice(invoiceId: string): Promise<InvoiceDetail> {
 }
 
 /**
- * Uji koneksi (PING) ke Mayar — **read-only, tanpa transaksi berbiaya**.
- * Mengambil 1 daftar invoice; 200 → OK, 401/403 → kredensial salah, error lain →
- * detail. Tidak pernah melempar (mengembalikan `{ ok, detail }`).
+ * Uji koneksi dan izin tulis Mayar tanpa membuat invoice.
+ * GET memeriksa autentikasi dasar. POST dengan body kosong sengaja invalid,
+ * sehingga API hanya memvalidasi akses endpoint tanpa membuat transaksi.
+ * Tidak pernah melempar (mengembalikan `{ ok, detail }`).
  */
 export async function pingMayar(): Promise<{ ok: boolean; detail: string }> {
   if (!isMayarConfigured()) {
@@ -227,11 +242,49 @@ export async function pingMayar(): Promise<{ ok: boolean; detail: string }> {
       },
       cache: "no-store",
     });
-    if (res.ok) return { ok: true, detail: `Ping OK (${getMayarMode()}).` };
     if (res.status === 401 || res.status === 403) {
-      return { ok: false, detail: "Kredensial Mayar ditolak (401/403)." };
+      return { ok: false, detail: `Mayar menolak API key untuk mode ${getMayarMode()} (HTTP ${res.status}). Periksa API key dari lingkungan yang sama.` };
     }
-    return { ok: false, detail: `Mayar merespons HTTP ${res.status}.` };
+    if (!res.ok) return { ok: false, detail: `Tes koneksi Mayar gagal (HTTP ${res.status}).` };
+
+    // Body kosong tidak memenuhi schema invoice. 400 berarti kredensial
+    // diterima dan endpoint POST terjangkau; invoice tidak mungkin tercipta.
+    let writeRes: Response;
+    try {
+      writeRes = await fetch(`${getBaseUrl()}/invoices/create`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.MAYAR_API_KEY?.trim()}`,
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+        cache: "no-store",
+      });
+    } catch (err) {
+      return {
+        ok: false,
+        detail: `Gagal menguji izin POST ke Mayar (${getMayarMode()}): ${err instanceof Error ? err.message : "network error"}`,
+      };
+    }
+    if (writeRes.status === 401 || writeRes.status === 403) {
+      return {
+        ok: false,
+        detail: `API key dapat membaca Mayar tetapi tidak diizinkan membuat invoice (HTTP ${writeRes.status}). Pastikan key Read & Write dari lingkungan ${getMayarMode()} dan redeploy Production.`,
+      };
+    }
+    if (writeRes.status === 400) {
+      return {
+        ok: true,
+        detail: `Tes akses berhasil (${getMayarMode()}): GET diterima dan POST ditolak sebagai body tidak valid, sesuai harapan. Tidak ada invoice yang dibuat.`,
+      };
+    }
+    if (writeRes.ok) {
+      return {
+        ok: false,
+        detail: `Mayar menerima tes POST kosong tanpa error (HTTP ${writeRes.status}); mohon jangan gunakan tes ini untuk checkout sampai respons diverifikasi.`,
+      };
+    }
+    return { ok: false, detail: `Tes izin membuat invoice Mayar merespons HTTP ${writeRes.status}.` };
   } catch (err) {
     return {
       ok: false,
