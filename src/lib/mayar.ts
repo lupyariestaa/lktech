@@ -407,3 +407,44 @@ export async function pingMayar(): Promise<{ ok: boolean; detail: string }> {
     };
   }
 }
+
+/**
+ * Mendaftarkan URL webhook ke Mayar (`POST /webhooks/update`). Aksi admin.
+ *
+ * Tujuan: menjamin token pada URL webhook yang tersimpan di Mayar SAMA dengan
+ * `MAYAR_WEBHOOK_TOKEN` server, sehingga verifikasi webhook tidak lagi ditolak.
+ * `urlHook` disusun server-side (bukan dari input pengguna) agar tidak ada
+ * kesalahan penyalinan token.
+ *
+ * Respons endpoint ini (`{statusCode, messages}`) tidak memuat `data`, jadi
+ * tidak memakai `mayarFetch` yang mensyaratkan `data`.
+ */
+export async function registerMayarWebhookUrl(urlHook: string): Promise<void> {
+  const apiKey = process.env.MAYAR_API_KEY?.trim();
+  if (!apiKey) {
+    throw new MayarError("Mayar belum dikonfigurasi (MAYAR_API_KEY kosong).");
+  }
+  const res = await fetch(`${getBaseUrl()}/webhooks/update`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ urlHook }),
+    cache: "no-store",
+  });
+  const text = await res.text();
+  let messages = "";
+  try {
+    const json = text ? (JSON.parse(text) as { messages?: string }) : {};
+    messages = typeof json?.messages === "string" ? json.messages : "";
+  } catch {
+    /* abaikan body non-JSON */
+  }
+  if (!res.ok) {
+    throw new MayarError(
+      `Mayar gagal memperbarui URL webhook (HTTP ${res.status})${messages ? `: ${messages}` : "."}`,
+      res.status,
+    );
+  }
+}

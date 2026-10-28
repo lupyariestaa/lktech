@@ -10,6 +10,7 @@ import { extractMayarPaymentEvent, validateMayarPayment } from "@/lib/mayar-webh
 import { FieldValue } from "firebase-admin/firestore";
 import { timingSafeEqual } from "node:crypto";
 import { webhookTokenConfiguration } from "@/lib/webhook-security-pure";
+import { normalizeTokenValue } from "@/lib/webhook-url-pure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -214,14 +215,8 @@ function verifyToken(req: Request): boolean {
     req.headers.get("x-webhook-token") ?? "",
   ].filter(Boolean);
 
-  // Toleran terhadap perbedaan URL-encoding (mis. token di-decode gateway).
-  const normalize = (s: string) => {
-    try {
-      return decodeURIComponent(s).trim();
-    } catch {
-      return s.trim();
-    }
-  };
+  // Toleran terhadap perbedaan URL-encoding & tanda kutip yang ikut tersalin.
+  const normalize = normalizeTokenValue;
   const expected = Buffer.from(normalize(secret));
   return candidates.some((candidate) => {
     const received = Buffer.from(normalize(candidate));

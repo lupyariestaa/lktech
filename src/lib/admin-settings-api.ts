@@ -143,6 +143,10 @@ export type MayarWebhookHistoryResult = {
   configured: boolean;
   mode?: string;
   apiHost?: string;
+  /** Kecocokan token pada URL webhook terdaftar vs token server (null = tak ada URL). */
+  tokenMatches?: boolean | null;
+  /** URL webhook terdaftar dengan token disamarkan. */
+  lastDestination?: string | null;
   deliveries: MayarWebhookDeliveryItem[];
   error?: string;
 };
@@ -153,6 +157,19 @@ export async function fetchMayarWebhookHistory(
   return adminFetch<MayarWebhookHistoryResult>(
     `/api/admin/payments/webhook-history?limit=${limit}`,
   );
+}
+
+/**
+ * Sinkronkan URL webhook ke Mayar (`/webhooks/update`) memakai token server.
+ * Menghilangkan penyebab umum webhook ditolak: token URL ≠ token server.
+ */
+export async function syncMayarWebhookUrl(): Promise<{
+  ok: boolean;
+  mode?: string;
+  url?: string;
+  message?: string;
+}> {
+  return adminFetch("/api/admin/payments/webhook", { method: "POST" });
 }
 
 /** Bersihkan cache internal (fase S6). */

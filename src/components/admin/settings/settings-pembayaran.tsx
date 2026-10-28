@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Send,
 } from "lucide-react";
-import { fetchPaymentMetrics, fetchMayarWebhookHistory, testIntegration } from "@/lib/admin-settings-api";
+import { fetchPaymentMetrics, fetchMayarWebhookHistory, syncMayarWebhookUrl, testIntegration } from "@/lib/admin-settings-api";
 import type { MayarWebhookHistoryResult } from "@/lib/admin-settings-api";
 import { formatRupiah, formatDateTime } from "@/lib/format";
 import { useToast } from "@/components/admin/toast";
@@ -22,6 +22,7 @@ export function SettingsPembayaran() {
   const [pinging, setPinging] = useState(false);
   const [hooks, setHooks] = useState<MayarWebhookHistoryResult | null>(null);
   const [loadingHooks, setLoadingHooks] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const load = useCallback(() => {
     (async () => {
@@ -69,6 +70,29 @@ export function SettingsPembayaran() {
       setPinging(false);
     }
   };
+
+  const syncWebhookUrl = useCallback(() => {
+    (async () => {
+      setSyncing(true);
+      try {
+        const res = await syncMayarWebhookUrl();
+        toast.success(res.message ?? "URL webhook disinkronkan ke Mayar.");
+        setLoadingHooks(true);
+        try {
+          setHooks(await fetchMayarWebhookHistory(15));
+        } finally {
+          setLoadingHooks(false);
+        }
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Gagal menyinkronkan URL webhook.",
+        );
+      } finally {
+        setSyncing(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const h = data?.health;
   const m = data?.metrics;
@@ -150,19 +174,36 @@ export function SettingsPembayaran() {
           <h2 className="flex items-center gap-1.5 text-sm font-bold text-secondary">
             <AlertTriangle className="h-4 w-4" /> Riwayat Webhook Mayar
           </h2>
-          <button
-            type="button"
-            onClick={loadHooks}
-            disabled={loadingHooks}
-            className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary-50 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-100 disabled:opacity-60"
-          >
-            {loadingHooks ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
+          <div className="flex flex-wrap items-center gap-2">
+            {hooks?.configured && (
+              <button
+                type="button"
+                onClick={syncWebhookUrl}
+                disabled={syncing}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
+              >
+                {syncing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                )}
+                Sinkronkan URL ke Mayar
+              </button>
             )}
-            Muat riwayat webhook
-          </button>
+            <button
+              type="button"
+              onClick={loadHooks}
+              disabled={loadingHooks}
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary-50 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-100 disabled:opacity-60"
+            >
+              {loadingHooks ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Muat riwayat webhook
+            </button>
+          </div>
         </div>
         <p className="mt-2 text-xs text-muted">
           Menampilkan pengiriman terbaru dari Mayar beserta balasan endpoint kita.
@@ -170,6 +211,28 @@ export function SettingsPembayaran() {
           apakah event <span className="font-mono">payment.received</span> muncul di
           sini dan balasannya bukan 401.
         </p>
+        {hooks?.configured && hooks.tokenMatches === false && (
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
+            <p className="font-semibold">Token webhook tidak cocok</p>
+            <p className="mt-1">
+              Token pada URL yang terdaftar di Mayar berbeda dengan{" "}
+              <span className="font-mono">MAYAR_WEBHOOK_TOKEN</span> server. Karena
+              itu webhook ditolak (401) dan pesanan tidak berubah menjadi Dibayar.
+              Klik “Sinkronkan URL ke Mayar” agar URL didaftarkan ulang memakai
+              token server.
+            </p>
+            {hooks.lastDestination && (
+              <p className="mt-1 font-mono break-all">
+                Terdaftar: {hooks.lastDestination}
+              </p>
+            )}
+          </div>
+        )}
+        {hooks?.configured && hooks.tokenMatches === true && (
+          <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700">
+            Token pada URL webhook sudah cocok dengan token server.
+          </div>
+        )}
         {hooks === null ? (
           <p className="mt-4 text-sm text-muted">
             Klik “Muat riwayat webhook” untuk melihat pengiriman terakhir.

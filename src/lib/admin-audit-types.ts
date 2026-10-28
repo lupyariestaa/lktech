@@ -44,6 +44,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   "settings.backup_export",
   "settings.cache_clear",
   "settings.maintenance",
+  "payment.webhook.sync",
   "seo.insight_action",
   "seo.audit_run",
 ] as const;
@@ -92,6 +93,7 @@ export const ADMIN_AUDIT_ACTION_LABEL: Record<AdminAuditAction, string> = {
   "settings.backup_export": "Ekspor backup",
   "settings.cache_clear": "Bersihkan cache",
   "settings.maintenance": "Ubah mode pemeliharaan",
+  "payment.webhook.sync": "Sinkronkan URL webhook Mayar",
   "seo.insight_action": "Tindak lanjut insight SEO",
   "seo.audit_run": "Jalankan audit SEO teknis",
 };

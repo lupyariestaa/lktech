@@ -6,6 +6,11 @@ import {
   getMayarWebhookDeliveries,
   isMayarConfigured,
 } from "@/lib/mayar";
+import {
+  extractWebhookUrlToken,
+  redactWebhookUrl,
+  webhookTokensMatch,
+} from "@/lib/webhook-url-pure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,12 +40,31 @@ export async function GET(req: Request) {
 
   try {
     const deliveries = await getMayarWebhookDeliveries(limit);
+
+    // Cocokkan token pada URL webhook terdaftar (dari pengiriman terbaru)
+    // dengan token server — TANPA membocorkan keduanya.
+    const latestWithUrl = deliveries.find((d) => d.urlDestination);
+    const tokenMatches = latestWithUrl
+      ? webhookTokensMatch(
+          extractWebhookUrlToken(latestWithUrl.urlDestination),
+          process.env.MAYAR_WEBHOOK_TOKEN,
+        )
+      : null;
+
     return NextResponse.json(
       {
         configured: true,
         mode: getMayarMode(),
         apiHost: getMayarApiHost(),
-        deliveries,
+        tokenMatches,
+        lastDestination: latestWithUrl
+          ? redactWebhookUrl(latestWithUrl.urlDestination)
+          : null,
+        // Jangan kirim nilai token pada URL ke klien.
+        deliveries: deliveries.map((d) => ({
+          ...d,
+          urlDestination: redactWebhookUrl(d.urlDestination),
+        })),
       },
       { headers: { "Cache-Control": "no-store" } },
     );
