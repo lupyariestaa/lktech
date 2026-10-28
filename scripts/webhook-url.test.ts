@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildWebhookUrl,
+  canonicalizeToken,
   extractWebhookUrlToken,
   normalizeTokenValue,
   redactWebhookUrl,
@@ -47,6 +48,35 @@ test("buildWebhookUrl: absolute URL with encoded token and single slash", () => 
   );
   // Token harus dapat dibaca kembali persis.
   assert.equal(extractWebhookUrlToken(url), "a/b+c=");
+});
+
+test("canonicalizeToken: treats '+' and space as the same character", () => {
+  // `+` literal vs spasi hasil decode query string harus kanonik sama.
+  assert.equal(canonicalizeToken("ab+cd"), canonicalizeToken("ab cd"));
+  assert.equal(canonicalizeToken("ab%2Bcd"), canonicalizeToken("ab+cd"));
+  assert.equal(canonicalizeToken("ab%20cd"), canonicalizeToken("ab+cd"));
+  assert.equal(canonicalizeToken(undefined), "");
+});
+
+test("webhookTokensMatch: base64 token survives '+'-to-space query decoding", () => {
+  const token = "ab+cd/ef=";
+  // Yang diterima server setelah URLSearchParams: `+` menjadi spasi.
+  assert.equal(webhookTokensMatch("ab cd/ef=", token), true);
+  assert.equal(webhookTokensMatch("ab%2Bcd%2Fef%3D", token), true);
+  assert.equal(webhookTokensMatch("ab+cd/ef=", token), true);
+  assert.equal(webhookTokensMatch("ab-cd/ef=", token), false);
+});
+
+test("buildWebhookUrl: token with '+' round-trips through query decoding", () => {
+  const url = buildWebhookUrl("https://lktech.vercel.app", "ab+cd/ef=");
+  // URLSearchParams men-decode `+`/`%2B` menjadi spasi/`+`, tetapi kanonik sama.
+  assert.equal(
+    webhookTokensMatch(
+      new URL(url).searchParams.get("token"),
+      "ab+cd/ef=",
+    ),
+    true,
+  );
 });
 
 test("redactWebhookUrl: hides token but keeps the rest", () => {

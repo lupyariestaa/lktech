@@ -43,13 +43,26 @@ export function extractWebhookUrlToken(
   }
 }
 
+/**
+ * Bentuk kanonik nilai token untuk perbandingan.
+ *
+ * Query/form encoding mengirim `+` sebagai spasi (dan sebaliknya), sementara
+ * token base64 dapat berisi `+` literal. Setelah normalisasi, semua karakter
+ * spasi disamakan menjadi `+`, sehingga token yang sama selalu menghasilkan
+ * bentuk kanonik identik — apa pun cara gateway menyandikannya. Tanpa ini,
+ * token berisi `+` akan tampak "tidak cocok" (401) padahal benar.
+ */
+export function canonicalizeToken(raw: string | null | undefined): string {
+  return normalizeTokenValue(raw).replace(/\s/g, "+");
+}
+
 /** Apakah token pada URL webhook sama dengan token server. */
 export function webhookTokensMatch(
   urlToken: string | null,
   serverToken: string | null | undefined,
 ): boolean {
-  const a = normalizeTokenValue(urlToken);
-  const b = normalizeTokenValue(serverToken);
+  const a = canonicalizeToken(urlToken);
+  const b = canonicalizeToken(serverToken);
   return a.length > 0 && a === b;
 }
 

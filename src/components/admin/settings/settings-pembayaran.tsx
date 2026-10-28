@@ -23,6 +23,7 @@ export function SettingsPembayaran() {
   const [hooks, setHooks] = useState<MayarWebhookHistoryResult | null>(null);
   const [loadingHooks, setLoadingHooks] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [webhookSynced, setWebhookSynced] = useState(false);
 
   const load = useCallback(() => {
     (async () => {
@@ -76,6 +77,7 @@ export function SettingsPembayaran() {
       setSyncing(true);
       try {
         const res = await syncMayarWebhookUrl();
+        setWebhookSynced(true);
         toast.success(res.message ?? "URL webhook disinkronkan ke Mayar.");
         setLoadingHooks(true);
         try {
@@ -211,7 +213,7 @@ export function SettingsPembayaran() {
           apakah event <span className="font-mono">payment.received</span> muncul di
           sini dan balasannya bukan 401.
         </p>
-        {hooks?.configured && hooks.tokenMatches === false && (
+        {hooks?.configured && hooks.tokenMatches === false && !webhookSynced && (
           <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
             <p className="font-semibold">Token webhook tidak cocok</p>
             <p className="mt-1">
@@ -226,6 +228,18 @@ export function SettingsPembayaran() {
                 Terdaftar: {hooks.lastDestination}
               </p>
             )}
+          </div>
+        )}
+        {hooks?.configured && webhookSynced && hooks.tokenMatches !== true && (
+          <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700">
+            <p className="font-semibold">URL webhook sudah disinkronkan</p>
+            <p className="mt-1">
+              Mayar kini memakai URL yang token-nya sama dengan{" "}
+              <span className="font-mono">MAYAR_WEBHOOK_TOKEN</span> server.
+              Riwayat di atas masih menampilkan pengiriman lama (sebelum
+              sinkronisasi). Status token akan terkonfirmasi pada pengiriman
+              berikutnya — lakukan pembayaran uji untuk memverifikasi.
+            </p>
           </div>
         )}
         {hooks?.configured && hooks.tokenMatches === true && (

@@ -75,6 +75,7 @@
     "test:reorder": "node --experimental-strip-types --test scripts/reorder-item.test.ts",
     "test:order-print": "node --experimental-strip-types --test scripts/order-print-snapshot.test.ts",
     "test:mayar-webhook": "node --experimental-strip-types --test scripts/mayar-webhook.test.ts",
+    "test:webhook-url": "node --experimental-strip-types --test scripts/webhook-url.test.ts",
     "test:webhook-security": "node --experimental-strip-types --test scripts/webhook-security.test.ts",
     "test:invoice-recovery": "node --experimental-strip-types --test scripts/invoice-recovery.test.ts",
     "test:unsub": "node --experimental-strip-types --test scripts/unsubscribe-token.test.ts",
