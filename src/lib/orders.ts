@@ -750,6 +750,50 @@ export async function setOrderDownloadToken(
 }
 
 /**
+ * Catat masalah bukti pembayaran pada order (untuk panel "butuh perhatian").
+ *
+ * - `kind: "mismatch"` — nominal diterima tidak sama dengan tagihan (mis. kurang
+ *   bayar). Menimpa `paymentMismatch` dan membersihkan `paymentIssue` lama.
+ * - `kind: "issue"` — bukti invoice/transaksi bermasalah (bukan soal nominal);
+ *   TIDAK boleh tampil sebagai "Nominal kurang bayar".
+ *
+ * Tidak pernah mengubah status pembayaran; hanya anotasi agar admin menindak.
+ */
+export async function recordPaymentProblem(
+  id: string,
+  problem:
+    | { kind: "mismatch"; received: number; expected: number; reason?: string }
+    | { kind: "issue"; reason: string },
+): Promise<void> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const atISO = new Date().toISOString();
+  const ref = db.collection(COLLECTION).doc(id);
+  if (problem.kind === "mismatch") {
+    await ref.set(
+      {
+        paymentMismatch: {
+          received: problem.received,
+          expected: problem.expected,
+          reason: problem.reason ?? "amount_mismatch",
+          atISO,
+        },
+        paymentIssue: FieldValue.delete(),
+      },
+      { merge: true },
+    );
+  } else {
+    await ref.set(
+      {
+        paymentMismatch: FieldValue.delete(),
+        paymentIssue: { reason: problem.reason, atISO },
+      },
+      { merge: true },
+    );
+  }
+}
+
+/**
  * Menandai order sebagai DIBAYAR secara **idempoten & ATOMIK**.
  *
  * ATOMIK (OR-A1): dijalankan dalam **transaksi Firestore** dengan RE-CHECK status

@@ -212,6 +212,7 @@ export async function getInvoice(invoiceId: string): Promise<InvoiceDetail> {
     status: string;
     paymentUrl?: string;
     expiredAt?: number;
+    transactionId?: string;
   }>(`/invoices/${encodeURIComponent(invoiceId)}`, { method: "GET" });
 
   return {
@@ -220,7 +221,121 @@ export async function getInvoice(invoiceId: string): Promise<InvoiceDetail> {
     status: data.status,
     payUrl: data.paymentUrl,
     expiredAt: data.expiredAt,
+    transactionId: data.transactionId,
   };
+}
+
+/** Status invoice Mayar yang dianggap lunas (dokumentasi: `paid`). */
+export function isInvoicePaid(status: string | undefined): boolean {
+  return typeof status === "string" && status.trim().toLowerCase() === "paid";
+}
+
+/**
+ * Satu pengiriman webhook dari Mayar (untuk diagnostik admin).
+ * TIDAK memuat API key; hanya metadata pengiriman + ringkasan payload.
+ */
+export type MayarWebhookDelivery = {
+  id: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  nextDelivery: string | null;
+  type: string;
+  status: string;
+  urlDestination: string;
+  /** Respons yang dikembalikan endpoint kita (mis. `{"ok":true}` atau 401). */
+  responsePayload: string | null;
+  /** Ringkasan payload: event & bukti korelasi/pembayaran bila dapat diparsing. */
+  event?: string;
+  orderId?: string;
+  amount?: number;
+  transactionStatus?: string;
+  paymentUrl?: string;
+};
+
+/** Ambil ringkasan aman dari payload webhook (string JSON) Mayar. */
+function summarizeWebhookPayload(raw: unknown): Pick<
+  MayarWebhookDelivery,
+  "event" | "orderId" | "amount" | "transactionStatus" | "paymentUrl"
+> {
+  if (typeof raw !== "string" || !raw.trim()) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (!parsed || typeof parsed !== "object") return {};
+  const root = parsed as Record<string, unknown>;
+  const data =
+    root.data && typeof root.data === "object"
+      ? (root.data as Record<string, unknown>)
+      : {};
+  const extra =
+    data.extraData && typeof data.extraData === "object"
+      ? (data.extraData as Record<string, unknown>)
+      : {};
+  const firstString = (...values: unknown[]): string => {
+    for (const value of values) {
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return "";
+  };
+  const rawAmount = data.amount;
+  const amount =
+    typeof rawAmount === "number"
+      ? rawAmount
+      : typeof rawAmount === "string" && rawAmount.trim()
+        ? Number(rawAmount)
+        : undefined;
+  return {
+    event: firstString(root.event) || undefined,
+    orderId: firstString(extra.orderId, data.orderId, data.productId) || undefined,
+    amount: amount !== undefined && Number.isFinite(amount) ? amount : undefined,
+    transactionStatus: firstString(data.transactionStatus, data.status) || undefined,
+    paymentUrl: firstString(data.paymentUrl) || undefined,
+  };
+}
+
+/**
+ * Riwayat pengiriman webhook terbaru dari Mayar (endpoint `/webhooks/new-history`).
+ * Read-only untuk diagnostik admin: membantu memastikan apakah Mayar benar-benar
+ * mengirim event pembayaran dan apa balasan endpoint kita.
+ */
+export async function getMayarWebhookDeliveries(
+  limit = 15,
+): Promise<MayarWebhookDelivery[]> {
+  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 50);
+  const rows = await mayarFetch<
+    Array<{
+      id?: string;
+      createdAt?: string | number;
+      updatedAt?: string | null;
+      nextDelivery?: string | null;
+      type?: string;
+      status?: string;
+      urlDestination?: string;
+      responsePayload?: string | null;
+      payload?: string | null;
+    }>
+  >(`/webhooks/new-history?limit=${safeLimit}`, { method: "GET" });
+
+  return (Array.isArray(rows) ? rows : []).map((row) => {
+    const createdAt =
+      typeof row.createdAt === "number"
+        ? new Date(row.createdAt).toISOString()
+        : (row.createdAt ?? null);
+    return {
+      id: row.id ?? "",
+      createdAt,
+      updatedAt: row.updatedAt ?? null,
+      nextDelivery: row.nextDelivery ?? null,
+      type: row.type ?? "",
+      status: row.status ?? "",
+      urlDestination: row.urlDestination ?? "",
+      responsePayload: row.responsePayload ?? null,
+      ...summarizeWebhookPayload(row.payload),
+    };
+  });
 }
 
 /**

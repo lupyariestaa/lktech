@@ -113,4 +113,6 @@ export type InvoiceDetail = {
   status: string;
   payUrl?: string;
   expiredAt?: number;
+  /** ID transaksi utama invoice (bila tersedia). */
+  transactionId?: string;
 };

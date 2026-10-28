@@ -119,6 +119,42 @@ export async function fetchPaymentMetrics(days = 30): Promise<PaymentMetricsResu
   return adminFetch<PaymentMetricsResult>(`/api/admin/payments/metrics?days=${days}`);
 }
 
+/**
+ * Riwayat pengiriman webhook Mayar (diagnostik). Menampilkan apakah provider
+ * mengirim event pembayaran dan apa balasan endpoint kita (mis. 401 vs ok).
+ */
+export type MayarWebhookDeliveryItem = {
+  id: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  nextDelivery: string | null;
+  type: string;
+  status: string;
+  urlDestination: string;
+  responsePayload: string | null;
+  event?: string;
+  orderId?: string;
+  amount?: number;
+  transactionStatus?: string;
+  paymentUrl?: string;
+};
+
+export type MayarWebhookHistoryResult = {
+  configured: boolean;
+  mode?: string;
+  apiHost?: string;
+  deliveries: MayarWebhookDeliveryItem[];
+  error?: string;
+};
+
+export async function fetchMayarWebhookHistory(
+  limit = 15,
+): Promise<MayarWebhookHistoryResult> {
+  return adminFetch<MayarWebhookHistoryResult>(
+    `/api/admin/payments/webhook-history?limit=${limit}`,
+  );
+}
+
 /** Bersihkan cache internal (fase S6). */
 export async function clearCache(): Promise<void> {
   await adminFetch<{ ok: boolean }>("/api/admin/settings/cache", { method: "POST" });

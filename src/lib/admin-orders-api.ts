@@ -227,6 +227,23 @@ export async function reconcileOrderInvoice(id: string, input: { invoiceId?: str
 }
 
 /**
+ * Verifikasi status pembayaran langsung ke Mayar (rekonsiliasi berbasis bukti).
+ * Hanya menandai lunas bila Mayar menyatakan `paid` dan nominal cocok.
+ */
+export async function verifyOrderInvoice(id: string) {
+  return adminFetch<{
+    ok: boolean;
+    paid?: boolean;
+    alreadyPaid?: boolean;
+    status?: string;
+    message?: string;
+  }>("/api/admin/orders", {
+    method: "POST",
+    body: JSON.stringify({ id, action: "invoice-verify" }),
+  });
+}
+
+/**
  * Ubah daftar pesanan menjadi CSV dan unduh di browser.
  * Item dirangkum jadi satu kolom (nama ×qty; dipisah ";").
  */

@@ -9,8 +9,9 @@ import {
   RefreshCw,
   Send,
 } from "lucide-react";
-import { fetchPaymentMetrics, testIntegration } from "@/lib/admin-settings-api";
-import { formatRupiah } from "@/lib/format";
+import { fetchPaymentMetrics, fetchMayarWebhookHistory, testIntegration } from "@/lib/admin-settings-api";
+import type { MayarWebhookHistoryResult } from "@/lib/admin-settings-api";
+import { formatRupiah, formatDateTime } from "@/lib/format";
 import { useToast } from "@/components/admin/toast";
 
 /** Halaman Pembayaran (Mayar) — kesehatan + metrik (fase S5). */
@@ -19,6 +20,8 @@ export function SettingsPembayaran() {
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchPaymentMetrics>> | null>(null);
   const [loading, setLoading] = useState(true);
   const [pinging, setPinging] = useState(false);
+  const [hooks, setHooks] = useState<MayarWebhookHistoryResult | null>(null);
+  const [loadingHooks, setLoadingHooks] = useState(false);
 
   const load = useCallback(() => {
     (async () => {
@@ -37,6 +40,22 @@ export function SettingsPembayaran() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadHooks = useCallback(() => {
+    (async () => {
+      setLoadingHooks(true);
+      try {
+        setHooks(await fetchMayarWebhookHistory(15));
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Gagal memuat riwayat webhook.",
+        );
+      } finally {
+        setLoadingHooks(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onPing = async () => {
     setPinging(true);
@@ -123,6 +142,96 @@ export function SettingsPembayaran() {
               <p className="mt-0.5 text-[11px] text-muted">Nilai omzet dibayar (30 hari)</p>
             </div>
           </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-1.5 text-sm font-bold text-secondary">
+            <AlertTriangle className="h-4 w-4" /> Riwayat Webhook Mayar
+          </h2>
+          <button
+            type="button"
+            onClick={loadHooks}
+            disabled={loadingHooks}
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary-50 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-100 disabled:opacity-60"
+          >
+            {loadingHooks ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Muat riwayat webhook
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Menampilkan pengiriman terbaru dari Mayar beserta balasan endpoint kita.
+          Bila pesanan tetap “Menunggu Bayar” padahal invoice sudah lunas, periksa
+          apakah event <span className="font-mono">payment.received</span> muncul di
+          sini dan balasannya bukan 401.
+        </p>
+        {hooks === null ? (
+          <p className="mt-4 text-sm text-muted">
+            Klik “Muat riwayat webhook” untuk melihat pengiriman terakhir.
+          </p>
+        ) : !hooks.configured ? (
+          <p className="mt-4 text-sm text-amber-700">
+            Mayar belum dikonfigurasi.
+          </p>
+        ) : hooks.error ? (
+          <p className="mt-4 text-sm text-rose-600">{hooks.error}</p>
+        ) : hooks.deliveries.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">
+            Belum ada pengiriman webhook tercatat untuk mode {hooks.mode ?? "?"}.
+            Pastikan URL webhook sudah didaftarkan pada akun Mayar yang sama
+            ({hooks.apiHost ?? "?"}).
+          </p>
+        ) : (
+          <ul className="mt-4 flex flex-col gap-2">
+            {hooks.deliveries.map((d) => {
+              const responded = d.responsePayload?.trim();
+              return (
+                <li
+                  key={d.id}
+                  className="rounded-2xl border border-slate-100 bg-surface px-3 py-3 text-xs"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold text-secondary">
+                      {d.type || d.event || "event"}
+                    </span>
+                    <span
+                      className={
+                        d.status === "SUCCESS"
+                          ? "font-semibold text-emerald-600"
+                          : "font-semibold text-amber-600"
+                      }
+                    >
+                      {d.status || "—"}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-col gap-0.5 text-muted">
+                    <span>{d.createdAt ? formatDateTime(d.createdAt) : "—"}</span>
+                    <span className="truncate">
+                      Tujuan: {d.urlDestination || "—"}
+                    </span>
+                    {d.orderId && <span>Order: {d.orderId}</span>}
+                    {typeof d.amount === "number" && (
+                      <span>Nominal: {formatRupiah(d.amount)}</span>
+                    )}
+                    {d.transactionStatus && (
+                      <span>Status transaksi: {d.transactionStatus}</span>
+                    )}
+                    <span className="break-all">
+                      Balasan kita: {responded ? responded : "(kosong)"}
+                    </span>
+                    {d.nextDelivery && (
+                      <span>Percobaan ulang: {d.nextDelivery}</span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </section>
     </div>

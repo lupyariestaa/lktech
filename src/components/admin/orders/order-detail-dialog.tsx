@@ -11,6 +11,7 @@ import {
   Loader2,
   Mail,
   MessageCircle,
+  RefreshCw,
   Send,
   Trash2,
   X,
@@ -23,6 +24,7 @@ import {
   fulfillOrderDownload,
   resendOrderEmail,
   reconcileOrderInvoice,
+  verifyOrderInvoice,
   updateOrderStatusAdmin,
   type OrderEmailLog,
 } from "@/lib/admin-orders-api";
@@ -407,6 +409,9 @@ export function OrderActionsBar({
       order.status === "selesai");
 
   const mixedServiceOrder = order.items.some((item) => item.fulfillment === "jasa") && order.items.some((item) => item.fulfillment !== "jasa");
+  const canVerifyPayment =
+    (Boolean(order.payment?.invoiceId) && order.payment?.status !== "dibayar") ||
+    (Boolean(order.servicePayment?.invoiceId) && order.servicePayment?.status !== "dibayar");
   const canCreateInvoice =
     (mixedServiceOrder
       ? order.status !== "dibatalkan" && order.status !== "kedaluwarsa" && order.status !== "selesai" &&
@@ -514,6 +519,25 @@ export function OrderActionsBar({
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Rekonsiliasi gagal.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onVerifyPayment = async () => {
+    setBusy("verify");
+    try {
+      const res = await verifyOrderInvoice(order.id);
+      if (res.paid && !res.alreadyPaid) {
+        toast.success(res.message ?? "Pembayaran terverifikasi. Pesanan ditandai lunas.");
+      } else if (res.alreadyPaid) {
+        toast.success(res.message ?? "Pesanan sudah lunas.");
+      } else {
+        toast.toast(res.message ?? "Pesanan belum lunas menurut Mayar.", "info");
+      }
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal memverifikasi pembayaran.");
     } finally {
       setBusy(null);
     }
@@ -631,6 +655,22 @@ export function OrderActionsBar({
               <Download className="h-4 w-4" />
             )}
             Unduhan
+          </button>
+        )}
+
+        {canVerifyPayment && (
+          <button
+            type="button"
+            onClick={onVerifyPayment}
+            disabled={busy !== null}
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary-50 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary-100 disabled:opacity-60"
+          >
+            {busy === "verify" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Periksa pembayaran
           </button>
         )}
 

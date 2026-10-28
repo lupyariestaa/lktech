@@ -17,6 +17,7 @@ import {
   getOrdersByIds,
   attachBuyerPhotos,
   updateOrderStatus,
+  markOrderPaid,
 } from "@/lib/orders";
 import { ORDER_STATUSES, ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/order-types";
 import { parseOrdersFilter, type OrdersSort } from "@/lib/orders-filter-pure";
@@ -31,8 +32,9 @@ import {
 import { restoreCouponUsage } from "@/lib/coupons";
 import { shouldRestoreCoupon } from "@/lib/order-status-pure";
 import { getSiteSettings } from "@/lib/settings";
-import { releaseOrderDownload, createManualOrderInvoice } from "@/lib/order-payment";
-import { relinkRecoveredInvoice, resolveInvoiceRecovery } from "@/lib/orders";
+import { releaseOrderDownload, createManualOrderInvoice, fulfillOrder } from "@/lib/order-payment";
+import { relinkRecoveredInvoice, resolveInvoiceRecovery, recordPaymentProblem } from "@/lib/orders";
+import { getInvoice, isInvoicePaid } from "@/lib/mayar";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { guardAdminMutation } from "@/lib/admin-rate-limit";
 import { addOrderActivity } from "@/lib/order-activities";
@@ -608,6 +610,122 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     } catch (err) {
       return NextResponse.json({ error: err instanceof Error ? err.message : "Rekonsiliasi gagal." }, { status: 409 });
+    }
+  }
+
+  // ===== Aksi: verifikasi status pembayaran invoice di Mayar =====
+  // Rekonsiliasi berbasis BUKTI provider: mengambil status invoice langsung dari
+  // Mayar. Hanya menandai lunas bila Mayar menyatakan `paid` DAN nominal invoice
+  // sama persis dengan nominal tagihan order. Tidak pernah menebak nominal.
+  if (body.action === "invoice-verify") {
+    const fresh = assertFreshAuth(check);
+    if (!fresh.ok) return fresh.response;
+    const limited = await guardAdminMutation(check.uid, "order.invoice.verify", { limit: 20 });
+    if (limited) return limited;
+    try {
+      const order = await getOrderById(id);
+      if (!order) {
+        return NextResponse.json({ error: "Pesanan tidak ditemukan." }, { status: 404 });
+      }
+      const payRef = order.payment?.invoiceId
+        ? order.payment
+        : order.servicePayment?.invoiceId
+          ? order.servicePayment
+          : undefined;
+      if (!payRef?.invoiceId) {
+        return NextResponse.json(
+          {
+            error: "Pesanan ini belum punya ID invoice Mayar. Buat invoice manual lebih dahulu.",
+            code: "no_invoice",
+          },
+          { status: 409 },
+        );
+      }
+      if (payRef.status === "dibayar") {
+        return NextResponse.json({
+          ok: true,
+          paid: true,
+          alreadyPaid: true,
+          status: "paid",
+          message: "Pesanan sudah ditandai lunas.",
+        });
+      }
+
+      const detail = await getInvoice(payRef.invoiceId);
+      const expected = payRef.amountExpected ?? order.total;
+      if (detail.amount !== expected) {
+        await recordPaymentProblem(id, {
+          kind: "mismatch",
+          received: detail.amount,
+          expected,
+          reason: "amount_mismatch",
+        });
+        return NextResponse.json(
+          {
+            error: `Nominal invoice Mayar (${detail.amount}) tidak sama dengan tagihan (${expected}). Pesanan TIDAK ditandai lunas.`,
+            code: "amount_mismatch",
+          },
+          { status: 409 },
+        );
+      }
+      if (!isInvoicePaid(detail.status)) {
+        return NextResponse.json({
+          ok: true,
+          paid: false,
+          status: detail.status,
+          message: `Mayar melaporkan status invoice "${detail.status}" — belum lunas.`,
+        });
+      }
+
+      const { applied, reason } = await markOrderPaid(
+        id,
+        {
+          amount: detail.amount,
+          invoiceId: payRef.invoiceId,
+          ...(detail.transactionId ? { transactionId: detail.transactionId } : {}),
+        },
+        "dibayar",
+      );
+      if (!applied) {
+        return NextResponse.json({
+          ok: true,
+          paid: false,
+          status: detail.status,
+          message:
+            reason === "already_paid"
+              ? "Pesanan sudah lunas."
+              : "Pesanan tidak dapat ditandai lunas (status terminal).",
+        });
+      }
+
+      try {
+        await fulfillOrder(id);
+      } catch (fulfillErr) {
+        console.error("[api/admin/orders] fulfillment setelah verifikasi gagal:", fulfillErr);
+      }
+      await addOrderActivity(id, {
+        type: "sistem",
+        note: `Pembayaran diverifikasi lunas via Mayar (invoice ${payRef.invoiceId}).`,
+        actor: check.email,
+      });
+      await recordAdminAudit({
+        action: "order.invoice.verify",
+        actor: check.email,
+        target: id,
+        meta: { invoiceId: payRef.invoiceId, amount: detail.amount },
+      });
+      return NextResponse.json({
+        ok: true,
+        paid: true,
+        status: "paid",
+        message: "Pembayaran terverifikasi di Mayar & pesanan ditandai lunas.",
+      });
+    } catch (err) {
+      console.error("[api/admin/orders] invoice-verify gagal:", err);
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Gagal memverifikasi invoice." },
+        { status: 409 },
+      );
     }
   }
 
