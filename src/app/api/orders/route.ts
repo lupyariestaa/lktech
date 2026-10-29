@@ -44,8 +44,22 @@ export async function POST(req: Request) {
 
   const parsed = checkoutSchema.safeParse(json);
   if (!parsed.success) {
+    // Sertakan lokasi field agar masalah seperti ini tidak perlu ditebak lagi
+    // (mis. `items.0.printOptions`). Detail dicatat server-side untuk diagnosis.
+    const issue = parsed.error.issues[0];
+    const where = issue?.path.join(".") ?? "";
+    console.warn("[api/orders] validasi keranjang gagal:", {
+      where,
+      code: issue?.code,
+      message: issue?.message,
+    });
     return NextResponse.json(
-      { error: "Data keranjang tidak valid." },
+      {
+        error: where
+          ? `Data keranjang tidak valid (${where}). Muat ulang halaman keranjang lalu coba lagi.`
+          : "Data keranjang tidak valid. Muat ulang halaman keranjang lalu coba lagi.",
+        code: "invalid_cart",
+      },
       { status: 400 },
     );
   }

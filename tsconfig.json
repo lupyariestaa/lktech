@@ -112,6 +112,7 @@
     "scripts/site-content-schema.test.ts",
     "scripts/admin-auth-e2e.test.ts",
     "scripts/webhook-url.test.ts",
+    "scripts/checkout-payload.test.ts",
     "scripts/seed-emulator.ts"
   ]
 }

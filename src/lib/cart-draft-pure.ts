@@ -45,16 +45,21 @@ export function normalizeCartDraftItems(v: unknown): CartDraftItem[] {
     .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
     .map((x) => {
       const slug = typeof x.slug === "string" ? x.slug.trim() : "";
-      return {
+      const variantSlug =
+        typeof x.variantSlug === "string" && x.variantSlug.trim()
+          ? x.variantSlug.trim()
+          : undefined;
+      const item: CartDraftItem = {
         slug,
         name: typeof x.name === "string" ? x.name.trim() : "",
         price: num(x.price),
         qty: Math.max(1, Math.floor(num(x.qty, 1))),
-        variantSlug:
-          typeof x.variantSlug === "string" && x.variantSlug.trim()
-            ? x.variantSlug.trim()
-            : undefined,
-      } satisfies CartDraftItem;
+      };
+      // Kunci `variantSlug` hanya ditulis bila ada: Firestore menolak nilai
+      // `undefined`, sehingga menyertakannya membuat SELURUH draft gagal
+      // disimpan (pengingat keranjang terbengkalai jadi tidak pernah jalan).
+      if (variantSlug) item.variantSlug = variantSlug;
+      return item;
     })
     .filter((it) => it.slug && it.qty > 0);
 }

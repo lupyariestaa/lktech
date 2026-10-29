@@ -3,13 +3,36 @@ import { z } from "zod";
 /** Satu item yang dikirim klien saat checkout (hanya slug/varians/qty yang dipercaya). */
 export const checkoutItemSchema = z.object({
   slug: z.string().trim().min(1).max(200),
-  /** Slug varian terpilih (produk multi-varian). Opsional untuk produk tunggal. */
-  variantSlug: z.string().trim().min(1).max(200).optional(),
-  printOptions: z.object({
-    widthM: z.number().finite().positive().max(100).optional(),
-    heightM: z.number().finite().positive().max(100).optional(),
-    finishingIds: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
-  }).strict().optional(),
+  /**
+   * Slug varian terpilih (produk multi-varian). Opsional untuk produk tunggal.
+   *
+   * String kosong dianggap "tanpa varian" (bukan alasan menolak checkout):
+   * keranjang lama di `localStorage` dapat menyimpan `""`. Produk multi-varian
+   * tetap ditolak server dengan pesan jelas (`variant_required`) saat varian
+   * benar-benar dibutuhkan.
+   */
+  variantSlug: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((value) => (value ? value : undefined)),
+  /**
+   * Opsi cetak (produk percetakan).
+   *
+   * **Tidak** `strict`: keranjang lama menyimpan salinan tampilan (mis.
+   * `finishing`) di dalam `printOptions`. Server hanya membaca
+   * `widthM`/`heightM`/`finishingIds` dan menghitung ulang harga dari Firestore,
+   * jadi kunci tambahan tidak berpengaruh pada keamanan — dan tidak boleh
+   * membuat checkout gagal. Semua nilai tetap divalidasi ketat di atas.
+   */
+  printOptions: z
+    .object({
+      widthM: z.number().finite().positive().max(100).optional(),
+      heightM: z.number().finite().positive().max(100).optional(),
+      finishingIds: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
+    })
+    .optional(),
   qty: z.number().int().min(1).max(999),
 });
 

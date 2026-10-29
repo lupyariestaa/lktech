@@ -79,6 +79,9 @@ export function toPrintCartItem(
   price: number,
   qty = 1,
 ): CartItem {
+  // `finishing` hanya salinan tampilan — simpan di `printFinishing`, JANGAN di
+  // dalam `printOptions` (server hanya mengenali widthM/heightM/finishingIds).
+  const { finishing, ...printOptions } = options;
   return {
     slug: product.slug,
     name: `${product.name} — ${variant.name}`,
@@ -87,8 +90,8 @@ export function toPrintCartItem(
     qty,
     variantSlug: variant.slug,
     variantName: variant.name,
-    printOptions: { ...options, finishingIds: [...options.finishingIds].sort() },
-    printFinishing: options.finishing?.map((choice) => ({ ...choice })),
+    printOptions: { ...printOptions, finishingIds: [...options.finishingIds].sort() },
+    printFinishing: finishing?.map((choice) => ({ ...choice })),
     printPricing: variant.printPricing,
   };
 }

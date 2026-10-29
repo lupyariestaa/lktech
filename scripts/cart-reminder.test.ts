@@ -93,3 +93,20 @@ test("normalizeCartDraftItems: buang tak valid & normalisasi qty", () => {
   assert.equal(items[1].slug, "b");
   assert.equal(items[1].qty, 1);
 });
+
+test("normalizeCartDraftItems: tidak menulis variantSlug undefined (Firestore menolaknya)", () => {
+  const items = normalizeCartDraftItems([
+    { slug: "a", price: 1000, qty: 1 },
+    { slug: "b", price: 1000, qty: 1, variantSlug: "  " },
+    { slug: "c", price: 1000, qty: 1, variantSlug: " v1 " },
+  ]);
+  // Kunci dengan nilai `undefined` membuat `set()` Firestore gagal total.
+  assert.equal("variantSlug" in items[0], false);
+  assert.equal("variantSlug" in items[1], false);
+  assert.equal(items[2].variantSlug, "v1");
+  for (const item of items) {
+    for (const value of Object.values(item)) {
+      assert.notEqual(value, undefined);
+    }
+  }
+});

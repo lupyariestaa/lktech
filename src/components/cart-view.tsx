@@ -21,6 +21,7 @@ import { CartCoupon, type AppliedCoupon, type BestCouponHint } from "@/component
 import { CartCrossSell } from "@/components/cart-cross-sell";
 import { TrustBadges } from "@/components/trust-badges";
 import { createOrderRequest } from "@/lib/order-api";
+import { toCheckoutItems } from "@/lib/checkout-payload-pure";
 import {
   validateCouponRequest,
   suggestBestCouponRequest,
@@ -207,13 +208,10 @@ export function CartView({ promoCode }: { promoCode?: string }) {
     setSending(true);
     try {
       // Server memverifikasi harga/stok, memvalidasi kupon, & menyusun pesan.
+      // `toCheckoutItems` hanya mengirim field yang dikenali server, sehingga
+      // keranjang lama (field tampilan ekstra) tidak membuat checkout ditolak.
       const { order, warning } = await createOrderRequest(
-        items.map((it) => ({
-          slug: it.slug,
-          variantSlug: it.variantSlug,
-          printOptions: it.printOptions,
-          qty: it.qty,
-        })),
+        toCheckoutItems(items),
         user.displayName ?? "",
         appliedCoupon?.code,
       );
