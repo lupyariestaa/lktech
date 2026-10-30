@@ -391,6 +391,7 @@ export {
   isAwaitingPayment,
   isPaymentExpired,
   isTransitionAllowed,
+  orderCountDelta,
   shouldRestoreCoupon,
   shouldSendStatusEmail,
 } from "@/lib/order-status-pure";

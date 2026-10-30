@@ -58,7 +58,12 @@ function normalizeProfile(
     provider: str(data.provider, "google"),
     createdAt: str(data.createdAtISO),
     lastLoginAt: str(data.lastLoginAtISO),
-    orderCount: typeof data.orderCount === "number" ? data.orderCount : 0,
+    orderCount: Math.max(
+      0,
+      typeof data.orderCount === "number" && Number.isFinite(data.orderCount)
+        ? Math.floor(data.orderCount)
+        : 0,
+    ),
     wishlist: normalizeWishlist(data.wishlist),
     addresses: normalizeAddresses(data.addresses),
     whatsapp: str(data.whatsapp),
@@ -174,17 +179,41 @@ export function buildUserProfile(
   return { uid, ...normalizeProfile(data) };
 }
 
-/** Menaikkan penghitung order user (best-effort). */
-export async function incrementUserOrderCount(uid: string): Promise<void> {
+/**
+ * Menyesuaikan penghitung order user (`orderCount`) secara ATOMIK & best-effort.
+ *
+ * Sejak Sprint 3 (O-02), `orderCount` = jumlah order yang PERNAH LUNAS (dipakai
+ * kupon audience `baru`/`lama`) — bukan jumlah checkout. `delta` `+1` saat order
+ * lunas, `-1` saat order lunas dibatalkan/dihapus. Nilai dijaga ≥ 0.
+ *
+ * Best-effort: tidak melempar error agar alur uang (markOrderPaid) tidak gagal
+ * hanya karena penyesuaian counter.
+ */
+export async function adjustUserOrderCount(
+  uid: string,
+  delta: number,
+): Promise<void> {
+  if (!uid || !Number.isFinite(delta) || delta === 0) return;
   const db = getAdminDb();
   if (!db) return;
 
   const ref = db.collection(COLLECTION).doc(uid);
-  const existing = await ref.get();
-  if (!existing.exists) return;
-
-  const prev = normalizeProfile(existing.data() ?? {});
-  await ref.set({ orderCount: prev.orderCount + 1 }, { merge: true });
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return; // guest / profil belum dibuat → tak ada yg dihitung
+      const prev = normalizeProfile(snap.data() ?? {});
+      const next = Math.max(0, prev.orderCount + delta);
+      if (next === prev.orderCount) return;
+      tx.set(
+        ref,
+        { orderCount: next, updatedAtISO: new Date().toISOString() },
+        { merge: true },
+      );
+    });
+  } catch (err) {
+    console.error("[user-profile] gagal menyesuaikan orderCount:", uid, delta, err);
+  }
 }
 
 /** Perbarui nama tampilan user. Mengembalikan profil terbaru. */

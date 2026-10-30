@@ -4,7 +4,7 @@ import { createOrder, recordInvoiceRecovery, updateOrderPayment } from "@/lib/or
 import { getProductsBySlugs } from "@/lib/products";
 import { evaluatePurchase } from "@/lib/product-format";
 import { getSiteSettings } from "@/lib/settings";
-import { incrementUserOrderCount, getUserProfile } from "@/lib/user-profile";
+import { getUserProfile } from "@/lib/user-profile";
 import { buildOrderMessage } from "@/lib/cart";
 import { sendOrderNotification } from "@/lib/email";
 import { sendOrderConfirmationToBuyer } from "@/lib/email-order";
@@ -181,7 +181,8 @@ export async function performCheckout(
   // Ambil profil SEKALI (foto pembeli, nomor WA, & cek pembeli pertama).
   const buyerProfile = await getUserProfile(actor.uid).catch(() => null);
   const buyerPhotoUrl = (buyerProfile?.photoURL ?? "").trim();
-  // `isFirstPurchase` = belum pernah membuat pesanan sukses (orderCount 0).
+  // `isFirstPurchase` = belum pernah punya order LUNAS (`orderCount === 0`).
+  // Sejak Sprint 3, `orderCount` hanya naik saat pembayaran diterima.
   const isFirstPurchase = (buyerProfile?.orderCount ?? 0) === 0;
 
   // ===== Kupon (opsional) — divalidasi & dihitung SERVER =====
@@ -424,10 +425,9 @@ export async function performCheckout(
     if (!order.payment) order = { ...order, payment };
   }
 
-  // Naikkan penghitung pesanan user (best-effort).
-  incrementUserOrderCount(actor.uid).catch((err) =>
-    console.error("[checkout] gagal menaikkan orderCount:", err),
-  );
+  // O-02: `orderCount` TIDAK dinaikkan di sini. Sejak Sprint 3 ia menghitung
+  // order yang PERNAH LUNAS (dinaikkan di `markOrderPaid`/transisi lunas), agar
+  // keranjang yang ditinggalkan tidak menghanguskan hak kupon "pelanggan baru".
 
   // Observability terstruktur (OR-E5) — jalur uang.
   obs.checkoutCompleted({

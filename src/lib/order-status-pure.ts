@@ -83,6 +83,28 @@ export function isPayableStatus(status: string): boolean {
 }
 
 /**
+ * Perubahan `orderCount` user saat status order berpindah dari `previous` ke
+ * `next` (Sprint 3 / O-02).
+ *
+ * Sejak Sprint 3, `orderCount` = jumlah order yang **PERNAH LUNAS** — sumber
+ * `isFirstPurchase` untuk kupon audience (`baru`/`lama`). Bukan lagi jumlah
+ * checkout, sehingga keranjang yang ditinggalkan tak lagi menghanguskan hak
+ * "pelanggan baru".
+ *
+ * - masuk status lunas (`dibayar`/`diproses`/`selesai`) → `+1`
+ * - keluar dari status lunas (mis. `dibayar → dibatalkan`) → `-1`
+ * - sisanya (termasuk antar-status lunas) → `0`
+ */
+export function orderCountDelta(previous: string, next: string): number {
+  if (previous === next) return 0;
+  const wasPaid = isPaidStatus(previous);
+  const nowPaid = isPaidStatus(next);
+  if (!wasPaid && nowPaid) return 1;
+  if (wasPaid && !nowPaid) return -1;
+  return 0;
+}
+
+/**
  * Apakah transisi DARI `previous` KE `next` harus mengembalikan kuota kupon.
  * Benar hanya bila: status berubah, `next` termasuk `RESTORE_COUPON_STATUSES`,
  * dan order sebelumnya BELUM final (hindari restore ganda).

@@ -8,6 +8,7 @@ import {
   isPaymentExpired,
   isTransitionAllowed,
   evaluateStatusTransition,
+  orderCountDelta,
   shouldRestoreCoupon,
   shouldSendStatusEmail,
   ORDER_STATUS_LIST,
@@ -145,6 +146,41 @@ test("isTransitionAllowed: tak boleh mundur ke 'baru' dari alur lanjut", () => {
 test("isTransitionAllowed: tak boleh lompat bayar dari diproses/selesai", () => {
   assert.equal(isTransitionAllowed("diproses", "dibayar"), false);
   assert.equal(isTransitionAllowed("selesai", "dibayar"), false);
+});
+
+/* -------------------------------------------------------------------------- */
+/* O-02: orderCountDelta (orderCount = jumlah order PERNAH LUNAS)              */
+/* -------------------------------------------------------------------------- */
+
+test("orderCountDelta: masuk status lunas → +1", () => {
+  assert.equal(orderCountDelta("menunggu_bayar", "dibayar"), 1);
+  assert.equal(orderCountDelta("menunggu_konfirmasi", "dibayar"), 1);
+  assert.equal(orderCountDelta("baru", "dibayar"), 1);
+  // Lompat langsung ke status lunas lanjutan (mis. admin menandai selesai).
+  assert.equal(orderCountDelta("menunggu_bayar", "diproses"), 1);
+});
+
+test("orderCountDelta: keluar dari status lunas → -1", () => {
+  assert.equal(orderCountDelta("dibayar", "dibatalkan"), -1);
+  assert.equal(orderCountDelta("diproses", "kedaluwarsa"), -1);
+});
+
+test("orderCountDelta: antar-status lunas → 0 (tak dihitung dua kali)", () => {
+  assert.equal(orderCountDelta("dibayar", "diproses"), 0);
+  assert.equal(orderCountDelta("diproses", "selesai"), 0);
+  assert.equal(orderCountDelta("dibayar", "selesai"), 0);
+});
+
+test("orderCountDelta: status tak berubah → 0", () => {
+  for (const s of ["baru", "menunggu_bayar", "dibayar", "dibatalkan", "kedaluwarsa"]) {
+    assert.equal(orderCountDelta(s, s), 0, s);
+  }
+});
+
+test("orderCountDelta: tetap di luar status lunas → 0", () => {
+  assert.equal(orderCountDelta("baru", "menunggu_bayar"), 0);
+  assert.equal(orderCountDelta("menunggu_bayar", "dibatalkan"), 0);
+  assert.equal(orderCountDelta("kedaluwarsa", "dibatalkan"), 0);
 });
 
 /* -------------------------------------------------------------------------- */

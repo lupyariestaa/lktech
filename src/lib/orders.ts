@@ -9,7 +9,7 @@ import {
   type Order,
   type OrderStatus,
 } from "@/lib/order-types";
-import { evaluateStatusTransition } from "@/lib/order-status-pure";
+import { evaluateStatusTransition, isPaidStatus, orderCountDelta } from "@/lib/order-status-pure";
 import { stripUndefined } from "@/lib/firestore-sanitize-pure";
 import {
   applyFilterAndSort,
@@ -32,6 +32,7 @@ import {
   releaseStockInTransaction,
 } from "@/lib/stock";
 import { shouldReleaseStock } from "@/lib/stock-pure";
+import { adjustUserOrderCount } from "@/lib/user-profile";
 
 const COLLECTION = "orders";
 
@@ -597,6 +598,7 @@ export async function updateOrderStatus(
   if (!db) throw new Error("Admin SDK tidak tersedia.");
   const ref = db.collection(COLLECTION).doc(id);
   let createdAtISO: string | undefined;
+  let orderUid: string | undefined;
 
   const result = await db.runTransaction(async (tx) => {
     const doc = await tx.get(ref);
@@ -606,6 +608,7 @@ export async function updateOrderStatus(
     const data = doc.data() as Record<string, unknown>;
     createdAtISO = String(data.createdAtISO ?? "");
     const current = normalizeOrder({ id: doc.id, ...data });
+    orderUid = current.uid;
     const previousStatus = current.status;
 
     const transition = evaluateStatusTransition(previousStatus, status);
@@ -642,6 +645,14 @@ export async function updateOrderStatus(
     invalidateOrderDerivedCaches();
     invalidateAnalyticsForOrder(createdAtISO);
     if (result.stockReleased) invalidateProductStockCache();
+
+    // O-02: `orderCount` menghitung order yang PERNAH LUNAS (kupon audience
+    // `baru`/`lama`). Best-effort, di luar transaksi jalur uang — kegagalan
+    // penyesuaian counter tidak boleh menggagalkan perubahan status.
+    const delta = orderCountDelta(result.previousStatus ?? "", status);
+    if (orderUid && delta !== 0) {
+      await adjustUserOrderCount(orderUid, delta);
+    }
   }
   return result;
 }
@@ -850,6 +861,8 @@ export async function markOrderPaid(
   applied: boolean;
   order: Order | null;
   reason?: "already_paid" | "not_payable" | "not_found";
+  /** Perubahan `orderCount` user (O-02) saat status berubah ke lunas. */
+  countDelta?: number;
 }> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
@@ -906,6 +919,10 @@ export async function markOrderPaid(
       const settled = mixedGoodsPaid ? current.servicePayment?.status === "dibayar" : payment.component === "service" && mixed
         ? current.payment?.status === "dibayar"
         : true;
+      // O-02: `orderCount` naik saat order pertama kali LUNAS (transisi non-lunas →
+      // lunas). Bila komponen campuran belum lunas (`settled` false), status TIDAK
+      // berubah → `countDelta` 0. `orderCountDelta` juga menetralkan status lunas → lunas.
+      const countDelta = settled ? orderCountDelta(current.status, orderStatus) : 0;
       const nextPayment = stripUndefined(
         payRef.component === "service"
           ? { payment: current.payment, servicePayment: payment }
@@ -929,11 +946,15 @@ export async function markOrderPaid(
         paymentIssue: undefined,
         ...(settled ? { status: orderStatus } : {}),
       });
-      return { applied: true, order };
+      return { applied: true, order, countDelta };
     });
     if (result.applied) {
       invalidateOrderDerivedCaches();
       invalidateAnalyticsForOrder(result.order?.createdAt);
+      // O-02: sesuaikan `orderCount` (best-effort, di luar transaksi).
+      if (result.order?.uid && result.countDelta) {
+        await adjustUserOrderCount(result.order.uid, result.countDelta);
+      }
     }
     return result;
   } catch (err) {
@@ -1028,6 +1049,8 @@ export type DeleteOrderResult =
   | {
       ok: true;
       status: OrderStatus;
+      /** Pemilik order (O-02) untuk penyesuaian `orderCount`. */
+      uid?: string;
       couponRestored: boolean;
       /** Stok dilepas saat penghapusan (O-01). */
       stockReleased?: boolean;
@@ -1097,6 +1120,7 @@ export async function deleteOrder(
     return {
       ok: true,
       status: order.status,
+      uid: order.uid,
       couponRestored,
       stockReleased: stockWrites.length > 0,
       createdAtISO: order.createdAt,
@@ -1108,6 +1132,10 @@ export async function deleteOrder(
     invalidateAnalyticsForOrder(result.createdAtISO);
     if (result.couponRestored) invalidateCouponStatsCache();
     if (result.stockReleased) invalidateProductStockCache();
+    // O-02: order lunas yang dihapus mengurangi `orderCount` (best-effort).
+    if (result.uid && isPaidStatus(result.status)) {
+      await adjustUserOrderCount(result.uid, -1);
+    }
   }
   return result;
 }

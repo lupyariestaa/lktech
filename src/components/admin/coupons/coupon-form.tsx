@@ -662,15 +662,21 @@ export function CouponForm({
                 </div>
               </Section>
 
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={form.stackable ?? false}
-                  onChange={(e) => set("stackable", e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/30"
-                />
-                Boleh digabung kupon lain (stackable)
-              </label>
+              <div className="flex flex-col gap-1">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={form.stackable ?? false}
+                    onChange={(e) => set("stackable", e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/30"
+                  />
+                  Boleh digabung kupon lain (stackable)
+                </label>
+                <p className="pl-6 text-xs text-amber-600">
+                  Belum berpengaruh: satu pesanan hanya memakai SATU kupon. Nilai
+                  ini tersimpan untuk pengembangan, tapi belum diterapkan.
+                </p>
+              </div>
             </div>
           )}
         </div>
