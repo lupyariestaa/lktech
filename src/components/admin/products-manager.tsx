@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   ExternalLink,
@@ -44,6 +45,7 @@ import { useRegisterDirty } from "@/components/admin/unsaved-changes";
 import { useUnsavedChanges } from "@/components/admin/use-unsaved-changes";
 import { MediaPickerDialog } from "@/components/admin/media-picker-dialog";
 import { cn } from "@/lib/utils";
+import { findLowStock } from "@/lib/low-stock-pure";
 
 const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
@@ -99,6 +101,8 @@ export function ProductsManager() {
   const refresh = async () => {
     await load();
   };
+
+  const lowStockItems = findLowStock(items);
 
   const onNew = () => {
     setEditing({ ...emptyProduct });
@@ -297,6 +301,54 @@ export function ProductsManager() {
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           {error}
         </div>
+      )}
+
+      {lowStockItems.length > 0 && (
+        <section
+          aria-label="Peringatan stok rendah"
+          className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/70 p-4"
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-bold text-amber-900">
+                Stok rendah atau habis ({lowStockItems.length})
+              </h2>
+              <p className="mt-0.5 text-xs text-amber-800">
+                Stok terbatas tersisa 5 atau kurang. Stok tak dibatasi/tidak diketahui tidak ditampilkan.
+              </p>
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {lowStockItems.map((item) => (
+                  <li key={`${item.productSlug}::${item.variantSlug ?? ""}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = items.find((product) => product.slug === item.productSlug);
+                        if (target) onEdit(target);
+                      }}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-amber-200 bg-white px-3 py-2 text-left transition-colors hover:border-amber-400"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-semibold text-secondary">
+                          {item.productName}
+                        </span>
+                        {item.variantName && (
+                          <span className="block truncate text-[11px] text-muted">{item.variantName}</span>
+                        )}
+                      </span>
+                      <span className={cn(
+                        "shrink-0 rounded-full px-2 py-1 text-[11px] font-bold",
+                        item.soldOut ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800",
+                      )}>
+                        {item.soldOut ? "Habis" : `Sisa ${item.stock}`}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
       )}
 
       {loading ? (
