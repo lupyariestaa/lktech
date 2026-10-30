@@ -60,6 +60,33 @@ export const obs = {
       amount: props.amount,
       orderStatus: props.orderStatus,
     }),
+  /**
+   * F-13: event webhook yang BERHASIL diparse & dikorelasikan ke order.
+   * Dibandingkan dengan `webhookApplied` untuk mendeteksi "SUCCESS tapi order
+   * tidak berubah" (mis. bukti ditolak, order terminal, dl).
+   */
+  webhookReceived: (props: { orderId: string; amount?: number }) =>
+    logEvent("webhook_received", {
+      order: props.orderId,
+      amount: props.amount ?? null,
+    }),
+  /** F-13: hasil penerapan webhook pada order (applied/reason). */
+  webhookApplied: (props: {
+    orderId: string;
+    applied: boolean;
+    reason?: string;
+  }) =>
+    logEvent("webhook_applied", {
+      order: props.orderId,
+      applied: props.applied,
+      reason: props.reason ?? null,
+    }),
+  /** F-19: kegagalan sementara saat menerapkan pembayaran (memicu retry Mayar). */
+  paymentApplyFailed: (props: { orderId?: string; reason: string }) =>
+    logEvent("payment_apply_failed", {
+      order: props.orderId ?? null,
+      reason: props.reason,
+    }),
   checkoutCompleted: (props: {
     orderId: string;
     total: number;

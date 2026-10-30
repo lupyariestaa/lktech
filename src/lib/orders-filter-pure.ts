@@ -26,6 +26,8 @@ export type FilterableOrder = {
   } | null;
   paymentMismatch?: { received?: number; expected?: number; reason?: string; atISO?: string } | null;
   paymentIssue?: { reason?: string; atISO?: string } | null;
+  /** F-08: pembayaran masuk setelah order terminal (perlu tindakan admin). */
+  paymentLate?: { amount?: number; atISO?: string; orderStatus?: string; reason?: string } | null;
   downloadTokenId?: string;
   coupon?: { code?: string } | null;
   createdAt?: string;
@@ -272,6 +274,9 @@ export function attentionReasons(
   }
   if (order.paymentIssue) reasons.push("masalah_pembayaran");
 
+  // F-08: uang masuk setelah order terminal → butuh tindakan (refund/manual).
+  if (order.paymentLate) reasons.push("pembayaran_terlambat");
+
   if (
     order.fulfillment !== "jasa" &&
     order.status === "dibayar" &&
@@ -296,6 +301,7 @@ export const ATTENTION_LABEL: Record<string, string> = {
   terlambat_bayar: "Lewat jatuh tempo, belum ditandai",
   kurang_bayar: "Nominal kurang bayar",
   masalah_pembayaran: "Bukti pembayaran perlu ditinjau",
+  pembayaran_terlambat: "Pembayaran masuk setelah order ditutup (perlu tindakan)",
   belum_dipenuhi: "Dibayar, belum dipenuhi",
   email_gagal: "Email gagal terkirim",
 };

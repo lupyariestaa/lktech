@@ -67,6 +67,7 @@ test("extracts Mayar event while keeping data.id separate from invoiceId", () =>
     invoiceId: undefined,
     webhookId: "webhook-789",
     transactionId: "txn-456",
+    component: undefined,
   });
 });
 
@@ -85,6 +86,28 @@ test("rejects explicitly mismatched invoice reference", () => {
     ok: false,
     reason: "invoice_mismatch",
   });
+});
+
+/* ---- F-06: korelasi komponen invoice (barang vs jasa) ---- */
+
+test("extractMayarPaymentEvent: membaca extraData.component", () => {
+  for (const component of ["goods", "service", "order"] as const) {
+    const parsed = extractMayarPaymentEvent({
+      event: "payment.received",
+      data: { amount: 50000, extraData: { orderId: "order-123", component } },
+    });
+    assert.equal(parsed?.component, component, component);
+  }
+});
+
+test("extractMayarPaymentEvent: komponen tak dikenal diabaikan (fallback aman)", () => {
+  for (const component of ["bogus", "", 123, null]) {
+    const parsed = extractMayarPaymentEvent({
+      event: "payment.received",
+      data: { amount: 50000, extraData: { orderId: "order-123", component } },
+    });
+    assert.equal(parsed?.component, undefined, String(component));
+  }
 });
 
 /* ---- F-07: normalisasi nominal dari GET /invoices (number | string) ---- */

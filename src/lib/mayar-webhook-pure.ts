@@ -14,6 +14,12 @@ export type MayarPaymentEvent = {
   invoiceId?: string;
   /** data.id is documented as the webhook event ID, not necessarily invoice ID. */
   webhookId?: string;
+  /**
+   * F-06: komponen invoice yang ditagih (dari `extraData.component` yang kita
+   * sisipkan saat membuat invoice). Menentukan `payment` (barang) vs
+   * `servicePayment` (jasa) pada order campuran tanpa menebak dari nominal.
+   */
+  component?: "goods" | "service" | "order";
 };
 
 export type MayarOrderPaymentReference = {
@@ -112,6 +118,12 @@ export function extractMayarPaymentEvent(body: unknown): MayarPaymentEvent | nul
   const rawAmount = data.amount;
   const amount = coerceMayarAmount(rawAmount);
 
+  const rawComponent = firstString(extra?.component).toLowerCase();
+  const component =
+    rawComponent === "goods" || rawComponent === "service" || rawComponent === "order"
+      ? (rawComponent as "goods" | "service" | "order")
+      : undefined;
+
   return {
     orderId,
     amount,
@@ -120,6 +132,7 @@ export function extractMayarPaymentEvent(body: unknown): MayarPaymentEvent | nul
     invoiceId: firstString(data.invoiceId, data.invoice_id) || undefined,
     webhookId: firstString(data.id, data.webhookId) || undefined,
     transactionId: firstString(data.transactionId, data.transaction_id) || undefined,
+    component,
   };
 }
 

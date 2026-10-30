@@ -519,6 +519,8 @@ export type AttentionSummary = {
   terlambat_bayar: number;
   kurang_bayar: number;
   masalah_pembayaran: number;
+  /** F-08: pembayaran masuk setelah order terminal (perlu refund/tindakan). */
+  pembayaran_terlambat: number;
   belum_dipenuhi: number;
   email_gagal: number;
   total: number;
@@ -532,6 +534,7 @@ export async function getOrdersAttentionSummary(): Promise<AttentionSummary> {
     terlambat_bayar: 0,
     kurang_bayar: 0,
     masalah_pembayaran: 0,
+    pembayaran_terlambat: 0,
     belum_dipenuhi: 0,
     email_gagal: 0,
     total: 0,
@@ -770,7 +773,9 @@ export async function clearFailedInvoiceRecovery(id: string): Promise<void> {
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists || snap.get("invoiceRecovery.state") !== "failed") throw new Error("Status rekonsiliasi belum mengizinkan retry.");
-    tx.update(ref, { invoiceRecovery: null, updatedAtISO: new Date().toISOString() });
+    // F-18: `FieldValue.delete()` menghapus field sepenuhnya (bukan menyimpan
+    // `null`), konsisten dengan pembacaan `normalizeInvoiceRecovery`.
+    tx.update(ref, { invoiceRecovery: FieldValue.delete(), updatedAtISO: new Date().toISOString() });
   });
 }
 
@@ -855,7 +860,7 @@ export async function recordPaymentProblem(
  */
 export async function markOrderPaid(
   id: string,
-  info: { amount?: number; method?: string; transactionId?: string; invoiceId?: string; at?: string },
+  info: { amount?: number; method?: string; transactionId?: string; invoiceId?: string; at?: string; component?: "goods" | "service" | "order" },
   orderStatus: OrderStatus = "dibayar",
 ): Promise<{
   applied: boolean;
@@ -882,9 +887,17 @@ export async function markOrderPaid(
       });
 
       // Idempoten: sudah dibayar → tidak ada aksi.
-      const payRef = current.servicePayment?.invoiceId === info.invoiceId && info.invoiceId
-        ? current.servicePayment
-        : current.payment;
+      // F-06: pilih komponen pembayaran dari petunjuk `info.component` (dari
+      // `extraData.component` invoice) lebih dulu; jika tidak ada, fallback ke
+      // pencocokan `invoiceId`, terakhir default ke komponen barang.
+      const payRef =
+        info.component === "service"
+          ? current.servicePayment
+          : info.component === "goods"
+            ? current.payment
+            : current.servicePayment?.invoiceId === info.invoiceId && info.invoiceId
+              ? current.servicePayment
+              : current.payment;
       if (payRef?.status === "dibayar") {
         return { applied: false, order: current, reason: "already_paid" as const };
       }

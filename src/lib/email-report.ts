@@ -84,6 +84,11 @@ function buildHtml(report: WeeklyReport): string {
           ${statRow("Lead menang", String(report.leads.won))}
           ${statRow("Kupon terpakai", `${report.coupons.ordersUsing} pesanan`, undefined)}
           ${statRow("Total diskon diberikan", formatRupiah(report.coupons.discountGiven))}
+          ${
+            report.latePayments > 0
+              ? statRow("Pembayaran terlambat (perlu tindakan)", String(report.latePayments), undefined, "#e11d48")
+              : ""
+          }
         </table>
       </div>
       ${
@@ -112,6 +117,9 @@ function buildText(report: WeeklyReport): string {
     `Lead baru         : ${report.leads.new} (${deltaLabel(report.deltas.leads)}) · menang ${report.leads.won}`,
     `Kupon terpakai    : ${report.coupons.ordersUsing} · diskon ${formatRupiah(report.coupons.discountGiven)}`,
   ];
+  if (report.latePayments > 0) {
+    lines.push(`Pembayaran telat : ${report.latePayments} (perlu tindakan/refund)`);
+  }
   if (report.topProducts.length > 0) {
     lines.push("", "Produk terlaris:");
     for (const p of report.topProducts) {

@@ -144,6 +144,17 @@ uid: string;
     reason?: string;
     atISO?: string;
   };
+  /**
+   * F-08: pembayaran masuk untuk order yang sudah TERMINAL (`dibatalkan`/
+   * `kedaluwarsa`/`selesai`). Uang diterima tetapi status sengaja tidak ditimpa →
+   * perlu tindakan admin (refund/manual). Ditulis oleh webhook Mayar.
+   */
+  paymentLate?: {
+    amount?: number;
+    atISO?: string;
+    orderStatus?: string;
+    reason?: string;
+  };
   /** Jalur fulfillment: unduh, jasa, atau pickup cetak. */
   fulfillment?: FulfillmentType;
   /**
@@ -341,6 +352,16 @@ status,
       return issue
         ? { reason: str(issue.reason) || undefined, atISO: str(issue.atISO) || undefined }
         : undefined;
+    })(),
+    paymentLate: (() => {
+      if (!data.paymentLate || typeof data.paymentLate !== "object") return undefined;
+      const l = data.paymentLate as Record<string, unknown>;
+      return {
+        amount: typeof l.amount === "number" && Number.isFinite(l.amount) ? l.amount : undefined,
+        atISO: str(l.atISO) || undefined,
+        orderStatus: str(l.orderStatus) || undefined,
+        reason: str(l.reason) || undefined,
+      };
     })(),
     fulfillment,
     downloadTokenId: str(data.downloadTokenId) || undefined,

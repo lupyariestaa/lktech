@@ -123,6 +123,7 @@ export async function reconcilePendingPayments(): Promise<ReconcileResult> {
           {
             amount: detail.amount,
             invoiceId,
+            component: candidate.component,
             ...(detail.transactionId ? { transactionId: detail.transactionId } : {}),
           },
           "dibayar",
@@ -149,6 +150,19 @@ export async function reconcilePendingPayments(): Promise<ReconcileResult> {
           console.error(
             `[reconcile] late_payment order=${order.id} invoice=${invoiceId} status=${order.status}`,
           );
+          // F-08: catat penanda permanen agar muncul di panel "butuh perhatian".
+          try {
+            await db.collection("orders").doc(order.id).set({
+              paymentLate: {
+                amount: expected,
+                atISO: new Date().toISOString(),
+                orderStatus: order.status,
+                reason,
+              },
+            }, { merge: true });
+          } catch (err) {
+            console.error("[reconcile] gagal mencatat paymentLate:", order.id, err);
+          }
         } else {
           // already_paid / not_found → tidak ada aksi.
           result.skipped += 1;

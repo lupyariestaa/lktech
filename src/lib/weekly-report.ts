@@ -44,6 +44,8 @@ export type WeeklyReport = {
     /** Σ diskon yang diberikan (Rp). */
     discountGiven: number;
   };
+  /** F-08: pembayaran masuk setelah order ditutup (perlu tindakan) pada periode. */
+  latePayments: number;
   topProducts: Array<{ name: string; units: number; revenue: number }>;
 };
 
@@ -91,6 +93,7 @@ export async function buildWeeklyReport(
     deltas: { revenue: null, orders: null, leads: null },
     leads: { new: 0, won: 0 },
     coupons: { ordersUsing: 0, discountGiven: 0 },
+    latePayments: 0,
     topProducts: [],
   };
 
@@ -158,6 +161,19 @@ export async function buildWeeklyReport(
       console.error("[weekly-report] gagal memuat leads:", err);
     }
 
+    // F-08: hitung pembayaran terlambat (masuk setelah order ditutup) pada
+    // periode ini. Field `paymentLate.atISO` ditulis oleh webhook Mayar.
+    let latePayments = 0;
+    try {
+      const lateSnap = await db
+        .collection("orders")
+        .where("paymentLate.atISO", ">=", new Date(fromMs).toISOString())
+        .get();
+      latePayments = lateSnap.size;
+    } catch (err) {
+      console.error("[weekly-report] gagal memuat pembayaran terlambat:", err);
+    }
+
     return {
       fromISO: new Date(fromMs).toISOString(),
       toISO: new Date(toMs).toISOString(),
@@ -170,6 +186,7 @@ export async function buildWeeklyReport(
       },
       leads: { new: leadsNew, won: leadsWon },
       coupons: { ordersUsing, discountGiven },
+      latePayments,
       topProducts,
     };
   } catch (err) {

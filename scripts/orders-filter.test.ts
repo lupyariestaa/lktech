@@ -244,6 +244,18 @@ test("attentionReasons: invoice evidence issue is not labeled as underpayment", 
   assert.ok(reasons.includes("masalah_pembayaran"));
 });
 
+test("attentionReasons: pembayaran terlambat (F-08) ditandai untuk tindakan", () => {
+  const late = order({
+    id: "late",
+    status: "kedaluwarsa",
+    paymentLate: { amount: 100_000, atISO: "2026-10-11T09:00:00.000Z", orderStatus: "kedaluwarsa" },
+  });
+  assert.ok(attentionReasons(late, NOW).includes("pembayaran_terlambat"));
+
+  const normal = order({ id: "normal", status: "menunggu_bayar" });
+  assert.equal(attentionReasons(normal, NOW).includes("pembayaran_terlambat"), false);
+});
+
 test("sortOrders: tanggal & total", () => {
   const a = order({ id: "a", total: 100, createdAt: "2026-10-01T00:00:00Z" });
   const b = order({ id: "b", total: 300, createdAt: "2026-10-03T00:00:00Z" });

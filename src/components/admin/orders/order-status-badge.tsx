@@ -23,6 +23,7 @@ const ATTENTION_SHORT: Record<string, string> = {
   terlambat_bayar: "Lewat jatuh tempo",
   kurang_bayar: "Kurang bayar",
   masalah_pembayaran: "Cek pembayaran",
+  pembayaran_terlambat: "Bayar telat",
   belum_dipenuhi: "Belum dipenuhi",
   email_gagal: "Email gagal",
 };

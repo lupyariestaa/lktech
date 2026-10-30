@@ -364,7 +364,7 @@ export async function createManualOrderInvoice(orderId: string): Promise<{
             { quantity: 1, rate: -order.coupon.discount, description: `Diskon ${order.coupon.code}` },
           ]
       : [{ quantity: 1, rate: amountExpected, description: mixedService ? (isGoodsComponent ? "Item non-jasa" : "Jasa") : "Total pesanan" }],
-    extraData: { orderId: order.id },
+    extraData: { orderId: order.id, component },
   });
 
   const expiresAt = new Date(invoice.expiredAt).toISOString();

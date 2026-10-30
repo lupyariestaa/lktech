@@ -348,7 +348,7 @@ export async function performCheckout(
                     { quantity: 1, rate: -discount, description: `Diskon ${orderCoupon.code}` },
                   ]
                 : [{ quantity: 1, rate: total, description: "Total pesanan" }],
-          extraData: { orderId: order.id },
+          extraData: { orderId: order.id, component: hasGoods && hasService ? "goods" : "order" },
         });
 
         payment.status = "menunggu";

@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, ignored: "unhandled_event" });
   }
 
-  const { orderId, amount, method, transactionId, invoiceId } = payload;
+  const { orderId, amount, method, transactionId, invoiceId, component } = payload;
 
   try {
     const order = await getOrderById(orderId);
@@ -98,10 +98,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignored: "order_not_found" });
     }
 
+    // F-13: catat event yang berhasil dikorelasikan (bandingkan dengan
+    // `webhook_applied` untuk mendeteksi kegagalan senyap).
+    obs.webhookReceived({ orderId, amount });
+
     // ===== 4. Validasi bukti pembayaran; jangan pernah menebak nominal =====
-    const matchedPayment = invoiceId && order.servicePayment?.invoiceId === invoiceId
-      ? order.servicePayment
-      : order.payment;
+    // F-06: tentukan komponen invoice dari `extraData.component` (disisipkan saat
+    // pembuatan invoice). Fallback: cocokkan `invoiceId`, lalu default komponen
+    // barang. Ini mencegah pembayaran JASA dicocokkan ke komponen BARANG.
+    const matchedPayment =
+      component === "service"
+        ? order.servicePayment
+        : component === "goods"
+          ? order.payment
+          : invoiceId && order.servicePayment?.invoiceId === invoiceId
+            ? order.servicePayment
+            : order.payment;
     const validation = validateMayarPayment(
       { amount, invoiceId, transactionId },
       {
@@ -144,9 +156,10 @@ export async function POST(req: Request) {
     const targetStatus: OrderStatus = "dibayar";
     const { applied, reason } = await markOrderPaid(
       orderId,
-      { amount: validation.amount, method, transactionId, invoiceId },
+      { amount: validation.amount, method, transactionId, invoiceId, component },
       targetStatus,
     );
+    obs.webhookApplied({ orderId, applied, reason });
 
     if (!applied) {
       if (reason === "not_payable") {
@@ -161,6 +174,16 @@ export async function POST(req: Request) {
           amount: validation.amount,
           orderStatus: order.status,
         });
+        // F-08: tulis penanda permanen agar muncul di panel "butuh perhatian"
+        // admin dan tidak hilang bersama log.
+        await db.collection("orders").doc(orderId).set({
+          paymentLate: {
+            amount: validation.amount,
+            atISO: new Date().toISOString(),
+            orderStatus: order.status,
+            reason,
+          },
+        }, { merge: true });
         return NextResponse.json({ ok: true, not_payable: true });
       }
       // Sudah dibayar sebelumnya (atau tidak ditemukan) — idempoten, tak ada aksi.
@@ -188,6 +211,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[webhook/mayar] gagal memproses:", err);
+    // F-19: metrik kegagalan penerapan pembayaran (memicu retry & alarm).
+    obs.paymentApplyFailed({
+      orderId,
+      reason: err instanceof Error ? err.message : "unknown",
+    });
     // 500 (bukan 200) agar Mayar MENGULANG event saat kegagalan sementara
     // (Firestore error/timeout). Sebelumnya 200 membuat kegagalan persisten
     // tidak pernah dicoba ulang dan tampak "SUCCESS" di riwayat webhook.

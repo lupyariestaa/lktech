@@ -11,6 +11,7 @@ const KEYS: Array<keyof Omit<AttentionSummary, "total" | "truncated">> = [
   "terlambat_bayar",
   "kurang_bayar",
   "masalah_pembayaran",
+  "pembayaran_terlambat",
   "belum_dipenuhi",
   "email_gagal",
 ];
