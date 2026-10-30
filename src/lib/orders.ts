@@ -13,10 +13,11 @@ import { evaluateStatusTransition, isPaidStatus, orderCountDelta } from "@/lib/o
 import { stripUndefined } from "@/lib/firestore-sanitize-pure";
 import {
   applyFilterAndSort,
-  attentionReasons,
   buildFilteredPageResult,
   dateRangeForPreset,
   defaultFilter as defaultOrdersFilter,
+  summarizeAttention,
+  type AttentionCounts,
   type OrdersFilter,
   type OrdersSort,
 } from "@/lib/orders-filter-pure";
@@ -181,12 +182,26 @@ export function invalidateOrdersSummaryCache(): void {
 }
 
 /**
- * Segarkan SEMUA cache turunan pesanan (ringkasan + analitik penjualan).
+ * Cache singkat ringkasan "butuh perhatian" (Sprint 8). Dipanggil tiap muat
+ * daftar pesanan; pemindaian penuh tanpa cache akan mahal. TTL kecil (60 dtk)
+ * menjaga hitungan tetap segar, dan mutasi pesanan meng-invalidate langsung.
+ */
+const ATTENTION_TTL_MS = 60_000;
+let attentionCache: { at: number; value: AttentionSummary } | null = null;
+let attentionInflight: Promise<AttentionSummary> | null = null;
+
+export function invalidateOrdersAttentionCache(): void {
+  attentionCache = null;
+}
+
+/**
+ * Segarkan SEMUA cache turunan pesanan (ringkasan + attention + analitik).
  * Dipanggil setiap kali pesanan dibuat/diubah/dihapus agar dashboard langsung
  * menampilkan angka terbaru tanpa menunggu TTL.
  */
 function invalidateOrderDerivedCaches(): void {
   invalidateOrdersSummaryCache();
+  invalidateOrdersAttentionCache();
   invalidateSalesAnalyticsCache();
 }
 
@@ -325,8 +340,15 @@ const FILTER_SCAN_BATCH = 500;
  */
 const FILTER_SCAN_CAP = 5000;
 
-/** Batas pemindaian ringkasan "butuh perhatian" (best-effort). */
-const ATTENTION_SCAN_CAP = 500;
+/** Ukuran batch pemindaian ringkasan "butuh perhatian". */
+const ATTENTION_SCAN_BATCH = 500;
+
+/**
+ * Batas keras dokumen untuk ringkasan "butuh perhatian" (O-05, Sprint 8).
+ * Dipindai bertahap sampai habis / batas ini; bila tersentuh → `truncated`.
+ * Hasil di-cache singkat agar tidak memindai ulang tiap muat halaman.
+ */
+const ATTENTION_SCAN_CAP = 5000;
 
 /**
  * Pindai SELURUH dokumen pada query sempit dalam batch berurutan (O-03).
@@ -567,66 +589,65 @@ export async function attachBuyerPhotos(orders: Order[]): Promise<Order[]> {
 }
 
 /**
- * Ringkasan "butuh perhatian" (FASE O5) — hitung order yang butuh tindakan admin,
- * dari pemindaian window (cap `ATTENTION_SCAN_CAP`). Best-effort; `truncated` menandai
- * bila batas tersentuh.
+ * Ringkasan "butuh perhatian" (FASE O5; Sprint 8/O-05) — hitung order yang butuh
+ * tindakan admin dengan memindai SELURUH koleksi secara bertahap (cap
+ * `ATTENTION_SCAN_CAP`). Best-effort; `truncated` menandai bila batas tersentuh.
+ * Hasil di-cache singkat + di-dedupe agar tidak memindai tiap muat halaman.
  */
-export type AttentionSummary = {
-  jasa_menunggu: number;
-  bayar_segera: number;
-  /** Lewat `expiresAt` tetapi status masih `menunggu_bayar` (F-04). */
-  terlambat_bayar: number;
-  kurang_bayar: number;
-  masalah_pembayaran: number;
-  /** F-08: pembayaran masuk setelah order terminal (perlu refund/tindakan). */
-  pembayaran_terlambat: number;
-  belum_dipenuhi: number;
-  email_gagal: number;
-  total: number;
+export type AttentionSummary = AttentionCounts & {
+  /** `true` bila pemindaian menyentuh batas (hitungan bisa belum lengkap). */
   truncated: boolean;
 };
 
-export async function getOrdersAttentionSummary(): Promise<AttentionSummary> {
-  const empty: AttentionSummary = {
-    jasa_menunggu: 0,
-    bayar_segera: 0,
-    terlambat_bayar: 0,
-    kurang_bayar: 0,
-    masalah_pembayaran: 0,
-    pembayaran_terlambat: 0,
-    belum_dipenuhi: 0,
-    email_gagal: 0,
-    total: 0,
-    truncated: false,
-  };
+export async function getOrdersAttentionSummary(
+  opts: { bypassCache?: boolean } = {},
+): Promise<AttentionSummary> {
+  const empty: AttentionSummary = { ...summarizeAttention([]), truncated: false };
   const db = getAdminDb();
   if (!db) return empty;
-  try {
-    const snap = await db
-      .collection(COLLECTION)
-      .orderBy("createdAtISO", "desc")
-      .limit(ATTENTION_SCAN_CAP)
-      .get();
-    const truncated = snap.docs.length >= ATTENTION_SCAN_CAP;
-    const now = new Date();
-    const count: AttentionSummary = { ...empty, truncated };
-    const flagged = new Set<string>();
-    for (const doc of snap.docs) {
-      const order = normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) });
-      const reasons = attentionReasons(order, now);
-      for (const r of reasons) {
-        if (r in count && typeof count[r as keyof AttentionSummary] === "number") {
-          (count[r as keyof AttentionSummary] as number) += 1;
-        }
-        flagged.add(order.id);
-      }
+
+  const nowMs = Date.now();
+  if (!opts.bypassCache) {
+    if (attentionCache && nowMs - attentionCache.at < ATTENTION_TTL_MS) {
+      return attentionCache.value;
     }
-    count.total = flagged.size;
-    return count;
-  } catch (err) {
-    console.error("[orders] gagal menghitung attention:", err);
-    return empty;
+    if (attentionInflight) return attentionInflight;
   }
+
+  const compute = async (): Promise<AttentionSummary> => {
+    try {
+      // Sprint 8/O-05: pindai SELURUH koleksi secara bertahap (bukan hanya 500
+      // terbaru) agar hitungan panel tidak lagi meleset saat order menumpuk.
+      const build = (): Query =>
+        db.collection(COLLECTION).orderBy("createdAtISO", "desc");
+      const { docs, exhausted } = await scanAllBatches(
+        build,
+        build,
+        ATTENTION_SCAN_BATCH,
+        ATTENTION_SCAN_CAP,
+      );
+      const now = new Date();
+      const orders = docs.map((doc) =>
+        normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
+      );
+      // Hitungan murni & teruji (termasuk volume >500); `truncated` dari pemindaian.
+      return { ...summarizeAttention(orders, now), truncated: !exhausted };
+    } catch (err) {
+      console.error("[orders] gagal menghitung attention:", err);
+      return empty;
+    }
+  };
+
+  const p = compute()
+    .then((value) => {
+      attentionCache = { at: Date.now(), value };
+      return value;
+    })
+    .finally(() => {
+      attentionInflight = null;
+    });
+  attentionInflight = p;
+  return p;
 }
 
 /**
@@ -1056,7 +1077,7 @@ export async function resolveLatePayment(
   const atISO = new Date().toISOString();
   const note = input.note?.trim().slice(0, 500) ?? "";
 
-  return db.runTransaction(async (tx) => {
+  const result = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return { ok: false, reason: "not_found" as const };
     const existing = snap.get("paymentLate");
@@ -1077,6 +1098,11 @@ export async function resolveLatePayment(
     });
     return { ok: true as const };
   });
+
+  // Panel "butuh perhatian" di-cache singkat — segarkan agar kasus yang baru
+  // ditandai selesai langsung hilang dari hitungan.
+  if (result.ok) invalidateOrdersAttentionCache();
+  return result;
 }
 
 /** Mengambil satu pesanan berdasarkan id (null bila tidak ada). */

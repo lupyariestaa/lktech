@@ -318,6 +318,53 @@ export const ATTENTION_LABEL: Record<string, string> = {
   email_gagal: "Email gagal terkirim",
 };
 
+/** Kunci alasan yang dihitung di panel "butuh perhatian" (tanpa `total`). */
+export const ATTENTION_COUNTER_KEYS = [
+  "jasa_menunggu",
+  "bayar_segera",
+  "terlambat_bayar",
+  "kurang_bayar",
+  "masalah_pembayaran",
+  "pembayaran_terlambat",
+  "belum_dipenuhi",
+  "email_gagal",
+] as const;
+
+export type AttentionCounts = Record<
+  (typeof ATTENTION_COUNTER_KEYS)[number],
+  number
+> & {
+  /** Jumlah order UNIK yang punya minimal satu alasan. */
+  total: number;
+};
+
+/**
+ * Hitung ringkasan "butuh perhatian" dari SELURUH order yang diberikan (murni).
+ * `truncated` TIDAK dihitung di sini — pemanggil mengisinya sesuai kelengkapan
+ * pemindaian. Dipakai `getOrdersAttentionSummary` agar hitungan bisa diuji tanpa
+ * Firestore (termasuk volume >500).
+ */
+export function summarizeAttention(
+  orders: readonly FilterableOrder[],
+  now: Date = new Date(),
+): AttentionCounts {
+  const counts = Object.fromEntries(
+    ATTENTION_COUNTER_KEYS.map((k) => [k, 0]),
+  ) as Record<(typeof ATTENTION_COUNTER_KEYS)[number], number>;
+  const flagged = new Set<string>();
+
+  for (const order of orders) {
+    const reasons = attentionReasons(order, now);
+    if (reasons.length === 0) continue;
+    flagged.add(order.id);
+    for (const r of reasons) {
+      if (r in counts) counts[r as (typeof ATTENTION_COUNTER_KEYS)[number]] += 1;
+    }
+  }
+
+  return { ...counts, total: flagged.size };
+}
+
 /** Apakah order lolos seluruh filter (tanggal, status, fulfillment, dst). */
 export function matchesFilter(
   order: FilterableOrder,

@@ -264,6 +264,7 @@ dengan timeline, dan panel "butuh perhatian".
 - Mode filter bernomor menyempit query native (status + rentang `createdAtISO`) lalu menyaring/mengurutkan **di memori** atas pemindaian **bertahap per 500 dokumen** (O-03) — menghindari banyak composite index. Pemindaian berlanjut sampai query habis atau batas keras 5.000 dokumen; bila batas tersentuh, `truncated` + `totalExact=false` ditandai dan UI menampilkan “total+” (bukan angka palsu).
 - Filter tersinkron ke URL (`?status=&datePreset=&from=&to=&fulfillment=&paymentStatus=&coupon=&minTotal=&maxTotal=&attention=&q=&sort=&page=`) → bisa di-bookmark.
 - Pencarian server-side: kode/email/nama (substring dalam window filter). Bila filter kosong, mode cursor lama tetap dipakai.
+- Panel “butuh perhatian” (`?attention=1`) memindai **seluruh koleksi** secara bertahap (batch 500, cap 5.000 — O-05), di-cache singkat 60 detik + dedupe antar-panggilan, dan cache-nya di-invalidate setiap mutasi pesanan / resolusi pembayaran terlambat. `truncated` ditandai bila cap tersentuh.
 
 ### Sisa manual
 - Uji browser desktop/mobile (toggle tabel/kartu, filter, bulk, detail + timeline).

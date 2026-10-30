@@ -12,6 +12,8 @@ import {
   sortOrders,
   applyFilterAndSort,
   buildFilteredPageResult,
+  summarizeAttention,
+  ATTENTION_COUNTER_KEYS,
   type FilterableOrder,
 } from "../src/lib/orders-filter-pure.ts";
 
@@ -381,4 +383,86 @@ test("buildFilteredPageResult: page/pageSize tak valid dinormalkan (>=1)", () =>
   });
   assert.equal(r.orders.length, 1);
   assert.equal(r.orders[0].id, "o0");
+});
+
+/* -------------------------------------------------------------------------- */
+/* Sprint 8 / O-05: summarizeAttention (ringkasan penuh, >500)                 */
+/* -------------------------------------------------------------------------- */
+
+test("summarizeAttention: tanpa order → semua nol", () => {
+  const s = summarizeAttention([], NOW);
+  assert.equal(s.total, 0);
+  for (const k of ATTENTION_COUNTER_KEYS) assert.equal(s[k], 0, k);
+});
+
+test("summarizeAttention: satu alasan per jenis dihitung benar", () => {
+  const jasa = order({
+    id: "jasa",
+    fulfillment: "jasa",
+    status: "menunggu_konfirmasi",
+    createdAt: new Date(NOW.getTime() - 25 * 60 * 60 * 1000).toISOString(),
+  });
+  const segera = order({
+    id: "segera",
+    status: "menunggu_bayar",
+    payment: { status: "menunggu", expiresAt: new Date(NOW.getTime() + 2 * 60 * 60 * 1000).toISOString() },
+  });
+  const telat = order({
+    id: "telat",
+    status: "menunggu_bayar",
+    payment: { status: "menunggu", expiresAt: new Date(NOW.getTime() - 60 * 1000).toISOString() },
+  });
+  const kurang = order({
+    id: "kurang",
+    status: "menunggu_bayar",
+    paymentMismatch: { received: 50_000, expected: 100_000 },
+  });
+  const issue = order({ id: "issue", status: "menunggu_bayar", paymentIssue: { reason: "invoice_mismatch" } });
+  const late = order({ id: "late", status: "kedaluwarsa", paymentLate: { amount: 100_000 } });
+  const belum = order({ id: "belum", status: "dibayar" });
+  const gagal = order({ id: "gagal", status: "baru", confirmationEmailStatus: "failed" });
+
+  const s = summarizeAttention([jasa, segera, telat, kurang, issue, late, belum, gagal], NOW);
+  assert.equal(s.jasa_menunggu, 1);
+  assert.equal(s.bayar_segera, 1);
+  assert.equal(s.terlambat_bayar, 1);
+  assert.equal(s.kurang_bayar, 1);
+  assert.equal(s.masalah_pembayaran, 1);
+  assert.equal(s.pembayaran_terlambat, 1);
+  assert.equal(s.belum_dipenuhi, 1);
+  assert.equal(s.email_gagal, 1);
+  assert.equal(s.total, 8);
+});
+
+test("summarizeAttention: order dengan banyak alasan dihitung 1 di total", () => {
+  const multiple = order({
+    id: "multi",
+    status: "menunggu_bayar",
+    payment: { status: "menunggu", expiresAt: new Date(NOW.getTime() - 60 * 1000).toISOString() },
+    confirmationEmailStatus: "failed",
+  });
+  const s = summarizeAttention([multiple], NOW);
+  assert.equal(s.terlambat_bayar, 1);
+  assert.equal(s.email_gagal, 1);
+  assert.equal(s.total, 1);
+});
+
+test("summarizeAttention: pembayaran terlambat yang sudah ditangani tidak dihitung", () => {
+  const resolved = order({
+    id: "late-resolved",
+    status: "kedaluwarsa",
+    paymentLate: { amount: 100_000, resolvedAtISO: "2026-10-11T09:30:00.000Z" },
+  });
+  const s = summarizeAttention([resolved], NOW);
+  assert.equal(s.pembayaran_terlambat, 0);
+  assert.equal(s.total, 0);
+});
+
+test("summarizeAttention: lebih dari 500 order dihitung SELURUHNYA", () => {
+  const many = Array.from({ length: 600 }, (_, i) =>
+    order({ id: `paid-${i}`, status: "dibayar" }),
+  );
+  const s = summarizeAttention(many, NOW);
+  assert.equal(s.belum_dipenuhi, 600);
+  assert.equal(s.total, 600);
 });

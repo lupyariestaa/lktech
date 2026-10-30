@@ -2,19 +2,14 @@
 
 import { AlertTriangle } from "lucide-react";
 import type { AttentionSummary } from "@/lib/orders";
-import { ATTENTION_LABEL } from "@/lib/orders-filter-pure";
+import { ATTENTION_COUNTER_KEYS, ATTENTION_LABEL } from "@/lib/orders-filter-pure";
 import { cn } from "@/lib/utils";
 
-const KEYS: Array<keyof Omit<AttentionSummary, "total" | "truncated">> = [
-  "jasa_menunggu",
-  "bayar_segera",
-  "terlambat_bayar",
-  "kurang_bayar",
-  "masalah_pembayaran",
-  "pembayaran_terlambat",
-  "belum_dipenuhi",
-  "email_gagal",
-];
+/**
+ * Urutan chip diambil dari sumber yang SAMA dengan perhitungan server
+ * (`AttentionCounts`) agar tidak ada alasan yang terlewat saat daftar berubah.
+ */
+const KEYS = ATTENTION_COUNTER_KEYS;
 
 /**
  * Panel "butuh perhatian" (FASE O5) — work queue ringkas. Klik chip → set
@@ -73,7 +68,7 @@ export function OrdersAttentionPanel({
       </div>
       {attention.truncated && (
         <p className="mt-2 text-[11px] text-amber-700">
-          Dihitung dari pesanan terbaru (batas pemindaian) — bisa belum lengkap.
+          Batas pemindaian 5.000 pesanan tercapai — hitungan mungkin belum lengkap.
         </p>
       )}
     </div>
