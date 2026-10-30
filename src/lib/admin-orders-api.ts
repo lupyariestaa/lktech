@@ -227,6 +227,21 @@ export async function reconcileOrderInvoice(id: string, input: { invoiceId?: str
 }
 
 /**
+ * Tandai pembayaran terlambat (F-08) selesai ditangani admin (Sprint 5).
+ * `refunded` = sudah direfund, `handled` = ditangani manual, `ignored` = diabaikan.
+ */
+export async function resolveLatePaymentAdmin(
+  id: string,
+  resolution: "refunded" | "handled" | "ignored",
+  note?: string,
+) {
+  return adminFetch<{ ok: boolean }>("/api/admin/orders", {
+    method: "POST",
+    body: JSON.stringify({ id, action: "late-payment-resolve", resolution, note }),
+  });
+}
+
+/**
  * Verifikasi status pembayaran langsung ke Mayar (rekonsiliasi berbasis bukti).
  * Hanya menandai lunas bila Mayar menyatakan `paid` dan nominal cocok.
  */

@@ -154,6 +154,14 @@ uid: string;
     atISO?: string;
     orderStatus?: string;
     reason?: string;
+    /**
+     * Sprint 5: kapan admin menandai kasus ini SELESAI (refund/manual/abaikan).
+     * Selama kosong, order tetap muncul di panel "butuh perhatian".
+     */
+    resolvedAtISO?: string;
+    resolution?: "refunded" | "handled" | "ignored";
+    resolvedBy?: string;
+    note?: string;
   };
   /** Jalur fulfillment: unduh, jasa, atau pickup cetak. */
   fulfillment?: FulfillmentType;
@@ -356,11 +364,19 @@ status,
     paymentLate: (() => {
       if (!data.paymentLate || typeof data.paymentLate !== "object") return undefined;
       const l = data.paymentLate as Record<string, unknown>;
+      const resolution =
+        l.resolution === "refunded" || l.resolution === "handled" || l.resolution === "ignored"
+          ? l.resolution
+          : undefined;
       return {
         amount: typeof l.amount === "number" && Number.isFinite(l.amount) ? l.amount : undefined,
         atISO: str(l.atISO) || undefined,
         orderStatus: str(l.orderStatus) || undefined,
         reason: str(l.reason) || undefined,
+        resolvedAtISO: str(l.resolvedAtISO) || undefined,
+        resolution,
+        resolvedBy: str(l.resolvedBy) || undefined,
+        note: str(l.note) || undefined,
       };
     })(),
     fulfillment,

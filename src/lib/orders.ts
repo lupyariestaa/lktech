@@ -976,6 +976,50 @@ export async function markOrderPaid(
   }
 }
 
+/** Cara admin menyelesaikan pembayaran terlambat (Sprint 5). */
+export type LatePaymentResolution = "refunded" | "handled" | "ignored";
+
+/**
+ * Tandai pembayaran terlambat sebagai SELESAI ditangani (Sprint 5 / F-08).
+ *
+ * Pembayaran yang masuk setelah order terminal (`paymentLate`) tetap tercatat,
+ * tetapi tidak lagi muncul di panel "butuh perhatian" setelah ditandai. Bersifat
+ * idempoten-negatif: penandaan ganda ditolak (`already_resolved`) agar jejak
+ * audit tidak tertimpa.
+ */
+export async function resolveLatePayment(
+  id: string,
+  input: { resolution: LatePaymentResolution; note?: string; resolvedBy: string },
+): Promise<{ ok: boolean; reason?: "not_found" | "no_late_payment" | "already_resolved" }> {
+  const db = getAdminDb();
+  if (!db) throw new Error("Admin SDK tidak tersedia.");
+  const ref = db.collection(COLLECTION).doc(id);
+  const atISO = new Date().toISOString();
+  const note = input.note?.trim().slice(0, 500) ?? "";
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return { ok: false, reason: "not_found" as const };
+    const existing = snap.get("paymentLate");
+    if (!existing || typeof existing !== "object") {
+      return { ok: false, reason: "no_late_payment" as const };
+    }
+    const resolvedAtISO = (existing as Record<string, unknown>).resolvedAtISO;
+    if (typeof resolvedAtISO === "string" && resolvedAtISO) {
+      return { ok: false, reason: "already_resolved" as const };
+    }
+    tx.update(ref, {
+      "paymentLate.resolvedAtISO": atISO,
+      "paymentLate.resolution": input.resolution,
+      "paymentLate.resolvedBy": input.resolvedBy,
+      ...(note ? { "paymentLate.note": note } : {}),
+      updatedAtISO: atISO,
+      updatedBy: `admin:${input.resolvedBy}`,
+    });
+    return { ok: true as const };
+  });
+}
+
 /** Mengambil satu pesanan berdasarkan id (null bila tidak ada). */
 export async function getOrderById(id: string): Promise<Order | null> {
   const db = getAdminDb();

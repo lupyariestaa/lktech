@@ -256,6 +256,22 @@ test("attentionReasons: pembayaran terlambat (F-08) ditandai untuk tindakan", ()
   assert.equal(attentionReasons(normal, NOW).includes("pembayaran_terlambat"), false);
 });
 
+test("attentionReasons: pembayaran terlambat yang SUDAH ditangani tidak lagi ditandai", () => {
+  const resolved = order({
+    id: "late-resolved",
+    status: "kedaluwarsa",
+    paymentLate: {
+      amount: 100_000,
+      atISO: "2026-10-11T09:00:00.000Z",
+      orderStatus: "kedaluwarsa",
+      resolvedAtISO: "2026-10-11T09:30:00.000Z",
+      resolution: "refunded",
+      resolvedBy: "admin@lktech.test",
+    },
+  });
+  assert.equal(attentionReasons(resolved, NOW).includes("pembayaran_terlambat"), false);
+});
+
 test("sortOrders: tanggal & total", () => {
   const a = order({ id: "a", total: 100, createdAt: "2026-10-01T00:00:00Z" });
   const b = order({ id: "b", total: 300, createdAt: "2026-10-03T00:00:00Z" });

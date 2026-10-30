@@ -33,7 +33,7 @@ import { restoreCouponUsage } from "@/lib/coupons";
 import { shouldRestoreCoupon } from "@/lib/order-status-pure";
 import { getSiteSettings } from "@/lib/settings";
 import { releaseOrderDownload, createManualOrderInvoice, fulfillOrder } from "@/lib/order-payment";
-import { relinkRecoveredInvoice, resolveInvoiceRecovery, recordPaymentProblem } from "@/lib/orders";
+import { relinkRecoveredInvoice, resolveInvoiceRecovery, recordPaymentProblem, resolveLatePayment } from "@/lib/orders";
 import { getInvoice, isInvoicePaid } from "@/lib/mayar";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { guardAdminMutation } from "@/lib/admin-rate-limit";
@@ -418,6 +418,8 @@ export async function POST(req: Request) {
     payUrl?: string;
     expiresAt?: string;
     confirmNoInvoice?: boolean;
+    resolution?: string;
+    note?: string;
   };
   try {
     body = await req.json();
@@ -577,6 +579,50 @@ export async function POST(req: Request) {
   const { id } = body;
   if (!id) {
     return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
+  }
+
+  // ===== Aksi: tandai pembayaran terlambat selesai ditangani (Sprint 5 / F-08) =====
+  if (body.action === "late-payment-resolve") {
+    const resolution = body.resolution;
+    if (resolution !== "refunded" && resolution !== "handled" && resolution !== "ignored") {
+      return NextResponse.json(
+        { error: "resolution tidak valid (refunded|handled|ignored)." },
+        { status: 400 },
+      );
+    }
+    const fresh = assertFreshAuth(check);
+    if (!fresh.ok) return fresh.response;
+    const limited = await guardAdminMutation(check.uid, "order.late_payment.resolve", { limit: 30 });
+    if (limited) return limited;
+    const res = await resolveLatePayment(id, {
+      resolution,
+      note: body.note,
+      resolvedBy: check.email,
+    });
+    if (!res.ok) {
+      const msg =
+        res.reason === "not_found"
+          ? "Pesanan tidak ditemukan."
+          : res.reason === "no_late_payment"
+            ? "Tidak ada pembayaran terlambat pada pesanan ini."
+            : "Pembayaran terlambat sudah ditandai selesai.";
+      return NextResponse.json(
+        { error: msg, code: res.reason },
+        { status: res.reason === "not_found" ? 404 : 409 },
+      );
+    }
+    await recordAdminAudit({
+      action: "order.late_payment.resolve",
+      actor: check.email,
+      target: id,
+      meta: { resolution },
+    });
+    await addOrderActivity(id, {
+      type: "sistem",
+      note: `Pembayaran terlambat ditandai selesai (${resolution})${body.note?.trim() ? `: ${body.note.trim().slice(0, 200)}` : ""}.`,
+      actor: check.email,
+    });
+    return NextResponse.json({ ok: true });
   }
 
   if (body.action === "invoice-reconcile") {

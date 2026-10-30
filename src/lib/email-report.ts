@@ -86,7 +86,7 @@ function buildHtml(report: WeeklyReport): string {
           ${statRow("Total diskon diberikan", formatRupiah(report.coupons.discountGiven))}
           ${
             report.latePayments > 0
-              ? statRow("Pembayaran terlambat (perlu tindakan)", String(report.latePayments), undefined, "#e11d48")
+              ? statRow("Pembayaran terlambat (insiden)", String(report.latePayments), undefined, "#e11d48")
               : ""
           }
         </table>
@@ -118,7 +118,7 @@ function buildText(report: WeeklyReport): string {
     `Kupon terpakai    : ${report.coupons.ordersUsing} · diskon ${formatRupiah(report.coupons.discountGiven)}`,
   ];
   if (report.latePayments > 0) {
-    lines.push(`Pembayaran telat : ${report.latePayments} (perlu tindakan/refund)`);
+    lines.push(`Pembayaran telat : ${report.latePayments} insiden (bayar setelah order ditutup)`);
   }
   if (report.topProducts.length > 0) {
     lines.push("", "Produk terlaris:");

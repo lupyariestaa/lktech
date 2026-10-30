@@ -27,7 +27,16 @@ export type FilterableOrder = {
   paymentMismatch?: { received?: number; expected?: number; reason?: string; atISO?: string } | null;
   paymentIssue?: { reason?: string; atISO?: string } | null;
   /** F-08: pembayaran masuk setelah order terminal (perlu tindakan admin). */
-  paymentLate?: { amount?: number; atISO?: string; orderStatus?: string; reason?: string } | null;
+  paymentLate?: {
+    amount?: number;
+    atISO?: string;
+    orderStatus?: string;
+    reason?: string;
+    resolvedAtISO?: string;
+    resolution?: string;
+    resolvedBy?: string;
+    note?: string;
+  } | null;
   downloadTokenId?: string;
   coupon?: { code?: string } | null;
   createdAt?: string;
@@ -275,7 +284,10 @@ export function attentionReasons(
   if (order.paymentIssue) reasons.push("masalah_pembayaran");
 
   // F-08: uang masuk setelah order terminal → butuh tindakan (refund/manual).
-  if (order.paymentLate) reasons.push("pembayaran_terlambat");
+  // Sprint 5: sembunyikan dari panel setelah admin menandainya selesai.
+  if (order.paymentLate && !order.paymentLate.resolvedAtISO) {
+    reasons.push("pembayaran_terlambat");
+  }
 
   if (
     order.fulfillment !== "jasa" &&

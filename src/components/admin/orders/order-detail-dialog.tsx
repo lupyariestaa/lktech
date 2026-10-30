@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Send,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import {
@@ -25,6 +26,7 @@ import {
   resendOrderEmail,
   reconcileOrderInvoice,
   verifyOrderInvoice,
+  resolveLatePaymentAdmin,
   updateOrderStatusAdmin,
   type OrderEmailLog,
 } from "@/lib/admin-orders-api";
@@ -399,6 +401,7 @@ export function OrderActionsBar({
   const [recoveredInvoiceUrl, setRecoveredInvoiceUrl] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingFinal, setPendingFinal] = useState<OrderStatus | null>(null);
+  const [lateNote, setLateNote] = useState("");
 
   const FINAL_STATUSES: readonly OrderStatus[] = ["dibatalkan", "kedaluwarsa", "selesai"];
 
@@ -554,6 +557,22 @@ export function OrderActionsBar({
     }
   };
 
+  const onResolveLatePayment = async (
+    resolution: "refunded" | "handled" | "ignored",
+  ) => {
+    setBusy("late");
+    try {
+      await resolveLatePaymentAdmin(order.id, resolution, lateNote);
+      toast.success("Pembayaran terlambat ditandai selesai.");
+      setLateNote("");
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menandai pembayaran terlambat.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const onDelete = async () => {
     setBusy("delete");
     try {
@@ -598,6 +617,72 @@ export function OrderActionsBar({
             <button type="button" disabled={busy !== null} onClick={() => void onReconcileInvoice(Boolean(recoveredInvoiceId.trim()))} className="rounded bg-amber-700 px-3 py-1 font-semibold text-white">{recoveredInvoiceId.trim() ? "Tautkan invoice terverifikasi" : "Verifikasi: invoice tidak ada"}</button>
           </div>
           <p className="mt-1">Jangan tautkan sebelum mencocokkan invoice dan nominal di Mayar.</p>
+        </div>
+      )}
+
+      {order.paymentLate && !order.paymentLate.resolvedAtISO && (
+        <div className="my-3 rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs text-rose-950">
+          <p className="inline-flex items-center gap-1.5 font-semibold">
+            <Undo2 className="h-3.5 w-3.5" />
+            Pembayaran terlambat — perlu tindakan
+          </p>
+          <p className="mt-1">
+            Diterima {formatRupiah(order.paymentLate.amount ?? 0)} setelah pesanan{" "}
+            berstatus “{order.paymentLate.orderStatus ?? order.status}”. Uang sudah masuk tetapi
+            status sengaja tidak ditimpa. Refund atau tangani manual, lalu tandai selesai.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <input
+              aria-label="Catatan penyelesaian pembayaran terlambat"
+              placeholder="Catatan (opsional, mis. no. refund)"
+              value={lateNote}
+              onChange={(e) => setLateNote(e.target.value)}
+              className="min-w-52 flex-1 rounded border border-rose-200 px-2 py-1"
+            />
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => void onResolveLatePayment("refunded")}
+              className="rounded bg-rose-700 px-3 py-1 font-semibold text-white disabled:opacity-60"
+            >
+              {busy === "late" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Sudah direfund"}
+            </button>
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => void onResolveLatePayment("handled")}
+              className="rounded border border-rose-300 bg-white px-3 py-1 font-semibold text-rose-700 disabled:opacity-60"
+            >
+              Ditangani manual
+            </button>
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => void onResolveLatePayment("ignored")}
+              className="rounded border border-rose-200 bg-white px-3 py-1 font-semibold text-rose-600 disabled:opacity-60"
+            >
+              Abaikan
+            </button>
+          </div>
+        </div>
+      )}
+
+      {order.paymentLate?.resolvedAtISO && (
+        <div className="my-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+          <p className="inline-flex items-center gap-1.5 font-semibold">
+            <Check className="h-3.5 w-3.5" />
+            Pembayaran terlambat sudah ditangani
+          </p>
+          <p className="mt-1">
+            {order.paymentLate.resolution === "refunded"
+              ? "Ditandai sudah direfund"
+              : order.paymentLate.resolution === "ignored"
+                ? "Ditandai diabaikan"
+                : "Ditandai ditangani manual"}
+            {order.paymentLate.resolvedBy ? ` oleh ${order.paymentLate.resolvedBy}` : ""} ·{" "}
+            {formatDateTime(order.paymentLate.resolvedAtISO)}
+            {order.paymentLate.note ? ` · ${order.paymentLate.note}` : ""}
+          </p>
         </div>
       )}
 

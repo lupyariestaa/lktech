@@ -151,14 +151,13 @@ export async function reconcilePendingPayments(): Promise<ReconcileResult> {
             `[reconcile] late_payment order=${order.id} invoice=${invoiceId} status=${order.status}`,
           );
           // F-08: catat penanda permanen agar muncul di panel "butuh perhatian".
+          // Path bertitik → retry tidak menimpa resolusi admin (Sprint 5).
           try {
             await db.collection("orders").doc(order.id).set({
-              paymentLate: {
-                amount: expected,
-                atISO: new Date().toISOString(),
-                orderStatus: order.status,
-                reason,
-              },
+              "paymentLate.amount": expected,
+              "paymentLate.atISO": new Date().toISOString(),
+              "paymentLate.orderStatus": order.status,
+              "paymentLate.reason": reason,
             }, { merge: true });
           } catch (err) {
             console.error("[reconcile] gagal mencatat paymentLate:", order.id, err);

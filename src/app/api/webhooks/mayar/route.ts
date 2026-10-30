@@ -175,14 +175,14 @@ export async function POST(req: Request) {
           orderStatus: order.status,
         });
         // F-08: tulis penanda permanen agar muncul di panel "butuh perhatian"
-        // admin dan tidak hilang bersama log.
+        // admin dan tidak hilang bersama log. Pakai path bertitik agar retry
+        // webhook TIDAK menghapus `resolvedAtISO`/`resolution` yang sudah diisi
+        // admin (merge pada objek `paymentLate` akan menimpa seluruh map).
         await db.collection("orders").doc(orderId).set({
-          paymentLate: {
-            amount: validation.amount,
-            atISO: new Date().toISOString(),
-            orderStatus: order.status,
-            reason,
-          },
+          "paymentLate.amount": validation.amount,
+          "paymentLate.atISO": new Date().toISOString(),
+          "paymentLate.orderStatus": order.status,
+          "paymentLate.reason": reason,
         }, { merge: true });
         return NextResponse.json({ ok: true, not_payable: true });
       }
