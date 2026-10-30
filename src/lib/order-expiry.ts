@@ -28,10 +28,14 @@ const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 export type ExpireResult = {
   scanned: number;
   expired: number;
+  /** Order yang GAGAL diproses (exception) — bukan sekadar dilewati. */
+  failed: number;
   couponsRestored: number;
   emailsSent: number;
   /** ID order yang berhasil ditandai kedaluwarsa (untuk log/audit). */
   expiredIds: string[];
+  /** ID order yang gagal diproses (untuk diagnosa). */
+  failedIds: string[];
 };
 
 export async function expirePendingOrders(
@@ -40,9 +44,11 @@ export async function expirePendingOrders(
   const result: ExpireResult = {
     scanned: 0,
     expired: 0,
+    failed: 0,
     couponsRestored: 0,
     emailsSent: 0,
     expiredIds: [],
+    failedIds: [],
   };
 
   const candidates = await getExpiredPendingOrders(now, DEFAULT_TTL_MS);
@@ -91,8 +97,16 @@ export async function expirePendingOrders(
         }
       }
     } catch (err) {
+      result.failed += 1;
+      result.failedIds.push(order.id);
       console.error("[order-expiry] gagal memproses order:", order.id, err);
     }
+  }
+
+  if (result.failed > 0) {
+    console.error(
+      `[order-expiry] ${result.failed}/${result.scanned} order gagal diproses: ${result.failedIds.join(", ")}`,
+    );
   }
 
   if (result.expired > 0) {

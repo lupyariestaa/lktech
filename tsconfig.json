@@ -77,6 +77,7 @@
     "scripts/unsubscribe-token.test.ts",
     "scripts/newsletter-pure.test.ts",
     "scripts/order-status.test.ts",
+    "scripts/firestore-sanitize.test.ts",
     "scripts/orders-filter.test.ts",
     "scripts/review-rating.test.ts",
     "scripts/admin-audit.test.ts",

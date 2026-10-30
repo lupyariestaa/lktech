@@ -51,9 +51,15 @@ async function run(req: Request) {
 
   try {
     const result = await expirePendingOrders();
+    // Bila ada order yang GAGAL diproses, balas 500 agar GitHub Actions menandai
+    // run merah (kegagalan tidak lagi senyap seperti `expired: 0` sebelumnya).
+    const failed = result.failed > 0;
     return NextResponse.json(
-      { ok: true, ...result, atISO: new Date().toISOString() },
-      { headers: { "Cache-Control": "no-store" } },
+      { ok: !failed, ...result, atISO: new Date().toISOString() },
+      {
+        status: failed ? 500 : 200,
+        headers: { "Cache-Control": "no-store" },
+      },
     );
   } catch (err) {
     console.error("[api/cron/expire-orders] gagal:", err);

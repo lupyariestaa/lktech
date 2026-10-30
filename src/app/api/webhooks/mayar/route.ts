@@ -31,8 +31,9 @@ export const dynamic = "force-dynamic";
  *    nominal hilang/tidak valid/tidak cocok tidak pernah menandai lunas.
  * 5. **Guard status terminal (OR-A2)**: pembayaran untuk order `dibatalkan`/
  *    `kedaluwarsa`/`selesai` TIDAK menimpa status — dicatat sebagai `payment_late`.
- * 6. Selalu balas **200 cepat** (kecuali 401 token salah / 503 DB); fulfillment
- *    best-effort.
+ * 6. Balas **200 cepat** untuk event yang tidak relevan/ditolak permanen (agar
+ *    tidak di-retry), tetapi **500** untuk kegagalan sementara (Firestore down,
+ *    timeout) agar Mayar mengulang event. Penulisan status idempoten → retry aman.
  */
 export async function POST(req: Request) {
   const rl = await checkRateLimit("webhook:mayar", 60, 60_000);
@@ -181,8 +182,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[webhook/mayar] gagal memproses:", err);
-    // 200 agar Mayar tidak menumpuk retry pada error tak terduga.
-    return NextResponse.json({ ok: true, error: "processing_failed" });
+    // 500 (bukan 200) agar Mayar MENGULANG event saat kegagalan sementara
+    // (Firestore error/timeout). Sebelumnya 200 membuat kegagalan persisten
+    // tidak pernah dicoba ulang dan tampak "SUCCESS" di riwayat webhook.
+    // `markOrderPaid` idempoten, jadi retry tidak menggandakan efek.
+    return NextResponse.json(
+      { ok: false, error: "processing_failed" },
+      { status: 500 },
+    );
   }
 }
 

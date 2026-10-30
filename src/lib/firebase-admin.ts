@@ -60,11 +60,32 @@ function getAdminApp(): App | null {
 /**
  * Firestore admin (server-side, bypass security rules).
  * Mengembalikan `null` bila Admin SDK belum dikonfigurasi.
+ *
+ * `ignoreUndefinedProperties: true` sebagai jaring pengaman: bila suatu saat ada
+ * field bernilai `undefined` lolos ke operasi tulis (lihat
+ * `firestore-sanitize-pure`), Firestore mengabaikannya alih-alih menggagalkan
+ * SELURUH transaksi. Sanitasi eksplisit di batas tulis tetap menjadi cara utama.
+ *
+ * `settings()` hanya boleh dipanggil sebelum instance Firestore "dimulai", jadi
+ * dikonfigurasi sekali per instance (dilacak lewat WeakSet).
  */
+const configuredAdminDbs = new WeakSet<Firestore>();
+
 export function getAdminDb(): Firestore | null {
   const app = getAdminApp();
   if (!app) return null;
-  return getFirestore(app);
+  const db = getFirestore(app);
+  if (!configuredAdminDbs.has(db)) {
+    try {
+      db.settings({ ignoreUndefinedProperties: true });
+    } catch (err) {
+      // Instance sudah "started" (mis. hot-reload dev): settings tak bisa diubah
+      // lagi. Sanitasi eksplisit di batas tulis tetap menjadi pertahanan utama.
+      console.warn("[firebase-admin] settings Firestore tidak dapat diterapkan:", err);
+    }
+    configuredAdminDbs.add(db);
+  }
+  return db;
 }
 
 /**

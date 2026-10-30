@@ -10,6 +10,7 @@ import {
   type OrderStatus,
 } from "@/lib/order-types";
 import { evaluateStatusTransition } from "@/lib/order-status-pure";
+import { stripUndefined } from "@/lib/firestore-sanitize-pure";
 import {
   applyFilterAndSort,
   attentionReasons,
@@ -857,7 +858,12 @@ export async function markOrderPaid(
         return { applied: false, order: current, reason: "not_payable" as const };
       }
 
-      const payment = {
+      // PENTING: `payRef` berasal dari `normalizeOrderPayment`, yang mengembalikan
+      // SEMUA kunci opsional (bernilai `undefined` bila tak ada di dokumen).
+      // Menyebarnya langsung ke `tx.update()` membuat Firestore menolak SELURUH
+      // transaksi ("Cannot use \"undefined\" as a Firestore value"). `stripUndefined`
+      // membuang kunci kosong tanpa menyentuh sentinel `FieldValue.delete()`.
+      const payment = stripUndefined({
         ...payRef,
         provider: payRef.provider ?? "mayar",
         status: "dibayar" as const,
@@ -866,23 +872,25 @@ export async function markOrderPaid(
         amount: typeof info.amount === "number" ? info.amount : payRef.amount,
         paidAt: at,
         ...(current.payment?.manual ? { manual: true } : {}),
-      };
+      });
 
       const mixedGoodsPaid = mixed && payment.component === "goods";
       const settled = mixedGoodsPaid ? current.servicePayment?.status === "dibayar" : payment.component === "service" && mixed
         ? current.payment?.status === "dibayar"
         : true;
-      const nextPayment = payRef.component === "service"
-        ? { payment: current.payment, servicePayment: payment }
-        : { payment, servicePayment: current.servicePayment };
-      tx.update(ref, {
+      const nextPayment = stripUndefined(
+        payRef.component === "service"
+          ? { payment: current.payment, servicePayment: payment }
+          : { payment, servicePayment: current.servicePayment },
+      );
+      tx.update(ref, stripUndefined({
         ...(settled ? { status: orderStatus } : {}),
         ...nextPayment,
         paymentMismatch: FieldValue.delete(),
         paymentIssue: FieldValue.delete(),
         updatedAtISO: at,
         updatedBy: "system:markOrderPaid",
-      });
+      }));
 
       const order = normalizeOrder({
         id: doc.id,
@@ -1123,16 +1131,19 @@ export async function markOrderExpired(
       }
 
       const atISO = new Date().toISOString();
+      // `current.payment` hasil normalisasi memuat kunci opsional `undefined`;
+      // bersihkan sebelum disebar ke `tx.update()` agar Firestore tidak menolak
+      // seluruh transaksi (gejala "invoice kedaluwarsa tetap menunggu bayar").
       const payment = current.payment
-        ? { ...current.payment, status: "kedaluwarsa" as const }
+        ? stripUndefined({ ...current.payment, status: "kedaluwarsa" as const })
         : undefined;
 
-      tx.update(ref, {
+      tx.update(ref, stripUndefined({
         status: "kedaluwarsa",
         ...(payment ? { payment } : {}),
         updatedAtISO: atISO,
         updatedBy: "system:expire",
-      });
+      }));
 
       return {
         applied: true,
