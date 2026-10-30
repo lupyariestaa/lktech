@@ -5,6 +5,7 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
+  Globe,
   Loader2,
   Send,
 } from "lucide-react";
@@ -37,6 +38,12 @@ export function SettingsNotifikasi() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [domainChecking, setDomainChecking] = useState(false);
+  const [domainCheck, setDomainCheck] = useState<{
+    ok: boolean;
+    verdict?: string;
+    detail?: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   // ADM-11: versi dokumen yang dimuat form (dikirim balik saat simpan).
@@ -139,6 +146,23 @@ export function SettingsNotifikasi() {
     }
   };
 
+  /** F-14: periksa status domain pengirim di Resend tanpa mengirim email. */
+  const onCheckDomain = async () => {
+    setDomainChecking(true);
+    try {
+      const res = await testIntegration("email-domain");
+      setDomainCheck({ ok: res.ok, verdict: res.verdict, detail: res.detail });
+    } catch (err) {
+      setDomainCheck({
+        ok: false,
+        verdict: "unknown",
+        detail: err instanceof Error ? err.message : "Gagal memeriksa domain pengirim.",
+      });
+    } finally {
+      setDomainChecking(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center gap-3 text-muted">
@@ -196,7 +220,9 @@ export function SettingsNotifikasi() {
             ) : health.testOnly ? (
               <>
                 <strong>Mode uji Resend.</strong> Pengirim <code>{health.from}</code> — email hanya
-                terkirim ke alamat pemilik akun Resend. Verifikasi domain & ubah <code>EMAIL_FROM</code>.
+                terkirim ke alamat pemilik akun Resend. Email ke pembeli akan{" "}
+                <strong>ditolak (403)</strong>. Verifikasi domain di Resend lalu ubah{" "}
+                <code>EMAIL_FROM</code>.
               </>
             ) : (
               <>
@@ -239,6 +265,19 @@ export function SettingsNotifikasi() {
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Kirim email uji ke saya
           </button>
+          <button
+            type="button"
+            onClick={onCheckDomain}
+            disabled={domainChecking}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-secondary transition-colors hover:bg-slate-50 disabled:opacity-60"
+          >
+            {domainChecking ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Globe className="h-4 w-4" />
+            )}
+            Periksa domain pengirim
+          </button>
           <SaveRow
             onSave={onSave}
             saving={saving}
@@ -246,6 +285,32 @@ export function SettingsNotifikasi() {
             disabled={loadFailed || !dirty}
           />
         </div>
+
+        {/* F-14: hasil pemeriksaan domain Resend (tanpa mengirim email). */}
+        {domainCheck && (
+          <div
+            className={
+              domainCheck.verdict === "ready"
+                ? "mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800"
+                : domainCheck.verdict === "test_only"
+                  ? "mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800"
+                  : domainCheck.verdict === "unknown"
+                    ? "mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700"
+                    : "mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700"
+            }
+          >
+            <p className="font-semibold">
+              {domainCheck.verdict === "ready"
+                ? "Domain pengirim siap"
+                : domainCheck.verdict === "test_only"
+                  ? "Masih memakai domain uji"
+                  : domainCheck.verdict === "unknown"
+                    ? "Status domain tidak dapat dipastikan"
+                    : "Domain pengirim belum siap"}
+            </p>
+            <p className="mt-1">{domainCheck.detail}</p>
+          </div>
+        )}
       </section>
 
       {/* Pratinjau template (`EM-P3`) — memakai pesanan contoh, tidak mengirim. */}

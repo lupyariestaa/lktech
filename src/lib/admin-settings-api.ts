@@ -29,11 +29,13 @@ export type IntegrationTestResult = {
   ok: boolean;
   detail?: string;
   mode?: string;
+  /** F-14: putusan domain pengirim (`ready`/`test_only`/`not_found`/...). */
+  verdict?: string;
 };
 
 /** Uji koneksi (ping) sebuah layanan. */
 export async function testIntegration(
-  service: "mayar" | "email" | "cloudinary" | "upstash",
+  service: "mayar" | "email" | "email-domain" | "cloudinary" | "upstash",
 ): Promise<IntegrationTestResult> {
   return adminFetch<IntegrationTestResult>("/api/admin/integrations/test", {
     method: "POST",

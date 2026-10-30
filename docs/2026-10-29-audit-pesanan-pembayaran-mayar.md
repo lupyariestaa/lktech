@@ -495,7 +495,7 @@ Ini menjadikan webhook sebagai *fast path*, bukan *single point of failure*.
 13. Rate limit per-IP + `429` (F-10).
 14. Validasi `expiredAt` (F-11), pemetaan status invoice (F-12).
 15. Metrik & alarm selisih webhook (F-13, F-19).
-16. Verifikasi domain Resend (F-14).
+16. Verifikasi domain Resend (F-14) — **kode ✅**: tombol *"Periksa domain pengirim"* di Pengaturan → Notifikasi memanggil `GET /domains` (read-only) dan menjelaskan `test_only`/`not_found`/`pending`/`failed` tanpa membocorkan kredensial. Email uji juga menyertakan diagnosa domain. **Operasional ⏳**: verifikasi DNS domain di dashboard Resend lalu set `EMAIL_FROM`.
 17. Konsistensi `null` vs `delete` (F-18).
 
 ### Rekonsiliasi data lama (setelah kode diperbaiki)

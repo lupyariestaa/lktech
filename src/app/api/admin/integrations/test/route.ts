@@ -45,14 +45,35 @@ export async function POST(req: Request) {
       if (!isEmailConfigured) {
         return NextResponse.json({ service, ok: false, detail: "RESEND_API_KEY belum diisi." });
       }
+      // F-14: sertakan diagnosa domain pengirim agar kegagalan `403` (domain
+      // belum terverifikasi) langsung jelas. Hanya nama/status domain — tanpa
+      // rahasia — sehingga aman dikirim ke klien admin.
+      const { getSendingDomainHealth } = await import("@/lib/email-domain");
+      const domain = await getSendingDomainHealth();
       // Kirim email uji ke alamat admin yang login (aman, tidak menerima alamat dari body).
       const result = await sendTestEmail(check.email);
+      const domainNote = domain.verdict === "ready" ? "" : ` ${domain.message}`;
       return NextResponse.json({
         service,
         ok: result.ok,
+        verdict: domain.verdict,
         detail: result.ok
-          ? `Email uji dikirim ke ${check.email}.`
-          : `Gagal: ${result.error ?? "unknown"}`,
+          ? `Email uji dikirim ke ${check.email}.${
+              domain.verdict === "test_only" ? " (Mode uji — hanya alamat pemilik akun yang menerima.)" : ""
+            }`
+          : `Gagal: ${result.error ?? "unknown"}.${domainNote}`,
+      });
+    }
+
+    if (service === "email-domain") {
+      // F-14: periksa status domain pengirim TANPA mengirim email.
+      const { getSendingDomainHealth } = await import("@/lib/email-domain");
+      const health = await getSendingDomainHealth();
+      return NextResponse.json({
+        service,
+        ok: health.verdict === "ready",
+        verdict: health.verdict,
+        detail: health.message,
       });
     }
 
