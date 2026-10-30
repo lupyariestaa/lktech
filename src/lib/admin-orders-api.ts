@@ -32,6 +32,8 @@ export type OrdersListResult = {
   pageSize?: number;
   hasMore?: boolean;
   truncated?: boolean;
+  /** `false` bila `total` hanya batas bawah (pemindaian dibatasi, O-03). */
+  totalExact?: boolean;
 };
 
 function buildQuery(query: OrdersListQuery = {}): string {

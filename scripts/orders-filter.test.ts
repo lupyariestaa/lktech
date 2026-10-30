@@ -11,6 +11,7 @@ import {
   matchesFilter,
   sortOrders,
   applyFilterAndSort,
+  buildFilteredPageResult,
   type FilterableOrder,
 } from "../src/lib/orders-filter-pure.ts";
 
@@ -290,4 +291,94 @@ test("applyFilterAndSort: filter + sort gabungan", () => {
   ];
   const res = applyFilterAndSort(list, { ...defaultFilter(), status: "dibayar" }, "total_desc", NOW);
   assert.deepEqual(res.map((o) => o.id), ["c", "a"]);
+});
+
+/* -------------------------------------------------------------------------- */
+/* O-03: buildFilteredPageResult (paginasi >500)                               */
+/* -------------------------------------------------------------------------- */
+
+const MATCHED = Array.from({ length: 45 }, (_, i) => order({ id: `o${i}` }));
+
+test("buildFilteredPageResult: halaman pertama + hasMore saat masih ada", () => {
+  const r = buildFilteredPageResult({
+    matched: MATCHED,
+    page: 1,
+    pageSize: 20,
+    exhausted: true,
+  });
+  assert.equal(r.orders.length, 20);
+  assert.equal(r.orders[0].id, "o0");
+  assert.equal(r.total, 45);
+  assert.equal(r.totalExact, true);
+  assert.equal(r.hasMore, true);
+});
+
+test("buildFilteredPageResult: halaman terakhir memotong sisa & hasMore=false", () => {
+  const r = buildFilteredPageResult({
+    matched: MATCHED,
+    page: 3,
+    pageSize: 20,
+    exhausted: true,
+  });
+  assert.deepEqual(r.orders.map((o) => o.id), ["o40", "o41", "o42", "o43", "o44"]);
+  assert.equal(r.total, 45);
+  assert.equal(r.hasMore, false);
+});
+
+test("buildFilteredPageResult: tepat kelipatan pageSize → hasMore=false", () => {
+  const r = buildFilteredPageResult({
+    matched: MATCHED.slice(0, 40),
+    page: 2,
+    pageSize: 20,
+    exhausted: true,
+  });
+  assert.equal(r.orders.length, 20);
+  assert.equal(r.hasMore, false);
+});
+
+test("buildFilteredPageResult: pemindaian TIDAK habis → total hanya batas bawah", () => {
+  const r = buildFilteredPageResult({
+    matched: MATCHED.slice(0, 10),
+    page: 1,
+    pageSize: 20,
+    exhausted: false,
+  });
+  assert.equal(r.totalExact, false);
+  assert.equal(r.total, 10);
+  assert.equal(r.hasMore, false);
+});
+
+test("buildFilteredPageResult: halaman di luar rentang → kosong", () => {
+  const r = buildFilteredPageResult({
+    matched: MATCHED,
+    page: 9,
+    pageSize: 20,
+    exhausted: true,
+  });
+  assert.deepEqual(r.orders, []);
+  assert.equal(r.hasMore, false);
+});
+
+test("buildFilteredPageResult: all=true mengembalikan seluruh hasil (ekspor)", () => {
+  const r = buildFilteredPageResult({
+    matched: MATCHED,
+    page: 1,
+    pageSize: 20,
+    exhausted: true,
+    all: true,
+  });
+  assert.equal(r.orders.length, 45);
+  assert.equal(r.hasMore, false);
+  assert.equal(r.totalExact, true);
+});
+
+test("buildFilteredPageResult: page/pageSize tak valid dinormalkan (>=1)", () => {
+  const r = buildFilteredPageResult({
+    matched: MATCHED,
+    page: 0,
+    pageSize: 0,
+    exhausted: true,
+  });
+  assert.equal(r.orders.length, 1);
+  assert.equal(r.orders[0].id, "o0");
 });

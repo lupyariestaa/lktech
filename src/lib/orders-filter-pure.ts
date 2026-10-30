@@ -409,3 +409,40 @@ export function applyFilterAndSort<T extends FilterableOrder>(
     sort,
   );
 }
+
+/**
+ * Susun satu halaman dari hasil filter yang SUDAH dipindai (FASE O2/O3).
+ *
+ * `exhausted = true` berarti seluruh dokumen pada query sempit sudah dipindai →
+ * `total`/`hasMore` akurat. Bila `false` (batas pemindaian tercapai), `total`
+ * adalah batas bawah dan `totalExact=false` agar admin tidak disesatkan.
+ *
+ * `all = true` (ekspor) mengembalikan seluruh hasil tanpa memotong halaman.
+ */
+export function buildFilteredPageResult<T>(input: {
+  matched: T[];
+  page: number;
+  pageSize: number;
+  exhausted: boolean;
+  all?: boolean;
+}): {
+  orders: T[];
+  total: number;
+  totalExact: boolean;
+  hasMore: boolean;
+} {
+  const total = input.matched.length;
+  if (input.all) {
+    return { orders: input.matched, total, totalExact: input.exhausted, hasMore: false };
+  }
+  const page = Math.max(input.page, 1);
+  const pageSize = Math.max(input.pageSize, 1);
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  return {
+    orders: input.matched.slice(start, end),
+    total,
+    totalExact: input.exhausted,
+    hasMore: total > end,
+  };
+}

@@ -261,7 +261,7 @@ dengan timeline, dan panel "butuh perhatian".
 5. **Tanpa status operasional baru** (8 status existing).
 
 ### Cara kerja filter (server-authoritative)
-- Mode filter bernomor menyempit query native (status + rentang `createdAtISO`) lalu menyaring/mengurutkan **di memori** (cap 500) — menghindari banyak composite index. `truncated` ditandai bila batas tersentuh.
+- Mode filter bernomor menyempit query native (status + rentang `createdAtISO`) lalu menyaring/mengurutkan **di memori** atas pemindaian **bertahap per 500 dokumen** (O-03) — menghindari banyak composite index. Pemindaian berlanjut sampai query habis atau batas keras 5.000 dokumen; bila batas tersentuh, `truncated` + `totalExact=false` ditandai dan UI menampilkan “total+” (bukan angka palsu).
 - Filter tersinkron ke URL (`?status=&datePreset=&from=&to=&fulfillment=&paymentStatus=&coupon=&minTotal=&maxTotal=&attention=&q=&sort=&page=`) → bisa di-bookmark.
 - Pencarian server-side: kode/email/nama (substring dalam window filter). Bila filter kosong, mode cursor lama tetap dipakai.
 

@@ -154,7 +154,13 @@ export function OrdersManager() {
 
   const orders = useMemo(() => data?.orders ?? [], [data]);
   const total = data?.total ?? orders.length;
-  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+  const totalExact = data?.totalExact ?? true;
+  const hasMore = data?.hasMore ?? false;
+  // Bila pemindaian dibatasi (O-03), `total` hanya batas bawah — jangan tampilkan
+  // lompatan halaman yang menyesatkan; cukup sediakan "berikutnya" bila ada.
+  const totalPages = totalExact
+    ? Math.max(Math.ceil(total / pageSize), 1)
+    : Math.max(page + (hasMore ? 1 : 0), 1);
 
   const navigate = (
     nextFilter: OrdersFilter,
@@ -387,7 +393,8 @@ export function OrdersManager() {
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted">
           Menampilkan <span className="font-semibold text-secondary">{orders.length}</span>{" "}
-          dari {total} pesanan
+          dari {total}
+          {!totalExact && "+"} pesanan
           {data?.truncated && (
             <span className="ml-1 text-amber-600">
               (dibatasi pemindaian — persempit filter untuk presisi)
@@ -491,7 +498,7 @@ export function OrdersManager() {
       )}
 
       {/* Paginasi bernomor (FASE O7) */}
-      {!loading && total > pageSize && (
+      {!loading && (total > pageSize || hasMore) && (
         <Pagination page={page} totalPages={totalPages} onPage={onPage} />
       )}
 

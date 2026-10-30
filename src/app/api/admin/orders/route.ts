@@ -287,6 +287,7 @@ export async function GET(req: Request) {
             orders: result.orders,
             total: result.total ?? result.orders.length,
             truncated: result.truncated ?? false,
+            totalExact: result.totalExact ?? true,
           },
           { headers: { "Cache-Control": "no-store" } },
         );

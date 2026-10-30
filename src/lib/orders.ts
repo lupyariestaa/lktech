@@ -14,6 +14,7 @@ import { stripUndefined } from "@/lib/firestore-sanitize-pure";
 import {
   applyFilterAndSort,
   attentionReasons,
+  buildFilteredPageResult,
   dateRangeForPreset,
   defaultFilter as defaultOrdersFilter,
   type OrdersFilter,
@@ -307,10 +308,68 @@ export type OrdersPageResult = {
   hasMore?: boolean;
   /** `true` bila pemindaian menyentuh batas (hasil mungkin belum lengkap). */
   truncated?: boolean;
+  /** `false` bila `total` hanya batas bawah (pemindaian dibatasi, O-03). */
+  totalExact?: boolean;
 };
 
-/** Batas pemindaian saat memakai penyaringan memori (mode filter). */
-const FILTER_SCAN_CAP = 500;
+/**
+ * Ukuran satu batch pemindaian mode filter (satu `.get()` per batch).
+ * Dipindai berurutan sampai habis / batas keras, sehingga hasil >500 tetap
+ * terjangkau (O-03).
+ */
+const FILTER_SCAN_BATCH = 500;
+
+/**
+ * Batas keras dokumen per permintaan mode filter — pengaman biaya & latensi.
+ * Bila tersentuh, hasil ditandai `truncated` + `totalExact=false`.
+ */
+const FILTER_SCAN_CAP = 5000;
+
+/** Batas pemindaian ringkasan "butuh perhatian" (best-effort). */
+const ATTENTION_SCAN_CAP = 500;
+
+/**
+ * Pindai SELURUH dokumen pada query sempit dalam batch berurutan (O-03).
+ *
+ * - `startAfter(doc)` memakai snapshot (bukan nilai `createdAtISO`) agar dokumen
+ *   dengan timestamp identik tidak terlewat/terulang.
+ * - Bila query native gagal karena index belum tersedia → otomatis pakai
+ *   `buildFallback` (tanpa `where`), tetap dipindai penuh sampai batas.
+ * - `exhausted=true` berarti query sempit habis dipindai (total akurat).
+ */
+async function scanAllBatches(
+  buildNative: () => Query,
+  buildFallback: () => Query,
+  batchSize: number,
+  cap: number,
+): Promise<{ docs: QueryDocumentSnapshot[]; exhausted: boolean }> {
+  const scan = async (build: () => Query) => {
+    const docs: QueryDocumentSnapshot[] = [];
+    let last: QueryDocumentSnapshot | null = null;
+    while (docs.length < cap) {
+      const batchLimit = Math.min(batchSize, cap - docs.length);
+      let q = build();
+      if (last) q = q.startAfter(last);
+      const snap = await q.limit(batchLimit).get();
+      if (snap.docs.length === 0) return { docs, exhausted: true };
+      docs.push(...snap.docs);
+      last = snap.docs[snap.docs.length - 1];
+      // Batch tidak penuh → tidak ada dokumen lagi.
+      if (snap.docs.length < batchLimit) return { docs, exhausted: true };
+    }
+    return { docs, exhausted: false };
+  };
+
+  try {
+    return await scan(buildNative);
+  } catch (err) {
+    if (!isMissingIndexError(err)) throw err;
+    console.warn(
+      "[orders] index filter belum tersedia — fallback saring di memori (seluruh koleksi).",
+    );
+    return scan(buildFallback);
+  }
+}
 
 /** Ubah `yyyy-mm-dd` (lokal) ke batas ISO [awal hari, akhir hari]. */
 function dayBoundsISO(fromDay: string, toDay: string): { fromISO?: string; toISO?: string } {
@@ -333,9 +392,11 @@ function dayBoundsISO(fromDay: string, toDay: string): { fromISO?: string; toISO
  * - **Cursor** (default, `filter` kosong): query native `orderBy(createdAtISO)`
  *   + cursor; dipakai alur lama.
  * - **Filter bernomor** (`filter`/`sort`/`page` diisi — FASE O2/O3): menyaring &
- *   mengurutkan di memori atas window yang dipersempit query native (status +
- *   rentang tanggal) agar TIDAK bergantung banyak composite index. Mengembalikan
- *   `total` (dalam batas pemindaian) + `truncated` bila batas tersentuh.
+ *   mengurutkan di memori atas pemindaian BERTAHAP query sempit (status + rentang
+ *   tanggal) agar TIDAK bergantung banyak composite index. Dokumen dipindai dalam
+ *   batch sampai habis atau batas keras `FILTER_SCAN_CAP` (O-03) — jadi hasil
+ *   >500 tetap terjangkau. `total` akurat bila query habis (`totalExact=true`);
+ *   bila batas tersentuh, `total` hanya batas bawah + `truncated=true`.
  *
  * Bila index belum dipublikasikan → fallback otomatis ke penyaringan memori.
  */
@@ -359,48 +420,46 @@ export async function getOrdersPage(
     });
     const { fromISO, toISO } = dayBoundsISO(from, to);
 
-    let base: Query = db.collection(COLLECTION);
-    if (filter.status !== "semua") base = base.where("status", "==", filter.status);
-    if (fromISO) base = base.where("createdAtISO", ">=", fromISO);
-    if (toISO) base = base.where("createdAtISO", "<=", toISO);
-    base = base.orderBy("createdAtISO", "desc");
+    // Query sempit: status + rentang tanggal (mengurangi dokumen yang dipindai).
+    const buildNative = (): Query => {
+      let base: Query = db.collection(COLLECTION);
+      if (filter.status !== "semua") base = base.where("status", "==", filter.status);
+      if (fromISO) base = base.where("createdAtISO", ">=", fromISO);
+      if (toISO) base = base.where("createdAtISO", "<=", toISO);
+      return base.orderBy("createdAtISO", "desc");
+    };
+    const buildFallback = (): Query =>
+      db.collection(COLLECTION).orderBy("createdAtISO", "desc");
 
-    let docs: QueryDocumentSnapshot[] = [];
-    let truncated = false;
-    try {
-      const snap = await base.limit(FILTER_SCAN_CAP).get();
-      docs = snap.docs;
-      truncated = docs.length >= FILTER_SCAN_CAP;
-    } catch (err) {
-      if (!isMissingIndexError(err)) throw err;
-      console.warn(
-        "[orders] index filter belum tersedia — fallback saring di memori (tanpa rentang native).",
-      );
-      const snap = await db
-        .collection(COLLECTION)
-        .orderBy("createdAtISO", "desc")
-        .limit(FILTER_SCAN_CAP)
-        .get();
-      docs = snap.docs;
-      truncated = docs.length >= FILTER_SCAN_CAP;
-    }
+    // O-03: pindai dalam batch (bukan satu kali 500) agar hasil >500 tetap
+    // terjangkau; batas keras mencegah pembengkakan biaya/latensi.
+    const { docs, exhausted } = await scanAllBatches(
+      buildNative,
+      buildFallback,
+      FILTER_SCAN_BATCH,
+      FILTER_SCAN_CAP,
+    );
 
     const all = docs.map((doc) =>
       normalizeOrder({ id: doc.id, ...(doc.data() as Record<string, unknown>) }),
     );
     const filtered = applyFilterAndSort(all, filter, sort, now);
-    const total = filtered.length;
-    const start = (page - 1) * pageSize;
-    // Mode ekspor (F-G4): kembalikan seluruh hasil filter (satu "halaman").
-    const orders = query.all ? filtered : filtered.slice(start, start + pageSize);
-    return {
-      orders,
-      nextCursor: null,
-      total,
+    const pageResult = buildFilteredPageResult({
+      matched: filtered,
       page,
-      pageSize: query.all ? total : pageSize,
-      hasMore: query.all ? false : start + pageSize < total,
-      truncated,
+      pageSize,
+      exhausted,
+      all: Boolean(query.all),
+    });
+    return {
+      orders: pageResult.orders,
+      nextCursor: null,
+      total: pageResult.total,
+      page,
+      pageSize: query.all ? pageResult.total : pageSize,
+      hasMore: pageResult.hasMore,
+      truncated: !exhausted,
+      totalExact: exhausted,
     };
   }
 
@@ -509,7 +568,7 @@ export async function attachBuyerPhotos(orders: Order[]): Promise<Order[]> {
 
 /**
  * Ringkasan "butuh perhatian" (FASE O5) — hitung order yang butuh tindakan admin,
- * dari pemindaian window (cap `FILTER_SCAN_CAP`). Best-effort; `truncated` menandai
+ * dari pemindaian window (cap `ATTENTION_SCAN_CAP`). Best-effort; `truncated` menandai
  * bila batas tersentuh.
  */
 export type AttentionSummary = {
@@ -546,9 +605,9 @@ export async function getOrdersAttentionSummary(): Promise<AttentionSummary> {
     const snap = await db
       .collection(COLLECTION)
       .orderBy("createdAtISO", "desc")
-      .limit(FILTER_SCAN_CAP)
+      .limit(ATTENTION_SCAN_CAP)
       .get();
-    const truncated = snap.docs.length >= FILTER_SCAN_CAP;
+    const truncated = snap.docs.length >= ATTENTION_SCAN_CAP;
     const now = new Date();
     const count: AttentionSummary = { ...empty, truncated };
     const flagged = new Set<string>();
