@@ -33,6 +33,22 @@ function firstString(...values: unknown[]): string {
   return "";
 }
 
+/**
+ * Mengubah nominal dari Mayar menjadi `number` yang aman. Mayar dapat mengirim
+ * `number` maupun `string` (mis. `"180000"`); nilai lain / tak terhingga →
+ * `undefined`. Dipakai webhook (bukti pembayaran) DAN `getInvoice` (rekonsiliasi
+ * admin) agar perbandingan nominal tidak pernah gagal karena perbedaan tipe.
+ */
+export function coerceMayarAmount(raw: unknown): number | undefined {
+  const value =
+    typeof raw === "number"
+      ? raw
+      : typeof raw === "string" && raw.trim()
+        ? Number(raw)
+        : undefined;
+  return value !== undefined && Number.isFinite(value) ? value : undefined;
+}
+
 /** Parse only documented/explicit identifiers; never treat data.id as invoiceId. */
 export function extractMayarPaymentEvent(body: unknown): MayarPaymentEvent | null {
   if (!body || typeof body !== "object") return null;
@@ -50,15 +66,11 @@ export function extractMayarPaymentEvent(body: unknown): MayarPaymentEvent | nul
   if (!orderId) return null;
 
   const rawAmount = data.amount;
-  const amount = typeof rawAmount === "number"
-    ? rawAmount
-    : typeof rawAmount === "string" && rawAmount.trim()
-      ? Number(rawAmount)
-      : undefined;
+  const amount = coerceMayarAmount(rawAmount);
 
   return {
     orderId,
-    amount: amount !== undefined && Number.isFinite(amount) ? amount : undefined,
+    amount,
     method: firstString(data.paymentMethod, data.channel, data.method) || undefined,
     // Do not infer invoiceId from data.id: Mayar documents that as webhook ID.
     invoiceId: firstString(data.invoiceId, data.invoice_id) || undefined,

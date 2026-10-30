@@ -1,6 +1,7 @@
 import "server-only";
 import type { CreatedInvoice, InvoiceDetail } from "@/lib/payment-types";
 import { checkTrustedUrl } from "@/lib/trusted-url";
+import { coerceMayarAmount } from "@/lib/mayar-webhook-pure";
 
 /**
  * Klien Mayar.id (Headless API V2) — SERVER-ONLY.
@@ -208,7 +209,8 @@ export async function createInvoice(
 export async function getInvoice(invoiceId: string): Promise<InvoiceDetail> {
   const data = await mayarFetch<{
     id: string;
-    amount: number;
+    /** Mayar dapat mengirim number atau string numerik. */
+    amount: number | string;
     status: string;
     paymentUrl?: string;
     expiredAt?: number;
@@ -217,7 +219,9 @@ export async function getInvoice(invoiceId: string): Promise<InvoiceDetail> {
 
   return {
     invoiceId: data.id,
-    amount: data.amount,
+    // F-07: normalisasi tipe. `NaN` menandakan nominal tidak terbaca; pemanggil
+    // WAJIB memperlakukannya sebagai bukan-lunas (jangan pernah menebak).
+    amount: coerceMayarAmount(data.amount) ?? Number.NaN,
     status: data.status,
     payUrl: data.paymentUrl,
     expiredAt: data.expiredAt,

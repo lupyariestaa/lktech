@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 // @ts-expect-error Node strip-types runner needs explicit extension.
-import { extractMayarPaymentEvent, validateMayarPayment } from "../src/lib/mayar-webhook-pure.ts";
+import { extractMayarPaymentEvent, validateMayarPayment, coerceMayarAmount } from "../src/lib/mayar-webhook-pure.ts";
 
 const order = { total: 125000, invoiceId: "inv-123", transactionId: "txn-456" };
 
@@ -85,4 +85,30 @@ test("rejects explicitly mismatched invoice reference", () => {
     ok: false,
     reason: "invoice_mismatch",
   });
+});
+
+/* ---- F-07: normalisasi nominal dari GET /invoices (number | string) ---- */
+
+test("coerceMayarAmount: number dan string numerik diterima setara", () => {
+  assert.equal(coerceMayarAmount(180000), 180000);
+  assert.equal(coerceMayarAmount("180000"), 180000);
+  assert.equal(coerceMayarAmount(" 149000 "), 149000);
+});
+
+test("coerceMayarAmount: nilai tak valid → undefined (jangan menebak)", () => {
+  assert.equal(coerceMayarAmount(undefined), undefined);
+  assert.equal(coerceMayarAmount(null), undefined);
+  assert.equal(coerceMayarAmount(""), undefined);
+  assert.equal(coerceMayarAmount("   "), undefined);
+  assert.equal(coerceMayarAmount("abc"), undefined);
+  assert.equal(coerceMayarAmount(Number.NaN), undefined);
+  assert.equal(coerceMayarAmount(Number.POSITIVE_INFINITY), undefined);
+  assert.equal(coerceMayarAmount({ amount: 1 }), undefined);
+});
+
+test("coerceMayarAmount: rekonsiliasi string vs total tidak lagi mismatch palsu", () => {
+  const detailAmount = coerceMayarAmount("180000");
+  const expected = 180000;
+  assert.equal(detailAmount, expected);
+  assert.equal(Number.isFinite(detailAmount), true);
 });

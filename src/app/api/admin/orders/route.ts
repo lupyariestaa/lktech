@@ -653,16 +653,21 @@ export async function POST(req: Request) {
 
       const detail = await getInvoice(payRef.invoiceId);
       const expected = payRef.amountExpected ?? order.total;
-      if (detail.amount !== expected) {
-        await recordPaymentProblem(id, {
-          kind: "mismatch",
-          received: detail.amount,
-          expected,
-          reason: "amount_mismatch",
-        });
+      // F-07: `getInvoice` sudah menormalkan tipe (Mayar bisa kirim string).
+      // Nominal tak terbaca (NaN) tetap dianggap mismatch — jangan menebak lunas.
+      const received = detail.amount;
+      if (!Number.isFinite(received) || received !== expected) {
+        if (Number.isFinite(received)) {
+          await recordPaymentProblem(id, {
+            kind: "mismatch",
+            received,
+            expected,
+            reason: "amount_mismatch",
+          });
+        }
         return NextResponse.json(
           {
-            error: `Nominal invoice Mayar (${detail.amount}) tidak sama dengan tagihan (${expected}). Pesanan TIDAK ditandai lunas.`,
+            error: `Nominal invoice Mayar (${Number.isFinite(received) ? received : "tidak terbaca"}) tidak sama dengan tagihan (${expected}). Pesanan TIDAK ditandai lunas.`,
             code: "amount_mismatch",
           },
           { status: 409 },
