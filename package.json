@@ -71,6 +71,7 @@
     "test:order-schema": "node --experimental-strip-types --test scripts/order-schema.test.ts",
     "test:sanitize": "node --experimental-strip-types --test scripts/firestore-sanitize.test.ts",
     "test:stock": "node --experimental-strip-types --test scripts/product-stock.test.ts",
+    "test:stock-reservation": "node --experimental-strip-types --test scripts/stock-reservation.test.ts",
     "test:cart": "node --experimental-strip-types --test scripts/cart-reminder.test.ts",
     "test:cart-identity": "node --experimental-strip-types --test scripts/cart-identity.test.ts",
     "test:reorder": "node --experimental-strip-types --test scripts/reorder-item.test.ts",

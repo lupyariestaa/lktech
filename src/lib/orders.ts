@@ -25,6 +25,13 @@ import {
   invalidateCouponStatsCache,
   restoreCouponUsageInTransaction,
 } from "@/lib/coupons";
+import {
+  applyStockRelease,
+  invalidateProductStockCache,
+  readStockRelease,
+  releaseStockInTransaction,
+} from "@/lib/stock";
+import { shouldReleaseStock } from "@/lib/stock-pure";
 
 const COLLECTION = "orders";
 
@@ -74,6 +81,9 @@ export async function createOrder(
   if (data.payment) payload.payment = data.payment;
   if (data.servicePayment) payload.servicePayment = data.servicePayment;
   if (data.fulfillment) payload.fulfillment = data.fulfillment;
+  if (data.stockReservation && data.stockReservation.length > 0) {
+    payload.stockReservation = data.stockReservation;
+  }
 
   const ref = await db.collection(COLLECTION).add(payload);
   invalidateOrderDerivedCaches();
@@ -580,6 +590,8 @@ export async function updateOrderStatus(
   changed: boolean;
   notFound?: boolean;
   invalidTransition?: boolean;
+  /** Stok dilepas pada transisi ini (O-01). */
+  stockReleased?: boolean;
 }> {
   const db = getAdminDb();
   if (!db) throw new Error("Admin SDK tidak tersedia.");
@@ -593,10 +605,8 @@ export async function updateOrderStatus(
     }
     const data = doc.data() as Record<string, unknown>;
     createdAtISO = String(data.createdAtISO ?? "");
-    const previousStatus = normalizeOrder({
-      id: doc.id,
-      ...data,
-    }).status;
+    const current = normalizeOrder({ id: doc.id, ...data });
+    const previousStatus = current.status;
 
     const transition = evaluateStatusTransition(previousStatus, status);
     if (transition === "unchanged") {
@@ -607,16 +617,31 @@ export async function updateOrderStatus(
       return { previousStatus, changed: false, invalidTransition: true };
     }
 
+    // O-01: transisi → `dibatalkan`/`kedaluwarsa` MELEPAS reservasi stok.
+    // Idempoten via `stockReleasedAtISO` (cegah pengembalian ganda).
+    const reservation = current.stockReservation ?? [];
+    const releaseStock =
+      reservation.length > 0 &&
+      !current.stockReleasedAtISO &&
+      shouldReleaseStock(previousStatus, status);
+    let releasedAtISO: string | undefined;
+    if (releaseStock) {
+      await releaseStockInTransaction(tx, reservation);
+      releasedAtISO = new Date().toISOString();
+    }
+
     tx.update(ref, {
       status,
       updatedAtISO: new Date().toISOString(),
       updatedBy,
+      ...(releasedAtISO ? { stockReleasedAtISO: releasedAtISO } : {}),
     });
-    return { previousStatus, changed: true };
+    return { previousStatus, changed: true, stockReleased: releaseStock };
   });
   if (result.changed) {
     invalidateOrderDerivedCaches();
     invalidateAnalyticsForOrder(createdAtISO);
+    if (result.stockReleased) invalidateProductStockCache();
   }
   return result;
 }
@@ -1004,6 +1029,8 @@ export type DeleteOrderResult =
       ok: true;
       status: OrderStatus;
       couponRestored: boolean;
+      /** Stok dilepas saat penghapusan (O-01). */
+      stockReleased?: boolean;
       /** Hanya untuk invalidasi agregat harian; tidak dikirim ke klien. */
       createdAtISO: string;
     }
@@ -1048,17 +1075,30 @@ export async function deleteOrder(
       } as const;
     }
 
+    // O-01: baca produk SEBELUM penulisan kupon — transaksi Firestore mewajibkan
+    // SEMUA pembacaan selesai sebelum penulisan pertama.
+    const stockWrites =
+      order.stockReservation &&
+      order.stockReservation.length > 0 &&
+      !order.stockReleasedAtISO
+        ? await readStockRelease(tx, order.stockReservation)
+        : [];
+
     const couponId = order.coupon?.couponId;
     const couponRestored = couponId
       ? // Semua baca kupon dilakukan di dalam transaksi yang sama, sebelum
         // `tx.delete(order)` ditulis.
         await restoreCouponUsageInTransaction(tx, couponId, order.uid)
       : false;
+
+    // Tulis stok yang dilepas, lalu hapus order (semua tulis setelah semua baca).
+    applyStockRelease(tx, stockWrites);
     tx.delete(ref);
     return {
       ok: true,
       status: order.status,
       couponRestored,
+      stockReleased: stockWrites.length > 0,
       createdAtISO: order.createdAt,
     } as const;
   });
@@ -1067,6 +1107,7 @@ export async function deleteOrder(
     invalidateOrderDerivedCaches();
     invalidateAnalyticsForOrder(result.createdAtISO);
     if (result.couponRestored) invalidateCouponStatsCache();
+    if (result.stockReleased) invalidateProductStockCache();
   }
   return result;
 }
@@ -1141,9 +1182,19 @@ export async function markOrderExpired(
         ? stripUndefined({ ...current.payment, status: "kedaluwarsa" as const })
         : undefined;
 
+      // O-01: order kedaluwarsa MELEPAS reservasi stok. Semua BACA harus
+      // selesai sebelum TULIS, jadi baca produk lebih dulu lalu tulis di akhir.
+      const reservation = current.stockReservation ?? [];
+      const releaseStock = reservation.length > 0 && !current.stockReleasedAtISO;
+      const stockWrites = releaseStock
+        ? await readStockRelease(tx, reservation)
+        : [];
+
+      applyStockRelease(tx, stockWrites);
       tx.update(ref, stripUndefined({
         status: "kedaluwarsa",
         ...(payment ? { payment } : {}),
+        ...(releaseStock ? { stockReleasedAtISO: atISO } : {}),
         updatedAtISO: atISO,
         updatedBy: "system:expire",
       }));
@@ -1155,12 +1206,14 @@ export async function markOrderExpired(
           ...(doc.data() as Record<string, unknown>),
           status: "kedaluwarsa",
           ...(payment ? { payment } : {}),
+          ...(releaseStock ? { stockReleasedAtISO: atISO } : {}),
         }),
       };
     });
     if (result.applied) {
       invalidateOrderDerivedCaches();
       invalidateAnalyticsForOrder(result.order?.createdAt);
+      if (result.order?.stockReleasedAtISO) invalidateProductStockCache();
     }
     return result;
   } catch (err) {

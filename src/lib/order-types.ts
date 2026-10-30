@@ -10,9 +10,10 @@ import { ORDER_STATUS_LIST } from "@/lib/order-status-pure";
 import type { PrintPricing } from "@/lib/product-types";
 import { normalizePrintFinishing } from "@/lib/order-item-display";
 import { normalizeInvoiceRecovery } from "@/lib/invoice-recovery-pure";
+import { normalizeStockReservation, type StockReservationLine } from "@/lib/stock-pure";
 
 // Re-export agar konsumen order cukup impor dari satu tempat.
-export type { FulfillmentType, OrderPayment, InvoiceRecovery };
+export type { FulfillmentType, OrderPayment, InvoiceRecovery, StockReservationLine };
 
 /**
  * STATUS pesanan (OR-E3): diturunkan dari daftar kanonik di `order-status-pure`
@@ -150,6 +151,14 @@ uid: string;
    * lunas (FASE P1). Dipakai untuk menampilkan link unduhan di `/akun`.
    */
   downloadTokenId?: string;
+  /**
+   * Stok yang DIRESERVASI (dikurangi) saat order dibuat (Sprint 2 / O-01).
+   * Berisi daftar PERSIS baris yang dikurangi agar pelepasan idempoten — hanya
+   * ada untuk produk dengan stok terbatas. Order lama: undefined.
+   */
+  stockReservation?: StockReservationLine[];
+  /** Waktu reservasi stok dilepas (ISO) — penanda idempotensi pelepasan. */
+  stockReleasedAtISO?: string;
   /** Nomor WhatsApp tujuan checkout (dari settings situs). */
   whatsapp: string;
   /** Pesan WhatsApp kanonik yang dikirim ke admin (untuk audit/ulang kirim). */
@@ -335,6 +344,8 @@ status,
     })(),
     fulfillment,
     downloadTokenId: str(data.downloadTokenId) || undefined,
+    stockReservation: normalizeStockReservation(data.stockReservation),
+    stockReleasedAtISO: str(data.stockReleasedAtISO) || undefined,
     whatsapp: str(data.whatsapp),
     message: str(data.message),
     createdAt:

@@ -73,6 +73,7 @@
     "scripts/payment-metrics.test.ts",
     "scripts/order-schema.test.ts",
     "scripts/product-stock.test.ts",
+    "scripts/stock-reservation.test.ts",
     "scripts/cart-reminder.test.ts",
     "scripts/unsubscribe-token.test.ts",
     "scripts/newsletter-pure.test.ts",

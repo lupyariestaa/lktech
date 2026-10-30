@@ -21,6 +21,7 @@ import { allocateDiscountByItem, fulfillmentTypeForCategory, summarizeFulfillmen
 import { notifyOrderAwaitingConfirmation } from "@/lib/order-payment";
 import { createInvoice, getMayarApiHost, getMayarErrorStatus, getInvoiceTtlMinutes, isMayarConfigured, getMayarMode } from "@/lib/mayar";
 import { coerceMayarExpiry } from "@/lib/mayar-webhook-pure";
+import { releaseStock, reserveStock } from "@/lib/stock";
 import { obs } from "@/lib/observability";
 import type { CheckoutInput } from "@/lib/order-schema";
 import type { InvoiceRecovery, OrderCoupon, OrderItem, OrderPayment } from "@/lib/order-types";
@@ -264,6 +265,25 @@ export async function performCheckout(
   }
   const initialStatus = fulfillment === "jasa" ? "menunggu_konfirmasi" : "menunggu_bayar";
 
+  // O-01: RESERVASI STOK ATOMIK sebelum order dibuat. `evaluatePurchase` hanya
+  // memeriksa stok; ini benar-benar MENGURANGINYA agar dua pembeli tidak bisa
+  // membeli unit terakhir bersamaan. Bila gagal → kembalikan kuota kupon & tolak.
+  const stock = await reserveStock(
+    pricedItems.map((item) => ({
+      slug: item.slug,
+      variantSlug: item.variantSlug,
+      qty: item.qty,
+    })),
+  );
+  if (!stock.ok) {
+    if (couponId) await restoreCouponUsage(couponId, actor.uid);
+    return fail(409, {
+      error: stock.message,
+      code: stock.code,
+      slug: stock.slug,
+    });
+  }
+
   let order;
   try {
     order = await createOrder({
@@ -279,9 +299,12 @@ export async function performCheckout(
       fulfillment,
       whatsapp: settings.whatsapp,
       message,
+      stockReservation: stock.reservation.length > 0 ? stock.reservation : undefined,
     });
   } catch (orderErr) {
     if (couponId) await restoreCouponUsage(couponId, actor.uid);
+    // Order gagal dibuat → lepas kembali stok yang sudah direservasi.
+    await releaseStock(stock.reservation);
     throw orderErr;
   }
 
