@@ -5,6 +5,7 @@ import {
   isTerminalStatus,
   isPayableStatus,
   isAwaitingPayment,
+  isPaymentExpired,
   isTransitionAllowed,
   evaluateStatusTransition,
   shouldRestoreCoupon,
@@ -186,6 +187,52 @@ test("isAwaitingPayment: status terminal → false (cegah tombol bayar hantu)", 
       s,
     );
   }
+});
+
+/* ---- F-05: invoice lewat jatuh tempo tidak boleh menawarkan pembayaran ---- */
+
+const NOW_05 = new Date("2026-10-30T12:00:00.000Z");
+
+test("isPaymentExpired: lewat → true, belum → false, invalid → false", () => {
+  assert.equal(isPaymentExpired("2026-10-30T11:00:00.000Z", NOW_05), true);
+  assert.equal(isPaymentExpired("2026-10-30T12:00:00.000Z", NOW_05), true);
+  assert.equal(isPaymentExpired("2026-10-30T13:00:00.000Z", NOW_05), false);
+  assert.equal(isPaymentExpired(undefined, NOW_05), false);
+  assert.equal(isPaymentExpired("bukan-tanggal", NOW_05), false);
+});
+
+test("isAwaitingPayment: expiresAt sudah lewat → false", () => {
+  assert.equal(
+    isAwaitingPayment(
+      {
+        status: "menunggu_bayar",
+        payment: {
+          status: "menunggu",
+          payUrl: "https://x",
+          expiresAt: "2026-10-30T11:00:00.000Z",
+        },
+      },
+      NOW_05,
+    ),
+    false,
+  );
+});
+
+test("isAwaitingPayment: expiresAt belum lewat → true", () => {
+  assert.equal(
+    isAwaitingPayment(
+      {
+        status: "menunggu_bayar",
+        payment: {
+          status: "menunggu",
+          payUrl: "https://x",
+          expiresAt: "2026-10-30T13:00:00.000Z",
+        },
+      },
+      NOW_05,
+    ),
+    true,
+  );
 });
 
 /* -------------------------------------------------------------------------- */

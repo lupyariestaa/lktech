@@ -49,6 +49,50 @@ export function coerceMayarAmount(raw: unknown): number | undefined {
   return value !== undefined && Number.isFinite(value) ? value : undefined;
 }
 
+/** Batas heuristik epoch: nilai < 1e12 hampir pasti DETIK, bukan milidetik. */
+const EPOCH_SECONDS_CEILING = 1_000_000_000_000;
+
+/**
+ * Status invoice Mayar yang PASTI berarti uang sudah diterima.
+ *
+ * Sengaja daftar eksplisit (bukan "selain unpaid"): status tak dikenal harus
+ * diperlakukan BELUM lunas agar tidak pernah menandai pesanan lunas tanpa bukti.
+ */
+export const MAYAR_PAID_INVOICE_STATUSES = [
+  "paid",
+  "settled",
+  "success",
+  "succeeded",
+] as const;
+
+/** Apakah status invoice Mayar berarti lunas (case/whitespace-insensitive). */
+export function isMayarInvoicePaid(status: string | undefined): boolean {
+  if (typeof status !== "string") return false;
+  const normalized = status.trim().toLowerCase();
+  return (MAYAR_PAID_INVOICE_STATUSES as readonly string[]).includes(normalized);
+}
+
+/**
+ * Menormalkan `expiredAt` invoice Mayar menjadi ISO yang valid.
+ *
+ * Mayar dapat mengirim epoch **milidetik**, epoch **detik**, atau string ISO.
+ * Tanpa normalisasi, `new Date(...)` bisa menghasilkan `Invalid Date` atau tahun
+ * 1970 (bila detik diperlakukan sebagai milidetik) sehingga order langsung
+ * "kedaluwarsa" (F-11). Nilai tak dikenali → `undefined` (pemanggil memakai
+ * fallback TTL).
+ */
+export function coerceMayarExpiry(raw: unknown): string | undefined {
+  if (typeof raw === "string" && raw.trim() && !/^\d+$/.test(raw.trim())) {
+    const t = Date.parse(raw);
+    return Number.isFinite(t) ? new Date(t).toISOString() : undefined;
+  }
+  const n = coerceMayarAmount(raw);
+  if (n === undefined || n <= 0) return undefined;
+  const ms = n < EPOCH_SECONDS_CEILING ? n * 1000 : n;
+  const d = new Date(ms);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : undefined;
+}
+
 /** Parse only documented/explicit identifiers; never treat data.id as invoiceId. */
 export function extractMayarPaymentEvent(body: unknown): MayarPaymentEvent | null {
   if (!body || typeof body !== "object") return null;

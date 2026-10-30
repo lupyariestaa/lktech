@@ -1,7 +1,7 @@
 import "server-only";
 import type { CreatedInvoice, InvoiceDetail } from "@/lib/payment-types";
 import { checkTrustedUrl } from "@/lib/trusted-url";
-import { coerceMayarAmount } from "@/lib/mayar-webhook-pure";
+import { coerceMayarAmount, isMayarInvoicePaid } from "@/lib/mayar-webhook-pure";
 
 /**
  * Klien Mayar.id (Headless API V2) — SERVER-ONLY.
@@ -229,9 +229,9 @@ export async function getInvoice(invoiceId: string): Promise<InvoiceDetail> {
   };
 }
 
-/** Status invoice Mayar yang dianggap lunas (dokumentasi: `paid`). */
+/** Status invoice Mayar yang dianggap lunas (lihat `isMayarInvoicePaid`). */
 export function isInvoicePaid(status: string | undefined): boolean {
-  return typeof status === "string" && status.trim().toLowerCase() === "paid";
+  return isMayarInvoicePaid(status);
 }
 
 /**

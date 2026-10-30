@@ -4,7 +4,7 @@ import { getOrderById, markOrderPaid } from "@/lib/orders";
 import { fulfillOrder } from "@/lib/order-payment";
 import { notifyOrderAwaitingConfirmation } from "@/lib/order-payment";
 import { obs } from "@/lib/observability";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import type { OrderStatus } from "@/lib/order-types";
 import { extractMayarPaymentEvent, validateMayarPayment } from "@/lib/mayar-webhook-pure";
 import { FieldValue } from "firebase-admin/firestore";
@@ -36,11 +36,17 @@ export const dynamic = "force-dynamic";
  *    timeout) agar Mayar mengulang event. Penulisan status idempoten → retry aman.
  */
 export async function POST(req: Request) {
-  const rl = await checkRateLimit("webhook:mayar", 60, 60_000);
+  const ip = clientIp(req);
+  const rl = await checkRateLimit(`webhook:mayar:${ip}`, 60, 60_000);
   if (!rl.ok) {
-    // Tetap 200 agar pengirim tidak menumpuk retry; cukup log.
-    console.warn("[webhook/mayar] rate limited", rl.retryAfter);
-    return NextResponse.json({ ok: true, throttled: true });
+    // F-10: 429 agar Mayar MENGULANG event. Kunci per-IP supaya lonjakan dari
+    // satu sumber tidak memblokir seluruh trafik webhook. Sebelumnya kunci
+    // global + balasan 200 → event hilang permanen saat kena limit.
+    console.warn("[webhook/mayar] rate limited", ip, rl.retryAfter);
+    return NextResponse.json(
+      { ok: false, error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
   }
 
   const db = getAdminDb();

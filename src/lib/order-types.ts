@@ -378,6 +378,7 @@ export {
   isTerminalStatus,
   isPayableStatus,
   isAwaitingPayment,
+  isPaymentExpired,
   isTransitionAllowed,
   shouldRestoreCoupon,
   shouldSendStatusEmail,

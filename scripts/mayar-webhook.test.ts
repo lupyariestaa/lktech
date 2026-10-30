@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 // @ts-expect-error Node strip-types runner needs explicit extension.
-import { extractMayarPaymentEvent, validateMayarPayment, coerceMayarAmount } from "../src/lib/mayar-webhook-pure.ts";
+import { extractMayarPaymentEvent, validateMayarPayment, coerceMayarAmount, coerceMayarExpiry, isMayarInvoicePaid } from "../src/lib/mayar-webhook-pure.ts";
 
 const order = { total: 125000, invoiceId: "inv-123", transactionId: "txn-456" };
 
@@ -111,4 +111,35 @@ test("coerceMayarAmount: rekonsiliasi string vs total tidak lagi mismatch palsu"
   const expected = 180000;
   assert.equal(detailAmount, expected);
   assert.equal(Number.isFinite(detailAmount), true);
+});
+
+/* ---- F-11: normalisasi `expiredAt` (detik vs milidetik vs ISO) ---- */
+
+const EXPIRY_ISO = "2026-10-30T12:00:00.000Z";
+
+test("coerceMayarExpiry: epoch detik, milidetik, dan ISO → ISO yang sama", () => {
+  const ms = Date.parse(EXPIRY_ISO);
+  assert.equal(coerceMayarExpiry(ms), EXPIRY_ISO);
+  assert.equal(coerceMayarExpiry(Math.floor(ms / 1000)), EXPIRY_ISO);
+  assert.equal(coerceMayarExpiry(EXPIRY_ISO), EXPIRY_ISO);
+});
+
+test("coerceMayarExpiry: nilai invalid → undefined (pakai fallback TTL)", () => {
+  assert.equal(coerceMayarExpiry(undefined), undefined);
+  assert.equal(coerceMayarExpiry(null), undefined);
+  assert.equal(coerceMayarExpiry(""), undefined);
+  assert.equal(coerceMayarExpiry("abc"), undefined);
+  assert.equal(coerceMayarExpiry(0), undefined);
+  assert.equal(coerceMayarExpiry(-5), undefined);
+});
+
+/* ---- F-12: pemetaan status invoice (fail-safe) ---- */
+
+test("isMayarInvoicePaid: status lunas dikenal, sisanya false", () => {
+  for (const status of ["paid", "settled", "success", "succeeded", " PAID "]) {
+    assert.equal(isMayarInvoicePaid(status), true, status);
+  }
+  for (const status of ["unpaid", "pending", "closed", "expired", "", undefined]) {
+    assert.equal(isMayarInvoicePaid(status), false, String(status));
+  }
 });

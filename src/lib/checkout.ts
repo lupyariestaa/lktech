@@ -19,7 +19,8 @@ import {
 import { recordOrderEmailStatus, logOrderEmail } from "@/lib/email-status";
 import { allocateDiscountByItem, fulfillmentTypeForCategory, summarizeFulfillment } from "@/lib/order-fulfillment";
 import { notifyOrderAwaitingConfirmation } from "@/lib/order-payment";
-import { createInvoice, getMayarApiHost, getMayarErrorStatus, isMayarConfigured, getMayarMode } from "@/lib/mayar";
+import { createInvoice, getMayarApiHost, getMayarErrorStatus, getInvoiceTtlMinutes, isMayarConfigured, getMayarMode } from "@/lib/mayar";
+import { coerceMayarExpiry } from "@/lib/mayar-webhook-pure";
 import { obs } from "@/lib/observability";
 import type { CheckoutInput } from "@/lib/order-schema";
 import type { InvoiceRecovery, OrderCoupon, OrderItem, OrderPayment } from "@/lib/order-types";
@@ -334,7 +335,19 @@ export async function performCheckout(
         payment.invoiceId = invoice.invoiceId;
         payment.transactionId = invoice.transactionId;
         payment.payUrl = invoice.payUrl;
-        payment.expiresAt = new Date(invoice.expiredAt).toISOString();
+        // F-11: validasi satuan/format `expiredAt` (detik vs milidetik vs ISO).
+        // Nilai tak valid → fallback TTL agar order tidak "kedaluwarsa 1970".
+        const expiresAtISO = coerceMayarExpiry(invoice.expiredAt);
+        if (!expiresAtISO) {
+          console.warn(
+            "[checkout] expiredAt Mayar tidak valid — memakai TTL fallback:",
+            order.id,
+            invoice.expiredAt,
+          );
+        }
+        payment.expiresAt =
+          expiresAtISO ??
+          new Date(Date.now() + getInvoiceTtlMinutes() * 60_000).toISOString();
         payUrl = invoice.payUrl;
 
         await recordInvoiceRecovery(order.id, {

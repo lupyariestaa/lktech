@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const KEYS: Array<keyof Omit<AttentionSummary, "total" | "truncated">> = [
   "jasa_menunggu",
   "bayar_segera",
+  "terlambat_bayar",
   "kurang_bayar",
   "masalah_pembayaran",
   "belum_dipenuhi",

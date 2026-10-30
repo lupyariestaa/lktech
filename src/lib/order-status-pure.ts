@@ -186,17 +186,35 @@ export const AWAITING_PAYMENT_STATUSES: readonly OrderStatusName[] = [
 ];
 
 /**
- * Apakah order layak menampilkan tombol "Bayar sekarang": punya `payUrl`,
- * pembayaran belum lunas, dan status order masih memungkinkan pembayaran.
- * Satu sumber kebenaran (klien & server) agar tidak ada tombol bayar "hantu"
- * pada order yang sudah dibatalkan/kedaluwarsa/selesai.
+ * Apakah `expiresAt` (ISO) sudah LEWAT pada `now`. Nilai kosong/tidak valid →
+ * `false` (jangan menyembunyikan tombol hanya karena data waktu rusak).
  */
-export function isAwaitingPayment(order: {
-  status: string;
-  payment?: { status?: string; payUrl?: string } | null;
-}): boolean {
+export function isPaymentExpired(
+  expiresAt: string | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!expiresAt) return false;
+  const t = Date.parse(expiresAt);
+  return Number.isFinite(t) && t <= now.getTime();
+}
+
+/**
+ * Apakah order layak menampilkan tombol "Bayar sekarang": punya `payUrl`,
+ * pembayaran belum lunas, BELUM lewat `expiresAt`, dan status order masih
+ * memungkinkan pembayaran.
+ * Satu sumber kebenaran (klien & server) agar tidak ada tombol bayar "hantu"
+ * pada order yang sudah dibatalkan/kedaluwarsa/selesai atau invoice yang mati.
+ */
+export function isAwaitingPayment(
+  order: {
+    status: string;
+    payment?: { status?: string; payUrl?: string; expiresAt?: string } | null;
+  },
+  now: Date = new Date(),
+): boolean {
   const payUrl = order.payment?.payUrl;
   if (!payUrl) return false;
   if (order.payment?.status === "dibayar") return false;
+  if (isPaymentExpired(order.payment?.expiresAt, now)) return false;
   return (AWAITING_PAYMENT_STATUSES as readonly string[]).includes(order.status);
 }

@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 const ATTENTION_SHORT: Record<string, string> = {
   jasa_menunggu: "Jasa >24 jam",
   bayar_segera: "Bayar <6 jam",
+  terlambat_bayar: "Lewat jatuh tempo",
   kurang_bayar: "Kurang bayar",
   masalah_pembayaran: "Cek pembayaran",
   belum_dipenuhi: "Belum dipenuhi",

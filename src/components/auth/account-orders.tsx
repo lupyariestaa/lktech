@@ -7,6 +7,7 @@ import {
   ORDER_STATUS_LABEL,
   ORDER_STATUS_STYLE,
   isAwaitingPayment,
+  isPaymentExpired,
 } from "@/lib/order-types";
 import type { MyOrder } from "@/lib/order-api";
 import { formatPrice } from "@/lib/product-format";
@@ -58,6 +59,12 @@ export function AccountOrders({
         const open = openId === order.id;
         const itemCount = order.items.reduce((n, it) => n + it.qty, 0);
         const pendingPayment = isAwaitingPayment(order);
+        // F-05: status masih `menunggu_bayar` padahal `expiresAt` sudah lewat —
+        // jangan tawarkan "Bayar sekarang", jangan menyesatkan pembeli.
+        const paymentExpired =
+          !pendingPayment &&
+          order.status === "menunggu_bayar" &&
+          isPaymentExpired(order.payment?.expiresAt);
         return (
           <li
             key={order.id}
@@ -102,6 +109,17 @@ export function AccountOrders({
                 >
                   Bayar sekarang
                 </a>
+              </div>
+            )}
+
+            {paymentExpired && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3">
+                <Clock className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                <p className="flex-1 text-xs text-slate-600">
+                  Waktu pembayaran sudah lewat. Status akan diperbarui otomatis;
+                  bila Anda sudah membayar, hubungi admin dengan kode pesanan{" "}
+                  <span className="font-semibold">{order.id}</span>.
+                </p>
               </div>
             )}
 

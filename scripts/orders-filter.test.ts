@@ -203,6 +203,20 @@ test("attentionReasons: bayar kedaluwarsa < 6 jam", () => {
   assert.ok(attentionReasons(o, NOW).includes("bayar_segera"));
 });
 
+test("attentionReasons: LEWAT jatuh tempo tapi belum ditandai (F-04)", () => {
+  const o = order({
+    id: "a",
+    status: "menunggu_bayar",
+    payment: {
+      status: "menunggu",
+      expiresAt: new Date(NOW.getTime() - 60 * 60 * 1000).toISOString(),
+    },
+  });
+  const reasons = attentionReasons(o, NOW);
+  assert.ok(reasons.includes("terlambat_bayar"));
+  assert.equal(reasons.includes("bayar_segera"), false);
+});
+
 test("attentionReasons: kurang bayar & belum dipenuhi", () => {
   const mismatch = order({
     id: "a",

@@ -253,7 +253,13 @@ export function attentionReasons(
     const t = Date.parse(order.payment.expiresAt);
     if (Number.isFinite(t)) {
       const left = t - nowMs;
-      if (left > 0 && left < 6 * 60 * 60 * 1000) reasons.push("bayar_segera");
+      if (left > 0) {
+        if (left < 6 * 60 * 60 * 1000) reasons.push("bayar_segera");
+      } else {
+        // F-04: sudah LEWAT jatuh tempo tapi status belum berpindah. Ini kondisi
+        // paling berbahaya (uang mungkin sudah masuk / cron kedaluwarsa mati).
+        reasons.push("terlambat_bayar");
+      }
     }
   }
 
@@ -287,6 +293,7 @@ export function attentionReasons(
 export const ATTENTION_LABEL: Record<string, string> = {
   jasa_menunggu: "Jasa belum dikonfirmasi > 24 jam",
   bayar_segera: "Pembayaran kedaluwarsa < 6 jam",
+  terlambat_bayar: "Lewat jatuh tempo, belum ditandai",
   kurang_bayar: "Nominal kurang bayar",
   masalah_pembayaran: "Bukti pembayaran perlu ditinjau",
   belum_dipenuhi: "Dibayar, belum dipenuhi",

@@ -504,6 +504,8 @@ export async function attachBuyerPhotos(orders: Order[]): Promise<Order[]> {
 export type AttentionSummary = {
   jasa_menunggu: number;
   bayar_segera: number;
+  /** Lewat `expiresAt` tetapi status masih `menunggu_bayar` (F-04). */
+  terlambat_bayar: number;
   kurang_bayar: number;
   masalah_pembayaran: number;
   belum_dipenuhi: number;
@@ -516,6 +518,7 @@ export async function getOrdersAttentionSummary(): Promise<AttentionSummary> {
   const empty: AttentionSummary = {
     jasa_menunggu: 0,
     bayar_segera: 0,
+    terlambat_bayar: 0,
     kurang_bayar: 0,
     masalah_pembayaran: 0,
     belum_dipenuhi: 0,
