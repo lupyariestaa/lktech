@@ -1,5 +1,5 @@
 import "server-only";
-import type { Firestore } from "firebase-admin/firestore";
+import type { Firestore, Query, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import {
   MEDIA_CATEGORIES,
   type MediaCategory,
@@ -10,6 +10,7 @@ import {
   type MediaStatusFilter,
 } from "@/lib/media-types";
 import { normalizeMediaItem } from "@/lib/media-normalize";
+import { paginateMedia } from "@/lib/media-list-pure";
 
 /**
  * Data layer media (server-only). Semua baca/tulis lewat satu tempat agar
@@ -26,6 +27,15 @@ const COLLECTION = "media";
 /** Batas default & maksimum jumlah item per halaman. */
 export const MEDIA_PAGE_DEFAULT_LIMIT = 24;
 export const MEDIA_PAGE_MAX_LIMIT = 100;
+
+/** Ukuran satu batch pemindaian dokumen media (satu `.get()` per batch). */
+const MEDIA_SCAN_BATCH = 500;
+
+/**
+ * Batas keras dokumen media per permintaan (Sprint 10 / ADM-17). Pengaman biaya
+ * & latensi; bila tersentuh, hasil ditandai `truncated` agar UI jujur.
+ */
+const MEDIA_SCAN_CAP = 5000;
 
 function clampLimit(limit?: number): number {
   if (typeof limit !== "number" || !Number.isFinite(limit) || limit <= 0) {
@@ -96,24 +106,41 @@ function matchesTextFilters(
 }
 
 /**
- * Ambil dokumen media mentah (belum difilter) dari Firestore, terurut menurun
- * berdasarkan `createdAtISO`. Bila query memakai sortir lain, ambil lebih dulu
- * semua yang relevan lalu urutkan di server.
+ * Pindai dokumen media mentah (belum difilter) terurut menurun berdasarkan
+ * `createdAtISO`, BERTAHAP per `MEDIA_SCAN_BATCH` sampai habis atau batas keras
+ * `MEDIA_SCAN_CAP` (Sprint 10 / ADM-17).
+ *
+ * Menggantikan pembacaan tak terbatas agar kuota & latensi terkendali.
+ * `exhausted = false` menandakan hasil mungkin terpotong (pemanggil menandai
+ * `truncated`). Memakai `startAfter(snapshot)` supaya dokumen bertimestamp
+ * identik tidak terlewat/terulang.
  */
-async function fetchAllDocs(db: Firestore): Promise<MediaItem[]> {
-  const snap = await db
-    .collection(COLLECTION)
-    .orderBy("createdAtISO", "desc")
-    .get();
-  return snap.docs.map((doc) => normalizeMediaItem(doc.id, doc.data()));
+async function scanAllDocs(
+  db: Firestore,
+): Promise<{ items: MediaItem[]; exhausted: boolean }> {
+  const items: MediaItem[] = [];
+  let last: QueryDocumentSnapshot | null = null;
+  while (items.length < MEDIA_SCAN_CAP) {
+    const batchLimit = Math.min(MEDIA_SCAN_BATCH, MEDIA_SCAN_CAP - items.length);
+    let q: Query = db.collection(COLLECTION).orderBy("createdAtISO", "desc");
+    if (last) q = q.startAfter(last);
+    const snap = await q.limit(batchLimit).get();
+    if (snap.docs.length === 0) return { items, exhausted: true };
+    for (const doc of snap.docs) items.push(normalizeMediaItem(doc.id, doc.data()));
+    last = snap.docs[snap.docs.length - 1];
+    // Batch tidak penuh → tidak ada dokumen lagi setelah ini.
+    if (snap.docs.length < batchLimit) return { items, exhausted: true };
+  }
+  return { items, exhausted: false };
 }
 
 /**
  * Daftar media terpaginasi dengan pencarian, filter, dan pengurutan.
  *
- * Implementasi: fetch dokumen (terurut baru→lama dari Firestore), lalu
- * filter/paginate di server. Cara ini menjamin filter teks/tag berfungsi tanpa
- * perlu composite index, dan tetap memberi paginasi kursor yang stabil.
+ * Implementasi: pindai dokumen (terurut baru→lama dari Firestore) secara
+ * bertahap, lalu filter/paginate di server. Cara ini menjamin filter teks/tag
+ * berfungsi tanpa perlu composite index, dan tetap memberi paginasi kursor yang
+ * stabil. Bila `MEDIA_SCAN_CAP` tersentuh, hasil ditandai `truncated`.
  */
 export async function listMedia(
   db: Firestore,
@@ -124,7 +151,7 @@ export async function listMedia(
   const status: MediaStatusFilter = query.status ?? "active";
   const q = (query.q ?? "").trim();
 
-  const all = await fetchAllDocs(db);
+  const { items: all, exhausted } = await scanAllDocs(db);
 
   const filtered = all.filter((item) => {
     if (status !== "all" && item.status !== status) return false;
@@ -138,34 +165,24 @@ export async function listMedia(
     );
   });
 
-  // Sortir (fetchAllDocs sudah desc by createdAt; timpa bila perlu).
+  // Sortir (pemindaian sudah desc by createdAt; timpa bila perlu).
   if (sort !== "newest") {
     filtered.sort((a, b) => compareItems(a, b, sort));
   }
 
-  // Paginasi kursor: mulai setelah posisi kursor pada urutan saat ini.
-  const cursor = decodeCursor(query.cursor);
-  let startIndex = 0;
-  if (cursor && sort === "newest") {
-    const idx = filtered.findIndex(
-      (it) => it.createdAt === cursor.createdAt && it.id === cursor.id,
-    );
-    startIndex = idx >= 0 ? idx + 1 : 0;
-  } else if (cursor) {
-    // Untuk sortir non-newest: cari berdasarkan id saja.
-    const idx = filtered.findIndex((it) => it.id === cursor.id);
-    startIndex = idx >= 0 ? idx + 1 : 0;
-  }
+  const page = paginateMedia({
+    filtered,
+    cursor: decodeCursor(query.cursor),
+    sort,
+    limit,
+    scanExhausted: exhausted,
+  });
 
-  const page = filtered.slice(startIndex, startIndex + limit);
-  const last = page[page.length - 1];
-  const hasMore = startIndex + limit < filtered.length;
-  const nextCursor =
-    hasMore && last
-      ? encodeCursor({ createdAt: last.createdAt ?? "", id: last.id })
-      : null;
-
-  return { items: page, nextCursor };
+  return {
+    items: page.items,
+    nextCursor: page.nextCursorItem ? encodeCursor(page.nextCursorItem) : null,
+    truncated: page.truncated,
+  };
 }
 
 /** Ambil satu item media berdasarkan id (atau null bila tidak ada). */

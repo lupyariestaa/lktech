@@ -848,8 +848,9 @@ meminta `summary=1&trend=1`, sedangkan badge memakai summary count saja.
 
 ### ADM-17 · 🟡 Sedang · Kontrak daftar tidak konsisten: batas tersembunyi & filter audit mengecil
 
-**Status:** 🟡 Sebagian diperbaiki — agregat ulasan dan urutan audit dibenahi;
-subscriber/media masih perlu paging/flag batas.
+**Status:** 🟢 Diperbaiki (Sprint 10) — agregat ulasan, urutan audit, serta batas
+subscriber & media kini ditandai jujur. Sisa: pencarian/ekspor tetap terbatas
+pada data termuat (dinyatakan ke admin).
 
 **Bukti:**
 
@@ -872,8 +873,20 @@ sehingga sulit dipakai untuk investigasi.
 
 **Perbaikan:** summary ulasan memakai Firestore count/average aggregate; audit
 memakai `orderBy("atISO", "desc")` dan opsi filter stabil.
-**Sisa:** paging/penanda pemotongan subscriber dan media masih terbuka; filter
-audit per aksi tetap dibatasi 1.000 dokumen.
+**Sprint 10 (ADM-17 sisa):**
+
+- **Media** — `listMedia` dulu membaca **seluruh** koleksi (`fetchAllDocs` tanpa
+  batas) lalu memotong di memori. Sekarang dipindai **bertahap per 500** dengan
+  batas keras 5.000 (`scanAllDocs`), paginasi diekstraksi ke `paginateMedia`
+  (murni & teruji), dan hasilnya membawa `truncated` yang ditampilkan sebagai
+  peringatan di `media-manager.tsx`.
+- **Subscriber** — `listSubscribers` dulu satu kali `.limit(10.000)` **tanpa
+  penanda**. Sekarang dipindai bertahap (`scanSubscribers`) dan mengembalikan
+  `{ subscribers, truncated }`; daftar pelanggan dan ringkasan broadcast
+  menampilkan peringatan + “N+” saat batas tersentuh.
+- **Sisa:** pencarian/ekspor (subscriber & media) tetap terbatas pada data yang
+  termuat — kini **dinyatakan** ke admin; filter audit per aksi tetap dibatasi
+  1.000 dokumen.
 
 ---
 

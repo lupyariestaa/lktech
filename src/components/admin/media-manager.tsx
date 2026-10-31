@@ -81,6 +81,8 @@ export function MediaManager() {
 
   const [items, setItems] = useState<MediaItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  // Sprint 10 / ADM-17: `true` bila pemindaian server menyentuh batas keras.
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,12 +149,14 @@ export function MediaManager() {
         const list = await fetchOrphanMedia(500);
         setItems(list);
         setNextCursor(null);
+        setTruncated(false);
         setError(null);
         return;
       }
       const data = await listMedia(buildQuery());
       setItems(data.items);
       setNextCursor(data.nextCursor);
+      setTruncated(Boolean(data.truncated));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat media.");
@@ -178,12 +182,14 @@ export function MediaManager() {
           if (!active) return;
           setItems(list);
           setNextCursor(null);
+          setTruncated(false);
           setError(null);
         } else {
           const data = await listMedia(buildQuery());
           if (!active) return;
           setItems(data.items);
           setNextCursor(data.nextCursor);
+          setTruncated(Boolean(data.truncated));
           setError(null);
         }
       } catch (err) {
@@ -607,7 +613,9 @@ export function MediaManager() {
 
   const resultLabel = loading
     ? "Memuat…"
-    : `${items.length} aset ditampilkan${nextCursor ? " (masih ada lagi)" : ""}`;
+    : `${items.length} aset ditampilkan${nextCursor ? " (masih ada lagi)" : ""}${
+        truncated ? " (dibatasi pemindaian)" : ""
+      }`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -619,6 +627,18 @@ export function MediaManager() {
         <div className="flex items-start gap-2.5 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           {error}
+        </div>
+      )}
+
+      {/* Sprint 10 / ADM-17: jujur saat pemindaian server menyentuh batas. */}
+      {truncated && !loading && (
+        <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Pemindaian dibatasi 5.000 aset terbaru — sebagian media lama mungkin
+            belum tampil. Persempit filter (kategori/koleksi/tag/pencarian) untuk
+            hasil presisi.
+          </span>
         </div>
       )}
 

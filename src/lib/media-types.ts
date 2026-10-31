@@ -112,4 +112,9 @@ export type MediaListQuery = {
 export type MediaListResult = {
   items: MediaItem[];
   nextCursor: string | null;
+  /**
+   * `true` bila pemindaian sumber menyentuh batas keras sehingga daftar mungkin
+   * belum lengkap (Sprint 10 / ADM-17). UI menampilkan peringatan jujur.
+   */
+  truncated?: boolean;
 };

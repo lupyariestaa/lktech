@@ -24,6 +24,7 @@ const TABS: Array<{ id: Tab; label: string; icon: typeof Send }> = [
 export function BroadcastManager() {
   const [summary, setSummary] = useState<SubscribersSummary | null>(null);
   const [counts, setCounts] = useState<SegmentCounts | null>(null);
+  const [truncated, setTruncated] = useState(false);
   const [tab, setTab] = useState<Tab>("kirim");
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export function BroadcastManager() {
         if (active) {
           setSummary(o.summary);
           setCounts(o.segmentCounts);
+          setTruncated(Boolean(o.truncated));
         }
       } catch {
         /* silent */
@@ -67,6 +69,13 @@ export function BroadcastManager() {
           accent="bg-slate-100 text-slate-500"
         />
       </div>
+
+      {truncated && (
+        <p className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          Angka di atas dihitung dari 10.000 pelanggan terbaru — total sebenarnya
+          bisa lebih besar.
+        </p>
+      )}
 
       {/* Tab */}
       <div className="mb-4 flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1">

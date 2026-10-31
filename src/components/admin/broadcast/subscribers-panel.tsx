@@ -19,6 +19,7 @@ export function SubscribersPanel() {
   const toast = useToast();
   const { isOwner } = useAdminAccess();
   const [subs, setSubs] = useState<Subscriber[] | null>(null);
+  const [truncated, setTruncated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("semua");
@@ -27,8 +28,11 @@ export function SubscribersPanel() {
     let active = true;
     (async () => {
       try {
-        const list = await fetchSubscribers();
-        if (active) setSubs(list);
+        const { subscribers, truncated: cut } = await fetchSubscribers();
+        if (active) {
+          setSubs(subscribers);
+          setTruncated(cut);
+        }
       } catch (err) {
         if (active) {
           setError(err instanceof Error ? err.message : "Gagal memuat pelanggan.");
@@ -114,6 +118,13 @@ export function SubscribersPanel() {
         </p>
       )}
 
+      {truncated && subs !== null && (
+        <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          Daftar dibatasi 10.000 pelanggan terbaru — total mungkin lebih besar.
+          Gunakan pencarian/ekspor untuk lingkup yang lebih kecil.
+        </p>
+      )}
+
       {subs === null ? (
         <p className="mt-4 flex items-center gap-2 text-sm text-muted">
           <Loader2 className="h-4 w-4 animate-spin" /> Memuat pelanggan...
@@ -170,7 +181,8 @@ export function SubscribersPanel() {
       {subs !== null && (
         <p className="mt-3 flex items-center gap-1.5 text-xs text-muted">
           <Users className="h-3.5 w-3.5" />
-          Menampilkan {filtered.length} dari {subs.length} pelanggan.
+          Menampilkan {filtered.length} dari {subs.length}
+          {truncated ? "+" : ""} pelanggan.
         </p>
       )}
     </div>

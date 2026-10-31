@@ -1,4 +1,5 @@
 import "server-only";
+import type { Query, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { signNewsletterUnsubToken } from "@/lib/unsubscribe-token";
 import {
@@ -28,6 +29,9 @@ const ORDERS_COLLECTION = "orders";
 
 /** Batas dokumen saat memindai (hindari biaya/loop tak terbatas). */
 const SCAN_CAP = 10000;
+
+/** Ukuran satu batch pemindaian dokumen subscriber (satu `.get()` per batch). */
+const SCAN_BATCH = 500;
 
 /** Normalisasi email → id dokumen aman (lowercase, ganti char tak aman). */
 export function subscriberId(email: string): string {
@@ -87,15 +91,57 @@ export async function unsubscribeEmail(email: string): Promise<boolean> {
   }
 }
 
-/** Daftar seluruh subscriber (terbaru dulu). */
-export async function listSubscribers(): Promise<Subscriber[]> {
+/**
+ * Pindai seluruh subscriber secara BERTAHAP (Sprint 10 / ADM-17).
+ *
+ * Tanpa `orderBy` (urutan default per-id dokumen) agar dokumen lama tanpa
+ * `createdAtISO` tetap ikut; pengurutan tampilan dilakukan setelahnya.
+ * `startAfter(snapshot)` menjaga iterasi stabil (tidak terlewat/terulang).
+ *
+ * Berhenti saat query habis (`truncated = false`) atau menyentuh `SCAN_CAP`
+ * (`truncated = true`) — pemanggil bisa memperingatkan admin secara jujur.
+ */
+async function scanSubscribers(): Promise<{
+  subscribers: Subscriber[];
+  truncated: boolean;
+}> {
   const db = getAdminDb();
-  if (!db) return [];
-  const snap = await db.collection(COLLECTION).limit(SCAN_CAP).get();
-  return snap.docs
-    .map((doc) => normalizeSubscriber(doc.data()))
-    .filter((s): s is Subscriber => s !== null)
-    .sort((a, b) => b.createdAtISO.localeCompare(a.createdAtISO));
+  if (!db) return { subscribers: [], truncated: false };
+  const subscribers: Subscriber[] = [];
+  let last: QueryDocumentSnapshot | null = null;
+  let scanned = 0;
+  while (scanned < SCAN_CAP) {
+    const batchLimit = Math.min(SCAN_BATCH, SCAN_CAP - scanned);
+    let q: Query = db.collection(COLLECTION);
+    if (last) q = q.startAfter(last);
+    const snap = await q.limit(batchLimit).get();
+    if (snap.docs.length === 0) {
+      return { subscribers, truncated: false };
+    }
+    for (const doc of snap.docs) {
+      const sub = normalizeSubscriber(doc.data());
+      if (sub) subscribers.push(sub);
+    }
+    scanned += snap.docs.length;
+    last = snap.docs[snap.docs.length - 1];
+    // Batch tidak penuh → tidak ada dokumen lagi setelah ini.
+    if (snap.docs.length < batchLimit) {
+      return { subscribers, truncated: false };
+    }
+  }
+  return { subscribers, truncated: true };
+}
+
+/** Daftar seluruh subscriber (terbaru dulu) + penanda bila pemindaian terbatas. */
+export async function listSubscribers(): Promise<{
+  subscribers: Subscriber[];
+  truncated: boolean;
+}> {
+  const { subscribers, truncated } = await scanSubscribers();
+  const sorted = [...subscribers].sort((a, b) =>
+    b.createdAtISO.localeCompare(a.createdAtISO),
+  );
+  return { subscribers: sorted, truncated };
 }
 
 /**
@@ -134,11 +180,14 @@ export async function getBuyerEmails(): Promise<Set<string>> {
 export async function getBroadcastOverview(): Promise<{
   summary: { total: number; active: number; unsubscribed: number };
   segmentCounts: Record<BroadcastSegment, number>;
+  /** `true` bila pemindaian subscriber menyentuh batas (angka mungkin terpotong). */
+  truncated: boolean;
 }> {
-  const [subs, buyers] = await Promise.all([listSubscribers(), getBuyerEmails()]);
+  const [subsMeta, buyers] = await Promise.all([listSubscribers(), getBuyerEmails()]);
   return {
-    summary: summarizeSubscribers(subs),
-    segmentCounts: countSegmentRecipients(subs, buyers),
+    summary: summarizeSubscribers(subsMeta.subscribers),
+    segmentCounts: countSegmentRecipients(subsMeta.subscribers, buyers),
+    truncated: subsMeta.truncated,
   };
 }
 
@@ -155,8 +204,8 @@ export async function resolveSegmentEmails(
   const db = getAdminDb();
   if (!db) return [];
 
-  const [subs, buyers] = await Promise.all([listSubscribers(), getBuyerEmails()]);
-  const emails = subs
+  const [subsMeta, buyers] = await Promise.all([listSubscribers(), getBuyerEmails()]);
+  const emails = subsMeta.subscribers
     .filter((s) => !s.unsubscribed)
     .filter((s) => matchesSegment(segment, buyers.has(s.email.toLowerCase())))
     .map((s) => s.email.toLowerCase());

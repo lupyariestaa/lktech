@@ -76,6 +76,7 @@
     "scripts/product-stock.test.ts",
     "scripts/stock-reservation.test.ts",
     "scripts/low-stock.test.ts",
+    "scripts/media-list.test.ts",
     "scripts/cart-reminder.test.ts",
     "scripts/unsubscribe-token.test.ts",
     "scripts/newsletter-pure.test.ts",

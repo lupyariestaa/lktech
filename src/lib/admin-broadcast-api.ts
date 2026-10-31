@@ -14,6 +14,8 @@ export type SegmentCounts = Record<BroadcastSegment, number>;
 export type BroadcastOverview = {
   summary: SubscribersSummary;
   segmentCounts: SegmentCounts;
+  /** `true` bila pemindaian subscriber menyentuh batas (angka bisa terpotong). */
+  truncated?: boolean;
 };
 
 /** Ringkasan subscriber + jumlah per segmen (admin). */
@@ -21,12 +23,15 @@ export async function fetchBroadcastOverview(): Promise<BroadcastOverview> {
   return adminFetch<BroadcastOverview>("/api/admin/broadcast");
 }
 
-/** Daftar subscriber (admin). */
-export async function fetchSubscribers(): Promise<Subscriber[]> {
-  const data = await adminFetch<{ subscribers: Subscriber[] }>(
+/** Daftar subscriber (admin) + penanda bila pemindaian dibatasi. */
+export async function fetchSubscribers(): Promise<{
+  subscribers: Subscriber[];
+  truncated: boolean;
+}> {
+  const data = await adminFetch<{ subscribers: Subscriber[]; truncated?: boolean }>(
     "/api/admin/broadcast?list=1",
   );
-  return data.subscribers;
+  return { subscribers: data.subscribers, truncated: Boolean(data.truncated) };
 }
 
 /** Riwayat broadcast (admin). */

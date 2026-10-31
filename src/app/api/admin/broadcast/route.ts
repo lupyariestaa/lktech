@@ -56,8 +56,8 @@ export async function GET(req: Request) {
   const noStore = { headers: { "Cache-Control": "no-store" } };
   try {
     if (url.searchParams.get("list") === "1") {
-      const subscribers = await listSubscribers();
-      return NextResponse.json({ subscribers }, noStore);
+      const { subscribers, truncated } = await listSubscribers();
+      return NextResponse.json({ subscribers, truncated }, noStore);
     }
     if (url.searchParams.get("history") === "1") {
       const history = await listBroadcastLogs(50);
