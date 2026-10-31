@@ -774,8 +774,10 @@ untuk schema invalid / 413 untuk body terlalu besar.
 
 ### ADM-15 · 🟠 Tinggi · Daftar user: full scan, ringkasan berulang, batas 100 tersembunyi, ekspor parsial
 
-**Status:** 🟡 Sebagian diperbaiki dan terverifikasi lewat kode/tests; search
-substring tetap dibatasi 5.000 profil dan dampak volume masih dugaan.
+**Status:** 🟢 Diperbaiki (Sprint 11 untuk ekspor) — daftar, ringkasan, dan ekspor
+kini berbatas & jujur. Sisa bukan-kode/opsional: pencarian substring masih
+memindai 5.000 profil pertama (butuh backfill/index) dan profil tanpa
+`createdAtISO` butuh backfill agar lengkap.
 
 **Bukti:**
 
@@ -803,10 +805,24 @@ tampil/diekspor, sehingga tindakan massal (blokir/ekspor) bisa salah sasaran.
 **Perbaikan:** daftar reguler memakai cursor Firestore dan hanya mengagregasi
 order milik uid halaman; UI punya “Muat lebih banyak”; summary cache 60 detik
 dan tidak dipanggil ulang tiap pencarian. Pencarian substring dibatasi 5.000
-profil yang dipindai; API menandai `truncated`. **Sisa:** daftar reguler Firestore
-tidak mengurutkan profil tanpa `createdAtISO`; UI memberi peringatan bila summary
-menunjukkan selisih. Ekspor masih hanya baris termuat; backfill/index pencarian
-dan uji dataset besar belum dilakukan.
+profil yang dipindai; API menandai `truncated`.
+
+**Sprint 11 (ADM-15 sisa — ekspor):**
+
+- `exportAdminUsers` (server) memanggil `listAdminUsers` berulang hingga sumber
+  habis atau **cap keras 5.000 baris** (`ADMIN_USERS_EXPORT_CAP`), memakai
+  paginasi kursor yang sudah ada — bukan lagi mengekspor 100 baris halaman.
+- Route `GET /api/admin/users?export=1` **khusus OWNER** (`isOwnerEmail`),
+  mengembalikan `{ users, truncated, cap }`; ADMIN biasa tetap 403.
+- UI `users-manager.tsx` mengekspor via server, menonaktifkan tombol saat
+  berjalan, dan memberi pesan jujur bila `truncated` (“dibatasi 5.000 baris;
+  persempit filter”).
+- Logika batas diekstrak ke `exportPageLimit` + `nextExportStep` (murni) dengan
+  +9 uji di `scripts/admin-users.test.ts`.
+
+**Sisa (bukan kode / opsional):** daftar reguler Firestore tidak mengurutkan
+profil tanpa `createdAtISO` (butuh backfill); pencarian substring masih dalam
+jendela 5.000 profil (butuh backfill/index); uji dataset besar belum dilakukan.
 
 ---
 

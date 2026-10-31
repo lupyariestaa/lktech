@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { setUserBlocked } from "@/lib/user-profile";
-import { getAdminUsersSummary, listAdminUsers, type AdminUsersFilter } from "@/lib/admin-users";
+import {
+  exportAdminUsers,
+  getAdminUsersSummary,
+  listAdminUsers,
+  type AdminUsersFilter,
+} from "@/lib/admin-users";
+import { ADMIN_USERS_EXPORT_CAP } from "@/lib/admin-users-pure";
+import { isOwnerEmail } from "@/lib/admins";
 import { userBlockSchema } from "@/lib/api-schemas";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { guardAdminMutation } from "@/lib/admin-rate-limit";
@@ -16,6 +23,7 @@ const VALID_FILTERS: AdminUsersFilter[] = ["semua", "sudah", "belum"];
  * GET /api/admin/users — daftar user (dashboard admin).
  *   Query: ?q=<cari nama/email/whatsapp> ?filter=semua|sudah|belum ?limit=<1..200> ?cursor=<opaque>
  * GET /api/admin/users?summary=1 — statistik ringkas (kartu & badge).
+ * GET /api/admin/users?export=1 — ekspor seluruh hasil filter (OWNER-only, cap 5.000, `truncated`).
  */
 export async function GET(req: Request) {
   const check = await requireAdmin(req);
@@ -27,6 +35,39 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url);
+
+  // Ekspor massal PII daftar user khusus OWNER (ADM-03/ADM-15). Daftar halaman
+  // tetap bisa dibaca ADMIN untuk operasional.
+  if (url.searchParams.get("export") === "1") {
+    if (!isOwnerEmail(check.email)) {
+      return NextResponse.json(
+        { error: "Ekspor data pengguna massal hanya dapat dilakukan OWNER." },
+        { status: 403 },
+      );
+    }
+    const filterRawExport = url.searchParams.get("filter");
+    const filterExport: AdminUsersFilter = VALID_FILTERS.includes(
+      filterRawExport as AdminUsersFilter,
+    )
+      ? (filterRawExport as AdminUsersFilter)
+      : "semua";
+    try {
+      const result = await exportAdminUsers({
+        q: url.searchParams.get("q") ?? undefined,
+        filter: filterExport,
+      });
+      return NextResponse.json(
+        { ...result, cap: ADMIN_USERS_EXPORT_CAP },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } catch (err) {
+      console.error("[api/admin/users] export gagal:", err);
+      return NextResponse.json(
+        { error: "Gagal mengekspor data user." },
+        { status: 500 },
+      );
+    }
+  }
 
   if (url.searchParams.get("summary") === "1") {
     try {

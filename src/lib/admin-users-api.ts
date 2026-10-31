@@ -51,6 +51,29 @@ export async function fetchUsersSummary(): Promise<AdminUsersSummary> {
   return data.summary;
 }
 
+export type UsersExport = {
+  users: AdminUserRow[];
+  /** `true` bila hasil dipotong batas keras / batas pencarian. */
+  truncated: boolean;
+  /** Batas keras baris yang dipakai server. */
+  cap: number;
+};
+
+/**
+ * Ekspor seluruh hasil filter (server-side, OWNER-only) hingga batas keras.
+ * Berbeda dari `fetchUsers` yang hanya satu halaman.
+ */
+export async function fetchUsersForExport(
+  query: Pick<UsersListQuery, "q" | "filter"> = {},
+): Promise<UsersExport> {
+  const params = new URLSearchParams({ export: "1" });
+  if (query.q) params.set("q", query.q);
+  if (query.filter && query.filter !== "semua") {
+    params.set("filter", query.filter);
+  }
+  return adminFetch<UsersExport>(`/api/admin/users?${params.toString()}`);
+}
+
 /** Detail user + daftar pesanannya. */
 export async function fetchUserDetail(
   uid: string,

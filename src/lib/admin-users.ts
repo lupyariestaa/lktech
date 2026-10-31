@@ -9,6 +9,9 @@ import { normalizeOrder, type Order } from "@/lib/order-types";
 import {
   addOrderToAggregate,
   emptyOrderAggregate,
+  exportPageLimit,
+  nextExportStep,
+  ADMIN_USERS_EXPORT_CAP,
   type AdminOrderAggregate,
 } from "@/lib/admin-users-pure";
 import type {
@@ -250,6 +253,72 @@ export async function listAdminUsers(
   }
   const nextCursor = hasMore ? (scanCursor ?? null) : null;
   return { users: result, nextCursor, truncated: false };
+}
+
+/** Hasil ekspor daftar user (Sprint 11 / ADM-15). */
+export type AdminUsersExport = {
+  users: AdminUserRow[];
+  /** `true` bila batas keras atau batas pencarian menyentuh — hasil tak lengkap. */
+  truncated: boolean;
+};
+
+/**
+ * Ekspor daftar user (untuk CSV) memakai paginasi `listAdminUsers` berulang
+ * hingga sumber habis atau `ADMIN_USERS_EXPORT_CAP` tercapai (Sprint 11 /
+ * ADM-15).
+ *
+ * Sebelumnya UI hanya mengekspor baris halaman yang termuat (maks. 100) dan
+ * diam-diam memotong sisanya. Sekarang seluruh hasil filter (sejauh cap)
+ * diambil di server, dan `truncated` diberitahukan ke admin.
+ *
+ * Otorisasi OWNER dilakukan di route; fungsi ini murni pengambilan data.
+ */
+export async function exportAdminUsers(
+  query: Pick<AdminUsersQuery, "q" | "filter"> = {},
+): Promise<AdminUsersExport> {
+  const db = getAdminDb();
+  if (!db) return { users: [], truncated: false };
+
+  const users: AdminUserRow[] = [];
+  let cursor: string | undefined;
+  let truncated = false;
+
+  while (true) {
+    const limit = exportPageLimit({
+      collected: users.length,
+      cap: ADMIN_USERS_EXPORT_CAP,
+      maxLimit: ADMIN_USERS_MAX_LIMIT,
+    });
+    // Tanpa sisa kuota (cap tercapai) — `nextExportStep` sudah menandai truncated.
+    if (limit === 0) break;
+
+    const page = await listAdminUsers({
+      q: query.q,
+      filter: query.filter,
+      limit,
+      cursor,
+    });
+    users.push(...page.users);
+
+    const step = nextExportStep({
+      collected: users.length - page.users.length,
+      added: page.users.length,
+      hasMore: Boolean(page.nextCursor),
+      sourceTruncated: page.truncated,
+      cap: ADMIN_USERS_EXPORT_CAP,
+    });
+    if (step.truncated) truncated = true;
+    if (step.done || !page.nextCursor) break;
+
+    // Jaga-jaga: kursor tidak maju → hentikan agar tidak loop; tandai terpotong.
+    if (page.nextCursor === cursor) {
+      truncated = true;
+      break;
+    }
+    cursor = page.nextCursor;
+  }
+
+  return { users, truncated };
 }
 
 function encodeUserCursor(createdAt: string, uid: string): string {

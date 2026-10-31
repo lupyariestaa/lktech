@@ -2,9 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   ADMIN_PAID_ORDER_STATUSES,
+  ADMIN_USERS_EXPORT_CAP,
   addOrderToAggregate,
   emptyOrderAggregate,
+  exportPageLimit,
   isPaidOrderStatus,
+  nextExportStep,
 } from "../src/lib/admin-users-pure.ts";
 import { PAID_ORDER_STATUSES } from "../src/lib/metrics-spec.ts";
 
@@ -59,4 +62,120 @@ test("total tidak valid tidak merusak agregat", () => {
 
   assert.equal(agg.paidCount, 3);
   assert.equal(agg.paidTotal, 0);
+});
+
+/**
+ * Sprint 11 / ADM-15: ekspor user memakai paginasi berulang dengan cap keras
+ * 5.000 baris. Logika batas & tanda `truncated` diuji tanpa Firestore.
+ */
+
+test("ADMIN_USERS_EXPORT_CAP = 5000", () => {
+  assert.equal(ADMIN_USERS_EXPORT_CAP, 5000);
+});
+
+test("exportPageLimit dibatasi maxLimit dan sisa kuota", () => {
+  assert.equal(exportPageLimit({ collected: 0, cap: 5000, maxLimit: 200 }), 200);
+  assert.equal(
+    exportPageLimit({ collected: 4_950, cap: 5000, maxLimit: 200 }),
+    50,
+  );
+  assert.equal(exportPageLimit({ collected: 4_999, cap: 5000, maxLimit: 200 }), 1);
+});
+
+test("exportPageLimit = 0 saat cap sudah/terlewati atau maxLimit invalid", () => {
+  assert.equal(exportPageLimit({ collected: 5_000, cap: 5000, maxLimit: 200 }), 0);
+  assert.equal(exportPageLimit({ collected: 6_000, cap: 5000, maxLimit: 200 }), 0);
+  assert.equal(exportPageLimit({ collected: 0, cap: 5000, maxLimit: 0 }), 0);
+  assert.equal(exportPageLimit({ collected: 0, cap: 5000, maxLimit: -5 }), 0);
+});
+
+test("nextExportStep lanjut selama di bawah cap dan masih ada halaman", () => {
+  assert.deepEqual(
+    nextExportStep({
+      collected: 0,
+      added: 200,
+      hasMore: true,
+      sourceTruncated: false,
+      cap: 5000,
+    }),
+    { done: false, truncated: false },
+  );
+});
+
+test("nextExportStep selesai tanpa terpotong saat sumber habis", () => {
+  assert.deepEqual(
+    nextExportStep({
+      collected: 1_800,
+      added: 200,
+      hasMore: false,
+      sourceTruncated: false,
+      cap: 5000,
+    }),
+    { done: true, truncated: false },
+  );
+});
+
+test("nextExportStep ditandai terpotong saat cap tercapai dan masih ada halaman", () => {
+  assert.deepEqual(
+    nextExportStep({
+      collected: 4_800,
+      added: 200,
+      hasMore: true,
+      sourceTruncated: false,
+      cap: 5000,
+    }),
+    { done: true, truncated: true },
+  );
+});
+
+test("nextExportStep: tepat cap tanpa halaman berikutnya = lengkap", () => {
+  assert.deepEqual(
+    nextExportStep({
+      collected: 4_800,
+      added: 200,
+      hasMore: false,
+      sourceTruncated: false,
+      cap: 5000,
+    }),
+    { done: true, truncated: false },
+  );
+});
+
+test("nextExportStep: sumber sendiri terpotong selalu ditandai (jujur)", () => {
+  assert.deepEqual(
+    nextExportStep({
+      collected: 0,
+      added: 30,
+      hasMore: false,
+      sourceTruncated: true,
+      cap: 5000,
+    }),
+    { done: true, truncated: true },
+  );
+});
+
+test("nextExportStep: sumber terpotong tetap lanjut selama ada halaman", () => {
+  assert.deepEqual(
+    nextExportStep({
+      collected: 0,
+      added: 200,
+      hasMore: true,
+      sourceTruncated: true,
+      cap: 5000,
+    }),
+    { done: false, truncated: true },
+  );
+});
+
+test("nextExportStep: kelebihan defensif di atas cap ditandai terpotong", () => {
+  assert.deepEqual(
+    nextExportStep({
+      collected: 4_950,
+      added: 100,
+      hasMore: false,
+      sourceTruncated: false,
+      cap: 5000,
+    }),
+    { done: true, truncated: true },
+  );
 });

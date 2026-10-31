@@ -6,6 +6,7 @@ import {
   Ban,
   Copy,
   Download,
+  Loader2,
   Phone,
   RefreshCw,
   Search,
@@ -16,6 +17,7 @@ import {
 import {
   exportUsersToCsv,
   fetchUsers,
+  fetchUsersForExport,
   fetchUsersSummary,
   setUserBlocked,
   type UsersFilter,
@@ -59,6 +61,7 @@ export function UsersManager() {
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const debouncedQuery = useDebounced(query);
 
@@ -114,19 +117,40 @@ export function UsersManager() {
     setReloadKey((k) => k + 1);
   }, []);
 
-  const onExport = () => {
+  const onExport = async () => {
     if (!isOwner) {
       toast.error("Ekspor PII hanya dapat dilakukan OWNER.");
       return;
     }
-    if (users.length === 0) {
-      toast.error("Tidak ada data untuk diekspor.");
-      return;
+    if (exporting) return;
+    setExporting(true);
+    try {
+      // Sprint 11 / ADM-15: ekspor seluruh hasil filter di server (bukan hanya
+      // baris halaman yang termuat), sejauh batas keras yang diberitahukan.
+      const result = await fetchUsersForExport({
+        q: debouncedQuery,
+        filter,
+      });
+      if (result.users.length === 0) {
+        toast.error("Tidak ada data untuk diekspor.");
+        return;
+      }
+      exportUsersToCsv(result.users);
+      if (result.truncated) {
+        toast.toast(
+          `${result.users.length} pengguna diekspor — dibatasi ${result.cap.toLocaleString("id-ID")} baris. Persempit filter/pencarian untuk kelengkapan.`,
+          "info",
+        );
+      } else {
+        toast.success(`${result.users.length} pengguna diekspor ke CSV.`);
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Gagal mengekspor pengguna.",
+      );
+    } finally {
+      setExporting(false);
     }
-    exportUsersToCsv(users);
-    toast.success(
-      `${users.length} pengguna diekspor ke CSV${nextCursor ? " (halaman termuat saja)" : ""}.`,
-    );
   };
 
   const onToggleBlock = async (user: AdminUserRow) => {
@@ -227,10 +251,15 @@ export function UsersManager() {
           {isOwner && (
             <button
               onClick={onExport}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+              disabled={exporting}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Download className="h-4 w-4" />
-              Ekspor CSV
+              {exporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {exporting ? "Mengekspor..." : "Ekspor CSV"}
             </button>
           )}
         </div>
