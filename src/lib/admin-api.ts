@@ -18,14 +18,44 @@ export type LeadListPage = {
 };
 
 export async function fetchLeads(query: {
+  q?: string;
+  status?: LeadStatus | "semua";
   limit?: number;
   cursor?: string;
 } = {}): Promise<LeadListPage> {
   const params = new URLSearchParams();
+  if (query.q) params.set("q", query.q);
+  if (query.status && query.status !== "semua") {
+    params.set("status", query.status);
+  }
   if (query.limit) params.set("limit", String(query.limit));
   if (query.cursor) params.set("cursor", query.cursor);
   const suffix = params.size ? `?${params.toString()}` : "";
   return adminFetch<LeadListPage>(`/api/admin/leads${suffix}`);
+}
+
+export type LeadsExport = {
+  leads: StoredLead[];
+  /** `true` bila hasil dipotong batas pemindaian/ekspor. */
+  truncated: boolean;
+  /** Batas keras baris yang dipakai server. */
+  cap: number;
+};
+
+/**
+ * Ekspor seluruh hasil filter (server-side, OWNER-only) hingga batas keras.
+ * Berbeda dari `fetchLeads` yang hanya satu halaman.
+ */
+export async function fetchLeadsForExport(query: {
+  q?: string;
+  status?: LeadStatus | "semua";
+} = {}): Promise<LeadsExport> {
+  const params = new URLSearchParams({ export: "1" });
+  if (query.q) params.set("q", query.q);
+  if (query.status && query.status !== "semua") {
+    params.set("status", query.status);
+  }
+  return adminFetch<LeadsExport>(`/api/admin/leads?${params.toString()}`);
 }
 
 export type LeadDashboardSummary = {

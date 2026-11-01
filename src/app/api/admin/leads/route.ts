@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
-import { FieldPath } from "firebase-admin/firestore";
+import { FieldPath, type Firestore, type Query, type QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { LEAD_STATUSES, type LeadStatus, type StoredLead, type LeadActivity } from "@/lib/lead-types";
+import {
+  hasLeadFilter,
+  matchesLeadQuery,
+  paginateLeads,
+  LEAD_EXPORT_CAP,
+  LEAD_SCAN_BATCH,
+  LEAD_SCAN_CAP,
+} from "@/lib/lead-list-pure";
+import { isOwnerEmail } from "@/lib/admins";
 import { isPipelineStage, statusToStage } from "@/lib/lead-scoring-pure";
 import { updateLeadStage, addLeadActivity } from "@/lib/lead-crm";
 import { recordAdminAudit } from "@/lib/admin-audit";
@@ -11,10 +20,70 @@ import { guardAdminMutation } from "@/lib/admin-rate-limit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Ubah dokumen Firestore menjadi `StoredLead` (default aman untuk lead lama). */
+function toStoredLead(doc: QueryDocumentSnapshot): StoredLead {
+  const d = doc.data();
+  return {
+    id: doc.id,
+    name: d.name ?? "",
+    email: d.email ?? "",
+    phone: d.phone ?? "",
+    service: d.service ?? "",
+    message: d.message ?? "",
+    status: (d.status as LeadStatus) ?? "baru",
+    createdAt: d.createdAtISO ?? null,
+    source: d.source,
+    userAgent: d.userAgent,
+    // CRM mini (Tema 3.2) — default aman utk lead lama.
+    score: typeof d.score === "number" ? d.score : undefined,
+    stage:
+      typeof d.stage === "string"
+        ? d.stage
+        : statusToStage(String(d.status ?? "baru")),
+    activities: Array.isArray(d.activities)
+      ? (d.activities as LeadActivity[])
+      : undefined,
+    lastActivityAtISO:
+      typeof d.lastActivityAtISO === "string" ? d.lastActivityAtISO : undefined,
+  };
+}
+
+/**
+ * Pindai dokumen lead (terurut baru→lama) BERTAHAP per `LEAD_SCAN_BATCH` sampai
+ * habis atau batas keras `LEAD_SCAN_CAP` (Sprint 12 / ADM-16).
+ *
+ * Dipakai saat ada pencarian/filter: Firestore tak punya `contains`, jadi
+ * pencarian substring harus memindai jendela terbatas lalu difilter di memori.
+ * `exhausted = false` menandakan hasil mungkin terpotong (pemanggil menandai
+ * `truncated`). `startAfter(snapshot)` menjaga iterasi stabil.
+ */
+async function scanLeads(
+  db: Firestore,
+): Promise<{ leads: StoredLead[]; exhausted: boolean }> {
+  const leads: StoredLead[] = [];
+  let last: QueryDocumentSnapshot | null = null;
+  while (leads.length < LEAD_SCAN_CAP) {
+    const batchLimit = Math.min(LEAD_SCAN_BATCH, LEAD_SCAN_CAP - leads.length);
+    let q: Query = db
+      .collection("leads")
+      .orderBy("createdAtISO", "desc")
+      .orderBy(FieldPath.documentId(), "desc");
+    if (last) q = q.startAfter(last);
+    const snap = await q.limit(batchLimit).get();
+    if (snap.docs.length === 0) return { leads, exhausted: true };
+    for (const doc of snap.docs) leads.push(toStoredLead(doc));
+    last = snap.docs[snap.docs.length - 1];
+    // Batch tidak penuh → tidak ada dokumen lagi setelah ini.
+    if (snap.docs.length < batchLimit) return { leads, exhausted: true };
+  }
+  return { leads, exhausted: false };
+}
+
 /**
  * GET /api/admin/leads — halaman lead terbaru.
- * GET /api/admin/leads?summary=1 — ringkasan jumlah per status (untuk
- * badge sidebar; jangan tarik semua dokumen).
+ *   Query: ?q=<cari nama/email/layanan/pesan> ?status=<baru|diproses|selesai|arsip> ?limit=<1..100> ?cursor=<id>
+ * GET /api/admin/leads?summary=1 — ringkasan jumlah per status (untuk badge).
+ * GET /api/admin/leads?export=1 — ekspor seluruh hasil filter (OWNER-only, cap 5.000).
  */
 export async function GET(req: Request) {
   const check = await requireAdmin(req);
@@ -28,8 +97,40 @@ export async function GET(req: Request) {
     );
   }
 
+  const url = new URL(req.url);
+
+  // Ekspor massal PII lead khusus OWNER (ADM-03/ADM-16).
+  if (url.searchParams.get("export") === "1") {
+    if (!isOwnerEmail(check.email)) {
+      return NextResponse.json(
+        { error: "Ekspor data lead massal hanya dapat dilakukan OWNER." },
+        { status: 403 },
+      );
+    }
+    const q = url.searchParams.get("q") ?? undefined;
+    const statusRaw = url.searchParams.get("status");
+    const status =
+      statusRaw && LEAD_STATUSES.includes(statusRaw as LeadStatus)
+        ? statusRaw
+        : "semua";
+    try {
+      const { leads, exhausted } = await scanLeads(db);
+      const filtered = leads.filter((lead) => matchesLeadQuery(lead, { q, status }));
+      return NextResponse.json(
+        { leads: filtered, truncated: !exhausted, cap: LEAD_EXPORT_CAP },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } catch (err) {
+      console.error("[api/admin/leads] export gagal:", err);
+      return NextResponse.json(
+        { error: "Gagal mengekspor data lead." },
+        { status: 500 },
+      );
+    }
+  }
+
   // Ringkasan count per status untuk badge sidebar (response kecil).
-  const wantsSummary = new URL(req.url).searchParams.get("summary") === "1";
+  const wantsSummary = url.searchParams.get("summary") === "1";
   if (wantsSummary) {
     try {
       const [total, ...byStatus] = await Promise.all([
@@ -44,7 +145,7 @@ export async function GET(req: Request) {
       });
       // Summary lama tetap kompatibel: trend diambil oleh route dashboard
       // terpisah agar endpoint badge tidak perlu 14 count tambahan.
-      if (new URL(req.url).searchParams.get("trend") !== "1") {
+      if (url.searchParams.get("trend") !== "1") {
         return NextResponse.json(
           { summary: counts },
           { headers: { "Cache-Control": "no-store" } },
@@ -100,7 +201,6 @@ export async function GET(req: Request) {
   }
 
   try {
-    const url = new URL(req.url);
     const limitRaw = Number(url.searchParams.get("limit"));
     const limit = Number.isFinite(limitRaw) && limitRaw > 0
       ? Math.min(Math.floor(limitRaw), 100)
@@ -109,6 +209,37 @@ export async function GET(req: Request) {
     if (cursor && (cursor.length > 1500 || cursor.includes("/"))) {
       return NextResponse.json({ error: "Cursor tidak valid." }, { status: 400 });
     }
+
+    const q = url.searchParams.get("q") ?? undefined;
+    const statusRaw = url.searchParams.get("status");
+    const status =
+      statusRaw && LEAD_STATUSES.includes(statusRaw as LeadStatus)
+        ? statusRaw
+        : "semua";
+
+    // Ada pencarian/filter → pindai jendela terbatas lalu filter di memori
+    // (Firestore tak punya `contains`), dengan penanda batas yang jujur.
+    if (hasLeadFilter({ q, status })) {
+      const { leads: scanned, exhausted } = await scanLeads(db);
+      const matched = scanned.filter((lead) =>
+        matchesLeadQuery(lead, { q, status }),
+      );
+      const page = paginateLeads({
+        filtered: matched,
+        cursorId: cursor,
+        limit,
+        scanExhausted: exhausted,
+      });
+      return NextResponse.json(
+        {
+          leads: page.items,
+          nextCursor: page.nextCursor,
+          truncated: page.truncated,
+        },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
     const query = db
       .collection("leads")
       .orderBy("createdAtISO", "desc")
@@ -122,33 +253,7 @@ export async function GET(req: Request) {
       : query.limit(limit + 1);
     const snap = await pagedQuery.get();
     const pageDocs = snap.docs.slice(0, limit);
-
-    const leads: StoredLead[] = pageDocs.map((doc) => {
-      const d = doc.data();
-      return {
-        id: doc.id,
-        name: d.name ?? "",
-        email: d.email ?? "",
-        phone: d.phone ?? "",
-        service: d.service ?? "",
-        message: d.message ?? "",
-        status: (d.status as LeadStatus) ?? "baru",
-        createdAt: d.createdAtISO ?? null,
-        source: d.source,
-        userAgent: d.userAgent,
-        // CRM mini (Tema 3.2) — default aman utk lead lama.
-        score: typeof d.score === "number" ? d.score : undefined,
-        stage:
-          typeof d.stage === "string"
-            ? d.stage
-            : statusToStage(String(d.status ?? "baru")),
-        activities: Array.isArray(d.activities)
-          ? (d.activities as LeadActivity[])
-          : undefined,
-        lastActivityAtISO:
-          typeof d.lastActivityAtISO === "string" ? d.lastActivityAtISO : undefined,
-      };
-    });
+    const leads = pageDocs.map((doc) => toStoredLead(doc));
 
     return NextResponse.json({
       leads,

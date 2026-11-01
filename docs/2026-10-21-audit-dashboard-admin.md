@@ -828,8 +828,9 @@ jendela 5.000 profil (butuh backfill/index); uji dataset besar belum dilakukan.
 
 ### ADM-16 · 🟡 Sedang · Lead dimuat seluruhnya; dashboard menggandakan query
 
-**Status:** 🟡 Sebagian diperbaiki — pagination/list dan agregat dashboard sudah
-ada; filter pencarian lead masih lokal pada halaman termuat.
+**Status:** 🟢 Diperbaiki (Sprint 12 untuk pencarian/filter/ekspor) — seluruh
+bagian inti sudah server-side dan berbatas; sisa hanya uji volume & cache
+ringkasan trend (opsional).
 
 **Bukti:**
 
@@ -851,14 +852,34 @@ setiap kali dashboard dibuka tidak perlu.
 **Perbaikan:** `GET /api/admin/leads` mengembalikan 50 lead dengan cursor;
 `LeadsManager` memuat halaman berikutnya. Dashboard meminta 5 lead terbaru dan
 summary count/trend melalui query agregat Firestore paralel.
-**Sisa:** pencarian/filter dan ekspor masih terbatas pada lead yang dimuat; UI
-menyatakan batas itu dan tombol muat berikutnya tetap tersedia. Summary lead
-menjalankan count per hari/status tanpa cache.
+
+**Sprint 12 (ADM-16 sisa — pencarian/filter/ekspor):**
+
+- `GET /api/admin/leads` menerima `?q=` (nama/email/layanan/pesan) dan
+  `?status=`. Bila ada pencarian/filter, server memindai lead secara **bertahap**
+  (batch 500, cap keras 5.000) lalu memfilter di memori — Firestore tak punya
+  `contains` — dan mengembalikan `truncated` bila cap tersentuh. Tanpa filter,
+  paginasi cursor Firestore yang efisien tetap dipakai.
+- `LEAD_EXPORT_CAP`/export: `GET /api/admin/leads?export=1` **khusus OWNER**
+  (`isOwnerEmail`) mengembalikan seluruh hasil filter hingga 5.000 baris +
+  `truncated` + `cap`.
+- UI `leads-manager.tsx`: pencarian & filter kini di-debounce dan berlaku di
+  **seluruh** lead (bukan halaman termuat), ekspor via server (OWNER) dengan
+  pesan jujur bila `truncated`, dan label batas diperbarui.
+- Logika pencocokan/paginasi diekstrak ke `lead-list-pure.ts`
+  (`matchesLeadQuery`/`hasLeadFilter`/`paginateLeads`) dengan +12 uji
+  (`scripts/lead-list.test.ts`).
+
+**Sisa (bukan kode / opsional):** pencarian substring terbatas pada jendela
+5.000 lead terbaru (perlu index/backfill untuk skala besar); summary trend lead
+menjalankan count per hari/status tanpa cache; uji volume produksi belum
+dilakukan.
 
 **Bukti implementasi:** `src/app/api/admin/leads/route.ts` memakai cursor dokumen
-dan `createdAtISO` bersama document ID sebagai tie-breaker; `src/components/admin/leads-manager.tsx`
-memuat halaman berikutnya dan memberi label batas pencarian/ekspor; dashboard
-meminta `summary=1&trend=1`, sedangkan badge memakai summary count saja.
+dan `createdAtISO` bersama document ID sebagai tie-breaker, serta jalur pindai
+berbatas untuk pencarian/filter; `src/components/admin/leads-manager.tsx`
+memuat halaman berikutnya dan mengekspor via server; dashboard meminta
+`summary=1&trend=1`, sedangkan badge memakai summary count saja.
 
 ---
 

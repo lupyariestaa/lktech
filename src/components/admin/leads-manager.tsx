@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
   Download,
@@ -19,6 +19,7 @@ import {
   deleteLead,
   exportLeadsToCsv,
   fetchLeads,
+  fetchLeadsForExport,
   updateLeadStatus,
   updateLeadStage,
 } from "@/lib/admin-api";
@@ -45,11 +46,28 @@ import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import { cn } from "@/lib/utils";
 
+const PAGE_LIMIT = 50;
+const SEARCH_DEBOUNCE_MS = 300;
+/** Batas pemindaian server saat pencarian/filter aktif (untuk pesan jujur). */
+const SCAN_CAP_HINT = 5_000;
+
+/** Debounce sederhana untuk pencarian. */
+function useDebounced<T>(value: T, delay = SEARCH_DEBOUNCE_MS): T {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return v;
+}
+
 export function LeadsManager() {
   const toast = useToast();
   const { isOwner } = useAdminAccess();
   const [leads, setLeads] = useState<StoredLead[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  // Sprint 12 / ADM-16: `true` bila pemindaian server menyentuh batas keras.
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,72 +81,64 @@ export function LeadsManager() {
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [toDelete, setToDelete] = useState<StoredLead | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const page = await fetchLeads({ limit: 50 });
-      setLeads(page.leads);
-      setNextCursor(page.nextCursor);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat lead.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const debouncedQuery = useDebounced(query);
 
+  const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  // Muat halaman pertama tiap kali pencarian/filter/refresh berubah.
+  // Pencarian & filter kini berlaku di SERVER (seluruh lead), bukan hanya
+  // halaman termuat (Sprint 12 / ADM-16).
   useEffect(() => {
     let active = true;
-    void fetchLeads({ limit: 50 })
-      .then((page) => {
+    (async () => {
+      try {
+        setLoading(true);
+        const page = await fetchLeads({
+          q: debouncedQuery,
+          status: filter,
+          limit: PAGE_LIMIT,
+        });
         if (!active) return;
         setLeads(page.leads);
         setNextCursor(page.nextCursor);
-      })
-      .catch((err: unknown) => {
-        if (active) setError(err instanceof Error ? err.message : "Gagal memuat lead.");
-      })
-      .finally(() => {
+        setTruncated(page.truncated);
+        setError(null);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Gagal memuat lead.");
+        setLeads([]);
+        setNextCursor(null);
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    })();
     return () => {
       active = false;
     };
-  }, []);
+  }, [debouncedQuery, filter, reloadKey]);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await fetchLeads({ limit: 50, cursor: nextCursor });
+      const page = await fetchLeads({
+        q: debouncedQuery,
+        status: filter,
+        limit: PAGE_LIMIT,
+        cursor: nextCursor,
+      });
       setLeads((current) => [...current, ...page.leads]);
       setNextCursor(page.nextCursor);
+      setTruncated((prev) => prev || page.truncated);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat lead berikutnya.");
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, nextCursor]);
-
-  const activeMatchCount = useMemo(() => {
-    if (query.trim() || filter === "semua" || !nextCursor) return null;
-    return leads.filter((lead) => lead.status === filter).length;
-  }, [filter, leads, nextCursor, query]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return leads.filter((l) => {
-      const matchQuery =
-        !q ||
-        l.name.toLowerCase().includes(q) ||
-        l.email.toLowerCase().includes(q) ||
-        l.service.toLowerCase().includes(q) ||
-        l.message.toLowerCase().includes(q);
-      const matchStatus = filter === "semua" || l.status === filter;
-      return matchQuery && matchStatus;
-    });
-  }, [leads, query, filter]);
+  }, [debouncedQuery, filter, loadingMore, nextCursor]);
 
   const onStatus = async (id: string, status: LeadStatus) => {
     // Abaikan bila lead ini masih dalam proses update (hindari request ganda).
@@ -154,16 +164,40 @@ export function LeadsManager() {
     }
   };
 
-  const onExport = () => {
+  const onExport = async () => {
     if (!isOwner) {
       setError("Ekspor PII hanya dapat dilakukan OWNER.");
       return;
     }
-    if (filtered.length === 0) {
-      setError("Tidak ada lead untuk diekspor.");
-      return;
+    if (exporting) return;
+    setExporting(true);
+    try {
+      // Sprint 12 / ADM-16: ekspor seluruh hasil filter di server (bukan hanya
+      // lead halaman yang termuat), sejauh batas keras yang diberitahukan.
+      const result = await fetchLeadsForExport({
+        q: debouncedQuery,
+        status: filter,
+      });
+      if (result.leads.length === 0) {
+        setError("Tidak ada lead untuk diekspor.");
+        return;
+      }
+      exportLeadsToCsv(result.leads);
+      if (result.truncated) {
+        toast.toast(
+          `${result.leads.length} lead diekspor — dibatasi ${result.cap.toLocaleString("id-ID")} baris. Persempit filter/pencarian untuk kelengkapan.`,
+          "info",
+        );
+      } else {
+        toast.success(`${result.leads.length} lead diekspor ke CSV.`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Gagal mengekspor lead.";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setExporting(false);
     }
-    exportLeadsToCsv(filtered);
   };
 
   /** Pindah tahap pipeline (Kanban). Optimistik + rollback. */
@@ -178,7 +212,7 @@ export function LeadsManager() {
       await updateLeadStage(id, stage);
       toast.success(`Tahap: ${PIPELINE_STAGE_LABEL[stage]}.`);
       // Segarkan agar skor (dihitung ulang server) ikut terbarui.
-      fetchLeads({ limit: 50 })
+      fetchLeads({ q: debouncedQuery, status: filter, limit: PAGE_LIMIT })
         .then((page) => {
           setLeads((current) =>
             current.map((lead) =>
@@ -287,12 +321,16 @@ export function LeadsManager() {
       {isOwner && (
           <button
             onClick={onExport}
-            disabled={loading || leads.length === 0}
+            disabled={loading || exporting || leads.length === 0}
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/30 hover:text-primary disabled:opacity-60"
-            title="Ekspor lead dari halaman yang sudah dimuat ke CSV"
+            title="Ekspor seluruh hasil filter ke CSV (OWNER)"
           >
-            <Download className="h-4 w-4" />
-            Ekspor CSV
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {exporting ? "Mengekspor..." : "Ekspor CSV"}
           </button>
         )}
 
@@ -307,11 +345,11 @@ export function LeadsManager() {
       </div>
 
       <p className="mt-3 text-xs text-muted">
-        Menampilkan {filtered.length} dari {leads.length} lead yang termuat.
-        {activeMatchCount !== null
-          ? ` ${activeMatchCount} cocok pada halaman termuat.`
-          : ""}
-        {nextCursor ? " Gunakan Muat lagi untuk halaman berikutnya." : ""}
+        Menampilkan {leads.length} lead
+        {nextCursor ? " (masih ada halaman berikutnya)" : ""}
+        {truncated
+          ? ` — pencarian/filter dipindai dari ${SCAN_CAP_HINT.toLocaleString("id-ID")} lead terbaru; persempit kata kunci untuk kelengkapan.`
+          : "."}
       </p>
 
       {error && (
@@ -326,33 +364,29 @@ export function LeadsManager() {
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <span className="text-sm">Memuat lead...</span>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : leads.length === 0 ? (
         <div className="mt-16 rounded-3xl border border-dashed border-slate-200 bg-white py-16 text-center">
           <p className="text-sm font-medium text-secondary">
-            {leads.length === 0
-              ? "Belum ada lead masuk."
-              : nextCursor
-                ? "Tidak ada kecocokan di halaman termuat; muat halaman berikutnya untuk melanjutkan pencarian."
-                : "Tidak ada lead yang cocok dengan pencarian."}
+            {debouncedQuery || filter !== "semua"
+              ? "Tidak ada lead yang cocok dengan pencarian/filter."
+              : "Belum ada lead masuk."}
           </p>
           <p className="mt-1 text-xs text-muted">
-            {leads.length === 0
-              ? "Lead dari form kontak akan muncul di sini."
-              : nextCursor
-                ? "Kata kunci/filter berlaku pada lead yang sudah dimuat."
-                : "Coba ubah kata kunci atau filter."}
+            {debouncedQuery || filter !== "semua"
+              ? "Pencarian & filter berlaku pada seluruh lead (bukan hanya halaman ini). Coba kata kunci atau status lain."
+              : "Lead dari form kontak akan muncul di sini."}
           </p>
         </div>
       ) : view === "pipeline" ? (
         <LeadPipelineBoard
-          leads={filtered}
+          leads={leads}
           busyIds={busyIds}
           onStageChange={onStage}
           onOpen={setDetail}
         />
       ) : (
         <div className="mt-5 grid gap-4">
-          {filtered.map((lead) => (
+          {leads.map((lead) => (
             <article
               key={lead.id}
               className="rounded-2xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-lg hover:shadow-slate-900/5"
