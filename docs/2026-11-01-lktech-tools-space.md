@@ -1,6 +1,6 @@
 # LKTech Tools — Product & Technical Development Plan
 
-> **Status:** Rencana / belum diimplementasikan  
+> **Status:** F0 selesai — F1/F2 sedang diimplementasikan (lihat §14)  
 > **Disusun:** 2026-11-01  
 > **Cakupan:** Space khusus pengguna LKTech yang sudah login, berisi katalog dan workspace tools produktivitas.  
 > **Prinsip:** Mulai dari fondasi yang aman dan beberapa tools inti; tambah tools bertahap berdasarkan kebutuhan dan biaya operasional.
@@ -200,3 +200,65 @@ Detail framework, versi API, folder, auth guard, lint/build, dan panduan Next.js
 ## 13. Catatan eksekusi
 
 Dokumen ini adalah rencana produk-teknis, bukan laporan implementasi. Belum ada endpoint, halaman, tool, atau sistem pembayaran yang diklaim selesai. Sebelum mulai coding, audit implementasi auth dan routing aktual, lalu perbarui dokumen dengan keputusan tool MVP, file yang akan disentuh, status fase, serta hasil QA.
+
+---
+
+## 14. F0 — Hasil discovery & keputusan (2026-11-01)
+
+### Temuan kode aktual
+
+- **Auth user:** login Google Firebase di klien; token ID dikirim sebagai
+  `Authorization: Bearer` dan diverifikasi server dengan `requireUser(req)`
+  (`src/lib/admin-guard.ts`). Tidak ada cookie sesi user (cookie hanya untuk admin).
+- **Guard halaman:** pola repo memakai `UserGuard` (klien) yang mengarahkan ke
+  `/masuk?next=<path>`; `next` divalidasi `safeRedirectPath`
+  (`src/app/masuk/page.tsx`). Dipakai halaman `/akun`.
+- **Layout & desain:** root layout hanya memasang provider + analytics; `Navbar`
+  dan `Footer` dirakit per halaman. Hero halaman dalam memakai `PageHero`;
+  tombol memakai `@/components/ui/button`; ikon `lucide-react`.
+- **API user:** pola `src/app/api/user/*` + `requireUser`; klien menyisipkan
+  Bearer lewat `getIdToken()` (`src/lib/user-account-api.ts`).
+- **Framework:** Next.js 16.3.6 / React 19.3; `params`/`searchParams` berupa
+  Promise dan metadata hanya di Server Component (sesuai `node_modules/next/dist/docs/`).
+
+### Keputusan F0
+
+1. **Tools MVP:** Color Picker, Gambar ke WebP, dan Gambar ke PDF.
+2. **Pemrosesan:** 100% lokal di browser untuk ketiga tool. Tidak ada endpoint
+   server baru dan tidak ada model data riwayat pada MVP. Konsekuensi jujur:
+   batas keamanan halaman bersifat UI (`UserGuard`) seperti `/akun`; bila kelak
+   ada API, endpoint wajib `requireUser` + validasi server-side.
+3. **Image→PDF:** memakai `pdf-lib` **1.17.1 (MIT)**, di-`dynamic import` hanya
+   saat tool dibuka agar tidak membebani bundle halaman lain.
+4. **Rute:** `/tools` (katalog) dan `/tools/[slug]` (workspace); keduanya
+   `noindex, nofollow` dan dilindungi `UserGuard`.
+5. **Registry:** konfigurasi kode murni `src/lib/tools-registry-pure.ts`
+   (bukan kontrol otorisasi).
+6. **Batas default:** gambar ≤ 15 MB/berkas; ≤ 20 gambar untuk PDF; dimensi
+   output maks 4096 px; kualitas WebP 0.1–1.0; tipe divalidasi dengan decode,
+   bukan ekstensi.
+7. **Monetisasi/entitlement:** belum aktif; abstraksi disiapkan tetapi tidak
+   ada billing pada MVP (F4 terpisah).
+
+### Rencana sprint & file
+
+| Sprint | Isi | File utama |
+|---|---|---|
+| F1a | Registry + logika pencarian/filter murni + tes | `src/lib/tools-registry-pure.ts`, `scripts/tools-registry.test.ts` |
+| F1b | Katalog `/tools`, kartu, search/filter, empty state, entry point | `src/app/tools/page.tsx`, `src/components/tools/*` , `src/lib/nav.ts`, `src/components/auth/account-overview.tsx` |
+| F1c | Workspace `/tools/[slug]` + shell + dispatch + 404 | `src/app/tools/[slug]/page.tsx`, `src/components/tools/tool-workspace.tsx`, `tool-shell.tsx` |
+| F2a | Color Picker + helper murni | `src/components/tools/color-picker-tool.tsx`, `src/lib/tools/color-pure.ts` |
+| F2b | Gambar ke WebP + validasi/limit | `src/components/tools/image-to-webp-tool.tsx`, `src/lib/tools/image-tool-pure.ts` |
+| F2c | Gambar ke PDF (pdf-lib dynamic import) | `src/components/tools/image-to-pdf-tool.tsx`, `scripts/tools-image.test.ts` |
+| F3 | Hardening/QA: a11y, batas, bundle, tsc/lint/test/build | — |
+| F4 | Model berbayar | di luar cakupan sekarang |
+
+### Status
+
+- F0: ✅ selesai (dokumen ini).
+- F1: ✅ selesai (registry, katalog `/tools`, workspace `/tools/[slug]`, entry point
+  nav + akun, `robots.txt`).
+- F2a: ✅ selesai (Color Picker + `color-pure` + tes).
+- F2b/F2c: 🚧 dikerjakan (Gambar ke WebP & Gambar ke PDF).
+- F3: ⏳ menunggu F2.
+- F4: ⏸️ di luar cakupan.

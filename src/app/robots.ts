@@ -15,6 +15,9 @@ export default function robots(): MetadataRoute.Robots {
           "/akun",
           "/keranjang",
           "/masuk",
+          // Area tools khusus pengguna login: tidak perlu diindeks.
+          "/tools",
+          "/tools/",
           // Halaman unduhan bertoken: bersifat pribadi — jangan diindeks.
           "/unduhan",
           // Halaman fallback offline PWA — bukan konten nyata.

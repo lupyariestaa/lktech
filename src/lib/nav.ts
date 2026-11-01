@@ -74,6 +74,7 @@ export function buildNavMenu(
       ],
     },
     { label: "Blog", href: "/blog" },
+    { label: "Tools", href: "/tools" },
     { label: "Tentang", href: "/tentang" },
   ];
 }

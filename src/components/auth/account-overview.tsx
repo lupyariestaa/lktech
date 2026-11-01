@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   UserRound,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +101,13 @@ export function AccountOverview({
             >
               <Package className="h-4 w-4" />
               Jelajahi Produk
+            </Link>
+            <Link
+              href="/tools"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              <Wrench className="h-4 w-4" />
+              Buka LKTech Tools
             </Link>
             <button
               onClick={onLogout}
