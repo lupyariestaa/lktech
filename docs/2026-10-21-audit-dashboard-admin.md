@@ -1515,19 +1515,19 @@ Firestore `8080`, project `lktech-emulator`) dan akun seed
 
 - ✅ ADM-10 — metrik user hanya order berstatus berbayar; regression tests tersedia.
 - ✅ ADM-11 — version/expectedVersion (optimistic concurrency) untuk settings/content/produk/proyek; sisa uji dua-tab manual.
-- 🟡 ADM-15 — paging user + cached summary; sisa search index/backfill dan ekspor server.
-- 🟡 ADM-16 — paging lead + dashboard summary; sisa filter server-side.
-- 🟡 ADM-17 — review aggregate + audit order; sisa paging newsletter/media dan filter audit cap.
+- ✅ ADM-15 — paging user + cached summary + ekspor server-side (OWNER, cap 5.000); sisa backfill `createdAtISO`/index pencarian & uji volume.
+- ✅ ADM-16 — paging lead + dashboard summary + pencarian/filter/ekspor server-side (cap 5.000, `truncated` jujur); sisa index/backfill skala besar & cache trend.
+- 🟡 ADM-17 — review aggregate + audit order; paging newsletter/media selesai (S10, cap 5.000 + penanda `truncated`); sisa filter audit cap.
 - 🟡 ADM-18 — idempotency + cursor batch selesai kode (anti-duplikat, tombol “lanjutkan batch”); sisa queue/status per penerima.
 - ✅ ADM-20 — loading/error/suspense admin.
-- 🟡 ADM-21/22 — focus/label/main/live region diperbaiki; verifikasi aksesibilitas manual masih perlu.
+- ✅ ADM-21/22 — focus trap semua dialog admin + label/`main`/live region selesai (kode); verifikasi aksesibilitas manual (axe/keyboard E2E) masih perlu.
 - 🟡 ADM-26 — matrix otorisasi route admin selesai (sweep statis 43 route + role/re-auth); sisa E2E ber-kredensial/staging.
 
 ### P3 — polish & operasional
 
 - ✅ ADM-14 — schema Zod dan batas 900 KB; tests tersedia.
 - ADM-19 — pisahkan provider publik dari admin.
-- 🟡 ADM-23 — guard logout/back; browser history perlu uji.
+- 🟡 ADM-23 — guard logout/back selesai (kode); browser history perlu uji manual.
 - ✅ ADM-24 — pertahankan `next` saat sesi kedaluwarsa.
 - ✅ ADM-25 — noindex admin + `X-Robots-Tag`; crawl eksternal belum diuji.
 - ADM-27 — dokumentasi/runbook/copy login.
