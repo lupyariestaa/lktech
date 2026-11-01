@@ -58,6 +58,7 @@ import {
 import type { Project } from "@/lib/project-types";
 import { useToast } from "@/components/admin/toast";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import { cn } from "@/lib/utils";
 
 export type MediaViewMode = "grid" | "list";
@@ -1236,14 +1237,8 @@ function UsageBlockedDialog({
   usages: MediaUsage[] | null;
   onClose: () => void;
 }) {
-  useEffect(() => {
-    if (!usages) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [usages, onClose]);
+  // ADM-21: trap fokus + Escape + kembalikan fokus (sebelumnya hanya Escape).
+  const { ref } = useDrawerFocus<HTMLDivElement>(!!usages, { onEscape: onClose });
 
   if (!usages) return null;
 
@@ -1259,7 +1254,11 @@ function UsageBlockedDialog({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl">
+      <div
+        ref={ref}
+        tabIndex={-1}
+        className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl focus:outline-none"
+      >
         <div className="flex items-start gap-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-500">
             <AlertTriangle className="h-5 w-5" />
@@ -1289,6 +1288,7 @@ function UsageBlockedDialog({
 
         <div className="mt-6 flex justify-end">
           <button
+            data-autofocus
             type="button"
             onClick={onClose}
             className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary-dark"

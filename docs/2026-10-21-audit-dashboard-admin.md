@@ -929,8 +929,9 @@ memakai `orderBy("atISO", "desc")` dan opsi filter stabil.
 
 ### ADM-18 · 🟡 Sedang · ✅ Selesai kode · Broadcast email sinkron, tanpa idempotency/cursor batch
 
-**Status:** 🟢 Terverifikasi untuk desain; 🟡 Dugaan untuk timeout aktual
-tergantung platform.
+**Status:** 🟢 Selesai (kode) — idempotency per-batch + cursor email + tombol
+“lanjutkan batch”; timeout dimitigasi dengan batching. Status per penerima &
+queue/background tetap backlog (butuh infrastruktur).
 
 **Bukti:**
 
@@ -1026,7 +1027,8 @@ independen, timeout/fallback, dan tombol retry.
 
 ### ADM-21 · 🟡 Sedang · Dialog tidak konsisten mengunci/mengembalikan fokus
 
-**Status:** 🟡 Diperbaiki di dialog admin utama; keyboard/screen-reader E2E belum dijalankan.
+**Status:** 🟢 Selesai (kode) — semua dialog admin memakai focus trap + Escape +
+pengembalian fokus; uji keyboard/screen-reader E2E belum dijalankan.
 
 **Bukti:**
 
@@ -1047,11 +1049,28 @@ mengubah perilaku fokus browser secara otomatis.
 **Rekomendasi:** terapkan `useDrawerFocus` (trap + Escape + restore + inert`
 background) ke semua dialog; tambahkan test keyboard.
 
+**Status implementasi (2026-11-01):** 🟢 **Semua dialog admin memakai focus trap.**
+
+- `useDrawerFocus` (`src/components/admin/use-drawer-focus.ts`) dipakai oleh
+  `command-palette.tsx`, `user-detail-dialog.tsx`, `leads-manager.tsx`
+  (`LeadDetailDialog`), `coupons/coupon-batch-dialog.tsx`,
+  `sidebar/mobile-drawer.tsx`, dan `orders/order-detail-dialog.tsx`.
+- Dialog lain mengimplementasikan trap sendiri: `confirm-dialog.tsx` dan
+  `media-picker-dialog.tsx`.
+- **Hardening (2026-11-01)** — dialog yang sebelumnya hanya `role="dialog"`/Escape
+  tanpa trap & tanpa pengembalian fokus kini memakai `useDrawerFocus` (trap Tab,
+  Escape, fokus awal via `data-autofocus`, pulih ke pemicu): `articles-list.tsx`
+  (konfirmasi aksi massal), `analytics-dashboard.tsx` (`DrillDownDialog`),
+  `media-detail-panel.tsx` (panel slide-over), `media-manager.tsx`
+  (`UsageBlockedDialog`).
+- **Sisa:** uji keyboard/screen-reader E2E (axe + Playwright) belum dijalankan.
+
 ---
 
 ### ADM-22 · 🟡 Sedang · Gap a11y di login dan pencarian user
 
-**Status:** 🟡 Perbaikan kode selesai; audit axe/E2E aksesibilitas masih manual.
+**Status:** 🟢 Selesai (kode) — label/aria-label, `<main id="konten">` login, dan
+`role="alert"` sudah diterapkan; audit axe/E2E aksesibilitas masih manual.
 
 **Bukti:**
 
@@ -1073,11 +1092,24 @@ dan regresi a11y tidak tertangkap.
 di login, `role="alert"` untuk error, axe pada halaman login/dashboard dengan
 akun uji, dan audit kontras/fokus.
 
+**Status implementasi (2026-11-01):** 🟢 **Perbaikan kode terverifikasi.**
+
+- `src/components/admin/users-manager.tsx:209-210` — input pencarian punya
+  `aria-label` ("Cari pengguna berdasarkan nama, email, atau WhatsApp"); filter
+  status dan tombol ikon juga memakai `aria-label`.
+- `src/app/admin/login/page.tsx:25-28` — `<main id="konten">` sehingga skip link
+  “Lewati ke konten utama” punya target di halaman login.
+- `src/components/admin/login-form.tsx:132-138` — pesan error login memakai
+  `role="alert"` + `aria-live="assertive"`.
+- **Sisa:** audit axe/E2E aksesibilitas (kontras/fokus) dengan akun uji belum
+  dijalankan.
+
 ---
 
 ### ADM-23 · 🔵 Rendah · Unsaved changes tidak dijaga saat logout/back
 
-**Status:** 🟡 Guard logout/Back ditambahkan; perilaku browser history perlu verifikasi manual.
+**Status:** 🟢 Selesai (kode) — logout & tombol Back melewati guard dirty;
+verifikasi browser-history aktual masih manual.
 
 **Bukti:**
 
@@ -1094,6 +1126,18 @@ menekan Back. `beforeunload` hanya menolong saat refresh/tutup tab.
 
 **Rekomendasi:** alihkan logout melalui guard dirty; tangani navigasi history;
 test skenario edit → logout/back.
+
+**Status implementasi (2026-11-01):** 🟢 **Guard logout/Back terverifikasi.**
+
+- `src/components/admin/unsaved-changes.tsx:57-77` — memasang entry penjaga
+  history saat form dirty dan menangani `popstate` (dialog konfirmasi; konfirmasi
+  membuang perubahan lalu mundur dua entry).
+- `src/components/admin/admin-shell.tsx:97-104,228-240` — logout melewati guard
+  dirty (`pendingLogout` → `ConfirmDialog` "Buang & logout").
+- Command palette memanggil `onLogout` yang sama
+  (`src/components/admin/command-palette.tsx:119-121`), sehingga ikut ter-guard.
+- **Sisa:** verifikasi manual skenario edit → Back/logout di browser nyata
+  (termasuk perilaku history antar-browser).
 
 ---
 

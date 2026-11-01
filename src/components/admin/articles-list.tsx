@@ -22,6 +22,7 @@ import {
   type ManageFilter,
   type ManageStatus,
 } from "@/lib/article-manage";
+import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import { cn } from "@/lib/utils";
 
 /** Jumlah baris per halaman di list (muat lebih banyak). */
@@ -91,6 +92,17 @@ export function ArticlesList({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingBulk, setPendingBulk] = useState<BulkAction | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // ADM-21: trap fokus + Escape + kembalikan fokus untuk dialog konfirmasi
+  // aksi massal (sebelumnya hanya `role="dialog"` tanpa trap).
+  const { ref: bulkDialogRef } = useDrawerFocus<HTMLDivElement>(
+    pendingBulk !== null,
+    {
+      onEscape: () => {
+        if (!busy) setPendingBulk(null);
+      },
+    },
+  );
 
   // Waktu acuan status (terjadwal/terbit) diambil saat mount, agar render tetap murni.
   const [now] = useState(() => Date.now());
@@ -347,7 +359,11 @@ export function ArticlesList({
       {pendingBulk && (
         <div role="dialog" aria-modal="true" aria-label="Konfirmasi aksi massal" className="fixed inset-0 z-[11000] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-secondary/40" onClick={() => !busy && setPendingBulk(null)} />
-          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+          <div
+            ref={bulkDialogRef}
+            tabIndex={-1}
+            className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl focus:outline-none"
+          >
             <h2 className="text-base font-bold text-secondary">Konfirmasi</h2>
             <p className="mt-2 text-sm text-muted">{bulkConfirmText(pendingBulk, selectedVisible.length)}</p>
             <div className="mt-5 flex justify-end gap-2">

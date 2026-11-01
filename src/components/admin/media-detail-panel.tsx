@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   Check,
@@ -19,6 +19,7 @@ import {
   type MediaItem,
 } from "@/lib/media-types";
 import type { MediaAuditEntry } from "@/lib/admin-api";
+import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import { cn } from "@/lib/utils";
 
 const AUDIT_LABEL: Record<string, string> = {
@@ -85,7 +86,21 @@ export function MediaDetailPanel({
   const [collectionId, setCollectionId] = useState("");
   const [orderText, setOrderText] = useState("");
   const [copied, setCopied] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
+
+  // ADM-21: fokus awal, trap Tab, Escape, & kembalikan fokus ke pemicu.
+  const { ref: panelRef } = useDrawerFocus<HTMLDivElement>(open, {
+    onEscape: onClose,
+  });
+
+  // Kunci scroll body saat panel terbuka (fokus/trap/Escape diurus hook).
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
   // Sinkronkan form dengan item saat panel dibuka/ganti item. Dilakukan saat
   // render (pola "adjusting state when props change") agar tidak memicu
@@ -102,27 +117,6 @@ export function MediaDetailPanel({
     setOrderText(item.order === undefined ? "" : String(item.order));
     setCopied(false);
   }
-
-  // Tutup dengan Escape; kunci scroll; fokuskan panel & kembalikan fokus saat
-  // ditutup; jaga Tab tetap di dalam panel (focus trap).
-  useEffect(() => {
-    if (!open) return;
-    const trigger = document.activeElement as HTMLElement | null;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const t = setTimeout(() => panelRef.current?.focus(), 0);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-      clearTimeout(t);
-      // Kembalikan fokus ke elemen pemicu bila masih ada di DOM.
-      if (trigger && document.contains(trigger)) trigger.focus();
-    };
-  }, [open, onClose]);
 
   if (!open || !item) return null;
 
@@ -201,6 +195,7 @@ export function MediaDetailPanel({
               <Star className={cn("h-4 w-4", item.favorite && "fill-current")} />
             </button>
             <button
+              data-autofocus
               type="button"
               onClick={onClose}
               aria-label="Tutup panel"

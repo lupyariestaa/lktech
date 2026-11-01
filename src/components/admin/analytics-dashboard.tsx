@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useDrawerFocus } from "@/components/admin/use-drawer-focus";
 import {
   exportAnalyticsToCsv,
   fetchSalesAnalytics,
@@ -485,13 +486,8 @@ function DrillDownDialog({
     };
   }, [dateISO]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // ADM-21: trap fokus + Escape + kembalikan fokus (sebelumnya hanya Escape).
+  const { ref } = useDrawerFocus<HTMLDivElement>(true, { onEscape: onClose });
 
   const dateLabel = new Date(`${dateISO}T00:00:00`).toLocaleDateString("id-ID", {
     weekday: "long",
@@ -513,13 +509,18 @@ function DrillDownDialog({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-xl sm:rounded-3xl">
+      <div
+        ref={ref}
+        tabIndex={-1}
+        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-xl focus:outline-none sm:rounded-3xl"
+      >
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
           <div>
             <h2 className="text-sm font-bold text-secondary">Pesanan Harian</h2>
             <p className="mt-0.5 text-xs text-muted">{dateLabel}</p>
           </div>
           <button
+            data-autofocus
             type="button"
             onClick={onClose}
             className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-surface"
