@@ -4,6 +4,8 @@ import type { ComponentType } from "react";
 import { Wrench } from "lucide-react";
 import { ToolShell } from "@/components/tools/tool-shell";
 import { ColorPickerTool } from "@/components/tools/color-picker-tool";
+import { ImageToWebpTool } from "@/components/tools/image-to-webp-tool";
+import { ImageToPdfTool } from "@/components/tools/image-to-pdf-tool";
 import type { ToolDefinition } from "@/lib/tools-registry-pure";
 
 /**
@@ -13,6 +15,8 @@ import type { ToolDefinition } from "@/lib/tools-registry-pure";
  */
 const TOOL_BODIES: Record<string, ComponentType> = {
   "color-picker": ColorPickerTool,
+  "image-to-webp": ImageToWebpTool,
+  "image-to-pdf": ImageToPdfTool,
 };
 
 export function ToolWorkspace({ tool }: { tool: ToolDefinition }) {

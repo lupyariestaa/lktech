@@ -52,7 +52,7 @@ export function ToolsCatalog() {
         </label>
 
         <div
-          role="tablist"
+          role="group"
           aria-label="Filter kategori tool"
           className="flex flex-wrap items-center gap-1 rounded-full border border-slate-200 bg-white p-1"
         >
@@ -60,8 +60,7 @@ export function ToolsCatalog() {
             <button
               key={t.id}
               type="button"
-              role="tab"
-              aria-selected={category === t.id}
+              aria-pressed={category === t.id}
               onClick={() => setCategory(t.id)}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none",

@@ -48,6 +48,7 @@ export function ColorPickerTool() {
   const hex = rgbToHex(rgb);
   const hsl = useMemo(() => rgbToHsl(rgb), [rgb]);
   const textColor = contrastTextColor(rgb);
+  const hexInvalid = hexDraft !== null && parseHex(hexDraft) === null;
 
   const values: Array<{ id: string; label: string; value: string }> = [
     { id: "hex", label: "HEX", value: rgbaToHex(rgb, alpha) },
@@ -154,9 +155,10 @@ export function ColorPickerTool() {
               spellCheck={false}
               autoComplete="off"
               aria-label="Kode warna HEX"
+              aria-invalid={hexInvalid}
               className={cn(
                 "w-full bg-transparent font-mono text-sm font-semibold text-secondary uppercase focus:outline-none",
-                hexDraft !== null && !parseHex(hexDraft) && "text-rose-500",
+                hexInvalid && "text-rose-500",
               )}
             />
           </label>

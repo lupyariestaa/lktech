@@ -1,6 +1,6 @@
 # LKTech Tools — Product & Technical Development Plan
 
-> **Status:** F0 selesai — F1/F2 sedang diimplementasikan (lihat §14)  
+> **Status:** MVP selesai (F1–F3) — lihat §14–§15  
 > **Disusun:** 2026-11-01  
 > **Cakupan:** Space khusus pengguna LKTech yang sudah login, berisi katalog dan workspace tools produktivitas.  
 > **Prinsip:** Mulai dari fondasi yang aman dan beberapa tools inti; tambah tools bertahap berdasarkan kebutuhan dan biaya operasional.
@@ -259,6 +259,52 @@ Dokumen ini adalah rencana produk-teknis, bukan laporan implementasi. Belum ada 
 - F1: ✅ selesai (registry, katalog `/tools`, workspace `/tools/[slug]`, entry point
   nav + akun, `robots.txt`).
 - F2a: ✅ selesai (Color Picker + `color-pure` + tes).
-- F2b/F2c: 🚧 dikerjakan (Gambar ke WebP & Gambar ke PDF).
-- F3: ⏳ menunggu F2.
+- F2b/F2c: ✅ selesai (Gambar ke WebP & Gambar ke PDF + `image-tool-pure` + tes).
+- F3: ✅ selesai (lihat §15).
 - F4: ⏸️ di luar cakupan.
+
+## 15. F3 — Hardening/QA (2026-11-01)
+
+### Verifikasi
+
+- `npx tsc --noEmit` — bersih.
+- `npx eslint .` — bersih.
+- `npm run test:unit` — **1082 lulus / 0 gagal** (termasuk 11 tes registry, 11 tes
+  warna, dan 9 tes gambar).
+- `npm run build` — sukses; rute statis terbentuk: `/tools`,
+  `/tools/color-picker`, `/tools/image-to-webp`, `/tools/image-to-pdf`.
+- **Bundle:** `pdf-lib@1.17.1` berada di chunk lazy terpisah (~431 KB) dan
+  **tidak** termasuk chunk yang dimuat saat `/tools/image-to-pdf` dibuka; UI
+  tool (~36 KB) dimuat lebih dulu dan library baru diambil saat tombol
+  "Buat PDF" ditekan.
+
+### Batas & perilaku
+
+- Gambar ≤ 15 MB/berkas, ≤ 20 gambar per PDF, sisi terpanjang hasil 4096 px,
+  kualitas WebP 0.1–1.0 (di-clamp).
+- Tipe berkas divalidasi dengan **decode** (bukan ekstensi); jika decode gagal,
+  tool menampilkan pesan kesalahan dan tidak menghasilkan berkas.
+- WebP: browser yang tidak dapat meng-encode WebP ditolak dengan pesan jelas;
+  bila blob yang dikembalikan bukan `image/webp`, proses dibatalkan.
+- Object URL dan bitmap dilepas saat reset, ganti berkas, dan unmount.
+- PDF: urutan gambar dapat diubah; margin & ukuran halaman diatur; halaman
+  "sesuaikan gambar" memakai ukuran gambar itu sendiri.
+
+### Aksesibilitas
+
+- Dropzone memakai tombol yang dapat difokus keyboard (seret-lepas hanya
+  alternatif).
+- Semua kontrol memiliki label; filter katalog memakai `aria-pressed`; input
+  HEX menandai `aria-invalid`.
+- Status/progres diumumkan lewat wilayah `aria-live="polite"`.
+
+### Keterbatasan jujur
+
+- Batas keamanan halaman bersifat **UI** (`UserGuard`), sama seperti `/akun`.
+  Tidak ada endpoint atau data server pada MVP, sehingga tidak ada otorisasi
+  server-side yang perlu/tersedia.
+- PDF dibuat dengan me-render ulang gambar ke PNG/JPEG lewat kanvas; hasilnya
+  mengikuti codec browser, bukan konversi lossless.
+- Tool berstatus "segera" (PDF ke Gambar, Formatter Teks) belum punya rute
+  workspace dan tidak ditampilkan sebagai tersedia.
+- Belum ada riwayat penggunaan, kuota, atau model berbayar (F4 terpisah).
