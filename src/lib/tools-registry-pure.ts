@@ -110,13 +110,14 @@ export const TOOLS: readonly ToolDefinition[] = [
     name: "PDF ke Gambar",
     summary: "Render halaman PDF menjadi gambar PNG/JPG.",
     description:
-      "Ubah halaman PDF menjadi gambar yang dapat diunduh. Sedang disiapkan dengan batas halaman dan resolusi yang jelas.",
+      "Pilih berkas PDF, atur format, resolusi, dan rentang halaman, lalu unduh gambar tiap halaman. PDF tidak diunggah ke server.",
     category: "pdf",
-    status: "segera",
-    keywords: ["pdf", "gambar", "render", "png", "jpg", "konversi"],
+    status: "tersedia",
+    keywords: ["pdf", "gambar", "image", "render", "png", "jpg", "konversi", "halaman"],
     icon: "Images",
     local: true,
-    privacyNote: "Rencana: diproses lokal di browser.",
+    privacyNote:
+      "PDF diproses di browser Anda; tidak ada berkas yang diunggah atau disimpan di server.",
   },
 ];
 

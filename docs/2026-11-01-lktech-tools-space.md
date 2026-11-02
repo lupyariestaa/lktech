@@ -1,6 +1,6 @@
 # LKTech Tools — Product & Technical Development Plan
 
-> **Status:** MVP selesai (F1–F3) — lihat §14–§15  
+> **Status:** MVP selesai (F1–F3) + perluasan F2d/F2e (Formatter Teks, PDF ke Gambar) — lihat §14–§16  
 > **Disusun:** 2026-11-01  
 > **Cakupan:** Space khusus pengguna LKTech yang sudah login, berisi katalog dan workspace tools produktivitas.  
 > **Prinsip:** Mulai dari fondasi yang aman dan beberapa tools inti; tambah tools bertahap berdasarkan kebutuhan dan biaya operasional.
@@ -250,6 +250,8 @@ Dokumen ini adalah rencana produk-teknis, bukan laporan implementasi. Belum ada 
 | F2a | Color Picker + helper murni | `src/components/tools/color-picker-tool.tsx`, `src/lib/tools/color-pure.ts` |
 | F2b | Gambar ke WebP + validasi/limit | `src/components/tools/image-to-webp-tool.tsx`, `src/lib/tools/image-tool-pure.ts` |
 | F2c | Gambar ke PDF (pdf-lib dynamic import) | `src/components/tools/image-to-pdf-tool.tsx`, `scripts/tools-image.test.ts` |
+| F2d | Formatter Teks (JSON pretty/minify, rapikan teks) | `src/components/tools/text-formatter-tool.tsx`, `src/lib/tools/text-pure.ts`, `scripts/tools-text.test.ts` |
+| F2e | PDF ke Gambar (pdf.js self-host, rentang halaman) | `src/components/tools/pdf-to-image-tool.tsx`, `src/lib/tools/pdf-tool-pure.ts`, `scripts/copy-pdfjs-assets.mjs`, `scripts/tools-pdf.test.ts` |
 | F3 | Hardening/QA: a11y, batas, bundle, tsc/lint/test/build | — |
 | F4 | Model berbayar | di luar cakupan sekarang |
 
@@ -260,6 +262,7 @@ Dokumen ini adalah rencana produk-teknis, bukan laporan implementasi. Belum ada 
   nav + akun, `robots.txt`).
 - F2a: ✅ selesai (Color Picker + `color-pure` + tes).
 - F2b/F2c: ✅ selesai (Gambar ke WebP & Gambar ke PDF + `image-tool-pure` + tes).
+- F2d/F2e: ✅ selesai (Formatter Teks & PDF ke Gambar + `text-pure`/`pdf-tool-pure` + tes; lihat §16).
 - F3: ✅ selesai (lihat §15).
 - F4: ⏸️ di luar cakupan.
 
@@ -305,6 +308,57 @@ Dokumen ini adalah rencana produk-teknis, bukan laporan implementasi. Belum ada 
   server-side yang perlu/tersedia.
 - PDF dibuat dengan me-render ulang gambar ke PNG/JPEG lewat kanvas; hasilnya
   mengikuti codec browser, bukan konversi lossless.
-- Tool berstatus "segera" (PDF ke Gambar, Formatter Teks) belum punya rute
-  workspace dan tidak ditampilkan sebagai tersedia.
+- Kelima tool registry kini berstatus "tersedia" dan punya rute workspace
+  (PDF ke Gambar & Formatter Teks menyusul di §16).
 - Belum ada riwayat penggunaan, kuota, atau model berbayar (F4 terpisah).
+
+## 16. F2d/F2e — Formatter Teks & PDF ke Gambar (2026-11-02)
+
+Melanjutkan registry: dua tool yang terakhir berstatus "segera" kini **tersedia**,
+sehingga kelima tool punya workspace.
+
+### Formatter Teks (`text-formatter`)
+
+- `src/lib/tools/text-pure.ts` + `scripts/tools-text.test.ts` (11 tes);
+  komponen `src/components/tools/text-formatter-tool.tsx`.
+- Mode: rapikan JSON (`json-pretty`, indentasi 2/4/tab), minify JSON, dan rapikan
+  teks biasa (samakan akhir baris, buang spasi ujung, ringkas baris kosong).
+- Opsi "urutkan kunci" menyortir kunci objek secara rekursif (array tetap pada urutannya).
+- Batas lunak input **2.000.000 karakter**, dilaporkan jujur bila terlampaui.
+- Hasil dapat disalin atau diunduh (`.json`/`.txt`).
+
+### PDF ke Gambar (`pdf-to-image`)
+
+- `src/lib/tools/pdf-tool-pure.ts` + `scripts/tools-pdf.test.ts` (8 tes);
+  komponen `src/components/tools/pdf-to-image-tool.tsx`.
+- **pdf.js `pdfjs-dist@6.4.299` (Apache-2.0)** di-`dynamic import`; JS inti (~423 KB)
+  hanya dimuat saat **berkas PDF dipilih**, bukan saat halaman tool dibuka.
+- Worker & aset runtime **di-self-host** di `public/pdfjs/` (worker, `cmaps`,
+  `standard_fonts`, `wasm`, `iccs`) lewat `scripts/copy-pdfjs-assets.mjs`
+  (`predev`/`prebuild`). `GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.mjs"`
+  (worker dibuat sebagai `{ type: "module" }`, same-origin — sesuai CSP
+  `worker-src 'self'`).
+- `public/pdfjs/` masuk `.gitignore` dan daftar `ignores` ESLint (aset pihak ketiga,
+  tidak di-lint).
+
+### Batas & perilaku
+
+- PDF ≤ **25 MB**/berkas, ≤ **30 halaman per proses** (kelebihan dipotong & dilaporkan),
+  skala render **0,5–3**, sisi terpanjang gambar **≤ 4096 px** (di-clamp).
+- Pemilihan halaman: kosong = semua; mendukung `1-3,5` juga bentuk terbuka `-4`/`8-`.
+- PDF berpassword (`PasswordException`) & PDF rusak (`InvalidPDFException`) ditolak
+  dengan pesan spesifik.
+- Object URL & dokumen pdf.js dilepas saat reset, ganti berkas, dan unmount.
+- Unduhan per halaman; browser umumnya memblokir unduhan massal otomatis.
+
+### Verifikasi
+
+- `npx tsc --noEmit` — bersih.
+- `npx eslint .` — bersih.
+- `npm run test:unit` — **1101 lulus / 0 gagal** (1082 + 11 tes teks + 8 tes PDF).
+- `npm run build` — sukses; rute statis mencakup `/tools/text-formatter` dan
+  `/tools/pdf-to-image`; `prebuild` menyalin aset `/pdfjs/*` untuk disajikan.
+- Server produksi (`next start`) diuji: `/pdfjs/pdf.worker.min.mjs`,
+  `cmaps`, `standard_fonts`, `wasm`, dan `iccs` semua **200**, serta
+  `/tools/pdf-to-image` **200**. JS inti pdf.js (~423 KB) berada di chunk lazy
+  terpisah dan **tidak** ada di HTML awal halaman.

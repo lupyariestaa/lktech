@@ -12,6 +12,8 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Aset runtime pdf.js (disalin dari node_modules, tak untuk di-lint).
+      "public/pdfjs/**",
     ],
   },
 ];

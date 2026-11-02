@@ -50,7 +50,7 @@
 > 📋 **Tugas Manual Pemilik (pelacak hidup):** **[`TUGAS-MANUAL.md`](TUGAS-MANUAL.md)** — M1 GSC sitemap ✅ · M2 Mayar produksi · M3 domain+Resend · M4 env opsional · M5 backfill agregat ✅ · M6 Firestore rules. Centang saat beres.
 >
 > 🎯 **TASK AKTIF (2026-10-27):** tidak ada pekerjaan kode tertunda dari SEO/statistik (sudah push: `6f5f7ea`, `4fa882e`). **Increment aman P1 + `EM-P2` sudah di-push (`fdaaae5`, `6b1a515`):** pengumpul laporan CSP (`/api/csp-report`) + angka batas backup eksplisit (`EXPORT_CAP`/`assessExportLimits`) + **webhook Resend fail-safe** (`/api/webhooks/resend`). **`EM-P3` pratinjau template email pembeli selesai kode (2026-10-26).** **`KP-P2` kupon lanjutan selesai kode (2026-10-26):** diskon bundel atas `eligibleSubtotal` (item yang memenuhi syarat saja) + validasi form. **`ADM-28` race slug produk/proyek selesai kode (2026-10-27):** create atomik `create()` → 409 `slug_taken`. **`ADM-18` broadcast email selesai kode (2026-10-27):** cursor batch anti-duplikat + tombol “lanjutkan batch”. **`ADM-26` matrix otorisasi route admin selesai kode (2026-10-27):** sweep statis 43 route (setiap handler wajib guard) + matrix role/re-auth (`test:admin-authz`). **`ADM-11` optimistic concurrency selesai kode (2026-10-27):** field `version` + `expectedVersion` (transaksi Firestore) untuk settings/content/produk/proyek → 409 `version_conflict`. **Sisa P1:** enforce CSP penuh (butuh nonce/hash + verifikasi runtime — jangan tanpa bukti) & verifikasi staging/produksi + popup Google. **Sisa owner:** M7 (aktifkan webhook Resend), uji browser S4/SEO, pratinjau email EM-P3, uji kupon bundel, uji broadcast batch, uji konflik ADM-11 (dua tab admin), tugas di [`TUGAS-MANUAL.md`](TUGAS-MANUAL.md). Homepage F0–F8 + F6 jangan diubah.
-> 🧰 **LKTech Tools — MVP selesai (kode, 2026-11-01):** **[`docs/2026-11-01-lktech-tools-space.md`](docs/2026-11-01-lktech-tools-space.md)** §14–§15 — katalog login-gated `/tools` + workspace `/tools/[slug]` (Color Picker, Gambar ke WebP, Gambar ke PDF). Semua diproses **lokal di browser** (tanpa endpoint/unggahan/riwayat); `pdf-lib@1.17.1` di-load **lazily**. Gate hijau: tsc, eslint, unit **1082**, build. Guard halaman bersifat **UI** (`UserGuard`, sama seperti `/akun`) — didokumentasikan jujur. **F4 (model berbayar) di luar cakupan.** Disarankan uji manual di browser (drag & drop, WebP, PDF) sebelum rilis.
+> 🧰 **LKTech Tools — MVP selesai (kode, 2026-11-01):** **[`docs/2026-11-01-lktech-tools-space.md`](docs/2026-11-01-lktech-tools-space.md)** §14–§15 — katalog login-gated `/tools` + workspace `/tools/[slug]` (Color Picker, Gambar ke WebP, Gambar ke PDF). Semua diproses **lokal di browser** (tanpa endpoint/unggahan/riwayat); `pdf-lib@1.17.1` di-load **lazily**. Gate hijau: tsc, eslint, unit **1082**, build. Guard halaman bersifat **UI** (`UserGuard`, sama seperti `/akun`) — didokumentasikan jujur. **F4 (model berbayar) di luar cakupan.** Disarankan uji manual di browser (drag & drop, WebP, PDF) sebelum rilis. **Perluasan 2026-11-02:** Formatter Teks & PDF ke Gambar selesai → registry **5 tool tersedia** (lihat blok “SESI INI” di bawah).
 > ✅ **SEO & Konten Mesin — FASE S7 (QA & rilis) SELESAI (2026-10-12):** gate penuh hijau (32 suite / **561 test** · build **125 halaman**); audit QA (canonical/robots/sitemap/JSON-LD/noindex/internal linking) bersih; temuan QA **near-duplicate halaman kota diperbaiki** (`serviceCityIntro` + `SERVICE_ANGLES` — paragraf pembuka unik per layanan×kota). Rilis commit+push. Lihat §13.
 > ✅ **SEO & Konten Mesin — FASE S6 SELESAI (2026-10-12):** GA4 opsional + panel **Search Console** (`/admin/seo`), fail-safe. Test `test:search-console` (9). Lihat §11.
 > ✅ **SEO & Konten Mesin — FASE S5 SELESAI (2026-10-12):** programmatic SEO `/layanan/[slug]/[kota]` — 40 halaman konten unik (anti-doorway). Test `test:locations`. Lihat §10.
@@ -66,6 +66,33 @@
 > 📧 **Newsletter & Broadcast P1–P3 ✅ SELESAI (2026-10-11):** UI daftar pelanggan + ekspor, pratinjau/kirim-uji/estimasi penerima, riwayat broadcast, segmen akurat dari orders, header List-Unsubscribe. Lihat [`docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md`](docs/2026-10-11-perbaikan-newsletter-broadcast-p1.md).
 > 📄 **Audit sistem pesanan (pradasar):** **[`docs/2026-10-11-audit-sistem-pesanan.md`](docs/2026-10-11-audit-sistem-pesanan.md)** — ✅ Batch 1–4 selesai.
 > ✅ **Upgrade Beranda (H0–H8):** `docs/2026-10-06-task-upgrade-beranda.md` + `docs/2026-10-06-upgrade-beranda.md`. **SELESAI.**
+
+---
+
+## 🧰 SESI INI — LKTech Tools: Formatter Teks & PDF ke Gambar (F2d/F2e) — SELESAI (kode, 2026-11-02)
+
+**Status: ✅ SELESAI (kode).** Registry kini **5 tool tersedia**; kelima tool punya
+workspace. Dokumen: [`docs/2026-11-01-lktech-tools-space.md`](docs/2026-11-01-lktech-tools-space.md) §16.
+
+- **Formatter Teks (`text-formatter`)** — commit `028636f`: `src/lib/tools/text-pure.ts` +
+  `scripts/tools-text.test.ts` (11), komponen `src/components/tools/text-formatter-tool.tsx`.
+  Mode rapikan/minify JSON (indentasi 2/4/tab, opsi **urutkan kunci**) & rapikan teks;
+  batas input 2 juta karakter; hasil bisa disalin/diunduh.
+- **PDF ke Gambar (`pdf-to-image`)** — `src/lib/tools/pdf-tool-pure.ts` +
+  `scripts/tools-pdf.test.ts` (8), komponen `src/components/tools/pdf-to-image-tool.tsx`.
+  `pdfjs-dist@6.4.299` (**Apache-2.0**) di-load **lazily** (saat berkas PDF dipilih, bukan saat
+  halaman dibuka); worker + `cmaps`/`standard_fonts`/
+  `wasm`/`iccs` **self-host** di `public/pdfjs/` (`scripts/copy-pdfjs-assets.mjs`, jalan via
+  `predev`/`prebuild`; `public/pdfjs/` di-`.gitignore` + diabaikan ESLint). Batas: PDF ≤ **25 MB**,
+  ≤ **30 halaman/proses**, skala **0,5–3**, output ≤ **4096 px**; rentang halaman `1-3,5`, `-4`, `8-`;
+  pesan khusus untuk PDF berpassword/rusak.
+- **Lokal di browser** (tanpa unggahan/endpoint/riwayat); guard halaman tetap **UI**
+  (`UserGuard`, sama seperti `/akun`). **F4 (berbayar) tetap di luar cakupan.**
+- **Gate:** `tsc` ✅ · `eslint` ✅ · unit **1101/1101** · `build` ✅
+  (`/tools/text-formatter` & `/tools/pdf-to-image` ter-prerender; aset `/pdfjs/*` disalin oleh `prebuild`).
+
+**Sisa manual (owner):** uji browser PDF (render, rentang halaman, PDF berpassword) &
+Formatter Teks (JSON besar, salin/unduh).
 
 ---
 

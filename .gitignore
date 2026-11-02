@@ -46,5 +46,8 @@ playwright-report/
 blob-report/
 .playwright/
 
+# Aset runtime pdf.js (disalin otomatis dari node_modules via `predev`/`prebuild`)
+public/pdfjs/
+
 # Log build lokal
 build*.log

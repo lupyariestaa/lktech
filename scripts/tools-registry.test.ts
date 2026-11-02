@@ -32,13 +32,15 @@ test("registry: tools MVP tersedia", () => {
   assert.ok(slugs.includes("color-picker"));
   assert.ok(slugs.includes("image-to-webp"));
   assert.ok(slugs.includes("image-to-pdf"));
+  assert.ok(slugs.includes("pdf-to-image"));
   assert.ok(slugs.includes("text-formatter"));
 });
 
-test("registry: tool 'segera' tidak masuk availableToolSlugs", () => {
-  const slugs = availableToolSlugs();
-  assert.ok(!slugs.includes("pdf-to-image"));
-  assert.ok(slugs.includes("text-formatter"));
+test("registry: availableToolSlugs hanya memuat status 'tersedia'", () => {
+  const available = new Set(availableToolSlugs());
+  for (const tool of TOOLS) {
+    assert.equal(available.has(tool.slug), tool.status === "tersedia", tool.slug);
+  }
 });
 
 test("normalizeToolQuery: trim + lowercase", () => {
