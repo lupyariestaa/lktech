@@ -6,6 +6,7 @@ import { ToolShell } from "@/components/tools/tool-shell";
 import { ColorPickerTool } from "@/components/tools/color-picker-tool";
 import { ImageToWebpTool } from "@/components/tools/image-to-webp-tool";
 import { ImageToPdfTool } from "@/components/tools/image-to-pdf-tool";
+import { TextFormatterTool } from "@/components/tools/text-formatter-tool";
 import type { ToolDefinition } from "@/lib/tools-registry-pure";
 
 /**
@@ -17,6 +18,7 @@ const TOOL_BODIES: Record<string, ComponentType> = {
   "color-picker": ColorPickerTool,
   "image-to-webp": ImageToWebpTool,
   "image-to-pdf": ImageToPdfTool,
+  "text-formatter": TextFormatterTool,
 };
 
 export function ToolWorkspace({ tool }: { tool: ToolDefinition }) {

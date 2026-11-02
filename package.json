@@ -78,6 +78,7 @@
     "test:tools-registry": "node --experimental-strip-types --test scripts/tools-registry.test.ts",
     "test:tools-color": "node --experimental-strip-types --test scripts/tools-color.test.ts",
     "test:tools-image": "node --experimental-strip-types --test scripts/tools-image.test.ts",
+    "test:tools-text": "node --experimental-strip-types --test scripts/tools-text.test.ts",
     "test:stock-reservation": "node --experimental-strip-types --test scripts/stock-reservation.test.ts",
     "test:cart": "node --experimental-strip-types --test scripts/cart-reminder.test.ts",
     "test:cart-identity": "node --experimental-strip-types --test scripts/cart-identity.test.ts",

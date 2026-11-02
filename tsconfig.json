@@ -81,6 +81,7 @@
     "scripts/tools-registry.test.ts",
     "scripts/tools-color.test.ts",
     "scripts/tools-image.test.ts",
+    "scripts/tools-text.test.ts",
     "scripts/cart-reminder.test.ts",
     "scripts/unsubscribe-token.test.ts",
     "scripts/newsletter-pure.test.ts",

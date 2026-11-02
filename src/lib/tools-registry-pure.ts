@@ -92,6 +92,20 @@ export const TOOLS: readonly ToolDefinition[] = [
       "Gambar dan PDF dibuat di browser Anda; tidak ada berkas yang dikirim ke server.",
   },
   {
+    slug: "text-formatter",
+    name: "Formatter Teks",
+    summary: "Rapikan JSON (pretty/minify) dan bersihkan spasi teks.",
+    description:
+      "Validasi & format ulang JSON dengan indentasi pilihan atau jadikan satu baris, serta rapikan spasi dan baris kosong pada teks biasa. Semua diproses lokal di browser.",
+    category: "produktivitas",
+    status: "tersedia",
+    keywords: ["teks", "json", "format", "minify", "pretty", "rapikan", "validasi"],
+    icon: "Braces",
+    local: true,
+    privacyNote:
+      "Teks diproses di browser Anda; tidak ada isi yang dikirim atau disimpan di server.",
+  },
+  {
     slug: "pdf-to-image",
     name: "PDF ke Gambar",
     summary: "Render halaman PDF menjadi gambar PNG/JPG.",
@@ -101,19 +115,6 @@ export const TOOLS: readonly ToolDefinition[] = [
     status: "segera",
     keywords: ["pdf", "gambar", "render", "png", "jpg", "konversi"],
     icon: "Images",
-    local: true,
-    privacyNote: "Rencana: diproses lokal di browser.",
-  },
-  {
-    slug: "text-formatter",
-    name: "Formatter Teks",
-    summary: "Rapikan JSON/teks dan konversi format umum.",
-    description:
-      "Format ulang JSON, rapikan spasi, dan konversi format teks umum. Sedang disiapkan.",
-    category: "produktivitas",
-    status: "segera",
-    keywords: ["teks", "json", "format", "minify", "pretty", "konversi"],
-    icon: "Braces",
     local: true,
     privacyNote: "Rencana: diproses lokal di browser.",
   },
