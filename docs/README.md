@@ -30,7 +30,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 
 | Tanggal    | Dokumen                                                                 | Status      |
 | ---------- | ----------------------------------------------------------------------- | ----------- |
-| 2026-11-01 | [LKTech Tools — Product & Technical Development Plan](2026-11-01-lktech-tools-space.md) | ✅ MVP (F1–F3) + F2d/F2e — 5 tool tersedia (kode); F4 (berbayar) di luar cakupan |
+| 2026-11-01 | [LKTech Tools — Product & Technical Development Plan](2026-11-01-lktech-tools-space.md) | ✅ MVP (F1–F3) + F2d/F2e (5 tool) + F5 (landing `/tools` & ruang `/tools/ruang`); F4 (berbayar) di luar cakupan |
 | 2026-02-14 | [Auth split (admin/user) + Sistem Produk](2026-02-14-auth-split-dan-produk.md) | Selesai |
 | 2026-10-02 | [Rencana Upgrade Sistem Media (M1–M6)](2026-10-02-media-system-upgrade.md) | Selesai |
 | 2026-10-02 | [Upgrade Sidebar Dashboard Admin (audit UI/UX + task flow)](2026-10-02-sidebar-dashboard-upgrade.md) | Selesai |

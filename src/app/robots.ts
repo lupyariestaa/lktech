@@ -15,8 +15,8 @@ export default function robots(): MetadataRoute.Robots {
           "/akun",
           "/keranjang",
           "/masuk",
-          // Area tools khusus pengguna login: tidak perlu diindeks.
-          "/tools",
+          // Landing tools publik (`/tools`) boleh diindeks; ruang & workspace
+          // (semua sub-path di bawahnya) privat — tidak perlu diindeks.
           "/tools/",
           // Halaman unduhan bertoken: bersifat pribadi — jangan diindeks.
           "/unduhan",

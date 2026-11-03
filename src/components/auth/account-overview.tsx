@@ -103,7 +103,7 @@ export function AccountOverview({
               Jelajahi Produk
             </Link>
             <Link
-              href="/tools"
+              href="/tools/ruang"
               className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-secondary transition-colors hover:border-primary/40 hover:text-primary"
             >
               <Wrench className="h-4 w-4" />

@@ -46,6 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE.url}/blog`, lastModified: latestContentDate, changeFrequency: "weekly", priority: 0.8 },
     { url: `${SITE.url}/tentang`, lastModified: stable, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE.url}/kontak`, lastModified: stable, changeFrequency: "yearly", priority: 0.7 },
+    { url: `${SITE.url}/tools`, lastModified: stable, changeFrequency: "monthly", priority: 0.7 },
   ];
 
   // Slug layanan dibaca dari modul layanan (hardcoded).

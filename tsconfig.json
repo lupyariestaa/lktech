@@ -83,6 +83,7 @@
     "scripts/tools-image.test.ts",
     "scripts/tools-text.test.ts",
     "scripts/tools-pdf.test.ts",
+    "scripts/tools-pages.test.ts",
     "scripts/cart-reminder.test.ts",
     "scripts/unsubscribe-token.test.ts",
     "scripts/newsletter-pure.test.ts",

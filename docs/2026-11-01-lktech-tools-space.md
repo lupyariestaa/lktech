@@ -1,6 +1,6 @@
 # LKTech Tools — Product & Technical Development Plan
 
-> **Status:** MVP selesai (F1–F3) + perluasan F2d/F2e (Formatter Teks, PDF ke Gambar) — lihat §14–§16  
+> **Status:** MVP selesai (F1–F3) + perluasan F2d/F2e (Formatter Teks, PDF ke Gambar) + F5 (landing publik & ruang) — lihat §14–§17  
 > **Disusun:** 2026-11-01  
 > **Cakupan:** Space khusus pengguna LKTech yang sudah login, berisi katalog dan workspace tools produktivitas.  
 > **Prinsip:** Mulai dari fondasi yang aman dan beberapa tools inti; tambah tools bertahap berdasarkan kebutuhan dan biaya operasional.
@@ -254,6 +254,7 @@ Dokumen ini adalah rencana produk-teknis, bukan laporan implementasi. Belum ada 
 | F2e | PDF ke Gambar (pdf.js self-host, rentang halaman) | `src/components/tools/pdf-to-image-tool.tsx`, `src/lib/tools/pdf-tool-pure.ts`, `scripts/copy-pdfjs-assets.mjs`, `scripts/tools-pdf.test.ts` |
 | F3 | Hardening/QA: a11y, batas, bundle, tsc/lint/test/build | — |
 | F4 | Model berbayar | di luar cakupan sekarang |
+| F5 | Landing publik `/tools` + pemisahan ruang `/tools/ruang` | `src/app/tools/page.tsx`, `src/app/tools/ruang/page.tsx`, `scripts/tools-pages.test.ts` |
 
 ### Status
 
@@ -264,6 +265,7 @@ Dokumen ini adalah rencana produk-teknis, bukan laporan implementasi. Belum ada 
 - F2b/F2c: ✅ selesai (Gambar ke WebP & Gambar ke PDF + `image-tool-pure` + tes).
 - F2d/F2e: ✅ selesai (Formatter Teks & PDF ke Gambar + `text-pure`/`pdf-tool-pure` + tes; lihat §16).
 - F3: ✅ selesai (lihat §15).
+- F5: ✅ selesai (landing publik `/tools` + ruang gated `/tools/ruang`; lihat §17).
 - F4: ⏸️ di luar cakupan.
 
 ## 15. F3 — Hardening/QA (2026-11-01)
@@ -362,3 +364,45 @@ sehingga kelima tool punya workspace.
   `cmaps`, `standard_fonts`, `wasm`, dan `iccs` semua **200**, serta
   `/tools/pdf-to-image` **200**. JS inti pdf.js (~423 KB) berada di chunk lazy
   terpisah dan **tidak** ada di HTML awal halaman.
+
+## 17. F5 — Landing page publik + pemisahan Ruang (2026-11-03)
+
+Permintaan pemilik: LKTech Tools perlu **halaman pengantar sendiri** sebelum
+masuk ke ruang (katalog) yang butuh login.
+
+### Struktur baru
+
+| Rute | Peran | Akses | SEO |
+|---|---|---|---|
+| `/tools` | Landing publik: hero, daftar tool, cara kerja, privasi, FAQ, CTA | Publik | `index, follow` + canonical + JSON-LD (`BreadcrumbList`/`ItemList`/`FAQPage`) |
+| `/tools/ruang` | Ruang/katalog tool (pencarian + filter kategori) | `UserGuard` | `noindex, nofollow` |
+| `/tools/[slug]` | Workspace tool | `UserGuard` | `noindex, nofollow` |
+
+- `src/app/tools/page.tsx` → landing publik; `src/app/tools/ruang/page.tsx` → ruang.
+- Navigasi internal diarahkan ke ruang: `tool-shell` ("Kembali ke ruang tools")
+  & `account-overview` ("Buka LKTech Tools"). Menu navbar `Tools` tetap ke
+  landing `/tools`.
+- `robots.txt`: hanya sub-path `/tools/` di-disallow; landing `/tools` diizinkan
+  (mengandalkan aturan prefix — `"/tools/"` memblokir `/tools/ruang` &
+  `/tools/[slug]`, tanpa memblokir `/tools`).
+- `sitemap.xml`: `/tools` ditambahkan (prioritas 0.7).
+
+### Verifikasi
+
+- `npx tsc --noEmit` — bersih.
+- `npx eslint .` — bersih.
+- `npm run test:unit` — **1107 lulus / 0 gagal** (termasuk 6 tes wiring baru).
+- `npm run build` — sukses; `/tools` & `/tools/ruang` **statis**, `/tools/[slug]` **SSG**.
+- Server produksi (`next start`) diuji: `/tools` → `index, follow` + canonical +
+  `ItemList`/`FAQPage`; `/tools/ruang` & `/tools/color-picker` → `noindex, nofollow`;
+  `robots.txt` memuat `Disallow: /tools/` (tanpa memblokir `/tools`); `sitemap.xml`
+  memuat `/tools`.
+- **Penjaga regresi** `scripts/tools-pages.test.ts` (6): landing tanpa `UserGuard`
+  & boleh diindeks; ruang & workspace wajib `UserGuard` + noindex; robots & sitemap
+  sesuai aturan di atas; navigasi internal menunjuk ke `/tools/ruang`.
+
+### Keterbatasan jujur
+
+- Landing mengandalkan aturan prefix `robots.txt` (`/tools/`) untuk memisahkan
+  area publik vs privat; workspace & ruang tetap `noindex` di level metadata.
+- Landing hanya menampilkan pratinjau tool; interaksi penuh tetap di ruang gated.

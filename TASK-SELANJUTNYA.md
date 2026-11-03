@@ -69,6 +69,21 @@
 
 ---
 
+## 🧰 SESI INI — LKTech Tools: Landing Publik + Ruang (`/tools` & `/tools/ruang`) — SELESAI (kode, 2026-11-03)
+
+**Status: ✅ SELESAI (kode).** Permintaan pemilik: LKTech Tools punya **landing page
+publik** sendiri sebelum masuk ruang login-gated. Dokumen: [`docs/2026-11-01-lktech-tools-space.md`](docs/2026-11-01-lktech-tools-space.md) §17.
+
+- **Struktur baru:** `/tools` = **landing publik** (hero, daftar 5 tool, cara kerja, privasi, FAQ, CTA) `index, follow` + canonical + JSON-LD (`BreadcrumbList`/`ItemList`/`FAQPage`); `/tools/ruang` = **ruang/katalog** `UserGuard` + `noindex`; `/tools/[slug]` tetap gated + noindex.
+- **Navigasi:** `tool-shell` ("Kembali ke ruang tools") & `account-overview` diarahkan ke `/tools/ruang`; menu navbar `Tools` tetap ke landing `/tools`.
+- **robots.txt:** hanya sub-path `/tools/` di-disallow; landing `/tools` diizinkan. **sitemap.xml:** `/tools` ditambahkan (0.7).
+- **Penjaga regresi:** `scripts/tools-pages.test.ts` (6) — landing tanpa `UserGuard`, ruang/workspace wajib `UserGuard`, robots & sitemap sesuai.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · unit **1107/1107** · `build` ✅ (`/tools` & `/tools/ruang` statis; `/tools/[slug]` SSG). Uji server produksi: landing `index, follow`; ruang & workspace `noindex`; `robots.txt` `Disallow: /tools/`; sitemap memuat `/tools`.
+
+**Sisa manual (owner):** buka `/tools` tanpa login (halaman pengantar), lalu klik "Masuk ke Tools" — anonim diarahkan ke login dan kembali ke ruang setelah masuk.
+
+---
+
 ## 🧰 SESI INI — LKTech Tools: Formatter Teks & PDF ke Gambar (F2d/F2e) — SELESAI (kode, 2026-11-02)
 
 **Status: ✅ SELESAI (kode).** Registry kini **5 tool tersedia**; kelima tool punya

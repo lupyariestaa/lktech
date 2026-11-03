@@ -21,11 +21,11 @@ export function ToolShell({
 
       <div className="relative mx-auto max-w-5xl px-6">
         <Link
-          href="/tools"
+          href="/tools/ruang"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted transition-colors hover:text-primary"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Kembali ke katalog tools
+          Kembali ke ruang tools
         </Link>
 
         <div className="mt-6 flex items-start gap-4">

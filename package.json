@@ -80,6 +80,7 @@
     "test:tools-image": "node --experimental-strip-types --test scripts/tools-image.test.ts",
     "test:tools-text": "node --experimental-strip-types --test scripts/tools-text.test.ts",
     "test:tools-pdf": "node --experimental-strip-types --test scripts/tools-pdf.test.ts",
+    "test:tools-pages": "node --experimental-strip-types --test scripts/tools-pages.test.ts",
     "pdfjs:assets": "node scripts/copy-pdfjs-assets.mjs",
     "predev": "npm run pdfjs:assets",
     "prebuild": "npm run pdfjs:assets",
