@@ -73,7 +73,7 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | — | Navbar | `sections/navbar.tsx` | Client | Sticky, dropdown desktop + akordeon mobile. Sudah rapi. |
 | 1 | Hero | `sections/hero.tsx` | Client | Beranda: parallax + animated headline + trust bar + cursor glow ✅ (F1); **scene 3D/WebGL lazy** di tablet+ ✅ (F5), dulu **terpusat di kolom visual kanan** (F7). **F9:** hero jadi **satu kolom teks-center**; elemen 3D (`hero-3d.tsx`) & efek kursor (cursor glow, magnetic CTA, pointer) **dilepas**; mesin tik judul & parallax dipertahankan. |
 | 1b | Pratinjau | `sections/showcase.tsx` | Client | **Baru (F7):** mockup browser (carousel, gambar `browser` saja) — dipindah dari hero. Tepat setelah hero. |
-| 2 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor. `/tentang` tetap grid 3 kolom. |
+| 2 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor; **F11:** 4 kartu jadi grid **2×2 lega** (bukan sebaris sempit) + poles hover/fokus/ritme. `/tentang` tetap grid 3 kolom. |
 | 3 | Technologies | `sections/technologies.tsx` | Client | **F8:** strip "Teknologi yang kami gunakan" dipindah ke **antara Layanan & Portofolio** (dulu tepat setelah Pratinjau); marquee kini **dua baris** — atas ke kiri (`animate-marquee`), bawah ke kanan (urutan dibalik, `animate-marquee-reverse`), satu mask kiri/kanan untuk keduanya; pause saat hover. **F6.2:** tombol **Jeda/Mainkan** (WCAG 2.2.2), disembunyikan saat reduced-motion. |
 | 4 | Portfolio Teaser | `sections/portfolio-teaser.tsx` | Server | Grid 3 kolom, ambil `getProjects()`. |
 | 5 | Why Us | `sections/why-us.tsx` | Client | Grid 3 kolom + stagger. Pola berulang. |
@@ -672,6 +672,32 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   saat terlihat; tombol Jeda/Mainkan berfungsi; reduced-motion `animationName: none` & toggle absen;
   tangkapan layar 1440/1024/768/390/360 diperiksa.
 
+### F11 — Layanan Kami: bento 2×2 lega + poles interaksi — effort S
+- **Permintaan pemilik (verbatim):** *"next optimasi sections : Layanan Kami"* (lanjutan permintaan
+  "lebih baik rapi responsive dan smooth" seperti F9/F10).
+- **Masalah yang ditemukan** (tangkapan 1440/1024): kartu unggulan selebar penuh sudah baik, tetapi
+  4 kartu layanan lain dipaksa **sebaris 4 kolom** (`lg:col-span-3`). Di dalam `max-w-6xl` tiap kartu
+  hanya ±230–253 px, sehingga teks deskripsi patah menjadi baris 3–4 kata dan tinggi kartu tidak
+  seimbang. Di 768 (2 kolom) sudah nyaman — jadi masalahnya khusus breakpoint `lg`+.
+- **Perubahan** ✅:
+  - **Grid 2×2 di semua layar ≥ `sm`.** Kartu kecil memakai `lg:col-span-6` (bukan `lg:col-span-3`);
+    kartu unggulan tetap `sm:col-span-2 lg:col-span-12`. Lebar kartu naik dari ±230 px → ±478–542 px,
+    deskripsi kembali 1–2 baris rapi, tinggi kartu seragam per baris (`h-full`).
+  - **Ritme responsif:** section `py-20 sm:py-24`; grid `mt-12 sm:mt-14`, `gap-4 sm:gap-5`;
+    padding kartu `p-5 sm:p-6` (kecil) dan `p-6 sm:p-7 lg:p-8` (unggulan).
+  - **Hover lebih halus:** transisi dipersempit ke `translate`/`transform`/`box-shadow`/`border-color`
+    dengan `ease-out` (bukan `transition-all`), tetap lift `-translate-y-1` + shadow aksen.
+    Catatan Tailwind v4: utility `-translate-y-*` memakai properti CSS `translate` — harus ikut
+    didaftarkan di `transition-[…]`, kalau tidak lift akan melompat tanpa animasi.
+  - **Fokus keyboard jelas:** `focus-visible:ring-2 ring-primary/50 ring-offset-2` pada seluruh kartu
+    (kartu = tautan), tanpa mengubah spotlight kursor yang sudah ada.
+  - Konten TIDAK dipangkas: ikon, judul, tagline, deskripsi, poin unggulan, dan "Lihat detail" tetap.
+- **Verifikasi** ✅: `tsc` bersih · `eslint` bersih · `build` sukses · Playwright (produksi `next start`):
+  ukuran kartu 1440 `[1104, 542×4]`, 1024 `[976, 478×4]`, 768 `[720, 350×4]`, 390/360 satu kolom;
+  spotlight hover (`--mx/--my`, opacity 1) & fokus keyboard (`:focus-visible` + ring) berfungsi;
+  reduced-motion menampilkan kartu langsung (tanpa transform/opacity awal); screenshot 1440/1024/768/390
+  diperiksa.
+
 ### F6 — Polish & QA — effort M
 - **Temuan audit (P1–P3) & resolusi** ✅:
   - **P1 — cover produk terpotong:** cover asli 16:9 dipaksa ke bingkai 4:3 + `object-cover`, teks di dalam cover terpangkas ±25% lebarnya. **F6.1:** bingkai kartu jadi `aspect-[16/9]`; prop baru `imageSizes` (default `/produk` 2 kolom: `(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw`; beranda & detail: `(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw`) agar `srcset` tidak mengunduh 100vw. Bila cover gagal dimuat (timeout optimizer/aset hilang), `onError` menampilkan placeholder ikon — bukan kartu kosong.
@@ -701,7 +727,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
 | `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask); *(F7.6)* probe WebGL melepas konteks (`WEBGL_lose_context`), cross-fade frame pertama (`FirstFrame` → `onReady`), `antialias:false`, bola inti 64², entrance diperhalus; *(F7.7)* `FrozenFrame` — frame beku via `advance(0)` selama `frameloop="never"` sampai `play`, lalu jam R3F di-reset → entrance mulai dari nol; *(F7.8)* wrapper kanvas = kemunculan beranimasi (`transition-[opacity,scale]` 0,9 s dari `scale-[0.94] opacity-0`) dan `play` menyala tepat saat itu (`sceneReady`); ***(F9) file DIHAPUS*** — 3D dilepas dari hero | 🗑️ Dihapus (F9) |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
-| `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
+| `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang`; *(F11)* kartu kecil **2×2 lega** (`lg:col-span-6`), padding/ritme responsif, transisi hover terarah, ring fokus keyboard | ✅ Selesai |
 | `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero; *(F7.5)* ganti carousel satu kartu → **band melengkung full-bleed** (`ShowcaseBand`), kartu mockup lama jadi keadaan kosong; *(F6.2)* state pause + tombol Jeda/Mainkan di bawah band | ✅ Selesai |
 | `src/components/sections/showcase-band.tsx` *(F7.5)* | Band gambar melengkung ala silinder (12 pita/tile, loop murni CSS `transform`, statis saat reduced-motion); *(F6.2)* prop `paused` → `animationPlayState` per tile | ✅ Selesai |
 | `src/components/motion-toggle.tsx` *(F6.2)* | Tombol **Jeda/Mainkan** bersama untuk konten bergerak otomatis (marquee teknologi & band Pratinjau) — WCAG 2.2.2; `aria-label` dinamis, ikon Pause/Play | ✅ Selesai |
@@ -772,6 +798,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F6 | Polish & QA (cover 16:9, kontras/target, pause animasi, intro sekali per sesi, perf & lintas browser) | ✅ Selesai (kode + QA) |
 | F9 | Hero teks-center: lepas elemen 3D + efek kursor, hero satu kolom terpusat (revisi F5/F7.x) | ✅ Selesai (kode) |
 | F10 | Pratinjau: skala tile responsif per breakpoint + jeda animasi saat di luar viewport | ✅ Selesai (kode) |
+| F11 | Layanan Kami: bento 2×2 lega (hentikan 4-across sempit) + poles hover/fokus/ritme | ✅ Selesai (kode) |
 
 ---
 

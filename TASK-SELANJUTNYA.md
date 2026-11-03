@@ -69,6 +69,30 @@
 
 ---
 
+## 🧩 SESI INI — Section Layanan Kami: Bento 2×2 Lega + Poles Interaksi (F11) — SELESAI (kode, 2026-11-03)
+
+**Status: ✅ SELESAI (kode).** Permintaan pemilik: optimasi section **Layanan Kami** agar lebih rapi,
+responsif, dan smooth. Dokumen:
+[`docs/2026-10-15-blueprint-upgrade-homepage-uiux.md`](docs/2026-10-15-blueprint-upgrade-homepage-uiux.md) §F11.
+
+- **Akar masalah:** 4 kartu layanan dipaksa sebaris 4 kolom (`lg:col-span-3`) di dalam `max-w-6xl`
+  → tiap kartu hanya ±230–253 px, deskripsi patah 3–4 kata per baris.
+- **Grid 2×2:** kartu kecil kini `lg:col-span-6` (kartu unggulan tetap selebar penuh) → lebar
+  ±478–542 px, teks 1–2 baris rapi, tinggi seragam per baris.
+- **Ritme responsif:** `py-20 sm:py-24`; grid `mt-12 sm:mt-14`, `gap-4 sm:gap-5`; padding kartu
+  `p-5 sm:p-6` (kecil) & `p-6 sm:p-7 lg:p-8` (unggulan).
+- **Hover halus:** transisi hanya `transform`/`box-shadow`/`border-color` (`ease-out`), lift
+  `-translate-y-1` + shadow aksen; spotlight kursor dipertahankan.
+- **Aksesibilitas:** ring fokus keyboard `focus-visible:ring-2 ring-primary/50 ring-offset-2`.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · unit **1107/1107** · `build` ✅ · Playwright produksi: ukuran kartu
+  1440 `[1104, 542×4]`, 1024 `[976, 478×4]`, 768 `[720, 350×4]`, 390/360 satu kolom; spotlight hover &
+  fokus keyboard berfungsi; reduced-motion menampilkan kartu tanpa animasi awal; screenshot diperiksa.
+
+**Sisa manual (owner):** buka beranda → scroll ke **Layanan Kami**. Di desktop kartu layanan harus
+tampil **2×2 lega** (tidak lagi sempit 4 sebaris), teks rapi, dan hover/fokus terasa halus.
+
+---
+
 ## 🖼️ SESI INI — Section Pratinjau: Responsif & Smooth (F10) — SELESAI (kode, 2026-11-03)
 
 **Status: ✅ SELESAI (kode).** Permintaan pemilik: optimasi section **Pratinjau** agar lebih rapi,

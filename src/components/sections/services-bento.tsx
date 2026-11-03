@@ -23,13 +23,17 @@ import type { Service } from "@/lib/services";
  * `src/components/sections/services.tsx` (grid) **tidak diubah** karena juga
  * dipakai `/tentang`.
  *
+ * F11: kartu kecil disusun **2×2 lega** di layar ≥ `sm` (dulu 4 sebaris di
+ * `lg` sehingga teks sempit & patah-patah), padding/ritme dibuat responsif,
+ * dan kartu mendapat ring fokus keyboard yang jelas.
+ *
  * Konten TIDAK dipangkas: tiap layanan tetap menampilkan ikon, judul, tagline,
  * deskripsi, dan tautan "Lihat detail"; kartu unggulan menambah poin singkat
  * (`landingPoints`) yang sudah ada di sumber data.
  */
 export function ServicesBento() {
   return (
-    <section id="layanan" className="relative scroll-mt-24 bg-surface py-24">
+    <section id="layanan" className="relative scroll-mt-24 bg-surface py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           align="left"
@@ -55,8 +59,10 @@ export function ServicesBento() {
         />
 
         {/* Bento: kartu unggulan jadi banner lebar (baris 1), 4 layanan lain
-            sebaris di bawahnya (baris 2). Hierarki jelas tanpa ruang kosong. */}
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-12">
+            dalam grid 2×2 yang lega. Sebelumnya 4 kartu dipaksa sebaris di
+            desktop sehingga teksnya sempit & patah-patah; 2×2 memberi lebar
+            baca yang nyaman di semua ukuran. */}
+        <div className="mt-12 grid gap-4 sm:mt-14 sm:grid-cols-2 sm:gap-5 lg:grid-cols-12">
           {SERVICES.map((service, i) => (
             <Reveal
               key={service.slug}
@@ -65,7 +71,7 @@ export function ServicesBento() {
                 "h-full",
                 i === 0
                   ? "sm:col-span-2 lg:col-span-12"
-                  : "sm:col-span-1 lg:col-span-3",
+                  : "sm:col-span-1 lg:col-span-6",
               )}
             >
               <BentoServiceCard service={service} feature={i === 0} />
@@ -100,9 +106,10 @@ function BentoServiceCard({
       target={`/layanan/${service.slug}`}
       onMouseMove={onMove}
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300",
+        "group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition-[translate,transform,box-shadow,border-color] duration-300 ease-out",
         "hover:-translate-y-1 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10",
-        feature ? "p-7 lg:p-8" : "p-6",
+        "focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:outline-none",
+        feature ? "p-6 sm:p-7 lg:p-8" : "p-5 sm:p-6",
       )}
     >
       {/* Spotlight (mengikuti kursor) */}
