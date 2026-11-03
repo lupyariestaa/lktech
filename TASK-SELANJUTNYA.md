@@ -69,6 +69,28 @@
 
 ---
 
+## 🎨 SESI INI — Hero Beranda Teks-Center: Lepas 3D & Efek Kursor (F9) — SELESAI (kode, 2026-11-03)
+
+**Status: ✅ SELESAI (kode).** Permintaan pemilik: header beranda terasa berat karena elemen 3D; hero
+dibuat **teks saja, center**, tanpa **efek yang mengikuti kursor**. Dokumen:
+[`docs/2026-10-15-blueprint-upgrade-homepage-uiux.md`](docs/2026-10-15-blueprint-upgrade-homepage-uiux.md) §F9.
+
+- **Hero satu kolom teks-center:** `src/components/sections/hero.tsx` ditulis ulang — grid dua kolom diganti
+  `mx-auto w-full max-w-4xl px-6 text-center`; CTA & trust bar `justify-center`; sub-judul `mx-auto max-w-2xl`.
+- **3D dilepas:** `Hero3D`, panggung kanan, `CoreFallback`, `CORE_GRADIENT`/`CORE_GLOW`/`EDGE_MASK`,
+  gerbang `sceneEnabled`/`mountScene`/`sceneReady`/`fallbackOn`/`SAFETY_FALLBACK_MS`.
+- **Efek kursor dilepas:** `CursorGlow`, `Magnetic`, pointer `pointerX`/`pointerY`, `cursorEnabled`.
+- **Dipertahankan:** mesin tik judul 3 varian, parallax scroll berlapis, shine CTA, trust bar + count-up,
+  latar grid/aurora.
+- **Pembersihan:** `src/components/sections/hero-3d.tsx` **dihapus**; `three`, `@react-three/fiber`,
+  `@react-three/postprocessing`, `postprocessing`, `@types/three` dilepas dari `package.json` + lockfile.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · unit **1107/1107** · `build` ✅ (beranda tetap statis; tak ada importer `three` tersisa).
+
+**Sisa manual (owner):** buka beranda — hero harus teks-center tanpa bola 3D, tanpa glow/magnet di
+belakang/sekitar kursor; judul tetap berganti (mesin tik) dan CTA tetap bisa diklik.
+
+---
+
 ## 🧰 SESI INI — LKTech Tools: Landing Publik + Ruang (`/tools` & `/tools/ruang`) — SELESAI (kode, 2026-11-03)
 
 **Status: ✅ SELESAI (kode).** Permintaan pemilik: LKTech Tools punya **landing page

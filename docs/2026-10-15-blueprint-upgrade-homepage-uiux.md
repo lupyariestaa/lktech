@@ -71,7 +71,7 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | --- | --- | --- | --- | --- |
 | — | Intro loader | `components/intro-loader.tsx` | Client | Panel ganda + progress, ~2,1 dtk, kunci scroll. Selalu tampil tiap kunjungan beranda. *(F5: bug reduced-motion diperbaiki)* |
 | — | Navbar | `sections/navbar.tsx` | Client | Sticky, dropdown desktop + akordeon mobile. Sudah rapi. |
-| 1 | Hero | `sections/hero.tsx` + `sections/hero-3d.tsx` | Client | Beranda: parallax + animated headline + trust bar + cursor glow ✅ (F1); **scene 3D/WebGL lazy** di tablet+ ✅ (F5), kini **terpusat di kolom visual kanan** (F7). Mobile: hero murni teks. |
+| 1 | Hero | `sections/hero.tsx` | Client | Beranda: parallax + animated headline + trust bar + cursor glow ✅ (F1); **scene 3D/WebGL lazy** di tablet+ ✅ (F5), dulu **terpusat di kolom visual kanan** (F7). **F9:** hero jadi **satu kolom teks-center**; elemen 3D (`hero-3d.tsx`) & efek kursor (cursor glow, magnetic CTA, pointer) **dilepas**; mesin tik judul & parallax dipertahankan. |
 | 1b | Pratinjau | `sections/showcase.tsx` | Client | **Baru (F7):** mockup browser (carousel, gambar `browser` saja) — dipindah dari hero. Tepat setelah hero. |
 | 2 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor. `/tentang` tetap grid 3 kolom. |
 | 3 | Technologies | `sections/technologies.tsx` | Client | **F8:** strip "Teknologi yang kami gunakan" dipindah ke **antara Layanan & Portofolio** (dulu tepat setelah Pratinjau); marquee kini **dua baris** — atas ke kiri (`animate-marquee`), bawah ke kanan (urutan dibalik, `animate-marquee-reverse`), satu mask kiri/kanan untuk keduanya; pause saat hover. **F6.2:** tombol **Jeda/Mainkan** (WCAG 2.2.2), disembunyikan saat reduced-motion. |
@@ -625,6 +625,30 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
     di dalam mask. Tangkapan layar desktop & mobile diperiksa (dua pita, tepi memudar, ritme rapi).
   - tsc/eslint/unit(593)/build hijau.
 
+### F9 — Hero teks-center: lepas elemen 3D & efek kursor (revisi F5/F7.x) — effort S
+- **Permintaan pemilik (verbatim):** *"kita ke landing page dulu, aku pengen upgrade header sectionsnya di
+  landing page home, perubahannya hapus element 3D itu kayaknya bikin berat banget. Jadi nanti kontennya
+  text saja center gitu, terus hilangkan juga effect yang mengikuti cursor di sections header."*
+- **Keputusan (dikonfirmasi pemilik):** mesin tik judul **dipertahankan**; `hero-3d.tsx` + paket
+  `three`/`@react-three/*`/`postprocessing` **dihapus** sekalian.
+- **Perubahan** ✅ (`src/components/sections/hero.tsx` ditulis ulang):
+  - **Hero jadi satu kolom teks terpusat.** Grid dua kolom (`lg:grid-cols-2`) diganti pembungkus tunggal
+    `mx-auto w-full max-w-4xl px-6 text-center`; CTA & trust bar memakai `justify-center`; sub-judul
+    `mx-auto max-w-2xl`.
+  - **Elemen 3D dilepas total:** `Hero3D` (dynamic import), panggung kanan (`[container-type:size]`),
+    `CoreFallback`, `CORE_GRADIENT`/`CORE_GLOW`/`EDGE_MASK`, gerbang `sceneEnabled`/`mountScene`/
+    `sceneReady`/`fallbackOn`/`SAFETY_FALLBACK_MS`, `onSceneReady`.
+  - **Efek pengikut kursor dilepas:** `CursorGlow`, pembungkus `Magnetic` pada CTA, motion value pointer
+    `pointerX`/`pointerY`, dan flag `cursorEnabled` — beserta impor yang jadi tak terpakai
+    (`next/dynamic`, `useCallback`, `useMotionValue`, `useSpring`, `RefObject`, `MEDIA_QUERIES`/`useMediaQuery`).
+  - **Dipertahankan (tidak diminta dihapus):** mesin tik judul 3 varian (`HeroTyped`), parallax scroll
+    berlapis per blok, sapuan kilau hover CTA, trust bar + count-up, dan latar dekoratif (grid + aurora).
+  - `src/components/sections/hero-3d.tsx` **dihapus**; `three`, `@react-three/fiber`,
+    `@react-three/postprocessing`, `postprocessing`, `@types/three` dilepas dari `package.json`
+    (+ `package-lock.json` diperbarui lewat `npm install`).
+- **Verifikasi** ✅: `tsc` bersih · `eslint` bersih · unit **1107/1107** · `build` sukses (beranda tetap
+  statis). Bundle `three` tak lagi ada (tidak ada importer tersisa di repo).
+
 ### F6 — Polish & QA — effort M
 - **Temuan audit (P1–P3) & resolusi** ✅:
   - **P1 — cover produk terpotong:** cover asli 16:9 dipaksa ke bingkai 4:3 + `object-cover`, teks di dalam cover terpangkas ±25% lebarnya. **F6.1:** bingkai kartu jadi `aspect-[16/9]`; prop baru `imageSizes` (default `/produk` 2 kolom: `(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw`; beranda & detail: `(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw`) agar `srcset` tidak mengunduh 100vw. Bila cover gagal dimuat (timeout optimizer/aset hilang), `onError` menampilkan placeholder ikon — bukan kartu kosong.
@@ -652,13 +676,13 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/scroll-progress.tsx` | Bar progres scroll (beranda) |
 | `src/components/pinned-section.tsx` | Wrapper sticky generik untuk storytelling |
 | `src/components/section-seam.tsx` *(F2)* | Jahitan gradien di batas antar-section |
-| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask); *(F7.6)* probe WebGL melepas konteks (`WEBGL_lose_context`), cross-fade frame pertama (`FirstFrame` → `onReady`), `antialias:false`, bola inti 64², entrance diperhalus; *(F7.7)* `FrozenFrame` — frame beku via `advance(0)` selama `frameloop="never"` sampai `play`, lalu jam R3F di-reset → entrance mulai dari nol; *(F7.8)* wrapper kanvas = kemunculan beranimasi (`transition-[opacity,scale]` 0,9 s dari `scale-[0.94] opacity-0`) dan `play` menyala tepat saat itu (`sceneReady`) | ✅ Selesai |
+| `src/components/sections/hero-3d.tsx` *(F5)* | Scene 3D/WebGL hero, lazy + gated (tablet+, bukan reduced-motion); *(F7.1)* pointer/scroll/drag/entrance + konstelasi/satelit/starfield + bloom; *(F7.2)* komposisi di-fit ke frame + soft-fade tepi (shader + mask); *(F7.6)* probe WebGL melepas konteks (`WEBGL_lose_context`), cross-fade frame pertama (`FirstFrame` → `onReady`), `antialias:false`, bola inti 64², entrance diperhalus; *(F7.7)* `FrozenFrame` — frame beku via `advance(0)` selama `frameloop="never"` sampai `play`, lalu jam R3F di-reset → entrance mulai dari nol; *(F7.8)* wrapper kanvas = kemunculan beranimasi (`transition-[opacity,scale]` 0,9 s dari `scale-[0.94] opacity-0`) dan `play` menyala tepat saat itu (`sceneReady`); ***(F9) file DIHAPUS*** — 3D dilepas dari hero | 🗑️ Dihapus (F9) |
 | `src/components/sections/process-timeline.tsx` *(F3)* | Timeline scroll-driven beranda (pinned) — `process.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/services-bento.tsx` *(F4)* | Bento grid layanan (beranda) — `services.tsx` tetap untuk `/tentang` | ✅ Selesai |
 | `src/components/sections/showcase.tsx` *(F7)* | Section "Pratinjau" (mockup browser) — dipindah dari hero; *(F7.5)* ganti carousel satu kartu → **band melengkung full-bleed** (`ShowcaseBand`), kartu mockup lama jadi keadaan kosong; *(F6.2)* state pause + tombol Jeda/Mainkan di bawah band | ✅ Selesai |
 | `src/components/sections/showcase-band.tsx` *(F7.5)* | Band gambar melengkung ala silinder (12 pita/tile, loop murni CSS `transform`, statis saat reduced-motion); *(F6.2)* prop `paused` → `animationPlayState` per tile | ✅ Selesai |
 | `src/components/motion-toggle.tsx` *(F6.2)* | Tombol **Jeda/Mainkan** bersama untuk konten bergerak otomatis (marquee teknologi & band Pratinjau) — WCAG 2.2.2; `aria-label` dinamis, ikon Pause/Play | ✅ Selesai |
-| `src/components/intro-gate.tsx` *(F7.6)* | Gerbang intro beranda: `IntroGate` (provider per-mount halaman) + `useIntroDone` / `useIntroFinisher` — sumber tunggal "intro loader sudah selesai?" untuk scene 3D; *(F6.3)* `useIntroSkip` + cek `sessionStorage` di layout-effect → intro sekali per sesi tab | ✅ Selesai |
+| `src/components/intro-gate.tsx` *(F7.6)* | Gerbang intro beranda: `IntroGate` (provider per-mount halaman) + `useIntroDone` / `useIntroFinisher` — sumber tunggal "intro loader sudah selesai?" untuk entrance hero & navbar (dulu juga scene 3D; F9 scene dilepas); *(F6.3)* `useIntroSkip` + cek `sessionStorage` di layout-effect → intro sekali per sesi tab | ✅ Selesai |
 | `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` | **Dokumen ini** |
 
 ### Diubah (usulan)
@@ -671,8 +695,8 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | `src/components/section-heading.tsx` | *(F2)* Varian alignment/ukuran + slot `action` | ✅ Selesai |
 | `src/components/sections/process.tsx` | *(F3)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
 | `src/components/sections/services.tsx` | *(F4)* **Tidak diubah** — tetap grid, dipakai `/tentang` | ✅ (dibiarkan) |
-| `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev); *(F7.1)* `@react-three/postprocessing` + `postprocessing` | ✅ Selesai |
-| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`); *(F7.6)* `mountScene` (gerbang intro) + `CoreFallback` yang tak pernah dibuang sebelum frame pertama 3D; *(F7.7)* kirim `play={!fallbackOn}`, samakan `CoreFallback` dengan **frame beku** (gradien dari profil render `uIntro=0`, cincin = proyeksi eksak torus); *(F7.8)* panggung **kosong** selama menunggu (`fallbackOn` mulai `false`), fallback turun jadi jaring pengaman (`SAFETY_FALLBACK_MS` 4 s, selalu fade-in lewat prop `hidden`), `play={sceneReady}`; *(F6.3)* entrance teks dijalankan saat `introDone` (tanpa `delayChildren` 2,13 dtk) + `HeroTyped` mulai langsung saat intro dilewati | ✅ Selesai |
+| `package.json` | *(F5)* Tambah `three`, `@react-three/fiber` (+ `@types/three` dev); *(F7.1)* `@react-three/postprocessing` + `postprocessing`; *(F9)* **semua paket three dilepas** — hero kembali teks-center, tak ada importer tersisa | ✅ Selesai |
+| `src/components/sections/hero.tsx` | *(F1)* Parallax, animated headline, trust bar, cursor glow; *(F5)* mount `Hero3D` lazy + `z-10` konten; *(F7)* kolom kanan → panggung 3D (terpusat) + `CoreFallback`, chip dihapus, mobile hero teks saja, prop `socialProof` dihapus; *(F7.3)* kolom kiri — kicker chip, judul **mask-reveal**, paragraf ber-penekanan, CTA magnetic+shine, trust **count-up**, parallax scroll berlapis; *(F7.4)* judul & sub **berputar 3 varian** (mesin tik + sub fade-in, anti-CLS `grid` reserve, `HeroTyped`); *(F7.6)* `mountScene` (gerbang intro) + `CoreFallback` yang tak pernah dibuang sebelum frame pertama 3D; *(F7.7)* kirim `play={!fallbackOn}`, samakan `CoreFallback` dengan **frame beku** (gradien dari profil render `uIntro=0`, cincin = proyeksi eksak torus); *(F7.8)* panggung **kosong** selama menunggu (`fallbackOn` mulai `false`), fallback turun jadi jaring pengaman (`SAFETY_FALLBACK_MS` 4 s, selalu fade-in lewat prop `hidden`), `play={sceneReady}`; *(F6.3)* entrance teks dijalankan saat `introDone` (tanpa `delayChildren` 2,13 dtk) + `HeroTyped` mulai langsung saat intro dilewati; *(F9)* **ditulis ulang**: satu kolom **teks-center** (`max-w-4xl`), 3D + `CursorGlow`/`Magnetic`/pointer dilepas, mesin tik & parallax dipertahankan | ✅ Selesai |
 | `src/components/intro-loader.tsx` | *(F5)* Perbaiki bug reduced-motion (loader tak pernah unmount → blokir klik & kunci scroll); *(F7.6)* lapor `finish()` ke `IntroGate` saat fase `done`; *(F6.3)* lewati seluruh timeline saat sesi sudah melihat intro + tandai `sessionStorage` di akhir intro pertama | ✅ Selesai |
 | `src/components/product-card.tsx` | *(F6.1)* Cover `aspect-[16/9]` (mengikuti rasio asli, tidak terpotong), prop `imageSizes`, fallback `onError` → placeholder ikon | ✅ Selesai |
 | `src/components/sections/footer.tsx` | *(F6.1)* Kontras tautan `text-slate-600` + target sentuh 28 px (`inline-flex py-1`, gap dirapatkan) | ✅ Selesai |
@@ -723,6 +747,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F7.8 | Hero 3D: panggung kosong saat menunggu → muncul dengan animasi (fade + scale 0,9 s); fallback jadi jaring pengaman | ✅ Selesai (kode) |
 | F8 | Teknologi: pindah ke antara Layanan & Portofolio + marquee dua baris (kiri/kanan) | ✅ Selesai (kode) |
 | F6 | Polish & QA (cover 16:9, kontras/target, pause animasi, intro sekali per sesi, perf & lintas browser) | ✅ Selesai (kode + QA) |
+| F9 | Hero teks-center: lepas elemen 3D + efek kursor, hero satu kolom terpusat (revisi F5/F7.x) | ✅ Selesai (kode) |
 
 ---
 

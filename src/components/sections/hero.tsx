@@ -1,14 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   animate,
   motion,
   useInView,
-  useMotionValue,
   useScroll,
-  useSpring,
   useTransform,
   type MotionValue,
   type Variants,
@@ -32,59 +29,6 @@ import { useSettings } from "@/components/settings-provider";
 import { useContent } from "@/components/content-provider";
 import { useIntroDone, useIntroSkip } from "@/components/intro-gate";
 import { introDelay, useReducedMotionPreference } from "@/lib/intro";
-import { MEDIA_QUERIES, useMediaQuery } from "@/lib/use-media-query";
-
-/**
- * Scene 3D hero (F5) — lazy + client-only (`ssr: false`) agar `three` hanya
- * diunduh di layar besar & bukan pada bundel/SSR awal. Di-mount hanya saat
- * `≥768px`, bukan reduced-motion, **dan intro loader sudah selesai** (F7.6,
- * lihat `mountScene`).
- */
-const Hero3D = dynamic(() => import("@/components/sections/hero-3d"), {
-  ssr: false,
-});
-
-/**
- * Cahaya halus yang mengikuti kursor (desktop saja).
- *
- * Mendengarkan `mousemove` pada container hero (via `containerRef`) dan
- * memakai motion value + pegas agar gerakannya lembut. Menggerakkan elemen
- * dengan `transform` (motion `x`/`y`) — GPU-friendly, tanpa re-render React.
- * Mulai tak terlihat lalu memudar masuk saat mouse pertama bergerak (menghindari
- * "disc" yang menggantung di posisi awal). Hanya di-mount pada layar besar &
- * bukan reduced-motion (lihat `cursorEnabled` di `Hero`).
- */
-function CursorGlow({ containerRef }: { containerRef: RefObject<HTMLElement | null> }) {
-  // Ukuran elemen 36rem = 576px → offset separuh (288px) agar pusat tepat di kursor.
-  const HALF = 288;
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const opacity = useMotionValue(0);
-  const sx = useSpring(x, { stiffness: 90, damping: 25, mass: 0.4 });
-  const sy = useSpring(y, { stiffness: 90, damping: 25, mass: 0.4 });
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onMove = (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
-      x.set(e.clientX - rect.left - HALF);
-      y.set(e.clientY - rect.top - HALF);
-      if (opacity.get() === 0) opacity.set(1);
-    };
-    el.addEventListener("mousemove", onMove, { passive: true });
-    return () => el.removeEventListener("mousemove", onMove);
-  }, [containerRef, x, y, opacity]);
-
-  return (
-    <motion.div
-      aria-hidden="true"
-      className="pointer-events-none absolute top-0 left-0 z-0 h-[36rem] w-[36rem] rounded-full bg-primary/10 blur-[120px]"
-      style={{ x: sx, y: sy, opacity }}
-    />
-  );
-}
 
 /**
  * Blok teks "naik + fokus" untuk animasi masuk (entrance). Dipakai lewat
@@ -255,44 +199,10 @@ function Block({
 }
 
 /**
- * Pembungkus "magnet": isinya bergeser halus mengikuti kursor (spring), lalu
- * kembali ke posisi awal. Hanya desktop (pointer presisi) & bukan reduced-motion
- * — kalau tidak, anak dirender polos tanpa pembungkus.
- */
-function Magnetic({ enabled, children }: { enabled: boolean; children: ReactNode }) {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const sx = useSpring(x, { stiffness: 220, damping: 20, mass: 0.4 });
-  const sy = useSpring(y, { stiffness: 220, damping: 20, mass: 0.4 });
-
-  if (!enabled) return <>{children}</>;
-
-  return (
-    <motion.div
-      className="inline-flex"
-      style={{ x: sx, y: sy }}
-      onPointerMove={(e) => {
-        const r = e.currentTarget.getBoundingClientRect();
-        if (!r.width || !r.height) return;
-        x.set(((e.clientX - r.left) / r.width - 0.5) * 10);
-        y.set(((e.clientY - r.top) / r.height - 0.5) * 8);
-      }}
-      onPointerLeave={() => {
-        x.set(0);
-        y.set(0);
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-/**
  * Judul + sub-judul hero yang **berputar** (F7.4).
  *
  * Dipisah jadi komponen sendiri supaya mesin tik — yang men-update state tiap
- * ±55 ms — hanya me-render ulang subtree kecil ini; `Hero` dan scene 3D tidak
- * ikut tersentuh.
+ * ±55 ms — hanya me-render ulang subtree kecil ini.
  *
  * Anti-CLS: judul & sub dibungkus `grid` berisi salinan **tak terlihat** semua
  * varian (`invisible col-start-1 row-start-1`) → tinggi kotak dikunci oleh
@@ -344,7 +254,11 @@ function HeroTyped({
         </h1>
       </Block>
 
-      <Block variants={rise} y={reduced ? undefined : yPara} className="mt-6 max-w-xl">
+      <Block
+        variants={rise}
+        y={reduced ? undefined : yPara}
+        className="mx-auto mt-6 max-w-2xl"
+      >
         <div className="grid">
           <p
             className="col-start-1 row-start-1 text-base leading-relaxed text-muted transition-all duration-500 sm:text-lg"
@@ -412,138 +326,6 @@ function CountUp({
   );
 }
 
-/**
- * Soft-fade tepi panggung — **sama persis** dengan `EDGE_MASK` di `hero-3d.tsx`.
- * Sengaja disalin, bukan diimpor: file itu di-`dynamic import` (client-only), dan
- * mengimpor konstanta darinya akan ikut menarik `three` ke bundel awal.
- */
-const EDGE_MASK =
-  "radial-gradient(closest-side, rgba(0,0,0,1) 85%, rgba(0,0,0,0) 100%)";
-
-/**
- * F7.8: batas tunggu sebelum panggung 3D dianggap gagal (WebGL tak pernah
- * melapor siap) → fallback CSS muncul sebagai jaring pengaman. Di perangkat
- * normal frame pertama jauh lebih cepat dari ini (≤ ~1 s).
- */
-const SAFETY_FALLBACK_MS = 4000;
-
-/**
- * Fallback CSS statis "inti digital" (tablet ke atas) — **jaring pengaman**,
- * bukan lagi tampilan default.
- *
- * F7.8: selama menunggu, panggung sengaja dibiarkan **kosong**; bola 3D-nya
- * masuk dengan animasi begitu ia siap (fade + sedikit membesar — lihat
- * `Hero3D`). Bola CSS yang sudah nongol sejak awal justru membuat kemunculan
- * 3D terbaca sebagai "pergantian elemen", bukan animasi masuk.
- *
- * Fallback ini hanya tampil bila scene tak akan/tak boleh hidup:
- * - `prefers-reduced-motion`, layar < tablet, atau WebGL tak tersedia → ia
- *   satu-satunya visual (statis, tanpa animasi);
- * - canvas tak melapor siap dalam 4 s (WebGL gagal dibuat di tengah jalan) →
- *   panggung tidak boleh kosong selamanya (jaring pengaman `fallbackOn`).
- *
- * Ia selalu **fade in** (lewat prop `hidden`), tidak pernah "pop"; dan bila
- * ternyata 3D menyusul siap, ia memudar lewat `painted` seperti dulu.
- *
- * F7.6b: fallback ini adalah **salinan eksak kondisi frame-0 scene 3D**, jadi
- * cross-fade ke canvas tidak lagi terbaca sebagai "dua elemen 3D berbeda"
- * (keluhan: bentuk awal vs sesudah loading terlihat seperti dua objek). Semua
- * angka di bawah disalin dari `hero-3d.tsx` saat `uIntro = 0`:
- * - Bola inti: radius 1,3 unit; skala grup `COMPOSITION_HALF` (2,6) → siluet
- *   selalu **50 % sisi terpendek panggung** (`50cqmin`; panggung diberi
- *   `container-type: size` → `cqmin` = sisi terpendeknya, persis seperti
- *   `Math.min(viewport.width, viewport.height)` di shader). Di sini digambar
- *   `54cqmin` karena tepi *terlihat* bola 3D melebar oleh bloom (lihat
- *   `CORE_GRADIENT`).
- * - Warna & halo: nilai **render** 3D (tepi + bloom) diukur per radius dengan
- *   skrip QA screencast ad-hoc (buang setelah dipakai) lalu disalin apa adanya
- *   ke `CORE_GRADIENT` (0→138 px) dan `CORE_GLOW` (putih ±0,6 → 0 sampai 264 px).
- *   Profilnya diambil dari **frame beku** (`uIntro = 0`): di kondisi itu rim
- *   fresnel di-boost (`(1 − uIntro)`) sehingga tepi bola lebih putih daripada
- *   kondisi stabil — kalau diukur saat stabil, tepi fallback tampak 40–55 level
- *   lebih gelap dari canvas saat cross-fade (terukur F7.7).
- * - Cincin: torus r 1,9 & 2,15 pada skala entrance 0,8× — diproyeksikan eksak
- *   (perspektif kamera z=6, fov 45) → ring1
- *   60,7 × 10,0cqmin @ −3°, ring2 69,0 × 4,0cqmin @ −29,9°; warna + opasitas
- *   sama seperti materialnya. Perkiraan "pipih dari normal torus" (F7.6b) tidak
- *   akurat: perspektif membuat sumbu mayor +3 % dan sumbu minor lebih pipih.
- *
- * Tanpa animasi → aman untuk reduced-motion; semuanya ikut ukuran panggung.
- */
-/**
- * Gradasi bola fallback = **hasil ukur profil radial** render 3D kondisi
- * frame beku (`uIntro = 0`, F7.7).
- *
- * Radius 0→138 px pada panggung 512 px dipetakan ke 0→100 % radius bola di sini
- * (`54cqmin` = diameter 276 px — yaitu tepi bola 3D yang *terlihat*: siluet
- * asli 256 px + sebaran bloom). Tiap stop = warna rata-rata piksel 3D di radius
- * itu, jadi efek bloom + rim boost yang "mencuci" bola 3D ikut tersalin apa
- * adanya (bukan tebakan): tengah ~#2454c3, zona gelap pertengahan lebih lebar,
- * lalu tepi naik tajam ke putih di 90→96 %, dan memudar (`rgba(...,0)`) di ujung
- * supaya tepinya lembut seperti bloom.
- */
-const CORE_GRADIENT =
-  "radial-gradient(circle closest-side," +
-  "#2454c3 0%,#2956c5 32%,#315bc7 49%,#4066cd 61%,#4b6fd2 67%," +
-  "#597bdb 72%,#698ae7 78%,#85a9fa 84%,#b4dffe 90%,#f7fffe 96%," +
-  "rgba(250,254,254,0.6) 98%,rgba(250,254,254,0) 100%)";
-
-/**
- * Halo bloom di luar bola — dari profil radial yang sama: putih ±0,6 → 0 pada
- * radius 264 px (= `103cqmin`), puncaknya tepat di tepi bola (r 156–180 px).
- * Ini yang membuat siluet bola 3D tampak "menyala" di atas latar terang.
- *
- * Alphanya sengaja ~0,5 (bukan ~0,9 walau itu lebih dekat ke angka profil):
- * bloom 3D bersifat *additive*, jadi garis grid di belakang panggung tetap
- * terlihat menembus glow — dengan alpha tinggi, garis itu "tercuci" putih di
- * fallback (terukur di QA: fallback kehilangan grid, 3D tidak).
- */
-const CORE_GLOW =
-  "radial-gradient(circle closest-side," +
-  "rgba(255,255,255,0.6) 0%,rgba(255,255,255,0.6) 50%," +
-  "rgba(255,255,255,0.52) 59%,rgba(255,255,255,0.45) 68%," +
-  "rgba(255,255,255,0.3) 77%,rgba(255,255,255,0.18) 86%," +
-  "rgba(255,255,255,0.09) 91%,rgba(255,255,255,0) 100%)";
-
-function CoreFallback({
-  painted = false,
-  hidden = false,
-}: {
-  /** Ada canvas 3D siap → fallback memudar keluar (cross-fade). */
-  painted?: boolean;
-  /** Belum diizinkan tampil → tetap transparan (dipakai untuk fade-in). */
-  hidden?: boolean;
-}) {
-  return (
-    <div
-      className={
-        "absolute inset-0 transition-opacity duration-700 " +
-        (painted || hidden ? "opacity-0" : "opacity-100")
-      }
-      style={{ maskImage: EDGE_MASK, WebkitMaskImage: EDGE_MASK }}
-    >
-      {/* Halo bloom di belakang inti (pengganti Bloom 3D). */}
-      <div
-        className="absolute top-1/2 left-1/2 size-[103cqmin] -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{ background: CORE_GLOW }}
-      />
-      {/* Inti: warna & gradasi tersalin dari profil render 3D. */}
-      <div
-        className="absolute top-1/2 left-1/2 size-[54cqmin] -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{ background: CORE_GRADIENT }}
-      />
-      {/* Cincin orbit, geometri dari proyeksi eksak torusnya (kamera z=6, fov 45),
-          pada skala entrance 0,8×:
-          ring1 — semi-mayor 154,3 px & semi-minor 24,6 px, sumbu mayor −3,0° →
-          kotak 60,7 × 10,0cqmin (border-box: garis tengah = 154,4 / 24,6 px).
-          ring2 — semi-mayor 176,1 px & semi-minor 9,6 px, sumbu mayor −29,9° →
-          kotak 69,0 × 4,0cqmin (garis tengah = 176,0 / 9,6 px). */}
-      <div className="absolute top-1/2 left-1/2 h-[10cqmin] w-[60.7cqmin] -translate-x-1/2 -translate-y-1/2 -rotate-[3deg] rounded-[50%] border-2 border-[#4d82ec]/55" />
-      <div className="absolute top-1/2 left-1/2 h-[4cqmin] w-[69cqmin] -translate-x-1/2 -translate-y-1/2 -rotate-[29.9deg] rounded-[50%] border-[1.25px] border-[#7aa2ff]/30" />
-    </div>
-  );
-}
-
 export function Hero() {
   const reduced = useReducedMotionPreference();
   const settings = useSettings();
@@ -560,52 +342,14 @@ export function Hero() {
     hidden: {},
     show: { transition: { staggerChildren: 0.09 } },
   };
-  // Efek kursor hanya untuk layar besar (tablet ke atas) & bukan reduced-motion.
-  const isDesktop = useMediaQuery(MEDIA_QUERIES.desktopUp);
-  const cursorEnabled = isDesktop && !reduced;
-  // Scene 3D (F5): hanya tablet ke atas & bukan reduced-motion.
-  const isTabletUp = useMediaQuery(MEDIA_QUERIES.tabletUp);
-  const sceneEnabled = isTabletUp && !reduced;
-  // F7.6: scene 3D baru di-mount setelah intro loader selesai. Sebelumnya ia
-  // ikut menyala di balik loader (chunk `three` + init WebGL + kompilasi shader
-  // berebut main thread dengan animasi pembuka) dan fallback CSS-nya justru
-  // hilang saat hidrasi → panggung kosong beberapa detik.
-  const mountScene = sceneEnabled && introDone;
-  // `sceneReady` = canvas 3D sudah menggambar frame pertamanya.
-  const [sceneReady, setSceneReady] = useState(false);
-  // F7.8: panggung **kosong** selama menunggu (bukan bola CSS diam). Elemen 3D
-  // baru ditampilkan saat siap, dan tampilnya dianimasikan (fade + membesar di
-  // `Hero3D`) — permintaan: "sebelum loading beres kayak none dulu, kalau sudah
-  // beres muncul dengan animasi, nggak instan banget".
-  const [fallbackOn, setFallbackOn] = useState(false);
-  // Jaring pengaman: kalau canvas tak pernah melapor siap (WebGL gagal dibuat di
-  // tengah jalan — `probeWebgl` lolos tapi konteks asli ditolak, GPU diblokir),
-  // panggung tak boleh kosong selamanya → fallback CSS muncul, dengan fade.
-  useEffect(() => {
-    if (!mountScene || sceneReady) return;
-    const t = setTimeout(() => setFallbackOn(true), SAFETY_FALLBACK_MS);
-    return () => clearTimeout(t);
-  }, [mountScene, sceneReady]);
-  const onSceneReady = useCallback(() => setSceneReady(true), []);
-  // Fallback yang sempat tampil (jalur jaring pengaman) baru dilepas setelah
-  // cross-fade ke canvas selesai — supaya pergantiannya tidak "memotong".
-  useEffect(() => {
-    if (!sceneReady || !fallbackOn) return;
-    const t = setTimeout(() => setFallbackOn(false), 900);
-    return () => clearTimeout(t);
-  }, [sceneReady, fallbackOn]);
-  // Semua kemunculan fallback lewat fade (bukan pop): satu frame jeda dulu
-  // supaya kelas `opacity` barunya ikut ditransisikan.
-  const showFallback = !sceneEnabled || fallbackOn;
-  const [fallbackIn, setFallbackIn] = useState(false);
-  useEffect(() => {
-    if (!showFallback) return;
-    const raf = requestAnimationFrame(() => setFallbackIn(true));
-    return () => {
-      cancelAnimationFrame(raf);
-      setFallbackIn(false);
-    };
-  }, [showFallback]);
+
+  // Kejujuran data (FASE H2): klaim sosial di bawah CTA hanya ditampilkan bila
+  // berasal dari data NYATA & boleh tayang — bukan stat placeholder bawaan.
+  // `featuredStat` memakai penanda `featured` eksplisit (fallback label "klien"
+  // hanya untuk data lama), sehingga mengganti label tidak lagi menyembunyikan
+  // baris sosial secara diam-diam (AUD section statistik).
+  const honestStats = publishableStats(stats, isDefaultStats(stats));
+  const clientStat = featuredStat(honestStats);
 
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -624,31 +368,6 @@ export function Hero() {
   const yCta = useTransform(scrollYProgress, [0, 1], [0, -14]);
   const yTrust = useTransform(scrollYProgress, [0, 1], [0, -6]);
   const opacityText = useTransform(scrollYProgress, [0.35, 1], [1, 0]);
-  const yMock = useTransform(scrollYProgress, [0, 1], [0, 50]);
-  const opacityStage = useTransform(scrollYProgress, [0, 1], [1, 0.65]);
-
-  // Posisi kursor ternormalisasi (−1…1) untuk interaksi scene 3D: miring inti,
-  // parallax kamera, & "lampu" partikel. Di-update via motion value → tanpa
-  // re-render React. Hanya didengar saat scene benar-benar hidup (F7.6).
-  const pointerX = useMotionValue(0);
-  const pointerY = useMotionValue(0);
-  useEffect(() => {
-    if (!mountScene) return;
-    const onMove = (e: PointerEvent) => {
-      pointerX.set((e.clientX / window.innerWidth) * 2 - 1);
-      pointerY.set((e.clientY / window.innerHeight) * 2 - 1);
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
-  }, [mountScene, pointerX, pointerY]);
-
-  // Kejujuran data (FASE H2): klaim sosial di bawah CTA hanya ditampilkan bila
-  // berasal dari data NYATA & boleh tayang — bukan stat placeholder bawaan.
-  // `featuredStat` memakai penanda `featured` eksplisit (fallback label "klien"
-  // hanya untuk data lama), sehingga mengganti label tidak lagi menyembunyikan
-  // baris sosial secara diam-diam (AUD section statistik).
-  const honestStats = publishableStats(stats, isDefaultStats(stats));
-  const clientStat = featuredStat(honestStats);
 
   return (
     <section
@@ -661,11 +380,9 @@ export function Hero() {
       <div className="pointer-events-none absolute -top-24 -left-24 h-[32rem] w-[32rem] animate-aurora rounded-full bg-primary/25 blur-[120px]" />
       <div className="pointer-events-none absolute top-1/3 -right-24 h-[28rem] w-[28rem] animate-aurora rounded-full bg-primary-light/25 blur-[120px] [animation-delay:-6s]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white to-transparent" />
-      {cursorEnabled && <CursorGlow containerRef={sectionRef} />}
 
-      <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2">
+      <div className="relative z-10 mx-auto w-full max-w-4xl px-6 text-center">
         <motion.div
-          className="relative"
           variants={stagger}
           initial="hidden"
           animate={introDone ? "show" : "hidden"}
@@ -688,26 +405,24 @@ export function Hero() {
           />
 
           <Block variants={rise} y={reduced ? undefined : yCta} className="mt-8">
-            <div className="flex flex-wrap items-center gap-3">
-              <Magnetic enabled={cursorEnabled}>
-                <TrackedWaButton
-                  location="hero"
-                  href={waLink(WA_MESSAGES.general, settings.whatsapp)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  size="lg"
-                  className="group overflow-hidden"
-                >
-                  {/* Sapuan kilau saat hover (murni dekoratif). */}
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-0 left-0 w-1/2 -translate-x-[150%] skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]"
-                  />
-                  <MessageCircle className="h-5 w-5" />
-                  Mulai Konsultasi
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </TrackedWaButton>
-              </Magnetic>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <TrackedWaButton
+                location="hero"
+                href={waLink(WA_MESSAGES.general, settings.whatsapp)}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="lg"
+                className="group overflow-hidden"
+              >
+                {/* Sapuan kilau saat hover (murni dekoratif). */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 left-0 w-1/2 -translate-x-[150%] skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]"
+                />
+                <MessageCircle className="h-5 w-5" />
+                Mulai Konsultasi
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </TrackedWaButton>
               <ButtonAnchor
                 href="#layanan"
                 size="lg"
@@ -722,7 +437,7 @@ export function Hero() {
 
           {/* Trust bar — hanya sinyal JUJUR (tanpa angka palsu). */}
           <Block variants={rise} y={reduced ? undefined : yTrust} className="mt-9">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
               {clientStat && (
                 <TrustItem icon={<Users className="h-3.5 w-3.5" />}>
                   <span>
@@ -744,44 +459,6 @@ export function Hero() {
               </TrustItem>
             </div>
           </Block>
-        </motion.div>
-
-        {/* Kolom kanan (tablet+): panggung visual untuk inti digital 3D. Canvas
-            `Hero3D` di-scope ke panggung ini. F7.8: selama menunggu panggung
-            dibiarkan **kosong** — canvas masuk dengan animasi saat siap; fallback
-            CSS hanya jaring pengaman (reduced-motion / WebGL tak tersedia / 3D
-            tak pernah siap). Di mobile kolom disembunyikan → hero murni teks. */}
-        <motion.div
-          aria-hidden="true"
-          className={
-            // `[container-type:size]`: panggung jadi *size container* → fallback
-            // CSS bisa memakai satuan `cqmin` (= sisi terpendek panggung), sama
-            // seperti `Math.min(viewport.width, viewport.height)` di shader 3D.
-            // Hasilnya ukuran bola fallback = bola 3D di viewport mana pun.
-            "relative hidden h-[24rem] [container-type:size] md:block lg:h-[32rem] " +
-            (sceneEnabled
-              ? "cursor-grab active:cursor-grabbing"
-              : "pointer-events-none")
-          }
-          style={reduced ? undefined : { y: yMock, opacity: opacityStage }}
-        >
-          {showFallback && (
-            <CoreFallback painted={sceneReady} hidden={!fallbackIn} />
-          )}
-          {mountScene && (
-            <Hero3D
-              interaction={{
-                scroll: scrollYProgress,
-                pointer: { x: pointerX, y: pointerY },
-              }}
-              onReady={onSceneReady}
-              // F7.8: begitu frame pertama tergambar, scene langsung "bangun"
-              // (entrance dari nol) bersamaan dengan animasi masuknya kanvas
-              // (fade + membesar, di `Hero3D`) — jadi kemunculannya terlihat
-              // sebagai satu animasi, bukan pergantian elemen.
-              play={sceneReady}
-            />
-          )}
         </motion.div>
       </div>
     </section>
