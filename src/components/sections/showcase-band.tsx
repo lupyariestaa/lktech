@@ -7,6 +7,7 @@ import {
   useState,
   type AnimationEvent,
   type ComponentProps,
+  type CSSProperties,
 } from "react";
 import type { HeroShowcaseImage } from "@/lib/content-types";
 import { useReducedMotionPreference } from "@/lib/intro";
@@ -157,6 +158,9 @@ export type ShowcaseBandProps = {
  * `prefers-reduced-motion` → tiap tile **ditempatkan statis** pada busurnya
  * (satu frame band yang beku, tetap melengkung & utuh). Tidak bisa mengandalkan
  * "jeda" animasi: aturan global kita mematikan seluruh animasi pada mode itu.
+ *
+ * Animasi juga otomatis **dijeda saat band di luar viewport** (IntersectionObserver)
+ * agar tidak ada kerja compositor saat pengguna membaca section lain.
  */
 export function ShowcaseBand({
   images,
@@ -186,6 +190,31 @@ export function ShowcaseBand({
   // Hanya berubah saat tile membungkus (di luar layar), jadi resize pun tidak
   // menukar gambar yang sedang tampil.
   const [shown, setShown] = useState<Record<number, number>>({});
+
+  // Optimasi: hentikan animasi saat band di luar viewport — tidak ada kerja
+  // compositor saat pengguna membaca section lain. `rootMargin: 0` → hanya
+  // berjalan saat benar-benar terlihat.
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return;
+        const visible = entry.isIntersecting;
+        // Verifikasi ulang setelah satu frame: callback pertama kadang datang
+        // sebelum layout stabil (mis. hero belum setinggi viewport), sehingga
+        // `isIntersecting` bisa sempat `true` padahal band masih jauh di bawah.
+        requestAnimationFrame(() => {
+          const r = el.getBoundingClientRect();
+          setInView(visible && r.bottom > 0 && r.top < window.innerHeight);
+        });
+      },
+      { rootMargin: "0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -297,6 +326,20 @@ export function ShowcaseBand({
           // `limit` disembunyikan persis seperti di keyframes.
           const deg = -sweep + t * pitch;
           const off = Math.abs(deg) > limit;
+          // Animasi ditulis sebagai **longhand** (bukan shorthand `animation`).
+          // Shorthand akan me-reset `animation-play-state` saat React menyetel
+          // ulang style (bug: band tetap berjalan walau di luar viewport).
+          const anim: CSSProperties | undefined = reduced
+            ? undefined
+            : {
+                animationName: orbit,
+                animationDuration: `${duration}s`,
+                animationTimingFunction: "linear",
+                animationDelay: `${-t * speed}s`,
+                animationIterationCount: "infinite",
+                animationPlayState:
+                  !paused && inView ? "running" : "paused",
+              };
           return (
             <div
               key={t}
@@ -307,14 +350,7 @@ export function ShowcaseBand({
                 width: u(aspectRatio),
                 height: u(1),
                 transformStyle: "preserve-3d",
-                // Tile t mulai t tile di sepanjang loop.
-                animation: reduced
-                  ? "none"
-                  : `${orbit} ${duration}s linear ${-t * speed}s infinite`,
-                // Jeda manual (tombol) — bukan reduced-motion; posisi beku di
-                // frame saat tombol ditekan, lanjut lagi saat dimainkan.
-                animationPlayState:
-                  !reduced && paused ? "paused" : undefined,
+                ...anim,
                 transform: reduced ? turn(deg) : undefined,
                 visibility: reduced ? (off ? "hidden" : "visible") : undefined,
               }}
@@ -344,6 +380,8 @@ export function ShowcaseBand({
                     // antaranya. Pita terakhir tak punya tetangga.
                     width: k === SLICES - 1 ? u(share) : `calc(${u(share)} + 1px)`,
                     height: u(1),
+                    // Jangan gambar sisi belakang pita (hemat overdraw).
+                    backfaceVisibility: "hidden",
                     transform: turn((aspectRatio / 2 - (k + 0.5) * share) * unit),
                   }}
                 >

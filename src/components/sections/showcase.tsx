@@ -8,11 +8,12 @@ import { HeroShowcaseCarousel } from "@/components/hero-showcase-carousel";
 import { ShowcaseBand } from "@/components/sections/showcase-band";
 import { MotionToggle } from "@/components/motion-toggle";
 import { useReducedMotionPreference } from "@/lib/intro";
+import { MEDIA_QUERIES, useMediaQuery } from "@/lib/use-media-query";
 
 /**
  * Section "Pratinjau" (F7) — hasil desain yang sebelumnya menjadi mockup di
- * kolom kanan hero. Hero kini menampilkan inti digital 3D; mockup dipindah ke
- * sini agar tetap tampil sebagai bukti visual.
+ * kolom kanan hero. Hero kini teks-center (F9); mockup dipindah ke sini agar
+ * tetap tampil sebagai bukti visual.
  *
  * F7.5: gambar tidak lagi berupa carousel satu kartu, melainkan **band
  * melengkung** (`ShowcaseBand`) yang mengalir terus — gambar yang sama, cara
@@ -25,6 +26,10 @@ import { useReducedMotionPreference } from "@/lib/intro";
  * full-bleed, jadi teks yang terpusat terbaca sebagai satu komposisi simetris
  * (teks tengah → band melengkung → memudar ke tepi).
  *
+ * Responsif: tinggi panggung & skala tile dipilih per breakpoint (lihat
+ * `tileHeight`) supaya ±3 tile terlihat di semua lebar — ponsel tidak lagi
+ * hanya menampilkan satu tile raksasa yang terpotong.
+ *
  * Hanya memakai gambar `browser` (desktop) — mockup ponsel (`mobile`) sengaja
  * belum dipakai. Konten diambil dari `hero` (pengaturan yang sama, dikelola di
  * dashboard) sehingga tidak ada data baru/duplikat.
@@ -35,11 +40,19 @@ export function Showcase() {
   const reduced = useReducedMotionPreference();
   const hasImages = hero.enabled && hero.browser.length > 0;
 
+  // Skala tile mengikuti tinggi panggung, dipilih per breakpoint agar jumlah
+  // tile yang terlihat konsisten (~3) dari ponsel sampai desktop. Nilai ini
+  // dipakai JS (`measure`) sekaligus CSS (`cqh`) di `ShowcaseBand`.
+  const smUp = useMediaQuery(MEDIA_QUERIES.smUp);
+  const mdUp = useMediaQuery(MEDIA_QUERIES.tabletUp);
+  const lgUp = useMediaQuery(MEDIA_QUERIES.desktopUp);
+  const tileHeight = lgUp ? 52 : mdUp ? 48 : smUp ? 45 : 40;
+
   return (
     <section
       id="pratinjau"
       aria-label="Pratinjau hasil desain"
-      className="relative scroll-mt-24 overflow-hidden bg-white py-24"
+      className="relative scroll-mt-24 overflow-hidden bg-white py-20 sm:py-24"
     >
       {/* Latar lembut agar gambar terasa "berpanggung" (bukan menempel datar). */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface via-white to-white" />
@@ -64,19 +77,19 @@ export function Showcase() {
       {hasImages ? (
         /* Full-bleed: ujung band melengkung & memudar ke tepi layar. */
         <>
-          <Reveal delay={0.1} className="mt-14">
+          <Reveal delay={0.1} className="mt-10 sm:mt-14">
             <ShowcaseBand
               images={hero.browser}
               speed={3}
-              tileHeight={52}
+              tileHeight={tileHeight}
               aspectRatio={1.6}
               paused={paused}
-              className="h-[280px] sm:h-[340px] lg:h-[400px]"
+              className="h-[230px] sm:h-[290px] md:h-[330px] lg:h-[400px]"
             />
           </Reveal>
           {/* WCAG 2.2.2: band bergerak terus → sediakan kontrol jeda. */}
           {!reduced && (
-            <div className="relative mt-6 flex justify-center">
+            <div className="relative mt-5 flex justify-center sm:mt-6">
               <MotionToggle
                 paused={paused}
                 onToggle={() => setPaused((v) => !v)}
@@ -86,7 +99,7 @@ export function Showcase() {
           )}
         </>
       ) : (
-        <div className="relative mx-auto mt-14 max-w-6xl px-6">
+        <div className="relative mx-auto mt-10 max-w-6xl px-6 sm:mt-14">
           <div className="relative mx-auto max-w-5xl">
             {/* Glow dasar agar kartu "mengambang". */}
             <div className="pointer-events-none absolute inset-x-8 -bottom-6 h-24 rounded-[50%] bg-primary/20 blur-3xl" />

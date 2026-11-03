@@ -69,6 +69,31 @@
 
 ---
 
+## 🖼️ SESI INI — Section Pratinjau: Responsif & Smooth (F10) — SELESAI (kode, 2026-11-03)
+
+**Status: ✅ SELESAI (kode).** Permintaan pemilik: optimasi section **Pratinjau** agar lebih rapi,
+responsif, dan smooth. Dokumen:
+[`docs/2026-10-15-blueprint-upgrade-homepage-uiux.md`](docs/2026-10-15-blueprint-upgrade-homepage-uiux.md) §F10.
+
+- **Skala tile responsif:** `showcase.tsx` memilih `tileHeight` per breakpoint lewat `useMediaQuery`
+  (`MEDIA_QUERIES.smUp` baru): **40/45/48/52** pada `<640/≥640/≥768/≥1024`, tinggi panggung
+  **230/290/330/400 px** → ±3 tile konsisten di semua lebar (ponsel tak lagi 1–2 tile raksasa).
+- **Ritme:** `py-20 sm:py-24`, band `mt-10 sm:mt-14`, toggle `mt-5 sm:mt-6`.
+- **Hemat compositor:** animasi band otomatis **dijeda saat di luar viewport** (IntersectionObserver +
+  verifikasi rAF). `animation-play-state` kini benar-benar berlaku.
+- **Perbaikan bug:** animasi ditulis sebagai **longhand** (bukan shorthand `animation`) — shorthand
+  me-reset `animationPlayState` saat React menyetel ulang style. `backface-visibility: hidden` pada pita.
+- **Reduced-motion:** band tetap statis; tombol Jeda disembunyikan.
+- **Gate:** `tsc` ✅ · `eslint` ✅ · unit **1107/1107** · `build` ✅ · Playwright produksi: paused di luar
+  viewport → running saat terlihat; Jeda/Mainkan berfungsi; reduced-motion `animationName: none`;
+  screenshot 1440/1024/768/390/360 diperiksa.
+
+**Sisa manual (owner):** buka beranda → scroll ke **Pratinjau**. Di ponsel harus terlihat ±3 tile rapi
+(tidak terpotong), animasi halus, tombol **Jeda/Mainkan** bekerja, dan saat section ditinggalkan animasi
+berhenti (baterai/CPU lebih hemat).
+
+---
+
 ## 🎨 SESI INI — Hero Beranda Teks-Center: Lepas 3D & Efek Kursor (F9) — SELESAI (kode, 2026-11-03)
 
 **Status: ✅ SELESAI (kode).** Permintaan pemilik: header beranda terasa berat karena elemen 3D; hero

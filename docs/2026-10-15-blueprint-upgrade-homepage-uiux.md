@@ -649,6 +649,29 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 - **Verifikasi** ✅: `tsc` bersih · `eslint` bersih · unit **1107/1107** · `build` sukses (beranda tetap
   statis). Bundle `three` tak lagi ada (tidak ada importer tersisa di repo).
 
+### F10 — Pratinjau: responsif + jeda hemat compositor — effort S
+- **Permintaan pemilik (verbatim):** *"sekarang sections Pratinjau. aku pengen di opsimasi lagi menjadi lebih
+  baik rapi responsive dan smooth."*
+- **Perubahan** ✅:
+  - **Skala tile responsif.** `Showcase` memilih `tileHeight` per breakpoint lewat `useMediaQuery`
+    (breakpoint baru `MEDIA_QUERIES.smUp`): **40 / 45 / 48 / 52** untuk `<640 / ≥640 / ≥768 / ≥1024`,
+    dengan tinggi panggung **230 / 290 / 330 / 400 px**. Hasilnya ±3 tile terlihat konsisten di semua
+    lebar — ponsel tidak lagi menampilkan 1–2 tile raksasa yang terpotong.
+  - **Ritme lebih rapi:** padding section `py-20 sm:py-24`, jarak band `mt-10 sm:mt-14`, kontrol
+    `mt-5 sm:mt-6`.
+  - **Animasi dijeda saat di luar viewport** (`IntersectionObserver` + verifikasi `requestAnimationFrame`):
+    tidak ada kerja compositor saat pengguna membaca section lain.
+  - **Perbaikan bug halus:** animasi tile ditulis sebagai **longhand** (`animationName`, `animationDuration`,
+    `animationTimingFunction`, `animationDelay`, `animationIterationCount`, `animationPlayState`) alih-alih
+    shorthand `animation`. Shorthand ternyata me-reset `animationPlayState` saat React menyetel ulang style
+    → band tetap berjalan walau sudah "dijeda".
+  - `backface-visibility: hidden` pada pita tile (hemat overdraw).
+  - `prefers-reduced-motion` tetap menampilkan band **statis** (tanpa animasi, tombol Jeda disembunyikan).
+- **Verifikasi** ✅: `tsc` bersih · `eslint` bersih · unit **1107/1107** · `build` sukses ·
+  Playwright (produksi `next start`): `animation-play-state` **paused** di luar viewport → **running**
+  saat terlihat; tombol Jeda/Mainkan berfungsi; reduced-motion `animationName: none` & toggle absen;
+  tangkapan layar 1440/1024/768/390/360 diperiksa.
+
 ### F6 — Polish & QA — effort M
 - **Temuan audit (P1–P3) & resolusi** ✅:
   - **P1 — cover produk terpotong:** cover asli 16:9 dipaksa ke bingkai 4:3 + `object-cover`, teks di dalam cover terpangkas ±25% lebarnya. **F6.1:** bingkai kartu jadi `aspect-[16/9]`; prop baru `imageSizes` (default `/produk` 2 kolom: `(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw`; beranda & detail: `(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw`) agar `srcset` tidak mengunduh 100vw. Bila cover gagal dimuat (timeout optimizer/aset hilang), `onError` menampilkan placeholder ikon — bukan kartu kosong.
@@ -748,6 +771,7 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
 | F8 | Teknologi: pindah ke antara Layanan & Portofolio + marquee dua baris (kiri/kanan) | ✅ Selesai (kode) |
 | F6 | Polish & QA (cover 16:9, kontras/target, pause animasi, intro sekali per sesi, perf & lintas browser) | ✅ Selesai (kode + QA) |
 | F9 | Hero teks-center: lepas elemen 3D + efek kursor, hero satu kolom terpusat (revisi F5/F7.x) | ✅ Selesai (kode) |
+| F10 | Pratinjau: skala tile responsif per breakpoint + jeda animasi saat di luar viewport | ✅ Selesai (kode) |
 
 ---
 

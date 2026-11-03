@@ -7,9 +7,11 @@ import { useCallback, useSyncExternalStore } from "react";
  * Selaras dengan breakpoint Tailwind (sm = 640, md = 768, lg = 1024).
  */
 export const MEDIA_QUERIES = {
-  /** Tablet ke atas — dipakai untuk mengaktifkan efek berat (mis. 3D/WebGL). */
+  /** Layar kecil ke atas (Tailwind `sm`). */
+  smUp: "(min-width: 640px)",
+  /** Tablet ke atas (Tailwind `md`) — dipakai untuk efek yang lebih berat. */
   tabletUp: "(min-width: 768px)",
-  /** Desktop ke atas. */
+  /** Desktop ke atas (Tailwind `lg`). */
   desktopUp: "(min-width: 1024px)",
 } as const;
 
@@ -21,9 +23,8 @@ export const MEDIA_QUERIES = {
  *   hydration mismatch.
  * - Setelah mount → nilai sebenarnya, dan ikut berubah saat viewport berubah.
  *
- * Dipakai sebagai "gate" efek mahal (mis. cursor glow di desktop, 3D/WebGL)
- * agar hanya aktif di layar besar — lihat
- * `docs/2026-10-15-blueprint-upgrade-homepage-uiux.md` (F0/F1/F5).
+ * Dipakai sebagai "gate" efek mahal & penyesuaian ukuran per breakpoint
+ * (mis. skala tile band "Pratinjau").
  */
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
