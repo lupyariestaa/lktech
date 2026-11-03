@@ -30,7 +30,16 @@ test("robots.txt & sitemap.xml tersedia", async ({ request }) => {
 
   const sitemap = await request.get("/sitemap.xml");
   expect(sitemap.status()).toBe(200);
-  await expect(sitemap.text()).resolves.toContain("<urlset");
+  const xml = await sitemap.text();
+  expect(xml).toContain("<urlset");
+  // Landing tools publik harus masuk sitemap.
+  expect(xml).toContain("/tools<");
+});
+
+test("aset runtime pdf.js (self-host) tersedia", async ({ request }) => {
+  const worker = await request.get("/pdfjs/pdf.worker.min.mjs");
+  expect(worker.status()).toBe(200);
+  expect(worker.headers()["content-type"] ?? "").toMatch(/javascript/i);
 });
 
 test("health payment mengembalikan boolean (tanpa bocorkan rahasia)", async ({

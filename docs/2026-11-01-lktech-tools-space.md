@@ -400,6 +400,10 @@ masuk ke ruang (katalog) yang butuh login.
 - **Penjaga regresi** `scripts/tools-pages.test.ts` (6): landing tanpa `UserGuard`
   & boleh diindeks; ruang & workspace wajib `UserGuard` + noindex; robots & sitemap
   sesuai aturan di atas; navigasi internal menunjuk ke `/tools/ruang`.
+- **Smoke E2E Playwright (chromium) — 22 lulus** (`e2e/public-pages.spec.ts`,
+  `e2e/assets.spec.ts`): `/tools` sebagai halaman publik (`index` + canonical),
+  `/tools/ruang` tetap `noindex`, `robots.txt` `Disallow: /tools/` tanpa memblokir
+  `/tools`, `sitemap.xml` memuat `/tools`, dan aset `/pdfjs/pdf.worker.min.mjs` → 200.
 
 ### Keterbatasan jujur
 

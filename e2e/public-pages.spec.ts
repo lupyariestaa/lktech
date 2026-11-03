@@ -18,6 +18,7 @@ const PUBLIC_PAGES: Array<{ path: string; expectText: RegExp }> = [
   { path: "/kontak", expectText: /kontak|hubungi/i },
   { path: "/promo", expectText: /promo|kupon/i },
   { path: "/masuk", expectText: /masuk|login/i },
+  { path: "/tools", expectText: /tool|browser/i },
 ];
 
 test.describe("halaman publik", () => {
@@ -44,5 +45,40 @@ test.describe("halaman publik", () => {
   test("404 tidak menabrak server", async ({ page }) => {
     const res = await page.goto("/halaman-tidak-ada-xyz");
     expect(res?.status()).toBe(404);
+  });
+});
+
+test.describe("LKTech Tools: landing publik vs ruang privat", () => {
+  test("/tools publik, indexable & punya canonical", async ({ page }) => {
+    const res = await page.goto("/tools", { waitUntil: "domcontentloaded" });
+    expect(res?.status()).toBeLessThan(400);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      "content",
+      /index/i,
+    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      /\/tools$/,
+    );
+  });
+
+  test("/tools/ruang tetap noindex (ruang login-gated)", async ({ page }) => {
+    const res = await page.goto("/tools/ruang", { waitUntil: "domcontentloaded" });
+    expect(res?.status()).toBeLessThan(400);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      "content",
+      /noindex/i,
+    );
+  });
+
+  test("robots.txt memblokir sub-path /tools/ tanpa memblokir landing", async ({
+    request,
+  }) => {
+    const res = await request.get("/robots.txt");
+    expect(res.status()).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Disallow: /tools/");
+    // Landing persis "/tools" TIDAK boleh diblokir.
+    expect(text).not.toMatch(/Disallow: \/tools\s*$/m);
   });
 });

@@ -78,7 +78,8 @@ publik** sendiri sebelum masuk ruang login-gated. Dokumen: [`docs/2026-11-01-lkt
 - **Navigasi:** `tool-shell` ("Kembali ke ruang tools") & `account-overview` diarahkan ke `/tools/ruang`; menu navbar `Tools` tetap ke landing `/tools`.
 - **robots.txt:** hanya sub-path `/tools/` di-disallow; landing `/tools` diizinkan. **sitemap.xml:** `/tools` ditambahkan (0.7).
 - **Penjaga regresi:** `scripts/tools-pages.test.ts` (6) — landing tanpa `UserGuard`, ruang/workspace wajib `UserGuard`, robots & sitemap sesuai.
-- **Gate:** `tsc` ✅ · `eslint` ✅ · unit **1107/1107** · `build` ✅ (`/tools` & `/tools/ruang` statis; `/tools/[slug]` SSG). Uji server produksi: landing `index, follow`; ruang & workspace `noindex`; `robots.txt` `Disallow: /tools/`; sitemap memuat `/tools`.
+- **Smoke E2E (chromium):** `e2e/public-pages.spec.ts` + `e2e/assets.spec.ts` diperluas — `/tools` publik/indexable, `/tools/ruang` noindex, `robots.txt` `Disallow: /tools/`, sitemap memuat `/tools`, aset pdf.js 200. **22 lulus.**
+- **Gate:** `tsc` ✅ · `eslint` ✅ · unit **1107/1107** · `build` ✅ (`/tools` & `/tools/ruang` statis; `/tools/[slug]` SSG) · E2E chromium **22/22**. Uji server produksi: landing `index, follow`; ruang & workspace `noindex`; `robots.txt` `Disallow: /tools/`; sitemap memuat `/tools`.
 
 **Sisa manual (owner):** buka `/tools` tanpa login (halaman pengantar), lalu klik "Masuk ke Tools" — anonim diarahkan ke login dan kembali ke ruang setelah masuk.
 
