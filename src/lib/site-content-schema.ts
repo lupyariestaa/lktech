@@ -117,9 +117,21 @@ const statSchema = z.object({
 });
 
 const technologySchema = z.object({
-  name: z.string().trim().min(1).max(MAX_SHORT),
-  logo: z.string().max(MAX_URL).optional(),
-  color: z.string().max(40).optional(),
+  name: z.string().trim().min(1).max(60),
+  logo: z
+    .string()
+    .max(MAX_URL)
+    .refine(
+      (value) =>
+        value === "" ||
+        /^\/tech\/[a-zA-Z0-9][a-zA-Z0-9._-]*\.(?:svg|png|webp|avif)$/i.test(value.trim()),
+      "Gunakan path logo lokal di /tech (SVG, PNG, WebP, atau AVIF).",
+    )
+    .optional(),
+  color: z
+    .string()
+    .regex(/^#(?:[\da-f]{3}|[\da-f]{6})$/i, "Gunakan warna hex, mis. #61DAFB.")
+    .optional(),
   wordmark: z.boolean().optional(),
 });
 

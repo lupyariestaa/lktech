@@ -62,6 +62,29 @@ test("pengaturan hero dibatasi interval dan efeknya", () => {
   );
 });
 
+test("logo teknologi admin dibatasi ke path lokal aman dan warna hex", () => {
+  assert.equal(
+    siteContentSchema.safeParse({
+      technologies: [{ name: "React", logo: "/tech/react.svg", color: "#61DAFB" }],
+    }).success,
+    true,
+  );
+  for (const logo of ["https://evil.example/logo.svg", "//evil.example/logo.svg", "/tech/../secret.svg"]) {
+    assert.equal(
+      siteContentSchema.safeParse({ technologies: [{ name: "React", logo }] }).success,
+      false,
+    );
+  }
+  assert.equal(
+    siteContentSchema.safeParse({ technologies: [{ name: "React", color: "red" }] }).success,
+    false,
+  );
+  assert.equal(
+    siteContentSchema.safeParse({ technologies: [{ name: "x".repeat(61) }] }).success,
+    false,
+  );
+});
+
 test("batas payload berada di bawah batas dokumen Firestore", () => {
   assert.ok(MAX_SITE_CONTENT_BYTES < 1_048_576);
 });

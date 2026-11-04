@@ -36,6 +36,7 @@ import {
 } from "@/lib/stats-pure";
 import { fetchDerivedStatCounts } from "@/lib/admin-content-api";
 import { cn } from "@/lib/utils";
+import { TechnologyLogo } from "@/components/technology-logo";
 
 const fieldBase =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-secondary placeholder:text-slate-400 focus:ring-2 focus:ring-primary/30 focus:outline-none";
@@ -429,6 +430,15 @@ export function ContentExtraManager() {
           disabled={loadFailed}
           onDirtyChange={setDirtyList}
           onError={reject}
+          renderPreview={(draft) => (
+            <ul className="flex flex-wrap gap-2" aria-label="Pratinjau logo teknologi">
+              {draft.filter((item) => item.name.trim()).map((item, index) => (
+                <li key={`${item.name}-${index}`}>
+                  <TechnologyLogo item={{ ...item, logo: item.logo ?? "", color: item.color ?? "#64748B", wordmark: item.wordmark ?? false }} />
+                </li>
+              ))}
+            </ul>
+          )}
           renderRow={(item, update) => (
             <div className="grid gap-3">
               <div className="grid gap-3 sm:grid-cols-[1fr_1fr_120px]">
@@ -463,11 +473,13 @@ export function ContentExtraManager() {
               </label>
             </div>
           )}
-          validate={(items) =>
-            items.some((i) => !i.name.trim())
-              ? "Nama teknologi wajib diisi."
-              : null
-          }
+          validate={(items) => {
+            if (items.some((i) => !i.name.trim())) return "Nama teknologi wajib diisi.";
+            if (items.some((i) => i.name.trim().length > 60)) return "Nama teknologi maksimal 60 karakter.";
+            if (items.some((i) => i.color && !/^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(i.color.trim()))) return "Warna harus berupa hex, mis. #61DAFB.";
+            if (items.some((i) => i.logo && !/^\/tech\/[a-zA-Z0-9][a-zA-Z0-9._-]*\.(?:svg|png|webp|avif)$/i.test(i.logo.trim()))) return "Logo harus berupa path lokal di /tech, mis. /tech/react.svg.";
+            return null;
+          }}
         />
       )}
     </div>

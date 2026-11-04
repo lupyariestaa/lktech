@@ -3,6 +3,11 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { ManagedTechnology } from "@/lib/content-types";
+import {
+  resolveTechnologyColor,
+  resolveTechnologyLogo,
+  technologyInitialsColor,
+} from "@/lib/technology-logo-pure";
 import { cn } from "@/lib/utils";
 
 /** Inisial dari nama teknologi (maks 2 huruf), mis. "Next.js" -> "NE". */
@@ -23,9 +28,11 @@ function initials(name: string) {
  */
 export function TechnologyLogo({ item }: { item: ManagedTechnology }) {
   const [failed, setFailed] = useState(false);
-  const useImage = Boolean(item.logo) && !failed;
+  const logoSrc = resolveTechnologyLogo(item.logo);
+  const brandColor = resolveTechnologyColor(item.color);
+  const useImage = Boolean(logoSrc) && !failed;
   // Tampilkan hanya logo untuk SVG wordmark (yang sudah berisi nama brand).
-  const showLabel = !item.wordmark;
+  const showLabel = !item.wordmark || failed || !logoSrc;
 
   return (
     <div className="group flex h-16 items-center justify-center gap-3 rounded-2xl border border-slate-100 bg-surface px-5 whitespace-nowrap transition-colors hover:border-primary/20 hover:bg-white">
@@ -33,10 +40,12 @@ export function TechnologyLogo({ item }: { item: ManagedTechnology }) {
         item.wordmark ? (
           // Wordmark: tampilkan logo lebar (sudah memuat teks) mengisi kartu.
           <Image
-            src={item.logo}
+            src={logoSrc!}
             alt={item.name}
             width={140}
             height={36}
+            loading="eager"
+            unoptimized
             className="h-8 w-auto max-w-[150px] object-contain"
             onError={() => setFailed(true)}
           />
@@ -44,11 +53,13 @@ export function TechnologyLogo({ item }: { item: ManagedTechnology }) {
           <>
             <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl">
               <Image
-                src={item.logo}
+                src={logoSrc!}
                 alt={showLabel ? "" : item.name}
                 aria-hidden={showLabel ? true : undefined}
                 width={36}
                 height={36}
+                loading="eager"
+                unoptimized
                 className="h-7 w-7 object-contain"
                 onError={() => setFailed(true)}
               />
@@ -64,9 +75,12 @@ export function TechnologyLogo({ item }: { item: ManagedTechnology }) {
         <>
           <span
             className={cn(
-              "grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl text-xs font-bold text-white",
+              "grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl text-xs font-bold",
             )}
-            style={{ backgroundColor: item.color }}
+            style={{
+              backgroundColor: brandColor,
+              color: technologyInitialsColor(brandColor),
+            }}
           >
             {initials(item.name)}
           </span>

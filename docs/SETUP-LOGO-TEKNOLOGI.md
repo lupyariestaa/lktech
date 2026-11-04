@@ -1,17 +1,27 @@
 # Panduan Setup Logo Teknologi (Section "Teknologi yang Kami Gunakan")
 
-Section di beranda menampilkan **marquee logo teknologi** (React, Next.js, Laravel, Python, dll).
-Saat ini logonya masih **placeholder** (kotak warna + inisial nama). Panduan ini menjelaskan cara
-memasukkan **logo asli** satu per satu.
+Section di beranda menampilkan **dua baris logo teknologi bergerak** (React, Next.js, Laravel, Python,
+dan lainnya). Daftar dan logo dapat dikelola melalui dashboard admin; placeholder inisial dipakai bila
+logo belum tersedia/gagal.
 
-> Butuh bantuan edit kode? File yang relevan:
+> Untuk pengelolaan rutin gunakan dashboard. Jalur code di bawah hanya untuk mengubah data default/
+> fallback yang dipakai saat dokumen konten belum diset. File yang relevan:
 > - Daftar teknologi: `src/lib/content.ts` (cari `TECH_STACK`)
 > - Folder aset logo: `public/tech/`
 > - Komponen: `src/components/technology-logo.tsx` & `src/components/sections/technologies.tsx`
 
 ---
 
-## Ringkasan alur
+## Jalur utama: dashboard admin
+
+1. Buka **Admin → Konten → Teknologi**.
+2. Ubah nama, path logo lokal (contoh `/tech/react.svg`), warna hex, dan opsi wordmark.
+3. Tambahkan/hapus item, periksa preview draft, lalu klik **Simpan**.
+
+Path logo hanya menerima file lokal dalam folder `/tech/` (SVG, PNG, WebP, atau AVIF); URL remote
+ditolak agar sumber data admin tidak membuat `next/image` gagal render.
+
+## Jalur code: data default/fallback
 
 1. Unduh file logo (SVG lebih baik daripada PNG).
 2. Simpan ke `public/tech/<nama-file>` (mis. `react.svg`).
@@ -124,6 +134,5 @@ Vercel akan otomatis men-deploy setelah push ke `main`.
 
 Setelah file ada di `public/tech/`, isi `logo` di `TECH_STACK` sesuai nama file.
 
-> **Status saat ini:** seluruh logo di atas SUDAH terpasang di `public/tech/` dan
-> sudah terdaftar di `TECH_STACK`. Panduan ini tersedia bila ingin menambah/mengganti
-> teknologi di kemudian hari.
+> **Status saat ini:** seluruh logo terdaftar pada data default. Data yang tampil di situs dapat
+> berbeda jika daftar di dashboard sudah disimpan dan dikelola.

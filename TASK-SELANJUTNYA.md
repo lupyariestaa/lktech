@@ -69,6 +69,31 @@
 
 ---
 
+## 🧩 SESI INI — Section Teknologi: Seam, Reduced Motion, Data Aman & Admin (F12) — SELESAI (kode, 2026-11-04)
+
+**Status: ✅ SELESAI (kode).** Audit seluruh aspek menemukan gap pada seam loop, reduced-motion yang
+memotong konten, jeda offscreen, kontras fallback, dan sumber logo terkelola. Eksekusi prioritas P0/P1
+plus sebagian P2. Dokumen: [`docs/2026-10-15-blueprint-upgrade-homepage-uiux.md`](docs/2026-10-15-blueprint-upgrade-homepage-uiux.md) §F12.
+
+- **Loop mulus:** `pr-4` membuat jarak salinan duplikat tepat sama dengan `translateX(-50%)`.
+- **Lebih hemat:** animasi pause saat section di luar viewport; hover di salah satu baris menjeda keduanya;
+  `will-change` hanya aktif saat marquee berjalan.
+- **Reduced-motion:** marquee menjadi grid statis responsif yang menampilkan semua **20 teknologi**.
+- **Logo aman/cepat:** guard hanya `/tech/...` lokal, eager + `unoptimized`; fallback wordmark tetap menampilkan
+  nama. Inisial placeholder otomatis memilih warna teks kontras; warna invalid jatuh ke warna aman.
+- **A11y:** label section menjadi `<h2>`, track list semantik, `MotionToggle` mendapat `aria-pressed` dan
+  ring fokus brand; duplikat tetap tersembunyi dari screen reader.
+- **Admin/data:** validasi path lokal, warna hex, nama ≤60 saat schema+UI; preview draft; dokumentasi setup
+  menggunakan dashboard sebagai jalur utama.
+- **Gate:** tsc ✅ · eslint ✅ · unit **1111/1111** · build ✅ · E2E public-pages **16/16**.
+  Playwright: seam selisih 0 px, tombol pause membekukan track, hover menyatukan dua baris, reduced-motion
+  20/20 item, fallback wordmark & contrast diperiksa.
+
+**Belum dikerjakan:** pecah 80 komponen logo dari client boundary (P2 performa), forced-colors/print,
+upload logo dari media library. Komponen `Technologies` juga dipakai `/tentang` dan ikut menerima perbaikan.
+
+---
+
 ## 🧩 SESI INI — Section Layanan Kami: Bento 2×2 Lega + Poles Interaksi (F11) — SELESAI (kode, 2026-11-03)
 
 **Status: ✅ SELESAI (kode).** Permintaan pemilik: optimasi section **Layanan Kami** agar lebih rapi,

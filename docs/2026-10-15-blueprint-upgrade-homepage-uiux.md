@@ -74,7 +74,7 @@ efek scroll yang mengikat cerita). Tujuan upgrade: memberi **wow factor yang kha
 | 1 | Hero | `sections/hero.tsx` | Client | Beranda: parallax + animated headline + trust bar + cursor glow ✅ (F1); **scene 3D/WebGL lazy** di tablet+ ✅ (F5), dulu **terpusat di kolom visual kanan** (F7). **F9:** hero jadi **satu kolom teks-center**; elemen 3D (`hero-3d.tsx`) & efek kursor (cursor glow, magnetic CTA, pointer) **dilepas**; mesin tik judul & parallax dipertahankan. |
 | 1b | Pratinjau | `sections/showcase.tsx` | Client | **Baru (F7):** mockup browser (carousel, gambar `browser` saja) — dipindah dari hero. Tepat setelah hero. |
 | 2 | Services | `sections/services.tsx` (grid, `/tentang`) + `sections/services-bento.tsx` (bento, beranda) | Client | Beranda: **bento** ✅ (F4) — banner unggulan + 4 kartu, spotlight kursor; **F11:** 4 kartu jadi grid **2×2 lega** (bukan sebaris sempit) + poles hover/fokus/ritme. `/tentang` tetap grid 3 kolom. |
-| 3 | Technologies | `sections/technologies.tsx` | Client | **F8:** strip "Teknologi yang kami gunakan" dipindah ke **antara Layanan & Portofolio** (dulu tepat setelah Pratinjau); marquee kini **dua baris** — atas ke kiri (`animate-marquee`), bawah ke kanan (urutan dibalik, `animate-marquee-reverse`), satu mask kiri/kanan untuk keduanya; pause saat hover. **F6.2:** tombol **Jeda/Mainkan** (WCAG 2.2.2), disembunyikan saat reduced-motion. |
+| 3 | Technologies | `sections/technologies.tsx` | Client | **F8:** strip "Teknologi yang kami gunakan" dipindah ke **antara Layanan & Portofolio** (dulu tepat setelah Pratinjau); marquee dua baris berlawanan arah. **F12:** seam loop diperbaiki, pause offscreen/serentak, mode reduced-motion jadi grid statis semua item, logo aman & eager, contrast fallback, heading/list/focus, validasi/admin preview. |
 | 4 | Portfolio Teaser | `sections/portfolio-teaser.tsx` | Server | Grid 3 kolom, ambil `getProjects()`. |
 | 5 | Why Us | `sections/why-us.tsx` | Client | Grid 3 kolom + stagger. Pola berulang. |
 | 6 | Process | `sections/process.tsx` (grid, `/tentang`) + `sections/process-timeline.tsx` (pinned, beranda) | Client | Beranda: **timeline scroll-driven pinned** ✅ (F3). `/tentang` tetap grid 4 kolom + pulse. |
@@ -697,6 +697,30 @@ Komponen 3D hanya di-mount bila keduanya lolos; selain itu render fallback (gamb
   spotlight hover (`--mx/--my`, opacity 1) & fokus keyboard (`:focus-visible` + ring) berfungsi;
   reduced-motion menampilkan kartu langsung (tanpa transform/opacity awal); screenshot 1440/1024/768/390
   diperiksa.
+
+### F12 — Teknologi: loop halus, hemat animasi, reduced-motion lengkap & data aman — effort M
+- **Pemilik:** meminta audit seluruh aspek, lalu melanjutkan eksekusi atas daftar temuan.
+- **Perubahan** ✅:
+  - **Loop seam:** track memakai `pr-4`, menyamakan lebar duplikat dengan langkah `translateX(-50%)`.
+  - **Pause saat offscreen:** `IntersectionObserver` pada section; `animationPlayState` menghormati tombol,
+    hover wrapper (kedua baris berhenti bersama), dan visibility. `will-change` aktif hanya saat berjalan.
+  - **Reduced motion:** marquee diganti grid statis responsif (`2/3/4/5` kolom) yang menampilkan semua
+    logo; mask/overflow marquee dan tombol Jeda tidak digunakan.
+  - **Aset:** logo eager, local-only `/tech/...` di-guard sebelum `next/image`, `unoptimized` untuk aset lokal;
+    fallback wordmark menampilkan label bila logo gagal.
+  - **Fallback:** teks inisial pilih warna gelap/putih berdasarkan luminance; warna admin invalid jatuh ke
+    warna aman.
+  - **Semantik/a11y:** label menjadi `<h2>`, track aksesibel sebagai list; toggle punya `aria-pressed` dan
+    ring fokus brand; salinan visual tetap tersembunyi bagi screen reader.
+  - **Admin/data:** validasi nama ≤60, warna hex, dan path lokal aman pada schema + UI; preview draft
+    teknologi; panduan setup menjadikan dashboard jalur utama.
+  - **Tests:** tambah `technology-logo-pure` tests dan schema regression untuk logo/warna/nama.
+- **Verifikasi** ✅: tsc, eslint, unit **1111/1111**, build; Playwright produksi di 1440/1024/768/390/360:
+  seam `secondCopyStart == trackWidth/2`, tidak ada horizontal overflow, pause tombol/hover/offscreen,
+  reduced-motion menampilkan 20 item, logo eager-loading/fallback dan warna placeholder diuji.
+  Public E2E **16/16** lulus.
+- **Batas cakupan:** belum melakukan pemisahan 80 instance `TechnologyLogo` dari client boundary (T-17),
+  forced-colors/print, maupun redesign/upload media admin.
 
 ### F6 — Polish & QA — effort M
 - **Temuan audit (P1–P3) & resolusi** ✅:

@@ -29,9 +29,10 @@ export function MotionToggle({
     <button
       type="button"
       onClick={onToggle}
+      aria-pressed={paused}
       aria-label={paused ? `Mainkan ${label}` : `Jeda ${label}`}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-slate-600 backdrop-blur transition-colors hover:border-primary/40 hover:text-primary",
+        "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-slate-600 backdrop-blur transition-colors hover:border-primary/40 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:outline-none",
         className,
       )}
     >
