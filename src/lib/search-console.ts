@@ -103,7 +103,7 @@ async function querySearchAnalyticsInner(
   if (!siteUrl) return { ok: false, error: "invalid_credentials" };
   try {
     const response = await fetch(
-      `${API_BASE}/sites/${encodeURIComponent(siteUrl)}/searchanalytics/query`,
+      `${API_BASE}/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

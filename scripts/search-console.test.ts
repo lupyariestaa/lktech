@@ -1,5 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import {
   parseServiceAccount,
   dateRange,
@@ -146,6 +149,14 @@ test("gscErrorCode maps upstream status without exposing provider details", () =
   assert.equal(gscErrorCode(403), "permission_denied");
   assert.equal(gscErrorCode(429), "quota_limited");
   assert.equal(gscErrorCode(503), "provider_unavailable");
+});
+
+test("Search Console API wiring uses the case-sensitive searchAnalytics resource", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const source = readFileSync(resolve(here, "../src/lib/search-console.ts"), "utf8");
+
+  assert.match(source, /\/sites\/\$\{encodeURIComponent\(siteUrl\)\}\/searchAnalytics\/query/);
+  assert.doesNotMatch(source, /\/searchanalytics\/query/);
 });
 
 test("reportStatus membedakan not configured, no data, partial, dan error", () => {
