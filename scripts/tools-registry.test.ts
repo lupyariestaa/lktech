@@ -4,12 +4,18 @@ import assert from "node:assert/strict";
 import {
   TOOLS,
   TOOL_CATEGORIES,
+  TOOL_INTENTS,
   availableToolSlugs,
   countToolsByCategory,
   filterTools,
+  getRelatedTools,
   getToolBySlug,
+  isToolAvailable,
   matchesToolQuery,
   normalizeToolQuery,
+  resolveToolIntents,
+  toolGuideHref,
+  toolWorkspaceHref,
 } from "../src/lib/tools-registry-pure.ts";
 
 /**
@@ -100,4 +106,57 @@ test("countToolsByCategory: menghitung semua kategori", () => {
     counts.gambar + counts.pdf + counts.warna + counts.produktivitas,
     TOOLS.length,
   );
+});
+
+test("registry: metadata kartu format/batas/lokal lengkap", () => {
+  for (const tool of TOOLS) {
+    assert.ok(tool.format.from.trim().length > 0, tool.slug);
+    assert.ok(tool.format.to.trim().length > 0, tool.slug);
+    assert.ok(tool.limitLabel.trim().length > 0, tool.slug);
+    assert.equal(typeof tool.local, "boolean", tool.slug);
+    assert.ok(Array.isArray(tool.related), tool.slug);
+    assert.ok(!tool.related.includes(tool.slug), `${tool.slug} terkait dirinya`);
+  }
+});
+
+test("registry: related hanya menunjuk slug valid & tersedia", () => {
+  for (const tool of TOOLS) {
+    for (const slug of tool.related) {
+      const related = getToolBySlug(slug);
+      assert.ok(related, `${tool.slug} → ${slug} tidak ada`);
+      assert.equal(related.status, "tersedia", `${tool.slug} → ${slug}`);
+    }
+  }
+});
+
+test("isToolAvailable: mengikuti status registry", () => {
+  for (const tool of TOOLS) {
+    assert.equal(isToolAvailable(tool), tool.status === "tersedia", tool.slug);
+  }
+});
+
+test("intents: id unik & semua menunjuk tool tersedia", () => {
+  const ids = TOOL_INTENTS.map((intent) => intent.id);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const intent of TOOL_INTENTS) {
+    const tool = getToolBySlug(intent.toolSlug);
+    assert.ok(tool, intent.toolSlug);
+    assert.equal(tool.status, "tersedia", intent.toolSlug);
+  }
+  assert.equal(resolveToolIntents().length, TOOL_INTENTS.length);
+});
+
+test("helpers URL: workspace privat vs panduan publik", () => {
+  assert.equal(toolWorkspaceHref("color-picker"), "/tools/color-picker");
+  assert.equal(toolGuideHref("color-picker"), "/tools/panduan/color-picker");
+});
+
+test("getRelatedTools: menyaring tool tersedia & mempertahankan urutan", () => {
+  const webp = getToolBySlug("image-to-webp");
+  assert.ok(webp);
+  const related = getRelatedTools(webp).map((tool) => tool.slug);
+  assert.deepEqual(related, webp.related.filter((slug) => {
+    const tool = getToolBySlug(slug);
+    return tool?.status === "tersedia";
+  }));
 });

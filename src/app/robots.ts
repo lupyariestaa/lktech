@@ -6,7 +6,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        // Panduan publik per tool boleh diindeks; workspace tetap privat.
+        allow: ["/", "/tools/panduan"],
         disallow: [
           "/admin",
           "/admin/",

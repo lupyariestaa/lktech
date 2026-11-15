@@ -1,11 +1,22 @@
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  HelpCircle,
+  ShieldCheck,
+} from "lucide-react";
 import { ToolIcon } from "@/components/tools/tool-icon";
-import { TOOL_CATEGORY_LABEL, type ToolDefinition } from "@/lib/tools-registry-pure";
+import { ToolLocalBadge } from "@/components/tools/tool-badges";
+import { ToolRail } from "@/components/tools/tool-rail";
+import {
+  TOOL_CATEGORY_LABEL,
+  toolGuideHref,
+  type ToolDefinition,
+} from "@/lib/tools-registry-pure";
 
 /**
- * Kerangka halaman workspace tool: breadcrumb, judul, deskripsi, catatan
- * privasi, dan slot isi tool. Murni presentasional (tanpa state).
+ * Kerangka halaman workspace tool: breadcrumb, judul, metadata format/batas,
+ * catatan privasi, rail tool, dan slot isi tool. Murni presentasional.
  */
 export function ToolShell({
   tool,
@@ -24,7 +35,7 @@ export function ToolShell({
           href="/tools/ruang"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted transition-colors hover:text-primary"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Kembali ke ruang tools
         </Link>
 
@@ -45,12 +56,38 @@ export function ToolShell({
           </div>
         </div>
 
+        <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px]">
+          {tool.local && <ToolLocalBadge />}
+          <span className="rounded-full bg-surface px-2.5 py-1 font-semibold text-secondary">
+            {tool.format.from} → {tool.format.to}
+          </span>
+          <span className="rounded-full bg-surface px-2.5 py-1 text-muted">
+            {tool.limitLabel}
+          </span>
+          <Link
+            href={toolGuideHref(tool.slug)}
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold text-primary transition-colors hover:bg-primary-50 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+          >
+            <BookOpen className="h-3 w-3" aria-hidden="true" />
+            Panduan
+          </Link>
+          <Link
+            href="/tools#faq"
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold text-slate-500 transition-colors hover:bg-surface hover:text-secondary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+          >
+            <HelpCircle className="h-3 w-3" aria-hidden="true" />
+            Butuh bantuan?
+          </Link>
+        </div>
+
         <p className="mt-5 inline-flex items-start gap-2 rounded-2xl bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
           <span>{tool.privacyNote}</span>
         </p>
 
-        <div className="mt-8">{children}</div>
+        <ToolRail activeSlug={tool.slug} />
+
+        <div className="mt-6">{children}</div>
       </div>
     </section>
   );

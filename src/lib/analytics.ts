@@ -195,3 +195,123 @@ export function trackCouponRemoved(props: { code: string; auto?: boolean }): voi
 export function trackCouponAutopick(props: { code: string; discount: number }): void {
   trackEvent("coupon_autopick", { code: props.code, discount: props.discount });
 }
+
+/* -------------------------------------------------------------------------- */
+/* LKTech Tools — event produk (tanpa PII: hanya slug, kategori, konteks).      */
+/* -------------------------------------------------------------------------- */
+
+export type ToolsEventSource =
+  | "landing"
+  | "intent"
+  | "ruang"
+  | "recent"
+  | "rail"
+  | "related"
+  | "workspace"
+  | "guide";
+
+/** Klik CTA menuju ruang/tool. */
+export function trackToolsCta(props: {
+  location: string;
+  auth: "in" | "out";
+  target: string;
+}): void {
+  trackEvent("tools_cta_click", {
+    location: props.location,
+    auth: props.auth,
+    target: props.target,
+  });
+}
+
+/** Klik pintu masuk berbasis kebutuhan. */
+export function trackToolsIntent(props: { tool: string; intent: string }): void {
+  trackEvent("tools_intent_click", {
+    tool: props.tool,
+    intent: props.intent,
+  });
+}
+
+/** Interaksi demo mini (warna/teks). */
+export function trackToolsDemo(props: {
+  demo: "color" | "text";
+  action: "open" | "copy" | "format";
+}): void {
+  trackEvent("tools_demo_interact", {
+    demo: props.demo,
+    action: props.action,
+  });
+}
+
+/** Filter/pencarian katalog. Query mentah TIDAK dikirim. */
+export function trackToolsCatalogFilter(props: {
+  category: string;
+  hasQuery: boolean;
+  resultCount: number;
+}): void {
+  trackEvent("tools_catalog_filter", {
+    category: props.category,
+    has_query: props.hasQuery,
+    result_count: props.resultCount,
+  });
+}
+
+/** Tool dibuka dari landing/ruang/rail/related. */
+export function trackToolsToolOpen(props: {
+  tool: string;
+  source: ToolsEventSource;
+}): void {
+  trackEvent("tools_tool_open", {
+    tool: props.tool,
+    source: props.source,
+  });
+}
+
+/** Proses tool berhasil (tanpa nama/ukuran berkas). */
+export function trackToolsToolSuccess(props: {
+  tool: string;
+  durationBucket: "<5s" | "5-30s" | ">30s";
+}): void {
+  trackEvent("tools_tool_success", {
+    tool: props.tool,
+    duration_bucket: props.durationBucket,
+  });
+}
+
+/** Proses tool gagal (hanya kode aman, bukan pesan provider/berkas). */
+export function trackToolsToolError(props: {
+  tool: string;
+  code: string;
+}): void {
+  trackEvent("tools_tool_error", {
+    tool: props.tool,
+    code: props.code,
+  });
+}
+
+/** Favorit ditambah/dihapus (lokal). */
+export function trackToolsFavoriteToggle(props: {
+  tool: string;
+  action: "add" | "remove";
+}): void {
+  trackEvent("tools_favorite_toggle", {
+    tool: props.tool,
+    action: props.action,
+  });
+}
+
+/** Tool dibuka dari daftar recent. */
+export function trackToolsRecentOpen(props: { tool: string }): void {
+  trackEvent("tools_recent_open", { tool: props.tool });
+}
+
+/** Aksi pada empty state katalog. */
+export function trackToolsEmptyStateAction(props: {
+  action: "reset" | "request";
+}): void {
+  trackEvent("tools_empty_state_action", { action: props.action });
+}
+
+/** Feedback singkat di landing. */
+export function trackToolsFeedback(props: { helpful: boolean }): void {
+  trackEvent("tools_feedback", { helpful: props.helpful });
+}

@@ -6,6 +6,8 @@ import { taxonomySlug } from "@/lib/article-types";
 import { getProducts } from "@/lib/products";
 import { SERVICES } from "@/lib/services";
 import { getLocationSlugs } from "@/lib/locations";
+import { TOOLS } from "@/lib/tools-registry-pure";
+import { TOOL_GUIDES_UPDATED } from "@/lib/tools-guides-pure";
 
 export const revalidate = 3600;
 
@@ -47,6 +49,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE.url}/tentang`, lastModified: stable, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE.url}/kontak`, lastModified: stable, changeFrequency: "yearly", priority: 0.7 },
     { url: `${SITE.url}/tools`, lastModified: stable, changeFrequency: "monthly", priority: 0.7 },
+  ];
+
+  // Panduan publik per tool (indexable, tanpa login). Workspace tetap
+  // `noindex` dan tidak masuk sitemap.
+  const guideDate = new Date(TOOL_GUIDES_UPDATED);
+  const toolGuideRoutes: MetadataRoute.Sitemap = [
+    {
+      url: `${SITE.url}/tools/panduan`,
+      lastModified: guideDate,
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    ...TOOLS.filter((tool) => tool.status === "tersedia").map((tool) => ({
+      url: `${SITE.url}/tools/panduan/${tool.slug}`,
+      lastModified: guideDate,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
   ];
 
   // Slug layanan dibaca dari modul layanan (hardcoded).
@@ -128,6 +148,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticRoutes,
+    ...toolGuideRoutes,
     ...serviceRoutes,
     ...serviceCityRoutes,
     ...projectRoutes,

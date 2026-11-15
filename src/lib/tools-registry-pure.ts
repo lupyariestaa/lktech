@@ -24,6 +24,12 @@ export const TOOL_CATEGORY_LABEL: Record<ToolCategory, string> = {
 /** Status ketersediaan tool di katalog. */
 export type ToolStatus = "tersedia" | "segera";
 
+/** Format ringkas input → output untuk kartu & header workspace. */
+export type ToolFormat = {
+  from: string;
+  to: string;
+};
+
 export type ToolDefinition = {
   /** Slug URL: `/tools/{slug}`. Unik. */
   slug: string;
@@ -42,6 +48,14 @@ export type ToolDefinition = {
   local: boolean;
   /** Catatan privasi singkat yang ditampilkan di workspace. */
   privacyNote: string;
+  /** Format ringkas yang ditampilkan di kartu/workspace. */
+  format: ToolFormat;
+  /** Batas operasional ringkas (jujur, satu sumber untuk tampilan). */
+  limitLabel: string;
+  /** Slug tool lain yang relevan untuk ditawarkan setelah selesai. */
+  related: readonly string[];
+  /** Penanda editorial untuk badge "Baru" (bukan tanggal otomatis). */
+  isNew?: boolean;
 };
 
 /**
@@ -62,6 +76,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     local: true,
     privacyNote:
       "Nilai warna diproses di browser Anda dan tidak dikirim ke server.",
+    format: { from: "Warna visual / HEX", to: "HEX, RGB, HSL" },
+    limitLabel: "Tanpa batas berkas",
+    related: ["text-formatter"],
   },
   {
     slug: "image-to-webp",
@@ -76,6 +93,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     local: true,
     privacyNote:
       "Gambar diproses di browser Anda; tidak ada berkas yang diunggah atau disimpan.",
+    format: { from: "PNG, JPG", to: "WebP" },
+    limitLabel: "Maks. 15 MB",
+    related: ["image-to-pdf", "pdf-to-image"],
   },
   {
     slug: "image-to-pdf",
@@ -90,6 +110,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     local: true,
     privacyNote:
       "Gambar dan PDF dibuat di browser Anda; tidak ada berkas yang dikirim ke server.",
+    format: { from: "JPG, PNG", to: "PDF" },
+    limitLabel: "Maks. 20 gambar · 15 MB/gambar",
+    related: ["pdf-to-image", "image-to-webp"],
   },
   {
     slug: "text-formatter",
@@ -104,6 +127,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     local: true,
     privacyNote:
       "Teks diproses di browser Anda; tidak ada isi yang dikirim atau disimpan di server.",
+    format: { from: "JSON / teks", to: "JSON rapi / teks bersih" },
+    limitLabel: "Maks. 2 juta karakter",
+    related: ["color-picker"],
+    isNew: true,
   },
   {
     slug: "pdf-to-image",
@@ -118,6 +145,60 @@ export const TOOLS: readonly ToolDefinition[] = [
     local: true,
     privacyNote:
       "PDF diproses di browser Anda; tidak ada berkas yang diunggah atau disimpan di server.",
+    format: { from: "PDF", to: "PNG, JPG" },
+    limitLabel: "Maks. 25 MB · 30 halaman",
+    related: ["image-to-webp", "image-to-pdf"],
+    isNew: true,
+  },
+];
+
+/**
+ * Pintu masuk berbasis kebutuhan. Setiap intent menunjuk ke tool `tersedia`.
+ * Teks sengaja berupa masalah pengguna, bukan nama fitur.
+ */
+export type ToolIntent = {
+  id: string;
+  problem: string;
+  action: string;
+  toolSlug: string;
+  icon: string;
+};
+
+export const TOOL_INTENTS: readonly ToolIntent[] = [
+  {
+    id: "kompres-gambar",
+    problem: "Gambar terlalu besar",
+    action: "Kompres ke WebP",
+    toolSlug: "image-to-webp",
+    icon: "ImageDown",
+  },
+  {
+    id: "gabung-foto-pdf",
+    problem: "Foto perlu jadi satu PDF",
+    action: "Gabung jadi PDF",
+    toolSlug: "image-to-pdf",
+    icon: "FileText",
+  },
+  {
+    id: "ambil-warna",
+    problem: "Butuh warna dari referensi",
+    action: "Ambil kode warna",
+    toolSlug: "color-picker",
+    icon: "Palette",
+  },
+  {
+    id: "rapikan-teks",
+    problem: "JSON atau teks berantakan",
+    action: "Rapikan teks",
+    toolSlug: "text-formatter",
+    icon: "Braces",
+  },
+  {
+    id: "pecah-pdf",
+    problem: "PDF perlu jadi gambar",
+    action: "Pecah PDF jadi PNG",
+    toolSlug: "pdf-to-image",
+    icon: "Images",
   },
 ];
 
@@ -192,4 +273,50 @@ export function availableToolSlugs(
   tools: readonly ToolDefinition[] = TOOLS,
 ): string[] {
   return tools.filter((tool) => tool.status === "tersedia").map((t) => t.slug);
+}
+
+/** Apakah tool bisa dibuka di workspace. */
+export function isToolAvailable(tool: ToolDefinition): boolean {
+  return tool.status === "tersedia";
+}
+
+/** URL workspace tool (login-gated). */
+export function toolWorkspaceHref(slug: string): string {
+  return `/tools/${slug}`;
+}
+
+/** URL panduan publik tool (indexable, tanpa login). */
+export function toolGuideHref(slug: string): string {
+  return `/tools/panduan/${slug}`;
+}
+
+/**
+ * Tool terkait yang valid & tersedia. Registry boleh menyebut slug yang belum
+ * ada; fungsi ini menyaringnya agar UI tidak pernah menautkan 404.
+ */
+export function getRelatedTools(
+  tool: ToolDefinition,
+  tools: readonly ToolDefinition[] = TOOLS,
+): ToolDefinition[] {
+  return tool.related
+    .map((slug) => getToolBySlug(slug, tools))
+    .filter(
+      (related): related is ToolDefinition =>
+        related !== null && related.status === "tersedia",
+    );
+}
+
+/**
+ * Pasangkan intent dengan tool yang tersedia. Intent yang menunjuk ke tool
+ * tidak tersedia akan diabaikan (tidak ada tautan mati).
+ */
+export function resolveToolIntents(
+  intents: readonly ToolIntent[] = TOOL_INTENTS,
+  tools: readonly ToolDefinition[] = TOOLS,
+): Array<{ intent: ToolIntent; tool: ToolDefinition }> {
+  return intents.flatMap((intent) => {
+    const tool = getToolBySlug(intent.toolSlug, tools);
+    if (!tool || tool.status !== "tersedia") return [];
+    return [{ intent, tool }];
+  });
 }

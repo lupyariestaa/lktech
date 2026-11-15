@@ -410,3 +410,10 @@ masuk ke ruang (katalog) yang butuh login.
 - Landing mengandalkan aturan prefix `robots.txt` (`/tools/`) untuk memisahkan
   area publik vs privat; workspace & ruang tetap `noindex` di level metadata.
 - Landing hanya menampilkan pratinjau tool; interaksi penuh tetap di ruang gated.
+
+---
+
+> **Upgrade landing (diimplementasikan, 2026-11-15):** lihat
+> [`2026-11-14-upgrade-landing-lktech-tools.md`](2026-11-14-upgrade-landing-lktech-tools.md).
+> Dokumen ini tetap menjadi catatan historis F5; detail upgrade landing, ruang,
+> workspace, dan panduan publik ada di dokumen tersebut (§0.1).

@@ -3,14 +3,22 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+// @ts-expect-error Node strip-types runner needs explicit extension.
+import { TOOL_GUIDES, toolGuideSlugs } from "../src/lib/tools-guides-pure.ts";
+// @ts-expect-error Node strip-types runner needs explicit extension.
+import { TOOLS, availableToolSlugs } from "../src/lib/tools-registry-pure.ts";
 
 /**
- * Uji wiring pemisahan Landing (`/tools`) vs Ruang (`/tools/ruang`) (F5).
+ * Uji wiring pemisahan Landing (`/tools`), Panduan publik
+ * (`/tools/panduan/[slug]`), Ruang (`/tools/ruang`), dan Workspace
+ * (`/tools/[slug]`).
+ *
  * Jalankan: `npm run test:tools-pages`
  *
- * Membaca berkas sebagai teks (tanpa impor TS) agar tak terpengaruh alias `@/`.
- * Tujuan: mencegah regresi — landing harus tetap publik, ruang & workspace
- * harus tetap login-gated, dan robot/sitemap harus mencerminkan aturan itu.
+ * Membaca berkas sebagai teks (tanpa impor TSX) agar tak terpengaruh alias
+ * `@/`. Tujuan: mencegah regresi — landing & panduan harus tetap publik,
+ * ruang & workspace harus tetap login-gated, dan robot/sitemap mencerminkan
+ * aturan itu.
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -19,23 +27,53 @@ const read = (rel: string) => readFileSync(join(here, rel), "utf8");
 const landing = read("../src/app/tools/page.tsx");
 const space = read("../src/app/tools/ruang/page.tsx");
 const workspace = read("../src/app/tools/[slug]/page.tsx");
+const guideIndex = read("../src/app/tools/panduan/page.tsx");
+const guideDetail = read("../src/app/tools/panduan/[slug]/page.tsx");
 const robots = read("../src/app/robots.ts");
 const sitemap = read("../src/app/sitemap.ts");
 const toolShell = read("../src/components/tools/tool-shell.tsx");
+const toolRail = read("../src/components/tools/tool-rail.tsx");
 const accountOverview = read("../src/components/auth/account-overview.tsx");
 
 test("landing /tools publik: tanpa UserGuard & boleh diindeks", () => {
   assert.doesNotMatch(landing, /UserGuard/);
   assert.doesNotMatch(landing, /index:\s*false/);
   assert.match(landing, /canonical:\s*"\/tools"/);
-  assert.match(landing, /ToolCard/);
+  assert.match(landing, /ToolsHero/);
+  assert.match(landing, /ToolsIntentGrid/);
+  assert.match(landing, /ToolsShowcase/);
+  assert.match(landing, /ToolsFaqCta/);
   assert.match(landing, /TOOLS/);
+});
+
+test("landing menyediakan anchor demo, katalog, dan FAQ", () => {
+  assert.match(landing, /id="demo"/);
+  // Anchor katalog & FAQ berasal dari komponen landing.
+  assert.match(
+    read("../src/components/tools/landing/tools-showcase.tsx"),
+    /id="tool"/,
+  );
+  assert.match(
+    read("../src/components/tools/landing/tools-faq-cta.tsx"),
+    /id="faq"/,
+  );
+});
+
+test("landing menautkan panduan publik & JSON-LD memakai URL panduan", () => {
+  assert.match(
+    read("../src/components/tools/landing/tools-faq-cta.tsx"),
+    /href="\/tools\/panduan"/,
+  );
+  // ItemList tidak boleh menunjuk workspace gated.
+  assert.match(landing, /toolGuideHref\(tool\.slug\)/);
+  assert.doesNotMatch(landing, /url:\s*`\$\{SITE\.url\}\/tools\/\$\{tool\.slug\}`/);
 });
 
 test("ruang /tools/ruang login-gated & noindex", () => {
   assert.match(space, /UserGuard/);
   assert.match(space, /index:\s*false/);
   assert.match(space, /ToolsCatalog/);
+  assert.match(space, /Suspense/);
 });
 
 test("workspace /tools/[slug] login-gated & noindex", () => {
@@ -43,17 +81,76 @@ test("workspace /tools/[slug] login-gated & noindex", () => {
   assert.match(workspace, /index:\s*false/);
 });
 
-test("robots: sub-path /tools/ diblokir, landing /tools diizinkan", () => {
+test("panduan /tools/panduan publik & indexable", () => {
+  assert.doesNotMatch(guideIndex, /<UserGuard/);
+  assert.doesNotMatch(guideIndex, /components\/auth\/user-guard/);
+  assert.doesNotMatch(guideIndex, /index:\s*false/);
+  assert.match(guideIndex, /canonical:\s*"\/tools\/panduan"/);
+  assert.match(guideIndex, /TOOL_GUIDES/);
+});
+
+test("panduan /tools/panduan/[slug] publik, statis, & punya FAQ terlihat", () => {
+  assert.doesNotMatch(guideDetail, /UserGuard/);
+  assert.match(
+    guideDetail,
+    /alternates:\s*\{\s*canonical:\s*toolGuideHref\(slug\)/,
+  );
+  assert.match(guideDetail, /dynamicParams\s*=\s*false/);
+  assert.match(guideDetail, /generateStaticParams/);
+  assert.match(guideDetail, /toolGuideHref/);
+  assert.match(guideDetail, /FaqAccordion/);
+});
+
+test("robots: workspace diblokir, panduan publik diizinkan", () => {
   assert.match(robots, /"\/tools\/"/);
+  assert.match(robots, /"\/tools\/panduan"/);
   // Tidak boleh ada entri persis "/tools" (tanpa garis miring) yang ikut memblokir landing.
   assert.doesNotMatch(robots, /"\/tools"(?!\/)/);
 });
 
-test("sitemap memuat landing /tools", () => {
+test("sitemap memuat landing /tools dan panduan publik", () => {
   assert.match(sitemap, /`\$\{SITE\.url\}\/tools`/);
+  assert.match(sitemap, /tools\/panduan/);
 });
 
 test("navigasi internal mengarah ke ruang, bukan landing", () => {
   assert.match(toolShell, /href="\/tools\/ruang"/);
   assert.match(accountOverview, /href="\/tools\/ruang"/);
+});
+
+test("workspace punya rail tool dengan aria-current", () => {
+  assert.match(toolShell, /ToolRail/);
+  assert.match(toolRail, /aria-current/);
+  assert.match(toolRail, /"page"/);
+});
+
+test("setiap tool tersedia punya panduan yang lengkap", () => {
+  const guideSlugs = toolGuideSlugs();
+  assert.equal(new Set(guideSlugs).size, guideSlugs.length);
+
+  for (const slug of availableToolSlugs()) {
+    const guide = TOOL_GUIDES.find((item) => item.slug === slug);
+    assert.ok(guide, `panduan ${slug} tidak ada`);
+    assert.ok(guide.title.trim().length > 0, slug);
+    assert.ok(guide.intro.trim().length > 0, slug);
+    assert.ok(guide.steps.length >= 3, slug);
+    assert.ok(guide.useCases.length >= 3, slug);
+    assert.ok(guide.faq.length >= 3, slug);
+    for (const faq of guide.faq) {
+      assert.ok(faq.question.trim() && faq.answer.trim(), slug);
+    }
+  }
+
+  // Panduan tidak boleh menjanjikan tool fiktif atau klaim absolut.
+  for (const guide of TOOL_GUIDES) {
+    const text = JSON.stringify(guide).toLowerCase();
+    assert.doesNotMatch(text, /100% aman/, guide.slug);
+    assert.doesNotMatch(text, /testimoni/, guide.slug);
+  }
+
+  // Registry & panduan harus memakai kumpulan slug yang sama.
+  assert.deepEqual(
+    [...guideSlugs].sort(),
+    [...TOOLS.filter((tool) => tool.status === "tersedia").map((t) => t.slug)].sort(),
+  );
 });

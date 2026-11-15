@@ -1,14 +1,22 @@
 "use client";
 
-import type { ComponentType } from "react";
-import { Wrench } from "lucide-react";
+import { useEffect, type ComponentType } from "react";
+import Link from "next/link";
+import { ArrowRight, Wrench } from "lucide-react";
 import { ToolShell } from "@/components/tools/tool-shell";
+import { ToolCard } from "@/components/tools/tool-card";
 import { ColorPickerTool } from "@/components/tools/color-picker-tool";
 import { ImageToWebpTool } from "@/components/tools/image-to-webp-tool";
 import { ImageToPdfTool } from "@/components/tools/image-to-pdf-tool";
 import { PdfToImageTool } from "@/components/tools/pdf-to-image-tool";
 import { TextFormatterTool } from "@/components/tools/text-formatter-tool";
-import type { ToolDefinition } from "@/lib/tools-registry-pure";
+import { addRecentToolSlug } from "@/lib/tools-discovery-pure";
+import { readRecentTools, writeRecentTools } from "@/lib/tools-storage";
+import { trackToolsToolOpen } from "@/lib/analytics";
+import {
+  getRelatedTools,
+  type ToolDefinition,
+} from "@/lib/tools-registry-pure";
 
 /**
  * Peta slug → komponen body tool. Tool yang ditandai `tersedia` di registry
@@ -25,6 +33,18 @@ const TOOL_BODIES: Record<string, ComponentType> = {
 
 export function ToolWorkspace({ tool }: { tool: ToolDefinition }) {
   const Body = TOOL_BODIES[tool.slug];
+  const related = getRelatedTools(tool);
+
+  // Catat pembukaan workspace sekali per tool (tanpa PII).
+  useEffect(() => {
+    trackToolsToolOpen({ tool: tool.slug, source: "workspace" });
+  }, [tool.slug]);
+
+  const openRelated = (picked: ToolDefinition) => {
+    const next = addRecentToolSlug(readRecentTools(), picked.slug, 3);
+    writeRecentTools(next);
+    trackToolsToolOpen({ tool: picked.slug, source: "related" });
+  };
 
   return (
     <ToolShell tool={tool}>
@@ -42,6 +62,36 @@ export function ToolWorkspace({ tool }: { tool: ToolDefinition }) {
             Kami sedang menyiapkannya. Silakan coba tool lain di katalog.
           </p>
         </div>
+      )}
+
+      {related.length > 0 && (
+        <section className="mt-14 border-t border-slate-100 pt-10">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-secondary">
+                Jelajahi tool lain
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                Tool lain di ruang yang sama — tanpa perlu kembali ke katalog.
+              </p>
+            </div>
+            <Link
+              href="/tools/ruang"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary transition-colors hover:text-primary-dark focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+            >
+              Semua tool
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <ul className="mt-5 grid gap-4 sm:grid-cols-2">
+            {related.map((item) => (
+              <li key={item.slug} className="h-full">
+                <ToolCard tool={item} onOpen={openRelated} />
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </ToolShell>
   );

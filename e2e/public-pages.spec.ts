@@ -60,6 +60,34 @@ test.describe("LKTech Tools: landing publik vs ruang privat", () => {
       "href",
       /\/tools$/,
     );
+    // Panduan publik harus bisa ditemukan dari landing (internal linking).
+    await expect(page.locator('a[href="/tools/panduan"]').first()).toBeVisible();
+  });
+
+  test("/tools/panduan publik & indexable", async ({ page }) => {
+    const res = await page.goto("/tools/panduan", {
+      waitUntil: "domcontentloaded",
+    });
+    expect(res?.status()).toBeLessThan(400);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      "content",
+      /index/i,
+    );
+    await expect(
+      page.locator('a[href="/tools/panduan/color-picker"]').first(),
+    ).toBeVisible();
+  });
+
+  test("/tools/panduan/[slug] publik, indexable & punya H1", async ({ page }) => {
+    const res = await page.goto("/tools/panduan/color-picker", {
+      waitUntil: "domcontentloaded",
+    });
+    expect(res?.status()).toBeLessThan(400);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      "content",
+      /index/i,
+    );
+    await expect(page.locator("h1")).toContainText(/Color Picker/i);
   });
 
   test("/tools/ruang tetap noindex (ruang login-gated)", async ({ page }) => {
