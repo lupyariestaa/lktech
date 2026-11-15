@@ -4,28 +4,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowRight,
   Search,
   Star,
-  Trash2,
   Wrench,
   X,
 } from "lucide-react";
 import { ToolCard } from "@/components/tools/tool-card";
-import { ToolIcon } from "@/components/tools/tool-icon";
 import {
   trackToolsCatalogFilter,
   trackToolsEmptyStateAction,
   trackToolsFavoriteToggle,
-  trackToolsRecentOpen,
   trackToolsToolOpen,
 } from "@/lib/analytics";
 import {
-  addRecentToolSlug,
   buildToolsCatalogHref,
   filterCatalogTools,
   parseToolsCatalogParams,
-  resolveToolsBySlugs,
   toggleFavoriteToolSlug,
   type ToolsCatalogState,
 } from "@/lib/tools-discovery-pure";
@@ -37,15 +31,8 @@ import {
   type ToolCategoryFilter,
   type ToolDefinition,
 } from "@/lib/tools-registry-pure";
-import {
-  clearToolsLocalData,
-  writeFavoriteTools,
-  writeRecentTools,
-} from "@/lib/tools-storage";
-import {
-  useRecentTools,
-  useToolFavorites,
-} from "@/components/tools/use-tools-preferences";
+import { writeFavoriteTools } from "@/lib/tools-storage";
+import { useToolFavorites } from "@/components/tools/use-tools-preferences";
 import { cn } from "@/lib/utils";
 
 const AVAILABLE_TOOLS = TOOLS.filter((tool) => tool.status === "tersedia");
@@ -53,8 +40,12 @@ const COUNTS = countToolsByCategory(AVAILABLE_TOOLS);
 const AVAILABLE = AVAILABLE_TOOLS.length;
 
 /**
- * Katalog ruang `/tools/ruang`: pencarian, filter kategori, favorit, recent,
- * empty state, dan URL state yang bisa dibagikan.
+ * Katalog ruang `/tools/ruang`: pencarian, filter kategori, favorit, empty
+ * state, dan URL state yang bisa dibagikan.
+ *
+ * Recent, statistik, dan hapus data lokal sengaja tidak lagi ditangani di sini;
+ * itu tugas dashboard home dan footer sidebar. Klik tool hanya mengirim
+ * analytics — pencatatan recent/usage terjadi saat workspace di-mount.
  *
  * Catatan Next 16: komponen ini memakai `useSearchParams`, jadi pemanggil wajib
  * membungkusnya dengan `<Suspense>` agar build statis tidak gagal.
@@ -70,12 +61,10 @@ export function ToolsCatalog() {
     initial.category,
   );
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [notice, setNotice] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Data lokal (hanya slug; tidak ada berkas/isi) via external store React.
   const favorites = useToolFavorites();
-  const recent = useRecentTools();
 
   // URL berubah di luar kendali katalog (back/forward) → sinkronkan state.
   // SetState di callback event adalah pola subscribe yang dianjurkan React.
@@ -137,11 +126,6 @@ export function ToolsCatalog() {
     [q, category, favorites, favoritesOnly],
   );
 
-  const recentTools = useMemo(
-    () => resolveToolsBySlugs(recent, TOOLS),
-    [recent],
-  );
-
   const tabs: Array<{ id: ToolCategoryFilter; label: string; count: number }> = [
     { id: "semua", label: "Semua", count: AVAILABLE },
     ...TOOL_CATEGORIES.map((c) => ({
@@ -185,77 +169,16 @@ export function ToolsCatalog() {
     });
   };
 
-  const recordRecent = (tool: ToolDefinition) => {
-    writeRecentTools(addRecentToolSlug(recent, tool.slug, 3));
-  };
-
   const onOpenTool = (tool: ToolDefinition) => {
-    recordRecent(tool);
+    // Klik hanya mengirim analytics; recent & usage dicatat saat workspace
+    // benar-benar di-mount (satu titik, tanpa hitung ganda).
     trackToolsToolOpen({ tool: tool.slug, source: "ruang" });
-  };
-
-  const openRecent = (tool: ToolDefinition) => {
-    recordRecent(tool);
-    trackToolsRecentOpen({ tool: tool.slug });
-  };
-
-  const clearLocal = () => {
-    clearToolsLocalData();
-    setFavoritesOnly(false);
-    setNotice("Data lokal tools dihapus.");
   };
 
   return (
     <div>
-      {recentTools.length > 0 && (
-        <div className="mb-8 rounded-2xl border border-slate-200 bg-surface p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold tracking-wide text-muted uppercase">
-              Terakhir dipakai
-            </p>
-            <button
-              type="button"
-              onClick={clearLocal}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 transition-colors hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
-            >
-              <Trash2 className="h-3 w-3" aria-hidden="true" />
-              Hapus data lokal
-            </button>
-          </div>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {recentTools.map((tool) => (
-              <li key={tool.slug}>
-                <Link
-                  href={`/tools/${tool.slug}`}
-                  onClick={() => openRecent(tool)}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-secondary transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
-                >
-                  <ToolIcon name={tool.icon} className="h-3.5 w-3.5 text-primary" />
-                  {tool.name}
-                  <ArrowRight
-                    className="h-3 w-3 text-slate-300 transition-transform group-hover:translate-x-0.5"
-                    aria-hidden="true"
-                  />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {recentTools.length === 0 && (favorites.length > 0 || recent.length > 0) && (
-        <button
-          type="button"
-          onClick={clearLocal}
-          className="mb-4 inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 transition-colors hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
-        >
-          <Trash2 className="h-3 w-3" aria-hidden="true" />
-          Hapus data lokal
-        </button>
-      )}
-
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:max-w-sm">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="relative w-full xl:max-w-sm">
           <label htmlFor="tools-search" className="sr-only">
             Cari tool
           </label>
@@ -398,7 +321,7 @@ export function ToolsCatalog() {
           </div>
         </div>
       ) : (
-        <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((tool) => (
             <li key={tool.slug} className="h-full">
               <ToolCard
@@ -411,10 +334,6 @@ export function ToolsCatalog() {
           ))}
         </ul>
       )}
-
-      <p role="status" aria-live="polite" className="sr-only">
-        {notice}
-      </p>
     </div>
   );
 }
@@ -423,8 +342,8 @@ export function ToolsCatalog() {
 export function ToolsCatalogFallback() {
   return (
     <div aria-hidden="true">
-      <div className="h-11 w-full animate-pulse rounded-full bg-slate-100 lg:max-w-sm" />
-      <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="h-11 w-full animate-pulse rounded-full bg-slate-100 xl:max-w-sm" />
+      <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {[0, 1, 2].map((i) => (
           <div
             key={i}

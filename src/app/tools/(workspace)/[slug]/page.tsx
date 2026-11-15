@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Navbar } from "@/components/sections/navbar";
-import { Footer } from "@/components/sections/footer";
-import { UserGuard } from "@/components/auth/user-guard";
 import { ToolWorkspace } from "@/components/tools/tool-workspace";
-import { availableToolSlugs, getToolBySlug } from "@/lib/tools-registry-pure";
+import {
+  availableToolSlugs,
+  getToolBySlug,
+} from "@/lib/tools-registry-pure";
 
 /** Hanya tool `tersedia` yang punya halaman workspace. */
 export function generateStaticParams() {
@@ -19,15 +19,19 @@ export async function generateMetadata({
   const { slug } = await params;
   const tool = getToolBySlug(slug);
   if (!tool || tool.status !== "tersedia") {
-    return { title: "Tool tidak ditemukan", robots: { index: false, follow: false } };
+    return { title: "Tool tidak ditemukan" };
   }
   return {
     title: `${tool.name} — LKTech Tools`,
     description: tool.summary,
-    robots: { index: false, follow: false },
   };
 }
 
+/**
+ * Workspace tool (`/tools/[slug]`). Guard, `noindex`, sidebar, dan topbar
+ * mobile berasal dari layout `(workspace)`; halaman ini hanya merender body
+ * tool di area utama.
+ */
 export default async function ToolPage({
   params,
 }: {
@@ -37,15 +41,5 @@ export default async function ToolPage({
   const tool = getToolBySlug(slug);
   if (!tool || tool.status !== "tersedia") notFound();
 
-  return (
-    <>
-      <Navbar />
-      <main id="konten">
-        <UserGuard>
-          <ToolWorkspace tool={tool} />
-        </UserGuard>
-      </main>
-      <Footer />
-    </>
-  );
+  return <ToolWorkspace tool={tool} />;
 }

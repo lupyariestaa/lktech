@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ComponentType } from "react";
+import { useEffect, useRef, type ComponentType } from "react";
 import Link from "next/link";
 import { ArrowRight, Wrench } from "lucide-react";
 import { ToolShell } from "@/components/tools/tool-shell";
@@ -10,8 +10,7 @@ import { ImageToWebpTool } from "@/components/tools/image-to-webp-tool";
 import { ImageToPdfTool } from "@/components/tools/image-to-pdf-tool";
 import { PdfToImageTool } from "@/components/tools/pdf-to-image-tool";
 import { TextFormatterTool } from "@/components/tools/text-formatter-tool";
-import { addRecentToolSlug } from "@/lib/tools-discovery-pure";
-import { readRecentTools, writeRecentTools } from "@/lib/tools-storage";
+import { recordToolOpen } from "@/lib/tools-storage";
 import { trackToolsToolOpen } from "@/lib/analytics";
 import {
   getRelatedTools,
@@ -34,15 +33,19 @@ const TOOL_BODIES: Record<string, ComponentType> = {
 export function ToolWorkspace({ tool }: { tool: ToolDefinition }) {
   const Body = TOOL_BODIES[tool.slug];
   const related = getRelatedTools(tool);
+  const recordedRef = useRef<string | null>(null);
 
-  // Catat pembukaan workspace sekali per tool (tanpa PII).
+  // Catat recent + usage SEKALI per kunjungan workspace (termasuk deep link &
+  // refresh). Ref guard mencegah hitung ganda dari StrictMode di development.
   useEffect(() => {
+    if (recordedRef.current === tool.slug) return;
+    recordedRef.current = tool.slug;
+    recordToolOpen(tool.slug);
     trackToolsToolOpen({ tool: tool.slug, source: "workspace" });
   }, [tool.slug]);
 
   const openRelated = (picked: ToolDefinition) => {
-    const next = addRecentToolSlug(readRecentTools(), picked.slug, 3);
-    writeRecentTools(next);
+    // Pencatatan recent/usage terjadi saat workspace tujuan di-mount.
     trackToolsToolOpen({ tool: picked.slug, source: "related" });
   };
 

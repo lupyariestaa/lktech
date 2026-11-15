@@ -204,8 +204,9 @@ export type ToolsEventSource =
   | "landing"
   | "intent"
   | "ruang"
+  | "dashboard"
+  | "sidebar"
   | "recent"
-  | "rail"
   | "related"
   | "workspace"
   | "guide";

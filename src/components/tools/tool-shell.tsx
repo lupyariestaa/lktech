@@ -1,13 +1,12 @@
 import Link from "next/link";
 import {
-  ArrowLeft,
   BookOpen,
+  ChevronRight,
   HelpCircle,
   ShieldCheck,
 } from "lucide-react";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { ToolLocalBadge } from "@/components/tools/tool-badges";
-import { ToolRail } from "@/components/tools/tool-rail";
 import {
   TOOL_CATEGORY_LABEL,
   toolGuideHref,
@@ -15,8 +14,11 @@ import {
 } from "@/lib/tools-registry-pure";
 
 /**
- * Kerangka halaman workspace tool: breadcrumb, judul, metadata format/batas,
- * catatan privasi, rail tool, dan slot isi tool. Murni presentasional.
+ * Header workspace tool: breadcrumb, judul, metadata format/batas, catatan
+ * privasi, dan slot isi tool.
+ *
+ * Navigasi antar-tool sudah dipindahkan ke sidebar dashboard; tidak ada lagi
+ * rail horizontal atau tombol "kembali" besar di sini.
  */
 export function ToolShell({
   tool,
@@ -26,20 +28,28 @@ export function ToolShell({
   children: React.ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden bg-white pt-32 pb-20 sm:pt-36">
-      <div className="grid-lines absolute inset-0 opacity-60" />
-      <div className="pointer-events-none absolute -top-24 -left-24 h-[24rem] w-[24rem] animate-aurora rounded-full bg-primary/10 blur-[120px]" />
-
-      <div className="relative mx-auto max-w-5xl px-6">
-        <Link
-          href="/tools/ruang"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted transition-colors hover:text-primary"
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+      <header className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        <nav
+          aria-label="Breadcrumb"
+          className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-muted"
         >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          Kembali ke ruang tools
-        </Link>
+          <Link
+            href="/tools/ruang"
+            className="rounded transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+          >
+            Ruang tools
+          </Link>
+          <ChevronRight
+            className="h-3 w-3 text-slate-300"
+            aria-hidden="true"
+          />
+          <span aria-current="page" className="text-secondary">
+            {tool.name}
+          </span>
+        </nav>
 
-        <div className="mt-6 flex items-start gap-4">
+        <div className="mt-4 flex items-start gap-4">
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary-50 text-primary">
             <ToolIcon name={tool.icon} className="h-7 w-7" />
           </span>
@@ -81,14 +91,15 @@ export function ToolShell({
         </div>
 
         <p className="mt-5 inline-flex items-start gap-2 rounded-2xl bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+          <ShieldCheck
+            className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600"
+            aria-hidden="true"
+          />
           <span>{tool.privacyNote}</span>
         </p>
+      </header>
 
-        <ToolRail activeSlug={tool.slug} />
-
-        <div className="mt-6">{children}</div>
-      </div>
-    </section>
+      <div className="mt-6">{children}</div>
+    </div>
   );
 }

@@ -30,6 +30,7 @@ Contoh: `2026-02-14-auth-split-dan-produk.md`
 
 | Tanggal    | Dokumen                                                                 | Status      |
 | ---------- | ----------------------------------------------------------------------- | ----------- |
+| 2026-11-15 | [Dashboard Ruang LKTech Tools — Rencana Produk, UX & Eksekusi](2026-11-15-upgrade-dashboard-ruang-tools.md) | ✅ Diimplementasikan (T1–T7); lint/tsc/test 102/build 217/E2E 18 hijau; QA visual 360–1440 lolos; belum commit |
 | 2026-11-14 | [Upgrade Landing LKTech Tools — Rencana Produk, UX & Eksekusi](2026-11-14-upgrade-landing-lktech-tools.md) | ✅ Diimplementasikan (Paket A+B+C); QA manual tersisa |
 | 2026-11-01 | [LKTech Tools — Product & Technical Development Plan](2026-11-01-lktech-tools-space.md) | ✅ MVP (F1–F3) + F2d/F2e (5 tool) + F5 (landing `/tools` & ruang `/tools/ruang`); F4 (berbayar) di luar cakupan |
 | 2026-02-14 | [Auth split (admin/user) + Sistem Produk](2026-02-14-auth-split-dan-produk.md) | Selesai |
