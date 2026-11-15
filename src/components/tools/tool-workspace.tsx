@@ -90,6 +90,7 @@ export function ToolWorkspace({ tool }: { tool: ToolDefinition }) {
               <li key={item.slug} className="h-full">
               <ToolCard
                 tool={item}
+                showArtwork={false}
                 onOpen={(picked) =>
                   trackToolsToolOpenIntent({
                     tool: picked.slug,

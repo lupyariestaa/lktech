@@ -80,3 +80,16 @@ test("dashboard E2E signs in through the Google Auth Emulator UI", () => {
   assert.match(config, /NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST/);
   assert.match(config, /NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_KEY/);
 });
+
+test("catalog cards use title artwork without an available status badge", () => {
+  const card = read("src/components/tools/tool-card.tsx");
+  const workspace = read("src/components/tools/tool-workspace.tsx");
+
+  assert.match(card, /function ToolCardArtwork/);
+  assert.match(card, /<ToolCardArtwork tool=\{tool\} \/>/);
+  assert.match(card, /showArtwork = true/);
+  assert.match(card, /<h3[^>]*>\s*\{tool\.name\}/);
+  assert.doesNotMatch(card, /ToolStatusBadge|Tersedia/);
+  assert.match(workspace, /showArtwork=\{false\}/);
+  assert.match(workspace, /<ToolShell tool=\{tool\}>/);
+});
