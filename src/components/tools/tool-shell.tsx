@@ -28,7 +28,7 @@ export function ToolShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+    <div className="w-full px-4 py-6 sm:px-6 lg:px-8 xl:px-10 lg:py-8">
       <header className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
         <nav
           aria-label="Breadcrumb"

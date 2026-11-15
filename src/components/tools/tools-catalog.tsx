@@ -178,7 +178,7 @@ export function ToolsCatalog() {
   return (
     <div>
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="relative w-full xl:max-w-sm">
+        <div className="relative w-full xl:w-auto xl:flex-1 xl:max-w-none">
           <label htmlFor="tools-search" className="sr-only">
             Cari tool
           </label>
@@ -342,7 +342,7 @@ export function ToolsCatalog() {
 export function ToolsCatalogFallback() {
   return (
     <div aria-hidden="true">
-      <div className="h-11 w-full animate-pulse rounded-full bg-slate-100 xl:max-w-sm" />
+      <div className="h-11 w-full animate-pulse rounded-full bg-slate-100" />
       <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {[0, 1, 2].map((i) => (
           <div

@@ -93,6 +93,7 @@ test("ruang /tools/ruang memakai shell dashboard, guard dari layout", () => {
   assert.match(space, /ToolsCatalog/);
   assert.match(space, /Suspense/);
   assert.match(space, /id="katalog"/);
+  assert.match(space, /<div className="w-full">/);
 });
 
 test("workspace /tools/[slug] tetap statis & memakai shell dashboard", () => {
@@ -147,6 +148,12 @@ test("dashboard memakai sidebar bersama + drawer mobile", () => {
   assert.match(toolsShell, /useToolFavorites/);
   assert.match(toolsShell, /useToolUsage/);
   assert.match(toolsShell, /id="tools-main"/);
+  assert.match(toolsShell, /lg:grid-cols-\[76px_minmax\(0,1fr\)\]/);
+  assert.match(toolsShell, /useSyncExternalStore/);
+  assert.match(sidebarContent, /onToggleCollapsed/);
+  assert.match(sidebarContent, /Tampilkan sidebar penuh/);
+  assert.match(sidebarContent, /collapsed/);
+  assert.match(toolShell, /w-full px-4/);
 });
 
 test("sidebar memuat tool aktif, favorit, frekuensi, semua tool", () => {

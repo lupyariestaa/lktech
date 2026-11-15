@@ -33,7 +33,7 @@ export default function ToolsSpacePage() {
 
   return (
     <div className="px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
-      <div className="mx-auto max-w-6xl">
+      <div className="w-full">
         <header>
           <p className="text-[11px] font-semibold tracking-[0.14em] text-primary uppercase">
             LKTech Tools

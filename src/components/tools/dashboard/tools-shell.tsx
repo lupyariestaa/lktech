@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { ToolsMobileDrawer } from "@/components/tools/dashboard/tools-mobile-drawer";
 import { ToolsMobileTopbar } from "@/components/tools/dashboard/tools-mobile-topbar";
@@ -17,6 +17,27 @@ import {
 import { trackToolsToolOpenIntent } from "@/lib/analytics";
 import { getActiveToolSlug } from "@/lib/tools-usage-pure";
 
+const SIDEBAR_PREFERENCE_KEY = "lktech-tools-sidebar-collapsed";
+const SIDEBAR_PREFERENCE_EVENT = "lktech-tools-sidebar-preference";
+let sidebarCollapsedFallback = false;
+
+function getSidebarCollapsedSnapshot() {
+  try {
+    return window.localStorage.getItem(SIDEBAR_PREFERENCE_KEY) === "true";
+  } catch {
+    return sidebarCollapsedFallback;
+  }
+}
+
+function subscribeToSidebarPreference(onChange: () => void) {
+  window.addEventListener(SIDEBAR_PREFERENCE_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(SIDEBAR_PREFERENCE_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
 /**
  * Shell dashboard LKTech Tools.
  *
@@ -30,9 +51,25 @@ import { getActiveToolSlug } from "@/lib/tools-usage-pure";
 export function ToolsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const sidebarCollapsed = useSyncExternalStore(
+    subscribeToSidebarPreference,
+    getSidebarCollapsedSnapshot,
+    () => false,
+  );
   const favorites = useToolFavorites();
   const usage = useToolUsage();
   const storageAvailable = useToolsStorageAvailable();
+
+  const toggleSidebar = () => {
+    const next = !sidebarCollapsed;
+    sidebarCollapsedFallback = next;
+    try {
+      window.localStorage.setItem(SIDEBAR_PREFERENCE_KEY, String(next));
+    } catch {
+      // Preferensi hanya berlaku untuk tab ini ketika storage tidak tersedia.
+    }
+    window.dispatchEvent(new Event(SIDEBAR_PREFERENCE_EVENT));
+  };
 
   const activeSlug = getActiveToolSlug(pathname, TOOLS);
   const activeTool = activeSlug ? getToolBySlug(activeSlug, TOOLS) : null;
@@ -52,7 +89,9 @@ export function ToolsShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-dvh bg-surface lg:grid lg:grid-cols-[264px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
+    <div
+      className={`min-h-dvh bg-surface lg:grid ${sidebarCollapsed ? "lg:grid-cols-[76px_minmax(0,1fr)]" : "lg:grid-cols-[264px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]"}`}
+    >
       <a
         href="#tools-main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg focus:outline-none"
@@ -62,7 +101,7 @@ export function ToolsShell({ children }: { children: React.ReactNode }) {
 
       <aside
         aria-label="Sidebar LKTech Tools"
-        className="sticky top-0 hidden h-dvh border-r border-slate-200 bg-white lg:block"
+        className={`sticky top-0 hidden h-dvh border-r border-slate-200 bg-white transition-[width] duration-200 lg:block ${sidebarCollapsed ? "w-[76px]" : "w-full"}`}
       >
         <ToolsSidebarContent
           pathname={pathname}
@@ -70,6 +109,8 @@ export function ToolsShell({ children }: { children: React.ReactNode }) {
           favorites={favorites}
           usage={usage}
           onToolOpen={trackSidebarOpen}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebar}
         />
       </aside>
 
