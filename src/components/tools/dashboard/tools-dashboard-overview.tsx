@@ -17,7 +17,7 @@ import {
 } from "@/components/tools/use-tools-preferences";
 import {
   trackToolsRecentOpen,
-  trackToolsToolOpen,
+  trackToolsToolOpenIntent,
 } from "@/lib/analytics";
 import { resolveToolsBySlugs } from "@/lib/tools-discovery-pure";
 import {
@@ -163,7 +163,7 @@ export function ToolsDashboardOverview() {
             }))}
             empty="Belum ada favorit. Tandai ★ pada kartu tool."
             onOpen={(slug) =>
-              trackToolsToolOpen({ tool: slug, source: "dashboard" })
+              trackToolsToolOpenIntent({ tool: slug, source: "dashboard" })
             }
           />
           <ToolsShortcutCard
@@ -179,7 +179,7 @@ export function ToolsDashboardOverview() {
             }))}
             empty="Belum ada hitungan. Buka tool untuk mulai."
             onOpen={(slug) =>
-              trackToolsToolOpen({ tool: slug, source: "dashboard" })
+              trackToolsToolOpenIntent({ tool: slug, source: "dashboard" })
             }
           />
         </div>

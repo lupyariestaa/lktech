@@ -7,6 +7,7 @@ import {
   getServerToolUsageSnapshot,
   getServerToolsSnapshot,
   getToolUsageSnapshot,
+  getToolsStorageAvailabilitySnapshot,
   subscribeToolsPreferences,
 } from "@/lib/tools-storage";
 import type { ToolUsageEntry } from "@/lib/tools-usage-pure";
@@ -42,5 +43,14 @@ export function useToolUsage(): ToolUsageEntry[] {
     subscribeToolsPreferences,
     getToolUsageSnapshot,
     getServerToolUsageSnapshot,
+  );
+}
+
+/** Apakah perubahan preferensi akan bertahan setelah tab/browser ditutup. */
+export function useToolsStorageAvailable(): boolean {
+  return useSyncExternalStore(
+    subscribeToolsPreferences,
+    getToolsStorageAvailabilitySnapshot,
+    () => true,
   );
 }

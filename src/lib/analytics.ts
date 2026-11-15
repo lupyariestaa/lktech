@@ -208,8 +208,8 @@ export type ToolsEventSource =
   | "sidebar"
   | "recent"
   | "related"
-  | "workspace"
-  | "guide";
+  | "guide"
+  | "workspace";
 
 /** Klik CTA menuju ruang/tool. */
 export function trackToolsCta(props: {
@@ -256,12 +256,21 @@ export function trackToolsCatalogFilter(props: {
   });
 }
 
-/** Tool dibuka dari landing/ruang/rail/related. */
+/** Workspace tool benar-benar berhasil dimuat (bukan sekadar klik tautan). */
 export function trackToolsToolOpen(props: {
   tool: string;
-  source: ToolsEventSource;
 }): void {
   trackEvent("tools_tool_open", {
+    tool: props.tool,
+  });
+}
+
+/** Intent navigasi menuju tool, tercatat di klik link. */
+export function trackToolsToolOpenIntent(props: {
+  tool: string;
+  source: Exclude<ToolsEventSource, "workspace">;
+}): void {
+  trackEvent("tools_tool_open_intent", {
     tool: props.tool,
     source: props.source,
   });

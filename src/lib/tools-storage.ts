@@ -37,12 +37,21 @@ const EMPTY_USAGE: ToolUsageEntry[] = [];
 let favoritesCache: string[] | null = null;
 let recentCache: string[] | null = null;
 let usageCache: ToolUsageEntry[] | null = null;
+let toolsStorageUnavailable = false;
+
+/** Status stabil untuk menjelaskan preferensi yang hanya hidup di tab ini. */
+export function getToolsStorageAvailabilitySnapshot(): boolean {
+  return !toolsStorageUnavailable;
+}
 
 function safeRead(key: string): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.localStorage.getItem(key);
+    const value = window.localStorage.getItem(key);
+    toolsStorageUnavailable = false;
+    return value;
   } catch {
+    toolsStorageUnavailable = true;
     return null;
   }
 }
@@ -51,8 +60,9 @@ function safeWrite(key: string, value: string): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(key, value);
+    toolsStorageUnavailable = false;
   } catch {
-    /* penyimpanan tidak tersedia — cache in-memory tetap berjalan */
+    toolsStorageUnavailable = true;
   }
 }
 
@@ -171,14 +181,14 @@ export function writeToolUsage(entries: readonly ToolUsageEntry[]): void {
  */
 export function recordToolOpen(slug: string): void {
   const recent = addRecentToolSlug(
-    readRecentTools(),
+    getRecentToolsSnapshot(),
     slug,
     MAX_RECENT_TOOLS,
   );
   safeWrite(TOOLS_RECENT_STORAGE_KEY, serializeToolSlugs(recent));
   recentCache = recent;
 
-  const usage = recordToolUsage(readToolUsage(), slug, TOOLS);
+  const usage = recordToolUsage(getToolUsageSnapshot(), slug, TOOLS);
   safeWrite(TOOLS_USAGE_STORAGE_KEY, serializeToolUsage(usage));
   usageCache = usage;
 
@@ -188,15 +198,18 @@ export function recordToolOpen(slug: string): void {
 /** Hapus seluruh data lokal Tools (recent + favorites + usage). */
 export function clearToolsLocalData(): void {
   if (typeof window === "undefined") return;
+  let cleared = true;
   try {
     window.localStorage.removeItem(TOOLS_RECENT_STORAGE_KEY);
     window.localStorage.removeItem(TOOLS_FAVORITES_STORAGE_KEY);
     window.localStorage.removeItem(TOOLS_USAGE_STORAGE_KEY);
   } catch {
-    /* abaikan */
+    cleared = false;
+    toolsStorageUnavailable = true;
   }
   favoritesCache = [];
   recentCache = [];
   usageCache = [];
+  if (cleared) toolsStorageUnavailable = false;
   emitChange();
 }

@@ -11,7 +11,10 @@ import { ImageToPdfTool } from "@/components/tools/image-to-pdf-tool";
 import { PdfToImageTool } from "@/components/tools/pdf-to-image-tool";
 import { TextFormatterTool } from "@/components/tools/text-formatter-tool";
 import { recordToolOpen } from "@/lib/tools-storage";
-import { trackToolsToolOpen } from "@/lib/analytics";
+import {
+  trackToolsToolOpen,
+  trackToolsToolOpenIntent,
+} from "@/lib/analytics";
 import {
   getRelatedTools,
   type ToolDefinition,
@@ -41,13 +44,8 @@ export function ToolWorkspace({ tool }: { tool: ToolDefinition }) {
     if (recordedRef.current === tool.slug) return;
     recordedRef.current = tool.slug;
     recordToolOpen(tool.slug);
-    trackToolsToolOpen({ tool: tool.slug, source: "workspace" });
+    trackToolsToolOpen({ tool: tool.slug });
   }, [tool.slug]);
-
-  const openRelated = (picked: ToolDefinition) => {
-    // Pencatatan recent/usage terjadi saat workspace tujuan di-mount.
-    trackToolsToolOpen({ tool: picked.slug, source: "related" });
-  };
 
   return (
     <ToolShell tool={tool}>
@@ -90,7 +88,15 @@ export function ToolWorkspace({ tool }: { tool: ToolDefinition }) {
           <ul className="mt-5 grid gap-4 sm:grid-cols-2">
             {related.map((item) => (
               <li key={item.slug} className="h-full">
-                <ToolCard tool={item} onOpen={openRelated} />
+              <ToolCard
+                tool={item}
+                onOpen={(picked) =>
+                  trackToolsToolOpenIntent({
+                    tool: picked.slug,
+                    source: "related",
+                  })
+                }
+              />
               </li>
             ))}
           </ul>

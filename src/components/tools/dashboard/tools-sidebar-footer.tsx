@@ -29,6 +29,7 @@ export function ToolsSidebarFooter({
   const [confirmClear, setConfirmClear] = useState(false);
   const [notice, setNotice] = useState("");
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
 
   const displayName = user?.displayName?.trim() || "Akun saya";
   const email = user?.email ?? "Sesi aktif di perangkat ini";
@@ -36,12 +37,14 @@ export function ToolsSidebarFooter({
 
   const handleSignOut = async () => {
     if (signingOut) return;
+    setSignOutError("");
     setSigningOut(true);
     try {
       await signOutUser();
       // UserGuard akan mengarahkan ke /masuk?next=... setelah sesi berakhir.
     } catch {
       setSigningOut(false);
+      setSignOutError("Tidak dapat keluar. Periksa koneksi lalu coba lagi.");
     }
   };
 
@@ -50,6 +53,8 @@ export function ToolsSidebarFooter({
     setConfirmClear(false);
     setNotice("Data lokal tools dihapus.");
   };
+
+  const feedbackId = "tools-sidebar-feedback";
 
   return (
     <div className="shrink-0 border-t border-slate-100 px-2 py-3">
@@ -100,6 +105,7 @@ export function ToolsSidebarFooter({
               onClick={handleSignOut}
               disabled={signingOut}
               aria-label="Keluar dari akun"
+              aria-describedby={signOutError ? feedbackId : undefined}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none disabled:opacity-50"
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
@@ -143,6 +149,15 @@ export function ToolsSidebarFooter({
         )}
       </div>
 
+      {signOutError && (
+        <p
+          role="alert"
+          id={feedbackId}
+          className="mx-1 mt-2 rounded-lg bg-rose-50 px-2.5 py-2 text-xs leading-relaxed text-rose-700"
+        >
+          {signOutError}
+        </p>
+      )}
       <p role="status" aria-live="polite" className="sr-only">
         {notice}
       </p>

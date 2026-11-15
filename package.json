@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
     "test:metrics": "node --experimental-strip-types --test scripts/metrics-spec.test.ts",
@@ -81,6 +81,7 @@
     "test:tools-text": "node --experimental-strip-types --test scripts/tools-text.test.ts",
     "test:tools-pdf": "node --experimental-strip-types --test scripts/tools-pdf.test.ts",
     "test:tools-pages": "node --experimental-strip-types --test scripts/tools-pages.test.ts",
+    "test:tools-dashboard": "node --experimental-strip-types --test scripts/tools-dashboard-wiring.test.ts",
     "test:tools-discovery": "node --experimental-strip-types --test scripts/tools-discovery.test.ts",
     "test:tools-usage": "node --experimental-strip-types --test scripts/tools-usage.test.ts",
     "pdfjs:assets": "node scripts/copy-pdfjs-assets.mjs",

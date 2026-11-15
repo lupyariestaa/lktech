@@ -39,10 +39,10 @@ export default defineConfig({
   webServer: process.env.E2E_AUTH_BASE_URL
     ? undefined
     : {
-        command: `npx next start -H 127.0.0.1 -p ${PORT}`,
+        command: `npm run build && npx next start -H 127.0.0.1 -p ${PORT}`,
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
-        timeout: 180_000,
+        timeout: 600_000,
         env: {
           NEXT_TELEMETRY_DISABLED: "1",
           ADMIN_USE_FIREBASE_EMULATOR: "1",
@@ -55,7 +55,14 @@ export default defineConfig({
           FIRESTORE_EMULATOR_HOST:
             process.env.FIRESTORE_EMULATOR_HOST ?? EMULATOR_FIRESTORE_HOST,
           NEXT_PUBLIC_FIREBASE_API_KEY: "demo-api-key",
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: `${EMULATOR_PROJECT_ID}.firebaseapp.com`,
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: EMULATOR_PROJECT_ID,
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: `${EMULATOR_PROJECT_ID}.firebasestorage.app`,
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "123456789",
+          NEXT_PUBLIC_FIREBASE_APP_ID: "1:123456789:web:e2e-test",
+          NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR: "1",
+          NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST: EMULATOR_AUTH_HOST,
+          NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_KEY: "demo-api-key",
         },
       },
 });

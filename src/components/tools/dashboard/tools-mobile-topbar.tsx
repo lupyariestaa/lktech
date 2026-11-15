@@ -20,7 +20,7 @@ export function ToolsMobileTopbar({
         onClick={onOpenDrawer}
         aria-label="Buka menu tools"
         aria-expanded={drawerOpen}
-        aria-controls="tools-drawer"
+        aria-controls={drawerOpen ? "tools-drawer" : undefined}
         className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-secondary transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
       >
         <Menu className="h-5 w-5" aria-hidden="true" />

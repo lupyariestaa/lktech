@@ -101,7 +101,7 @@ export function ToolCard({
             }
             title={favorite ? "Hapus dari favorit" : "Tambahkan ke favorit"}
             className={cn(
-              "relative z-20 grid h-9 w-9 place-items-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none",
+              "pointer-events-auto relative z-20 grid h-9 w-9 place-items-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none",
               favorite
                 ? "border-amber-200 bg-amber-50 text-amber-600"
                 : "border-slate-200 bg-white text-slate-400 hover:border-amber-200 hover:text-amber-600",
@@ -143,7 +143,9 @@ export function ToolCard({
         aria-label={`Buka ${tool.name}`}
         className="absolute inset-0 z-10 rounded-3xl focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:outline-none"
       />
-      <div className="relative z-0 flex h-full flex-col">{content}</div>
+      <div className="pointer-events-none relative z-20 flex h-full flex-col">
+        <div className="flex flex-1 flex-col">{content}</div>
+      </div>
     </article>
   );
 }

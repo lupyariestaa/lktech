@@ -6,7 +6,10 @@ import { SectionHeading } from "@/components/section-heading";
 import { ToolCard } from "@/components/tools/tool-card";
 import { RequestToolCard } from "@/components/tools/request-tool-card";
 import { ToolsCta } from "@/components/tools/tools-cta";
-import { trackToolsCatalogFilter, trackToolsToolOpen } from "@/lib/analytics";
+import {
+  trackToolsCatalogFilter,
+  trackToolsToolOpenIntent,
+} from "@/lib/analytics";
 import {
   TOOLS,
   TOOL_CATEGORIES,
@@ -123,7 +126,10 @@ export function ToolsShowcase() {
                 <ToolCard
                   tool={tool}
                   onOpen={() =>
-                    trackToolsToolOpen({ tool: tool.slug, source: "landing" })
+                    trackToolsToolOpenIntent({
+                      tool: tool.slug,
+                      source: "landing",
+                    })
                   }
                 />
               </li>

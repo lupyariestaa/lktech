@@ -170,7 +170,8 @@ test("rail lama sudah dihapus; workspace memakai sidebar", () => {
 test("recent & usage dicatat sekali saat workspace mount", () => {
   assert.match(toolWorkspace, /recordToolOpen/);
   assert.match(toolWorkspace, /useRef/);
-  assert.match(toolWorkspace, /source:\s*"workspace"/);
+  assert.match(toolWorkspace, /trackToolsToolOpen\(\{ tool: tool\.slug \}\)/);
+  assert.match(toolWorkspace, /source:\s*"related"/);
   // Katalog tidak lagi menulis recent (klik hanya analytics).
   assert.doesNotMatch(catalog, /writeRecentTools/);
   assert.doesNotMatch(catalog, /addRecentToolSlug/);

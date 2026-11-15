@@ -20,6 +20,9 @@ export const isFirebaseConfigured = Boolean(
     firebaseConfig.appId,
 );
 
+export const isFirebaseAuthEmulatorEnabled =
+  process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR === "1";
+
 /**
  * Mendapatkan instance Firebase App (singleton).
  * Mengembalikan `null` bila env belum dikonfigurasi, agar aplikasi

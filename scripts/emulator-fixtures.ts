@@ -20,6 +20,11 @@ export type EmulatorAccount = {
 };
 
 export const E2E_ACCOUNTS = {
+  tools: {
+    email: "tools-user@lktech.test",
+    password: "ToolsPass123!",
+    displayName: "E2E Tools User",
+  },
   owner: {
     email: "owner@lktech.test",
     password: "OwnerPass123!",

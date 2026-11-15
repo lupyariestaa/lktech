@@ -14,7 +14,7 @@ import {
   trackToolsCatalogFilter,
   trackToolsEmptyStateAction,
   trackToolsFavoriteToggle,
-  trackToolsToolOpen,
+  trackToolsToolOpenIntent,
 } from "@/lib/analytics";
 import {
   buildToolsCatalogHref,
@@ -172,7 +172,7 @@ export function ToolsCatalog() {
   const onOpenTool = (tool: ToolDefinition) => {
     // Klik hanya mengirim analytics; recent & usage dicatat saat workspace
     // benar-benar di-mount (satu titik, tanpa hitung ganda).
-    trackToolsToolOpen({ tool: tool.slug, source: "ruang" });
+    trackToolsToolOpenIntent({ tool: tool.slug, source: "ruang" });
   };
 
   return (

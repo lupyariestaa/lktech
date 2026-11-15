@@ -7,13 +7,14 @@ import { ToolsMobileTopbar } from "@/components/tools/dashboard/tools-mobile-top
 import { ToolsSidebarContent } from "@/components/tools/dashboard/tools-sidebar-content";
 import {
   useToolFavorites,
+  useToolsStorageAvailable,
   useToolUsage,
 } from "@/components/tools/use-tools-preferences";
 import {
   TOOLS,
   getToolBySlug,
 } from "@/lib/tools-registry-pure";
-import { trackToolsToolOpen } from "@/lib/analytics";
+import { trackToolsToolOpenIntent } from "@/lib/analytics";
 import { getActiveToolSlug } from "@/lib/tools-usage-pure";
 
 /**
@@ -31,12 +32,13 @@ export function ToolsShell({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const favorites = useToolFavorites();
   const usage = useToolUsage();
+  const storageAvailable = useToolsStorageAvailable();
 
   const activeSlug = getActiveToolSlug(pathname, TOOLS);
   const activeTool = activeSlug ? getToolBySlug(activeSlug, TOOLS) : null;
 
   const trackSidebarOpen = (slug: string) => {
-    trackToolsToolOpen({ tool: slug, source: "sidebar" });
+    trackToolsToolOpenIntent({ tool: slug, source: "sidebar" });
   };
 
   // Drawer tidak boleh tertinggal terbuka saat viewport melebar ke desktop.
@@ -84,6 +86,16 @@ export function ToolsShell({ children }: { children: React.ReactNode }) {
           tabIndex={-1}
           className="min-w-0 flex-1 focus:outline-none"
         >
+          {!storageAvailable && (
+            <p
+              role="status"
+              className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900 sm:px-6 lg:px-10"
+            >
+              Penyimpanan browser tidak tersedia. Favorit dan riwayat tetap
+              berfungsi di tab ini, tetapi tidak akan tersimpan setelah tab
+              ditutup.
+            </p>
+          )}
           {children}
         </main>
       </div>
