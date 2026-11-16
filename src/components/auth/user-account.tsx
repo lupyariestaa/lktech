@@ -20,6 +20,7 @@ import { useCart } from "@/components/cart-provider";
 import { toCartItem } from "@/lib/cart";
 import { calculatePrintUnitPrice, hasVariants } from "@/lib/product-format";
 import { resolveReorderItem } from "@/lib/reorder-item-pure";
+import { isAwaitingPayment } from "@/lib/order-types";
 import type { Product } from "@/lib/product-types";
 import type { SavedAddress, UserProfile } from "@/lib/user-types";
 import { AccountTabs, type AccountTab } from "@/components/auth/account-tabs";
@@ -116,6 +117,35 @@ export function UserAccount() {
       active = false;
     };
   }, []);
+
+  // Mayar mengonfirmasi pembayaran melalui webhook. Periksa ulang pesanan
+  // sementara ada pembayaran tertunda agar CTA undangan muncul otomatis saat
+  // pembeli kembali ke tab akun setelah membayar.
+  const hasAwaitingPayment = orders.some((order) => isAwaitingPayment(order));
+  useEffect(() => {
+    if (loading || !hasAwaitingPayment) return;
+
+    const startedAt = Date.now();
+    let requestInFlight = false;
+    const timer = window.setInterval(async () => {
+      if (Date.now() - startedAt >= 3 * 60_000) {
+        window.clearInterval(timer);
+        return;
+      }
+      if (document.visibilityState !== "visible" || requestInFlight) return;
+
+      requestInFlight = true;
+      try {
+        setOrders(await fetchMyOrders());
+      } catch {
+        // Polling best-effort; halaman tetap dapat dimuat ulang manual.
+      } finally {
+        requestInFlight = false;
+      }
+    }, 10_000);
+
+    return () => window.clearInterval(timer);
+  }, [loading, hasAwaitingPayment]);
 
   const onLogout = async () => {
     await signOutUser();

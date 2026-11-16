@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Clock, Download, RefreshCw, ShoppingBag } from "lucide-react";
+import { ChevronDown, Clock, Download, MessageCircle, RefreshCw, ShoppingBag } from "lucide-react";
 import {
   ORDER_STATUS_LABEL,
   ORDER_STATUS_STYLE,
@@ -14,6 +14,12 @@ import { formatPrice } from "@/lib/product-format";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { printSpecificationLines } from "@/lib/order-item-display";
+import { waLink } from "@/lib/whatsapp";
+import {
+  buildWeddingInvitationWhatsAppMessage,
+  canSendWeddingInvitationDetails,
+  WEDDING_INVITATION_PRODUCT_SLUG,
+} from "@/lib/wedding-invitation";
 
 /** Tab "Pesanan": daftar pesanan + detail + pesan lagi. */
 export function AccountOrders({
@@ -65,6 +71,10 @@ export function AccountOrders({
           !pendingPayment &&
           order.status === "menunggu_bayar" &&
           isPaymentExpired(order.payment?.expiresAt);
+        const isWeddingInvitation = order.items.some(
+          (item) => item.slug === WEDDING_INVITATION_PRODUCT_SLUG,
+        );
+        const weddingInvitationPaid = canSendWeddingInvitationDetails(order);
         return (
           <li
             key={order.id}
@@ -120,6 +130,36 @@ export function AccountOrders({
                   bila Anda sudah membayar, hubungi admin dengan kode pesanan{" "}
                   <span className="font-semibold">{order.id}</span>.
                 </p>
+              </div>
+            )}
+
+            {isWeddingInvitation && !weddingInvitationPaid && (
+              <div className="border-t border-amber-100 bg-amber-50/60 px-5 py-3 text-xs leading-relaxed text-amber-800">
+                Setelah pembayaran terverifikasi otomatis, tombol untuk meminta demo template dan mengirim data mempelai akan muncul di sini.
+              </div>
+            )}
+
+            {weddingInvitationPaid && (
+              <div className="flex flex-wrap items-center gap-3 border-t border-emerald-100 bg-emerald-50/60 px-5 py-3">
+                <p className="min-w-0 flex-1 text-xs leading-relaxed text-emerald-800">
+                  Pembayaran terverifikasi. Minta tautan demo template, lalu pilih salah satu dan lengkapi data mempelai melalui WhatsApp.
+                </p>
+                <a
+                  href={waLink(
+                    buildWeddingInvitationWhatsAppMessage({
+                      id: order.id,
+                      buyerName: order.buyerName,
+                      buyerEmail: order.buyerEmail,
+                    }),
+                    order.whatsapp,
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Kirim data mempelai
+                </a>
               </div>
             )}
 
