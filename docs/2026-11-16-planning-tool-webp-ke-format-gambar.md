@@ -1,6 +1,6 @@
 # Planning Tool WebP ke PNG, JPG, GIF, BMP, dan AVIF
 
-> **Status:** Implementasi selesai; build, pemeriksaan statis, tes terkait, dan suite Auth E2E Chromium (15/15) lulus. QA lintas browser dan audit tambahan masih tertunda.
+> **Status:** Implementasi selesai; build, pemeriksaan statis, tes terkait, suite Auth E2E Chromium (15/15), CI GitHub Actions, dan deploy Vercel hijau. Tool tampil di `https://lktech.vercel.app/tools`. QA lintas browser dan audit tambahan masih tertunda.
 > **Disusun:** 2026-11-16
 > **Cakupan:** Tool baru di LKTech Tools untuk mengubah satu berkas WebP lokal menjadi PNG, JPG, GIF, BMP, atau AVIF.
 > **Prinsip utama:** konversi lokal di browser, format hasil harus benar-benar terverifikasi, dan tidak boleh mengubah gambar secara diam-diam.
@@ -26,6 +26,7 @@ Dokumen ini awalnya disusun sebagai planning tool yang melengkapi **Gambar ke We
 | Tes WebP pure, registry, dashboard wiring, discovery, dan pages | Lulus. Tes WebP pure juga lulus setelah koreksi import GIF. |
 | E2E Auth Emulator, Chromium, konversi PNG/JPG/GIF/BMP/AVIF dan nama file | Lulus. Tes membuat WebP kecil di browser dan melewati kelima encoder termasuk AVIF WASM self-hosted. |
 | Suite Auth E2E lengkap | Lulus: 15/15 test pada Chromium melalui Firebase Auth Emulator, termasuk konversi kelima format. |
+| CI GitHub Actions (`Lint · Typecheck · Test · Build`) dan deploy Vercel | Hijau pada commit `d1de599`. Sebelumnya gagal karena `scripts/wedding-invitation.test.ts` menghasilkan TS2578/TS5097; diperbaiki pada commit `3421948`. Satu test E2E publik yang rentan terhadap duplikasi H1 saat hidrasi dibuat lebih tahan pada commit `d1de599`. |
 | Browser selain Chromium, perangkat mobile, inspeksi network/manual screen reader, audit dependency | Belum diverifikasi. |
 
 ### Batasan dan risiko tersisa
@@ -34,6 +35,7 @@ Dokumen ini awalnya disusun sebagai planning tool yang melengkapi **Gambar ke We
 - Build sebelumnya melaporkan circular dependency Webpack; bukan kegagalan build, namun tetap perlu ditinjau terpisah bila bundle menjadi perhatian.
 - Instalasi dependency melaporkan 34 vulnerabilities; baseline sebelum penambahan dependency tidak diketahui dan perlu audit terpisah.
 - Beberapa navigasi client dalam suite E2E mencatat log server `NoFallbackError`, meski test terkait tetap lulus; belum ditriase dan perlu ditinjau terpisah.
+- Deploy produksi sempat gagal pada commit `35a0bc5` karena typecheck CI; setelah diperbaiki, `https://lktech.vercel.app/tools` memuat tool baru. Domain kustom `lktech.id` tidak terselesaikan (NXDOMAIN) dari resolver publik; produksi saat ini diakses lewat `lktech.vercel.app`.
 
 ---
 
