@@ -1,11 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 // @ts-expect-error Node strip-types runner needs an explicit extension.
-import {
-  buildWeddingInvitationWhatsAppMessage,
-  canSendWeddingInvitationDetails,
-  WEDDING_INVITATION_PRODUCT_SLUG,
-} from "../src/lib/wedding-invitation.ts";
+import { buildWeddingInvitationWhatsAppMessage, canSendWeddingInvitationDetails, WEDDING_INVITATION_PRODUCT_SLUG } from "../src/lib/wedding-invitation.ts";
 
 test("undangan pernikahan punya slug stabil untuk katalog dan pesanan", () => {
   assert.equal(WEDDING_INVITATION_PRODUCT_SLUG, "undangan-pernikahan-digital");
