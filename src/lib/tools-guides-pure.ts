@@ -25,7 +25,7 @@ export type ToolGuide = {
 };
 
 /** Tanggal editorial konten panduan (dipakai metadata & sitemap). */
-export const TOOL_GUIDES_UPDATED = "2026-11-14";
+export const TOOL_GUIDES_UPDATED = "2026-11-16";
 
 export const TOOL_GUIDES: readonly ToolGuide[] = [
   {
@@ -185,6 +185,51 @@ export const TOOL_GUIDES: readonly ToolGuide[] = [
         question: "Bisakah mengubah JSON menjadi satu baris?",
         answer:
           "Bisa. Gunakan mode minify untuk menghasilkan JSON tanpa indentasi dan baris baru.",
+      },
+    ],
+  },
+  {
+    slug: "webp-to-image",
+    title: "Ubah WebP ke PNG, JPG, GIF, BMP, atau AVIF",
+    intro:
+      "WebP ke Gambar mengubah satu WebP statis menjadi format gambar yang Anda pilih. File diproses lokal di browser; WebP animasi ditolak agar frame tidak hilang diam-diam.",
+    steps: [
+      "Pilih satu berkas WebP statis berukuran maksimal 15 MB.",
+      "Tool memeriksa container dan dimensi gambar; batasnya 8 megapiksel.",
+      "Pilih PNG, JPG, GIF, BMP, atau AVIF. Atur kualitas untuk JPG atau AVIF bila diperlukan.",
+      "Jalankan konversi dan unduh hasil setelah pratinjau serta formatnya terverifikasi.",
+    ],
+    useCases: [
+      "Membuat PNG dari WebP untuk mempertahankan transparansi.",
+      "Menyimpan salinan JPG untuk aplikasi yang belum menerima WebP.",
+      "Membuat GIF statis dengan palet warna terbatas.",
+      "Menghasilkan BMP atau AVIF untuk alur kerja yang memerlukannya.",
+    ],
+    faq: [
+      {
+        question: "Apakah gambar saya diunggah ke server?",
+        answer:
+          "Tidak. Pembacaan, decode, dan konversi berlangsung lokal di browser Anda. Berkas tidak dikirim atau disimpan di server LKTech.",
+      },
+      {
+        question: "Bisakah mengubah WebP animasi?",
+        answer:
+          "Belum. Tool menolak WebP animasi dengan pesan jelas agar frame tambahan tidak hilang tanpa pemberitahuan.",
+      },
+      {
+        question: "Apa yang terjadi pada transparansi?",
+        answer:
+          "PNG dan AVIF mempertahankan alpha bila encoder mendukungnya. JPG dan BMP meratakan area transparan ke putih; GIF memakai transparansi satu tingkat dan palet maksimal 256 warna.",
+      },
+      {
+        question: "Berapa batas file dan dimensi?",
+        answer:
+          "Satu WebP hingga 15 MB dan 8 megapiksel. Gambar yang melampaui batas tidak di-resize diam-diam.",
+      },
+      {
+        question: "Mengapa AVIF pertama kali bisa lebih lama?",
+        answer:
+          "Encoder AVIF lokal perlu dimuat saat pertama kali digunakan. Setelah dimuat, hasil tetap dibuat di browser dan tidak mengirim gambar ke layanan eksternal.",
       },
     ],
   },

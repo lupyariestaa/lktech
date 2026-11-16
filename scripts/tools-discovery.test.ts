@@ -189,7 +189,7 @@ test("filterCatalogTools: kategori, query, dan favoritesOnly", () => {
     { q: "webp", category: "semua" },
     { tools: TOOLS },
   );
-  assert.deepEqual(webp.map((tool) => tool.slug), ["image-to-webp"]);
+  assert.deepEqual(webp.map((tool) => tool.slug), ["image-to-webp", "webp-to-image"]);
 
   const favorites = filterCatalogTools(
     { q: "", category: "semua" },

@@ -81,6 +81,7 @@
     "scripts/tools-registry.test.ts",
     "scripts/tools-color.test.ts",
     "scripts/tools-image.test.ts",
+    "scripts/tools-webp-conversion.test.ts",
     "scripts/tools-text.test.ts",
     "scripts/tools-pdf.test.ts",
     "scripts/tools-pages.test.ts",

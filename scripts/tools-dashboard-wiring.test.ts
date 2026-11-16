@@ -93,3 +93,18 @@ test("catalog cards use title artwork without an available status badge", () => 
   assert.match(workspace, /showArtwork=\{false\}/);
   assert.match(workspace, /<ToolShell tool=\{tool\}>/);
 });
+
+test("WebP converter is wired into the workspace with a local AVIF asset copier", () => {
+  const workspace = read("src/components/tools/tool-workspace.tsx");
+  const encoder = read("src/lib/tools/webp-image-encoder.ts");
+  const assetScript = read("scripts/copy-image-codec-assets.mjs");
+  const packageJson = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
+  assert.match(workspace, /"webp-to-image": WebpToImageTool/);
+  assert.match(encoder, /import\("@jsquash\/avif\/encode\.js"\)/);
+  assert.match(encoder, /\/avif-codec\//);
+  assert.match(assetScript, /avif_enc\.wasm/);
+  assert.match(assetScript, /avif_enc_mt\.js/);
+  assert.match(packageJson.scripts.prebuild, /image-codec:assets/);
+  assert.match(packageJson.scripts.predev, /image-codec:assets/);
+  assert.doesNotMatch(encoder, /https:\/\//);
+});

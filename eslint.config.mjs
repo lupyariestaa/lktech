@@ -14,6 +14,8 @@ const eslintConfig = [
       "next-env.d.ts",
       // Aset runtime pdf.js (disalin dari node_modules, tak untuk di-lint).
       "public/pdfjs/**",
+      // Aset runtime WASM/worker AVIF (disalin dari node_modules).
+      "public/avif-codec/**",
     ],
   },
 ];

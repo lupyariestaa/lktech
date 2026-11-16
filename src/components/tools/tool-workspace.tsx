@@ -7,6 +7,7 @@ import { ToolShell } from "@/components/tools/tool-shell";
 import { ToolCard } from "@/components/tools/tool-card";
 import { ColorPickerTool } from "@/components/tools/color-picker-tool";
 import { ImageToWebpTool } from "@/components/tools/image-to-webp-tool";
+import { WebpToImageTool } from "@/components/tools/webp-to-image-tool";
 import { ImageToPdfTool } from "@/components/tools/image-to-pdf-tool";
 import { PdfToImageTool } from "@/components/tools/pdf-to-image-tool";
 import { TextFormatterTool } from "@/components/tools/text-formatter-tool";
@@ -28,6 +29,7 @@ import {
 const TOOL_BODIES: Record<string, ComponentType> = {
   "color-picker": ColorPickerTool,
   "image-to-webp": ImageToWebpTool,
+  "webp-to-image": WebpToImageTool,
   "image-to-pdf": ImageToPdfTool,
   "pdf-to-image": PdfToImageTool,
   "text-formatter": TextFormatterTool,

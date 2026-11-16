@@ -49,5 +49,8 @@ blob-report/
 # Aset runtime pdf.js (disalin otomatis dari node_modules via `predev`/`prebuild`)
 public/pdfjs/
 
+# Aset WASM/worker AVIF (disalin otomatis dari node_modules via `predev`/`prebuild`)
+public/avif-codec/
+
 # Log build lokal
 build*.log

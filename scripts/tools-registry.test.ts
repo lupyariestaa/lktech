@@ -37,6 +37,7 @@ test("registry: tools MVP tersedia", () => {
   const slugs = availableToolSlugs();
   assert.ok(slugs.includes("color-picker"));
   assert.ok(slugs.includes("image-to-webp"));
+  assert.ok(slugs.includes("webp-to-image"));
   assert.ok(slugs.includes("image-to-pdf"));
   assert.ok(slugs.includes("pdf-to-image"));
   assert.ok(slugs.includes("text-formatter"));
@@ -88,7 +89,17 @@ test("filterTools: mempertahankan urutan registry", () => {
   assert.deepEqual(all.map((t) => t.slug), TOOLS.map((t) => t.slug));
 
   const images = filterTools(TOOLS, { category: "gambar" });
-  assert.deepEqual(images.map((t) => t.slug), ["image-to-webp"]);
+  assert.deepEqual(images.map((t) => t.slug), ["image-to-webp", "webp-to-image"]);
+});
+
+test("tool WebP ke Gambar terdaftar dengan metadata dan format yang benar", () => {
+  const tool = getToolBySlug("webp-to-image");
+  assert.ok(tool);
+  assert.equal(tool.category, "gambar");
+  assert.equal(tool.status, "tersedia");
+  assert.equal(tool.format.from, "WebP statis");
+  assert.match(tool.format.to, /PNG.*JPG.*GIF.*BMP.*AVIF/);
+  assert.ok(tool.related.includes("image-to-webp"));
 });
 
 test("getToolBySlug: case-insensitive & aman untuk slug tak dikenal", () => {
@@ -100,7 +111,7 @@ test("getToolBySlug: case-insensitive & aman untuk slug tak dikenal", () => {
 test("countToolsByCategory: menghitung semua kategori", () => {
   const counts = countToolsByCategory();
   for (const c of TOOL_CATEGORIES) assert.equal(typeof counts[c], "number");
-  assert.equal(counts.gambar, 1);
+  assert.equal(counts.gambar, 2);
   assert.equal(counts.pdf, 2); // image-to-pdf + pdf-to-image
   assert.equal(
     counts.gambar + counts.pdf + counts.warna + counts.produktivitas,

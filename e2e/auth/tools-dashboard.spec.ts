@@ -159,7 +159,7 @@ test("favorit, filter URL, riwayat workspace dan penghapusan data lokal bekerja"
 
   await page.getByRole("button", { name: "Buka menu tools" }).click();
   await page.getByRole("button", { name: "Hapus data lokal" }).click();
-  await page.getByRole("button", { name: "Hapus", exact: true }).click();
+  await page.getByRole("button", { name: "Konfirmasi hapus data lokal" }).click();
   await expect(page.getByRole("status")).toContainText("Data lokal tools dihapus.");
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem("lktech.tools.usage.v1")))
@@ -219,4 +219,45 @@ test("storage write failure tidak merusak sesi navigasi tool", async ({ page }) 
   await expect(
     page.getByRole("link", { name: "Gambar ke WebP 1×" }),
   ).toBeVisible();
+});
+
+test("workspace WebP ke Gambar mengubah WebP valid ke lima format dengan nama benar", async ({ page }) => {
+  await page.goto("/tools/webp-to-image");
+  await expect(page.getByRole("heading", { name: /WebP ke Gambar/i })).toBeVisible();
+  await expect(page.getByText(/maks 8 megapiksel/i)).toBeVisible();
+
+  const webpBytes = await page.evaluate(async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 2;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas unavailable");
+    context.fillStyle = "#2563eb";
+    context.fillRect(0, 0, 2, 2);
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((output) => output ? resolve(output) : reject(new Error("WebP unavailable")), "image/webp"),
+    );
+    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+  });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "contoh.webp",
+    mimeType: "image/webp",
+    buffer: Buffer.from(webpBytes),
+  });
+
+  const formats = [
+    ["PNG", "contoh.png"],
+    ["JPG", "contoh.jpg"],
+    ["GIF", "contoh.gif"],
+    ["BMP", "contoh.bmp"],
+    ["AVIF", "contoh.avif"],
+  ] as const;
+  for (const [label, filename] of formats) {
+    const option = page.getByRole("radio", { name: label });
+    await expect(option).toBeVisible();
+    await option.check();
+    await page.getByRole("button", { name: `Ubah ke ${label}` }).click();
+    await expect(page.getByText(`${label} siap diunduh`, { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("link", { name: new RegExp(`Unduh ${filename}`) })).toHaveAttribute("download", filename);
+  }
 });
