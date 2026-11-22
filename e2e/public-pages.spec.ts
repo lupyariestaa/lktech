@@ -89,7 +89,7 @@ test.describe("LKTech Tools: landing publik vs ruang privat", () => {
     );
     // `.first()` menghindari strict-mode violation saat hidrasi sempat
     // merender dua node heading yang teksnya sama di lingkungan CI.
-    await expect(page.locator("h1").first()).toContainText(/Color Picker/i);
+    await expect(page.locator("h1").first()).toContainText(/Color Studio/i);
   });
 
   test("/tools/ruang tetap noindex (ruang login-gated)", async ({ page }) => {

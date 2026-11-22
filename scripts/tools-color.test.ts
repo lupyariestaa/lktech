@@ -4,9 +4,13 @@ import assert from "node:assert/strict";
 import {
   clamp,
   clampAlpha,
+  buildColorScale,
+  contrastRatio,
   contrastTextColor,
+  extractPaletteFromRgba,
   formatHsl,
   formatRgb,
+  getContrastReport,
   hslToRgb,
   parseHex,
   parseHsl,
@@ -105,4 +109,44 @@ test("kontras: putih di latar gelap, hitam di latar terang", () => {
   assert.equal(contrastTextColor({ r: 255, g: 255, b: 255 }), "#000000");
   assert.equal(contrastTextColor({ r: 17, g: 24, b: 39 }), "#FFFFFF");
   assert.ok(relativeLuminance({ r: 255, g: 255, b: 255 }) > relativeLuminance({ r: 0, g: 0, b: 0 }));
+});
+
+test("contrastRatio dan laporan WCAG memakai ambang teks yang tepat", () => {
+  const black = { r: 0, g: 0, b: 0 };
+  const white = { r: 255, g: 255, b: 255 };
+  assert.equal(contrastRatio(black, white), 21);
+  const report = getContrastReport(black, white);
+  assert.deepEqual(report, {
+    ratio: 21,
+    normalAa: true,
+    normalAaa: true,
+    largeAa: true,
+    largeAaa: true,
+  });
+  const soft = getContrastReport({ r: 119, g: 119, b: 119 }, white);
+  assert.equal(soft.largeAa, true);
+  assert.equal(soft.normalAa, false);
+});
+
+test("buildColorScale menghasilkan tint, warna asal, dan shade stabil", () => {
+  const scale = buildColorScale({ r: 100, g: 120, b: 140 });
+  assert.equal(scale.length, 5);
+  assert.deepEqual(scale[2], { r: 100, g: 120, b: 140 });
+  assert.ok(scale[0].r > scale[2].r);
+  assert.ok(scale[4].r < scale[2].r);
+});
+
+test("extractPaletteFromRgba mengabaikan piksel transparan dan mengurutkan warna dominan", () => {
+  const pixels = new Uint8ClampedArray([
+    255, 0, 0, 255,
+    255, 0, 0, 255,
+    255, 0, 0, 255,
+    0, 0, 255, 255,
+    0, 255, 0, 0,
+  ]);
+  assert.deepEqual(extractPaletteFromRgba(pixels, 2), [
+    { r: 255, g: 0, b: 0 },
+    { r: 0, g: 0, b: 255 },
+  ]);
+  assert.deepEqual(extractPaletteFromRgba(pixels, 0), []);
 });

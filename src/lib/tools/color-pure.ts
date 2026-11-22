@@ -9,6 +9,13 @@
 export type Rgb = { r: number; g: number; b: number };
 /** `h` 0–360, `s`/`l` 0–100 (dibulatkan ke bilangan bulat). */
 export type Hsl = { h: number; s: number; l: number };
+export type ContrastReport = {
+  ratio: number;
+  normalAa: boolean;
+  normalAaa: boolean;
+  largeAa: boolean;
+  largeAaa: boolean;
+};
 
 /** Batasi angka ke rentang `[min, max]`; non-finite → `min`. */
 export function clamp(n: number, min: number, max: number): number {
@@ -180,6 +187,92 @@ export function relativeLuminance(rgb: Rgb): number {
     return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
   };
   return 0.2126 * chan(rgb.r) + 0.7152 * chan(rgb.g) + 0.0722 * chan(rgb.b);
+}
+
+/** Rasio kontras WCAG antara dua warna RGB opaque (1–21). */
+export function contrastRatio(foreground: Rgb, background: Rgb): number {
+  const first = relativeLuminance(foreground);
+  const second = relativeLuminance(background);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}
+
+/** Status WCAG 2.x untuk teks normal dan teks besar. */
+export function getContrastReport(foreground: Rgb, background: Rgb): ContrastReport {
+  const ratio = contrastRatio(foreground, background);
+  return {
+    ratio,
+    normalAa: ratio >= 4.5,
+    normalAaa: ratio >= 7,
+    largeAa: ratio >= 3,
+    largeAaa: ratio >= 4.5,
+  };
+}
+
+/** Campurkan dua warna opaque. `amount=0` menghasilkan `from`. */
+export function mixRgb(from: Rgb, to: Rgb, amount: number): Rgb {
+  const t = clamp(amount, 0, 1);
+  return {
+    r: toByte(from.r + (to.r - from.r) * t),
+    g: toByte(from.g + (to.g - from.g) * t),
+    b: toByte(from.b + (to.b - from.b) * t),
+  };
+}
+
+/** Lima variasi warna: dua tint, warna asal, dan dua shade. */
+export function buildColorScale(rgb: Rgb): Rgb[] {
+  return [
+    mixRgb(rgb, { r: 255, g: 255, b: 255 }, 0.7),
+    mixRgb(rgb, { r: 255, g: 255, b: 255 }, 0.35),
+    { r: toByte(rgb.r), g: toByte(rgb.g), b: toByte(rgb.b) },
+    mixRgb(rgb, { r: 0, g: 0, b: 0 }, 0.3),
+    mixRgb(rgb, { r: 0, g: 0, b: 0 }, 0.6),
+  ];
+}
+
+/**
+ * Ambil palet representatif dari piksel RGBA yang sudah di-downsample.
+ * Bucket 4-bit menjaga hasil deterministik serta cukup ringan untuk browser.
+ * Piksel hampir transparan diabaikan agar warna checkerboard/latarnya tidak
+ * masuk palet. Hasil disusun dari yang paling sering muncul.
+ */
+export function extractPaletteFromRgba(
+  pixels: Uint8ClampedArray,
+  maxColors = 8,
+): Rgb[] {
+  const requested = Math.floor(Number.isFinite(maxColors) ? maxColors : 0);
+  if (requested <= 0 || pixels.length < 4) return [];
+
+  type Bucket = { count: number; r: number; g: number; b: number };
+  const buckets = new Map<string, Bucket>();
+  for (let i = 0; i + 3 < pixels.length; i += 4) {
+    const alpha = pixels[i + 3];
+    if (alpha < 32) continue;
+    const r = pixels[i];
+    const g = pixels[i + 1];
+    const b = pixels[i + 2];
+    // Quantisasi 16 level kanal. Alfa menjadi bobot agar piksel separuh
+    // transparan tidak mendominasi warna opaque.
+    const key = `${r >> 4}-${g >> 4}-${b >> 4}`;
+    const weight = alpha / 255;
+    const previous = buckets.get(key);
+    if (previous) {
+      previous.count += weight;
+      previous.r += r * weight;
+      previous.g += g * weight;
+      previous.b += b * weight;
+    } else {
+      buckets.set(key, { count: weight, r: r * weight, g: g * weight, b: b * weight });
+    }
+  }
+
+  return [...buckets.values()]
+    .sort((a, b) => b.count - a.count || a.r - b.r || a.g - b.g || a.b - b.b)
+    .slice(0, Math.min(requested, 24))
+    .map((bucket) => ({
+      r: toByte(bucket.r / bucket.count),
+      g: toByte(bucket.g / bucket.count),
+      b: toByte(bucket.b / bucket.count),
+    }));
 }
 
 /** Warna teks paling kontras (hitam/putih) untuk latar `rgb`. */

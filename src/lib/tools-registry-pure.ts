@@ -65,19 +65,19 @@ export type ToolDefinition = {
 export const TOOLS: readonly ToolDefinition[] = [
   {
     slug: "color-picker",
-    name: "Color Picker",
-    summary: "Pilih warna, atur HSL/alfa, lalu salin HEX, RGB, atau HSL.",
+    name: "Color Studio",
+    summary: "Ambil warna dari gambar, buat palet, cek kontras, dan salin kode warna.",
     description:
-      "Pilih warna dari kontrol visual atau masukkan kode warna, atur kepekatan (alfa), lalu salin nilainya untuk dipakai di desain atau kode.",
+      "Pilih warna dari kontrol visual atau gambar lokal, ekstrak palet representatif, periksa kontras teks, buat gradient, lalu salin nilainya untuk desain atau kode.",
     category: "warna",
     status: "tersedia",
-    keywords: ["warna", "color", "hex", "rgb", "hsl", "palet", "picker"],
+    keywords: ["warna", "color", "hex", "rgb", "hsl", "palet", "picker", "kontras", "gradient", "gambar"],
     icon: "Palette",
     local: true,
     privacyNote:
-      "Nilai warna diproses di browser Anda dan tidak dikirim ke server.",
-    format: { from: "Warna visual / HEX", to: "HEX, RGB, HSL" },
-    limitLabel: "Tanpa batas berkas",
+      "Warna dan gambar lokal diproses di browser Anda; tidak ada berkas yang diunggah atau disimpan.",
+    format: { from: "Warna / gambar lokal", to: "HEX, RGB, HSL, CSS" },
+    limitLabel: "Gambar maks. 15 MB · diproses lokal",
     related: ["text-formatter"],
   },
   {

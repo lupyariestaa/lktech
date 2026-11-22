@@ -25,46 +25,52 @@ export type ToolGuide = {
 };
 
 /** Tanggal editorial konten panduan (dipakai metadata & sitemap). */
-export const TOOL_GUIDES_UPDATED = "2026-11-16";
+export const TOOL_GUIDES_UPDATED = "2026-11-22";
 
 export const TOOL_GUIDES: readonly ToolGuide[] = [
   {
     slug: "color-picker",
-    title: "Color Picker Online: Ambil Kode HEX, RGB, dan HSL",
+    title: "Color Studio: Ambil Warna Gambar, Palet, HEX, RGB, dan HSL",
     intro:
-      "Color Picker LKTech membantu Anda memilih warna dari kontrol visual atau memasukkan kode HEX, mengatur kepekatan (alfa), lalu menyalin nilai yang siap dipakai di desain maupun kode. Semua perhitungan warna berjalan di browser Anda.",
+      "Color Studio LKTech membantu Anda memilih warna dari kontrol visual atau gambar lokal, mengekstrak palet representatif, memeriksa kontras teks, membuat gradient, dan menyalin nilai yang siap dipakai di desain maupun kode. Semua perhitungan berjalan di browser Anda.",
     steps: [
-      "Buka Color Picker dari ruang tools LKTech.",
-      "Pilih warna lewat kontrol visual, preset, atau tempel kode HEX.",
-      "Atur alfa bila Anda membutuhkan warna transparan.",
-      "Salin nilai HEX, RGB, HSL, atau deklarasi CSS yang ditampilkan.",
+      "Buka Color Studio dari ruang tools LKTech.",
+      "Pilih warna lewat kontrol visual, preset, atau tempel kode HEX; atur alfa bila diperlukan.",
+      "Untuk mengambil warna dari referensi, buka menu Dari gambar, pilih gambar lokal, lalu klik titik warna pada preview; pengguna keyboard dapat memakai panah dan Enter/Spasi.",
+      "Gunakan palet, pemeriksa kontras, atau pembuat gradient sesuai kebutuhan, lalu salin HEX, RGB, HSL, CSS, atau CSS variables palet.",
     ],
     useCases: [
       "Menyamakan warna komponen dengan warna brand.",
-      "Mengambil kode warna dari referensi visual atau screenshot.",
+      "Mengambil kode warna dan palet dari referensi visual atau screenshot lokal.",
       "Membuat varian warna dengan tingkat transparansi berbeda.",
       "Menyalin deklarasi CSS untuk langsung ditempel di stylesheet.",
+      "Memeriksa apakah kombinasi teks dan latar memenuhi ambang kontras WCAG.",
     ],
     faq: [
       {
-        question: "Format warna apa yang bisa dihasilkan Color Picker?",
+        question: "Format warna apa yang bisa dihasilkan Color Studio?",
         answer:
-          "Color Picker menampilkan HEX, RGB, HSL, dan deklarasi CSS background. Nilai dapat disalin satu per satu.",
+          "Color Studio menampilkan HEX, RGB, HSL, deklarasi CSS background, CSS gradient, serta CSS variables dari palet. Nilai dapat disalin dari workspace.",
       },
       {
-        question: "Apakah saya perlu akun untuk memakai Color Picker?",
+        question: "Apakah saya perlu akun untuk memakai Color Studio?",
         answer:
-          "Demo warna di halaman /tools bisa dicoba tanpa akun. Untuk workspace penuh dan fitur salin nilai, masuk dengan akun LKTech.",
+          "Demo warna di halaman /tools bisa dicoba tanpa akun. Untuk workspace penuh, pengambilan warna gambar, dan fitur salin nilai, masuk dengan akun LKTech.",
       },
       {
-        question: "Apakah warna yang saya pilih dikirim ke server?",
+        question: "Apakah gambar atau warna saya dikirim ke server?",
         answer:
-          "Tidak. Nilai warna diproses di browser Anda dan tidak dikirim maupun disimpan di server.",
+          "Tidak. Nilai warna dan gambar lokal diproses di browser Anda dan tidak dikirim maupun disimpan di server.",
       },
       {
         question: "Bisakah mengatur transparansi warna?",
         answer:
           "Bisa. Atur nilai alfa untuk mendapatkan warna semi-transparan; hasil HEX, RGB, dan HSL akan mengikuti nilai tersebut.",
+      },
+      {
+        question: "Bagaimana cara mengambil warna dari gambar?",
+        answer:
+          "Pilih gambar dari perangkat Anda pada menu Dari gambar, lalu klik titik yang ingin diambil pada preview. Tool juga membuat palet representatif dari gambar tersebut. Gambar dibaca secara lokal dan dibatasi maksimal 15 MB.",
       },
     ],
   },
