@@ -83,18 +83,30 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     slug: "image-to-webp",
     name: "Gambar ke WebP",
-    summary: "Ubah PNG/JPG lokal menjadi WebP dengan kontrol kualitas.",
+    summary:
+      "Ubah banyak gambar lokal ke WebP berurutan, lalu unduh satu per satu atau sebagai ZIP.",
     description:
-      "Pilih satu gambar lokal, atur kualitas dan batas dimensi, lalu unduh hasil WebP. Gambar tidak diunggah ke server.",
+      "Pilih hingga 30 gambar lokal, atur kualitas dan batas dimensi, lalu proses berurutan. Setiap hasil diverifikasi sebagai WebP statis sebelum dapat diunduh, dan semua gambar tetap di browser Anda.",
     category: "gambar",
     status: "tersedia",
-    keywords: ["webp", "gambar", "image", "konversi", "kompres", "png", "jpg", "jpeg"],
+    keywords: [
+      "webp",
+      "gambar",
+      "image",
+      "konversi",
+      "kompres",
+      "batch",
+      "zip",
+      "png",
+      "jpg",
+      "jpeg",
+    ],
     icon: "ImageDown",
     local: true,
     privacyNote:
       "Gambar diproses di browser Anda; tidak ada berkas yang diunggah atau disimpan.",
-    format: { from: "PNG, JPG", to: "WebP" },
-    limitLabel: "Maks. 15 MB",
+    format: { from: "PNG, JPG, WebP, GIF, BMP, AVIF", to: "WebP + ZIP" },
+    limitLabel: "Hingga 30 berkas · 15 MB/berkas · total 100 MB",
     related: ["image-to-pdf", "pdf-to-image"],
   },
   {

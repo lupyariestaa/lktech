@@ -1,5 +1,6 @@
 import { expect, test as base, type BrowserContext, type Page } from "@playwright/test";
 import { Buffer } from "node:buffer";
+import { readFile } from "node:fs/promises";
 import { E2E_ACCOUNTS } from "../../scripts/emulator-fixtures";
 
 type BrowserStorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
@@ -305,4 +306,42 @@ test("workspace WebP ke Gambar mengubah WebP valid ke lima format dengan nama be
     await expect(page.getByText(`${label} siap diunduh`, { exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("link", { name: new RegExp(`Unduh ${filename}`) })).toHaveAttribute("download", filename);
   }
+});
+
+test("batch Gambar ke WebP memproses dua gambar dan membuat ZIP valid", async ({ page }) => {
+  await page.goto("/tools/image-to-webp");
+  await expect(page.getByRole("heading", { name: "Gambar ke WebP" })).toBeVisible();
+
+  await page.locator('input[type="file"]').setInputFiles([
+    { name: "merah.png", mimeType: "image/png", buffer: ONE_PIXEL_RED_PNG },
+    { name: "biru.png", mimeType: "image/png", buffer: ONE_PIXEL_RED_PNG },
+  ]);
+  await expect(page.getByText(/2 item · 0 berhasil/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Proses semua" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Selesai: 2 gambar berhasil diubah ke WebP.",
+    { timeout: 30_000 },
+  );
+  await expect(page.getByText(/2 item · 2 berhasil · 0 gagal/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Buat ZIP hasil" }).click();
+  const zipLink = page.getByRole("link", { name: "Unduh lktech-webp.zip" });
+  await expect(zipLink).toBeVisible();
+
+  const downloadPromise = page.waitForEvent("download");
+  await zipLink.click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("lktech-webp.zip");
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  const zipBytes = await readFile(downloadPath as string);
+  expect(zipBytes.subarray(0, 4).toString("latin1")).toBe("PK\u0003\u0004");
+  const zipText = zipBytes.toString("latin1");
+  expect(zipText).toContain("merah.webp");
+  expect(zipText).toContain("biru.webp");
+
+  await page.getByRole("button", { name: "Bersihkan" }).click();
+  await expect(page.getByRole("heading", { name: "Antrean gambar" })).toHaveCount(0);
+  await expect(zipLink).toHaveCount(0);
 });

@@ -1,6 +1,6 @@
 # Rencana Upgrade LKTech Tools Menjadi Workspace Produktivitas
 
-> **Status:** Rencana pengembangan — belum ada perubahan perilaku aplikasi dari dokumen ini.
+> **Status:** Sebagian dieksekusi — Color Studio P0 serta Batch WebP + ZIP lokal sudah dirilis; sisa fase per tool mengikuti status di bawah.
 > **Disusun:** 2026-11-22
 > **Cakupan:** Mengembangkan enam tool yang tersedia menjadi workspace yang lebih lengkap, konsisten, aman untuk batch, dan tetap memproses data secara lokal di browser.
 > **Prinsip non-negosiasi:** Tidak ada unggah atau penyimpanan isi berkas pengguna di server. Nama berkas, isi dokumen, piksel gambar, palet, dan hasil konversi tidak boleh dikirim ke analytics.
@@ -22,7 +22,18 @@ Implementasi pertama memprioritaskan kebutuhan yang paling mendesak tanpa menung
 - Logika color math, rasio kontras, variasi warna, dan ekstraksi palet mendapatkan regression test; E2E workspace menambahkan fixture gambar lokal.
 - Verifikasi: `tsc` & `eslint` bersih; `test:tools-color` 14/14, `test:tools-registry` 18/18, `test:tools-pages` 16/16; E2E Auth Emulator **16/16** (termasuk Color Studio). Suite E2E kini login sekali per suite dan memakai ulang `storageState`, bukan membuka popup emulator di setiap test.
 
-Batch image conversion, ZIP, dan fondasi antrean lintas-tool adalah fase berikutnya. Belum ada pustaka ZIP di proyek; spike dependensi (mis. `fflate`) atau ZIP *store* internal harus selesai sebelum unduhan massal dijanjikan.
+### Batch WebP + fondasi ZIP ✅ selesai (kode, 2026-11-22)
+
+- `image-to-webp` kini menjadi **Batch WebP Optimizer**: menerima hingga 30 gambar lokal (15 MB/berkas, total 100 MB), memproses **berurutan**, dan menampilkan status serta hasil per item.
+- Setiap item dapat diunduh sendiri; item gagal dapat diulang tanpa mengulang item yang sudah berhasil. Antrean dapat dihentikan setelah item aktif dan dibersihkan dengan pencabutan object URL.
+- Hasil tidak ditawarkan sebelum lolos verifikasi: MIME `image/webp`, container RIFF/WEBP, bukan animasi, serta dimensi hasil sama dengan target.
+- Nama hasil disanitasi dan dibuat unik (sufiks `-2`, `-3`, …) sebelum masuk unduhan atau ZIP.
+- **Spike ZIP selesai:** proyek memakai penulis **ZIP32 `store` internal** (`src/lib/tools/zip-store.ts`), bukan dependensi baru. Alasan: gambar sudah terkompresi, metode store menghindari biaya CPU, dan tidak menambah permukaan audit dependensi. Arsip menulis CRC32, nama UTF-8, menolak path/duplikat, serta dibatasi 100 MB hasil.
+- ZIP dibangun hanya saat diminta, setelah hasil selesai; unduhan per item tetap tersedia bila ZIP ditolak karena batas.
+- Verifikasi: `tsc` & `eslint` bersih; build produksi 89/89 halaman; `test:tools-batch` 8/8, `test:tools-zip` 4/4, `test:tools-registry` 18/18, `test:tools-pages` 16/16. ZIP diuji struktur biner dan dibuka dengan `Expand-Archive` Windows; E2E Auth Emulator mencakup antrean dua gambar, unduhan ZIP nyata, dan reset.
+- **Sisa untuk fase berikutnya:** preflight dimensi/piksel input sebelum decode untuk mencegah gambar dekompresi-bomb, mode crop `contain`/`cover`, latar solid untuk sumber transparan, pengaturan lebar/tinggi per sumbu, thumbnail antrean, serta uji perangkat low-memory. Batch WebP → Gambar dan tool PDF/teks belum diubah pada fase ini.
+
+Fondasi antrean (`batch-pure.ts`) dan penulis ZIP kini tersedia untuk tool berikutnya, tetapi belum dipaksakan ke semua tool agar perubahan tetap dapat ditinjau per tool.
 
 ---
 
@@ -174,6 +185,12 @@ Menjadikan Color Picker alat lengkap untuk memperoleh, memahami, menguji, dan me
 ---
 
 ## 4.2 Gambar ke WebP → Batch WebP Optimizer
+
+### Status implementasi P0 (2026-11-22)
+
+Sudah tersedia: multi-select dan drag-and-drop, batas 30 berkas/15 MB/100 MB, preset cepat/seimbang/tinggi, kontrol kualitas, batas sisi terpanjang, antrean berurutan, status dan hasil per item, ulangi item gagal, hentikan antrean, bersihkan workspace, unduhan per item, serta ZIP lokal dengan verifikasi signature.
+
+Belum tersedia: pengaturan lebar/tinggi per sumbu, mode `contain`/`cover`, latar solid untuk sumber transparan, thumbnail preview, serta preflight dimensi input sebelum decode.
 
 ### Tujuan
 

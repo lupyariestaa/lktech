@@ -76,20 +76,20 @@ export const TOOL_GUIDES: readonly ToolGuide[] = [
   },
   {
     slug: "image-to-webp",
-    title: "Cara Kompres Gambar ke WebP di Browser Tanpa Unggah",
+    title: "Cara Kompres Banyak Gambar ke WebP di Browser Tanpa Unggah",
     intro:
-      "Gambar ke WebP mengubah PNG atau JPG lokal menjadi WebP dengan kontrol kualitas dan batas dimensi. Cocok untuk memperkecil aset website tanpa mengunggah gambar ke server mana pun.",
+      "Gambar ke WebP mengubah hingga 30 gambar lokal menjadi WebP secara berurutan dengan kontrol kualitas dan batas dimensi. Setiap hasil dapat diunduh sendiri-sendiri atau sebagai satu ZIP, tanpa mengunggah gambar ke server mana pun.",
     steps: [
-      "Siapkan gambar PNG atau JPG dengan ukuran maksimal 15 MB.",
-      "Buka tool Gambar ke WebP dan pilih berkas dari perangkat Anda.",
-      "Atur kualitas dan batas dimensi sesuai kebutuhan.",
-      "Proses gambar, lalu unduh hasil WebP yang muncul.",
+      "Siapkan gambar PNG, JPG, WebP statis, GIF, BMP, atau AVIF maksimal 15 MB per berkas.",
+      "Buka tool Gambar ke WebP dan pilih satu atau beberapa berkas dari perangkat Anda.",
+      "Atur kualitas dan batas dimensi; pengaturan berlaku untuk seluruh antrean.",
+      "Proses antrean, periksa status tiap gambar, lalu unduh hasil atau buat ZIP.",
     ],
     useCases: [
-      "Memperkecil gambar untuk mempercepat halaman website.",
+      "Memperkecil banyak gambar sekaligus untuk mempercepat halaman website.",
       "Menyiapkan foto produk dengan ukuran berkas lebih ringan.",
       "Mengompres aset blog sebelum diunggah ke CMS.",
-      "Membuat lampiran gambar yang lebih kecil untuk email.",
+      "Mengirim satu ZIP berisi gambar yang sudah dioptimalkan.",
     ],
     faq: [
       {
@@ -98,9 +98,9 @@ export const TOOL_GUIDES: readonly ToolGuide[] = [
           "Tidak. Gambar dibaca dan diubah di browser Anda; tidak ada berkas yang dikirim atau disimpan di server LKTech.",
       },
       {
-        question: "Berapa batas ukuran gambar?",
+        question: "Berapa batas ukuran dan jumlah gambar?",
         answer:
-          "Satu berkas gambar maksimal 15 MB. Tool akan menolak berkas yang melewati batas tersebut dengan pesan yang jelas.",
+          "Setiap berkas maksimal 15 MB, maksimal 30 berkas per antrean, dan total masukan 100 MB. Tool menolak berkas yang melewati batas dengan alasan yang jelas.",
       },
       {
         question: "Bagaimana mengatur kualitas WebP?",
@@ -108,9 +108,9 @@ export const TOOL_GUIDES: readonly ToolGuide[] = [
           "Gunakan kontrol kualitas untuk memilih nilai antara 0,1 dan 1. Nilai sekitar 0,8 biasanya menjadi titik awal yang seimbang antara ukuran dan ketajaman.",
       },
       {
-        question: "Apakah semua browser bisa menghasilkan WebP?",
+        question: "Apakah GIF atau WebP animasi didukung?",
         answer:
-          "Browser modern umumnya mendukung encoder WebP. Tool memeriksa dukungan di browser Anda dan menampilkan pesan bila encoder tidak tersedia.",
+          "Hanya frame pertama yang diproses. Hasil selalu WebP statis dan diverifikasi signature serta dimensinya sebelum ditawarkan untuk diunduh.",
       },
     ],
   },
