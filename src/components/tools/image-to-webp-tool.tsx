@@ -700,7 +700,7 @@ export function ImageToWebpTool() {
                         variant="outline"
                         size="sm"
                       >
-                        <Download className="h-3.5 w-3.5" aria-hidden="true" /> Unduh
+                        <Download className="h-3.5 w-3.5" aria-hidden="true" /> Unduh {item.result.name}
                       </ButtonAnchor>
                     )}
                     {item.status === "failed" && (

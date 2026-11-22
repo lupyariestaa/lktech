@@ -267,10 +267,9 @@ test("storage write failure tidak merusak sesi navigasi tool", async ({ page }) 
   ).toBeVisible();
 });
 
-test("workspace WebP ke Gambar mengubah WebP valid ke lima format dengan nama benar", async ({ page }) => {
+test("workspace WebP ke Gambar memproses satu WebP ke PNG dalam antrean batch", async ({ page }) => {
   await page.goto("/tools/webp-to-image");
-  await expect(page.getByRole("heading", { name: /WebP ke Gambar/i })).toBeVisible();
-  await expect(page.getByText(/maks 8 megapiksel/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Batch WebP ke Gambar" })).toBeVisible();
 
   const webpBytes = await page.evaluate(async () => {
     const canvas = document.createElement("canvas");
@@ -290,22 +289,18 @@ test("workspace WebP ke Gambar mengubah WebP valid ke lima format dengan nama be
     mimeType: "image/webp",
     buffer: Buffer.from(webpBytes),
   });
+  await expect(page.getByText(/1 item · 0 berhasil/)).toBeVisible();
 
-  const formats = [
-    ["PNG", "contoh.png"],
-    ["JPG", "contoh.jpg"],
-    ["GIF", "contoh.gif"],
-    ["BMP", "contoh.bmp"],
-    ["AVIF", "contoh.avif"],
-  ] as const;
-  for (const [label, filename] of formats) {
-    const option = page.getByRole("radio", { name: label });
-    await expect(option).toBeVisible();
-    await option.check();
-    await page.getByRole("button", { name: `Ubah ke ${label}` }).click();
-    await expect(page.getByText(`${label} siap diunduh`, { exact: true })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("link", { name: new RegExp(`Unduh ${filename}`) })).toHaveAttribute("download", filename);
-  }
+  // Format PNG sudah dipilih secara default; langsung proses
+  await page.getByRole("button", { name: "Proses semua" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Selesai: 1 WebP berhasil diubah ke PNG.",
+    { timeout: 30_000 },
+  );
+  await expect(page.getByText(/1 item · 1 berhasil/)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Unduh contoh\.png/ }),
+  ).toHaveAttribute("download", "contoh.png");
 });
 
 test("batch Gambar ke WebP memproses dua gambar dan membuat ZIP valid", async ({ page }) => {

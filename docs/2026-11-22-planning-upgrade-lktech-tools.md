@@ -1,6 +1,6 @@
 # Rencana Upgrade LKTech Tools Menjadi Workspace Produktivitas
 
-> **Status:** Sebagian dieksekusi — Color Studio P0 serta Batch WebP + ZIP lokal sudah dirilis; sisa fase per tool mengikuti status di bawah.
+> **Status:** Sebagian dieksekusi — Color Studio P0 serta batch dua arah WebP + ZIP lokal sudah dirilis; sisa fase per tool mengikuti status di bawah.
 > **Disusun:** 2026-11-22
 > **Cakupan:** Mengembangkan enam tool yang tersedia menjadi workspace yang lebih lengkap, konsisten, aman untuk batch, dan tetap memproses data secara lokal di browser.
 > **Prinsip non-negosiasi:** Tidak ada unggah atau penyimpanan isi berkas pengguna di server. Nama berkas, isi dokumen, piksel gambar, palet, dan hasil konversi tidak boleh dikirim ke analytics.
@@ -31,9 +31,18 @@ Implementasi pertama memprioritaskan kebutuhan yang paling mendesak tanpa menung
 - **Spike ZIP selesai:** proyek memakai penulis **ZIP32 `store` internal** (`src/lib/tools/zip-store.ts`), bukan dependensi baru. Alasan: gambar sudah terkompresi, metode store menghindari biaya CPU, dan tidak menambah permukaan audit dependensi. Arsip menulis CRC32, nama UTF-8, menolak path/duplikat, serta dibatasi 100 MB hasil.
 - ZIP dibangun hanya saat diminta, setelah hasil selesai; unduhan per item tetap tersedia bila ZIP ditolak karena batas.
 - Verifikasi: `tsc` & `eslint` bersih; build produksi 89/89 halaman; `test:tools-batch` 8/8, `test:tools-zip` 4/4, `test:tools-registry` 18/18, `test:tools-pages` 16/16. ZIP diuji struktur biner dan dibuka dengan `Expand-Archive` Windows; E2E Auth Emulator mencakup antrean dua gambar, unduhan ZIP nyata, dan reset.
-- **Sisa untuk fase berikutnya:** preflight dimensi/piksel input sebelum decode untuk mencegah gambar dekompresi-bomb, mode crop `contain`/`cover`, latar solid untuk sumber transparan, pengaturan lebar/tinggi per sumbu, thumbnail antrean, serta uji perangkat low-memory. Batch WebP → Gambar dan tool PDF/teks belum diubah pada fase ini.
+- **Sisa untuk fase berikutnya:** preflight dimensi/piksel input sebelum decode untuk mencegah gambar dekompresi-bomb, mode crop `contain`/`cover`, latar solid untuk sumber transparan, pengaturan lebar/tinggi per sumbu, thumbnail antrean, serta uji perangkat low-memory. Tool PDF/teks belum diubah pada fase ini.
 
 Fondasi antrean (`batch-pure.ts`) dan penulis ZIP kini tersedia untuk tool berikutnya, tetapi belum dipaksakan ke semua tool agar perubahan tetap dapat ditinjau per tool.
+
+### Batch WebP ke Gambar ✅ selesai (kode, 2026-11-22)
+
+- `webp-to-image` kini menerima hingga **20 WebP statis** lokal (15 MB/berkas, total 80 MB), lalu memprosesnya **berurutan** ke satu format global: PNG, JPG, GIF, BMP, atau AVIF.
+- Parser container menolak input malformed dan **WebP animasi**; validasi ukuran, dimensi, dan piksel tetap berlaku sebelum encode. Kegagalan satu item tidak menghentikan item lain dan dapat diulang per item.
+- Setiap hasil melalui verifikasi MIME serta magic signature format target sebelum diberi object URL, unduhan individual, atau dimasukkan ke ZIP. Nama output disanitasi dan dibuat unik.
+- JPG/BMP diberi matte putih untuk alpha; GIF dijelaskan sebagai output statis berpalet 256 warna; AVIF dimuat lokal secara lazy. ZIP memakai kembali penulis ZIP32 `store`, maksimal 100 MB hasil.
+- Mengubah format membatalkan hasil lama dan mencabut object URL-nya, sehingga hasil dengan format sebelumnya tidak dapat terunduh keliru.
+- Verifikasi: `tsc` & `eslint` bersih; `test:tools-registry` 18/18, `test:tools-pages` 16/16, `test:tools-webp-conversion` 6/6; E2E Auth Emulator **17/17**, termasuk konversi batch WebP→PNG dan unduhan per-item.
 
 ---
 
@@ -454,9 +463,8 @@ Satu subfitur hanya dianggap tersedia setelah:
 
 ### Fase 3 — Batch WebP Converter
 
-- Porting antrean batch ke WebP ke Gambar sambil mempertahankan parser animasi dan verifikasi signature yang sudah ada.
-- Tambahkan ZIP, output global, serta batas format berat yang diuji.
-- Jalankan QA codec Chrome/Firefox/Safari untuk PNG/JPG/GIF/BMP/AVIF.
+- ✅ Antrean batch, output global, hasil per item, ZIP, parser animasi, dan verifikasi signature sudah diport ke WebP ke Gambar.
+- Sisa: QA codec Chrome/Firefox/Safari untuk PNG/JPG/GIF/BMP/AVIF serta uji perangkat low-memory.
 
 ### Fase 4 — PDF Composer dan PDF Render Studio
 

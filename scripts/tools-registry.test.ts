@@ -99,6 +99,8 @@ test("tool WebP ke Gambar terdaftar dengan metadata dan format yang benar", () =
   assert.equal(tool.status, "tersedia");
   assert.equal(tool.format.from, "WebP statis");
   assert.match(tool.format.to, /PNG.*JPG.*GIF.*BMP.*AVIF/);
+  assert.ok(tool.format.to.includes("ZIP"), "format.to harus menyebut ZIP");
+  assert.ok(tool.limitLabel.includes("20"), "limitLabel harus menyebut batas 20 berkas");
   assert.ok(tool.related.includes("image-to-webp"));
 });
 

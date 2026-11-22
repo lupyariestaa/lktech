@@ -112,18 +112,18 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     slug: "webp-to-image",
     name: "WebP ke Gambar",
-    summary: "Ubah WebP lokal menjadi PNG, JPG, GIF, BMP, atau AVIF.",
+    summary: "Ubah banyak WebP lokal ke PNG, JPG, GIF, BMP, atau AVIF, lalu unduh satu per satu atau sebagai ZIP.",
     description:
-      "Pilih satu WebP statis, tentukan format keluaran, lalu unduh hasilnya. Semua proses berjalan lokal di browser tanpa mengunggah gambar.",
+      "Pilih hingga 20 WebP statis, tentukan format keluaran, lalu proses berurutan. Setiap hasil diverifikasi signature sebelum dapat diunduh. Semua proses lokal di browser.",
     category: "gambar",
     status: "tersedia",
-    keywords: ["webp", "png", "jpg", "jpeg", "gif", "bmp", "avif", "gambar", "konversi"],
+    keywords: ["webp", "png", "jpg", "jpeg", "gif", "bmp", "avif", "gambar", "konversi", "batch", "zip"],
     icon: "Images",
     local: true,
     privacyNote:
       "WebP dibaca dan dikonversi di browser Anda; tidak ada berkas yang diunggah atau disimpan di server.",
-    format: { from: "WebP statis", to: "PNG, JPG, GIF, BMP, AVIF" },
-    limitLabel: "Maks. 15 MB · 8 megapiksel · WebP statis",
+    format: { from: "WebP statis", to: "PNG, JPG, GIF, BMP, AVIF + ZIP" },
+    limitLabel: "Hingga 20 berkas · 15 MB/berkas · total 80 MB · WebP statis",
     related: ["image-to-webp", "pdf-to-image"],
     isNew: true,
   },
