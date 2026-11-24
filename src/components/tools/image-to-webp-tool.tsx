@@ -28,6 +28,7 @@ import {
   canvasToBlob,
   createCanvas,
   decodeImageFile,
+  preflightImageFile,
 } from "@/lib/tools/image-client";
 import {
   IMAGE_BATCH_LIMITS,
@@ -264,6 +265,7 @@ export function ImageToWebpTool() {
 
         let decoded: Awaited<ReturnType<typeof decodeImageFile>> | null = null;
         try {
+          await preflightImageFile(target.file);
           decoded = await decodeImageFile(target.file);
           const dimensionCheck = validateWebpDimensions(decoded.width, decoded.height);
           if (!dimensionCheck.ok) throw new Error(dimensionCheck.reason);

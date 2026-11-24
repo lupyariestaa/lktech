@@ -15,6 +15,10 @@ export const IMAGE_LIMITS = {
   maxPdfImages: 20,
   /** Dimensi sisi terpanjang hasil (px). */
   maxOutputDimension: 4096,
+  /** Batas sisi input sebelum browser menjalankan decoder gambar. */
+  maxInputDimension: 8192,
+  /** Batas piksel input sebelum browser menjalankan decoder gambar. */
+  maxInputPixels: 8_000_000,
   minQuality: 0.1,
   maxQuality: 1,
 } as const;
@@ -83,6 +87,39 @@ export function clampQuality(q: number): number {
 
 export type FileMeta = { name?: string; type?: string; size?: number };
 export type ValidationResult = { ok: true } | { ok: false; reason: string };
+
+/** Validasi dimensi deklaratif sebelum decoder/canvas mengalokasikan piksel. */
+export function validateImageDimensions(
+  width: number,
+  height: number,
+  limits: {
+    maxDimension?: number;
+    maxPixels?: number;
+  } = {},
+): ValidationResult {
+  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1) {
+    return { ok: false, reason: "Dimensi gambar tidak valid." };
+  }
+  const maxDimension = limits.maxDimension ?? IMAGE_LIMITS.maxInputDimension;
+  const maxPixels = limits.maxPixels ?? IMAGE_LIMITS.maxInputPixels;
+  if (width > maxDimension || height > maxDimension) {
+    return {
+      ok: false,
+      reason: `Sisi gambar tidak boleh melebihi ${maxDimension.toLocaleString("id-ID")} px.`,
+    };
+  }
+  if (width * height > maxPixels) {
+    return {
+      ok: false,
+      reason: `Gambar melebihi batas ${formatPixels(maxPixels)} agar pemrosesan tetap stabil.`,
+    };
+  }
+  return { ok: true };
+}
+
+function formatPixels(value: number): string {
+  return value % 1_000_000 === 0 ? `${value / 1_000_000} megapiksel` : `${value} piksel`;
+}
 
 /** Apakah tipe MIME termasuk gambar yang kami dukung. */
 export function isAcceptedImageType(type: string): boolean {

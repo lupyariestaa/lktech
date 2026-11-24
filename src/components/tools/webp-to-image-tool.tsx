@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { ImageDropzone } from "@/components/tools/image-dropzone";
 import { Button, ButtonAnchor } from "@/components/ui/button";
-import { decodeImageFile } from "@/lib/tools/image-client";
+import { decodeImageFile, preflightImageFile } from "@/lib/tools/image-client";
 import { formatBytes } from "@/lib/tools/image-tool-pure";
 import {
   buildWebpOutputName,
@@ -250,7 +250,13 @@ export function WebpToImageTool() {
 
         let decoded: Awaited<ReturnType<typeof decodeImageFile>> | null = null;
         try {
-          // 1. Baca container WebP (tolak animasi)
+          // 1. Preflight signature + dimensi dari maksimum 256 KiB.
+          const preflight = await preflightImageFile(target.file);
+          if (preflight.format !== "webp") {
+            throw new Error("Header WebP tidak konsisten.");
+          }
+
+          // 2. Baca container lengkap untuk mendeteksi animasi sebelum decode.
           const bytes = new Uint8Array(await target.file.arrayBuffer());
           const container = inspectWebpContainer(bytes);
           if (!container.ok) throw new Error(container.reason);
@@ -262,7 +268,10 @@ export function WebpToImageTool() {
           const dimCheck = validateWebpDimensions(container.width, container.height);
           if (!dimCheck.ok) throw new Error(dimCheck.reason);
 
-          // 2. Decode piksel
+          // 3. Decode piksel setelah kedua header setuju.
+          if (preflight.width !== container.width || preflight.height !== container.height) {
+            throw new Error("Header WebP tidak konsisten.");
+          }
           decoded = await decodeImageFile(target.file);
           const decDimCheck = validateWebpDimensions(decoded.width, decoded.height);
           if (!decDimCheck.ok) throw new Error(decDimCheck.reason);
@@ -270,7 +279,7 @@ export function WebpToImageTool() {
             throw new Error("Dimensi hasil decode tidak cocok dengan header WebP.");
           }
 
-          // 3. Ambil ImageData di canvas sementara
+          // 4. Ambil ImageData di canvas sementara
           let pixels: ImageData;
           const canvas = document.createElement("canvas");
           canvas.width = decoded.width;
@@ -285,10 +294,10 @@ export function WebpToImageTool() {
             canvas.height = 1;
           }
 
-          // 4. Encode ke format target
+          // 5. Encode ke format target
           const blob = await encodeWebpPixels(pixels, format, clampWebpOutputQuality(quality));
 
-          // 5. Verifikasi signature (encodeWebpPixels sudah verifikasi, lapisan tambahan)
+          // 6. Verifikasi signature (encodeWebpPixels sudah verifikasi, lapisan tambahan)
           const header = new Uint8Array(await blob.slice(0, 64).arrayBuffer());
           if (!hasExpectedWebpOutput(format, blob.type, header)) {
             throw new Error(

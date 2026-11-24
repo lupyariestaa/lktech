@@ -3,6 +3,13 @@
  * Hanya diimpor oleh komponen klien; tidak diuji lewat Node.
  */
 
+import {
+  imageFormatForMime,
+  inspectImageHeader,
+  type ImageHeaderResult,
+} from "@/lib/tools/image-header-pure";
+import { validateImageDimensions } from "@/lib/tools/image-tool-pure";
+
 export type DecodedImage = {
   /** Sumber yang bisa langsung dipakai `ctx.drawImage`. */
   source: CanvasImageSource;
@@ -11,6 +18,28 @@ export type DecodedImage = {
   /** Lepaskan sumber daya (bitmap/object URL). */
   release: () => void;
 };
+
+/** Metadata dibaca secukupnya; tidak ada piksel yang didekode pada tahap ini. */
+export const IMAGE_HEADER_READ_BYTES = 256 * 1024;
+
+export type ImagePreflight = Extract<ImageHeaderResult, { ok: true }>;
+
+/**
+ * Periksa signature dan dimensi deklaratif sebelum `createImageBitmap`/`img`.
+ * Batas pembacaan menjaga preflight tetap ringan meskipun ukuran file diizinkan.
+ */
+export async function preflightImageFile(file: File): Promise<ImagePreflight> {
+  const bytes = new Uint8Array(await file.slice(0, IMAGE_HEADER_READ_BYTES).arrayBuffer());
+  const header = inspectImageHeader(bytes);
+  if (!header.ok) throw new Error(header.reason);
+  const expectedFormat = imageFormatForMime(file.type);
+  if (expectedFormat && expectedFormat !== header.format) {
+    throw new Error("Signature gambar tidak cocok dengan tipe berkas yang dipilih.");
+  }
+  const dimensions = validateImageDimensions(header.width, header.height);
+  if (!dimensions.ok) throw new Error(dimensions.reason);
+  return header;
+}
 
 function loadImageElement(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {

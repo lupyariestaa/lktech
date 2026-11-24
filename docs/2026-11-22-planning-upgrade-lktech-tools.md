@@ -31,7 +31,7 @@ Implementasi pertama memprioritaskan kebutuhan yang paling mendesak tanpa menung
 - **Spike ZIP selesai:** proyek memakai penulis **ZIP32 `store` internal** (`src/lib/tools/zip-store.ts`), bukan dependensi baru. Alasan: gambar sudah terkompresi, metode store menghindari biaya CPU, dan tidak menambah permukaan audit dependensi. Arsip menulis CRC32, nama UTF-8, menolak path/duplikat, serta dibatasi 100 MB hasil.
 - ZIP dibangun hanya saat diminta, setelah hasil selesai; unduhan per item tetap tersedia bila ZIP ditolak karena batas.
 - Verifikasi: `tsc` & `eslint` bersih; build produksi 89/89 halaman; `test:tools-batch` 8/8, `test:tools-zip` 4/4, `test:tools-registry` 18/18, `test:tools-pages` 16/16. ZIP diuji struktur biner dan dibuka dengan `Expand-Archive` Windows; E2E Auth Emulator mencakup antrean dua gambar, unduhan ZIP nyata, dan reset.
-- **Sisa untuk fase berikutnya:** preflight dimensi/piksel input sebelum decode untuk mencegah gambar dekompresi-bomb, mode crop `contain`/`cover`, latar solid untuk sumber transparan, pengaturan lebar/tinggi per sumbu, thumbnail antrean, serta uji perangkat low-memory. Tool PDF/teks belum diubah pada fase ini.
+- **Sisa untuk fase berikutnya:** mode crop `contain`/`cover`, latar solid untuk sumber transparan, pengaturan lebar/tinggi per sumbu, thumbnail antrean, serta uji perangkat low-memory. Tool PDF/teks belum diubah pada fase ini.
 
 Fondasi antrean (`batch-pure.ts`) dan penulis ZIP kini tersedia untuk tool berikutnya, tetapi belum dipaksakan ke semua tool agar perubahan tetap dapat ditinjau per tool.
 
@@ -43,6 +43,13 @@ Fondasi antrean (`batch-pure.ts`) dan penulis ZIP kini tersedia untuk tool berik
 - JPG/BMP diberi matte putih untuk alpha; GIF dijelaskan sebagai output statis berpalet 256 warna; AVIF dimuat lokal secara lazy. ZIP memakai kembali penulis ZIP32 `store`, maksimal 100 MB hasil.
 - Mengubah format membatalkan hasil lama dan mencabut object URL-nya, sehingga hasil dengan format sebelumnya tidak dapat terunduh keliru.
 - Verifikasi: `tsc` & `eslint` bersih; `test:tools-registry` 18/18, `test:tools-pages` 16/16, `test:tools-webp-conversion` 6/6; E2E Auth Emulator **17/17**, termasuk konversi batch WebP→PNG dan unduhan per-item.
+
+### Preflight header gambar ✅ selesai (kode, 2026-11-22)
+
+- Sebelum `createImageBitmap` atau fallback `<img>` mendekode piksel, empat alur pemrosesan (`image-to-webp`, `webp-to-image`, `image-to-pdf`, dan Color Studio) membaca maksimal **256 KiB** awal file untuk signature serta dimensi.
+- Parser lokal murni mencakup PNG, JPEG, GIF, BMP, WebP, dan AVIF. Signature harus cocok dengan MIME yang dipilih.
+- Input ditolak sebelum decode bila header malformed/tidak dikenali, sisi lebih dari **8.192 px**, atau luas lebih dari **8 megapiksel**. Batas ini mengurangi risiko alokasi memori dari dekompresi-bomb.
+- Setelah decode, validasi WebP yang sudah ada tetap dijalankan lagi pada tool WebP untuk pertahanan berlapis.
 
 ---
 
@@ -197,9 +204,9 @@ Menjadikan Color Picker alat lengkap untuk memperoleh, memahami, menguji, dan me
 
 ### Status implementasi P0 (2026-11-22)
 
-Sudah tersedia: multi-select dan drag-and-drop, batas 30 berkas/15 MB/100 MB, preset cepat/seimbang/tinggi, kontrol kualitas, batas sisi terpanjang, antrean berurutan, status dan hasil per item, ulangi item gagal, hentikan antrean, bersihkan workspace, unduhan per item, serta ZIP lokal dengan verifikasi signature.
+Sudah tersedia: multi-select dan drag-and-drop, batas 30 berkas/15 MB/100 MB, preset cepat/seimbang/tinggi, kontrol kualitas, batas sisi terpanjang, **preflight signature/dimensi/piksel sebelum decode**, antrean berurutan, status dan hasil per item, ulangi item gagal, hentikan antrean, bersihkan workspace, unduhan per item, serta ZIP lokal dengan verifikasi signature.
 
-Belum tersedia: pengaturan lebar/tinggi per sumbu, mode `contain`/`cover`, latar solid untuk sumber transparan, thumbnail preview, serta preflight dimensi input sebelum decode.
+Belum tersedia: pengaturan lebar/tinggi per sumbu, mode `contain`/`cover`, latar solid untuk sumber transparan, dan thumbnail preview.
 
 ### Tujuan
 

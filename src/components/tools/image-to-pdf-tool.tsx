@@ -22,9 +22,15 @@ import {
   computeTargetSize,
   fitImageOnPage,
   formatBytes,
+  validateImageDimensions,
   validateImageFile,
 } from "@/lib/tools/image-tool-pure";
-import { canvasToBlob, createCanvas, decodeImageFile } from "@/lib/tools/image-client";
+import {
+  canvasToBlob,
+  createCanvas,
+  decodeImageFile,
+  preflightImageFile,
+} from "@/lib/tools/image-client";
 import { cn } from "@/lib/utils";
 
 type Status = "idle" | "working" | "done" | "error";
@@ -77,7 +83,7 @@ export function ImageToPdfTool() {
     setStatus((prev) => (prev === "done" ? "idle" : prev));
   };
 
-  const addFiles = (files: FileList | File[]) => {
+  const addFiles = async (files: FileList | File[]) => {
     const incoming = Array.from(files);
     if (incoming.length === 0) return;
 
@@ -93,6 +99,15 @@ export function ImageToPdfTool() {
       const check = validateImageFile(f);
       if (!check.ok) {
         problems.push(`${f.name}: ${check.reason}`);
+        continue;
+      }
+      try {
+        // Wajib sebelum object URL preview: elemen <img> dapat mendekode URL itu.
+        await preflightImageFile(f);
+      } catch (cause) {
+        problems.push(
+          `${f.name}: ${cause instanceof Error ? cause.message : "Header gambar tidak dapat dibaca."}`,
+        );
         continue;
       }
       const previewUrl = URL.createObjectURL(f);
@@ -157,8 +172,11 @@ export function ImageToPdfTool() {
 
       let done = 0;
       for (const item of items) {
+        await preflightImageFile(item.file);
         const decoded = await decodeImageFile(item.file);
         try {
+          const dimCheck = validateImageDimensions(decoded.width, decoded.height);
+          if (!dimCheck.ok) throw new Error(dimCheck.reason);
           const target = computeTargetSize(
             decoded.width,
             decoded.height,

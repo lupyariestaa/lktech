@@ -19,9 +19,10 @@ import {
   IMAGE_ACCEPT_ATTR,
   IMAGE_LIMITS,
   formatBytes,
+  validateImageDimensions,
   validateImageFile,
 } from "@/lib/tools/image-tool-pure";
-import { decodeImageFile } from "@/lib/tools/image-client";
+import { decodeImageFile, preflightImageFile } from "@/lib/tools/image-client";
 import {
   buildColorScale,
   contrastTextColor,
@@ -205,8 +206,11 @@ export function ColorPickerTool() {
     setImageError(null);
     setSamplePoint(null);
     try {
+      await preflightImageFile(file);
       const decoded = await decodeImageFile(file);
       try {
+        const dimCheck = validateImageDimensions(decoded.width, decoded.height);
+        if (!dimCheck.ok) throw new Error(dimCheck.reason);
         const target = scaledSize(decoded.width, decoded.height);
         canvas.width = target.width;
         canvas.height = target.height;

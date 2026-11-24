@@ -70,7 +70,7 @@ export const TOOL_GUIDES: readonly ToolGuide[] = [
       {
         question: "Bagaimana cara mengambil warna dari gambar?",
         answer:
-          "Pilih gambar dari perangkat Anda pada menu Dari gambar, lalu klik titik yang ingin diambil pada preview. Tool juga membuat palet representatif dari gambar tersebut. Gambar dibaca secara lokal dan dibatasi maksimal 15 MB.",
+          "Pilih gambar dari perangkat Anda pada menu Dari gambar, lalu klik titik yang ingin diambil pada preview. Tool juga membuat palet representatif dari gambar tersebut. Gambar dibaca lokal, maksimal 15 MB, 8 megapiksel, dan sisi 8.192 px.",
       },
     ],
   },
@@ -100,7 +100,7 @@ export const TOOL_GUIDES: readonly ToolGuide[] = [
       {
         question: "Berapa batas ukuran dan jumlah gambar?",
         answer:
-          "Setiap berkas maksimal 15 MB, maksimal 30 berkas per antrean, dan total masukan 100 MB. Tool menolak berkas yang melewati batas dengan alasan yang jelas.",
+          "Setiap berkas maksimal 15 MB dan 8 megapiksel dengan sisi maksimal 8.192 px; maksimal 30 berkas per antrean dan total masukan 100 MB. Signature, tipe berkas, serta dimensi diperiksa sebelum gambar didekode.",
       },
       {
         question: "Bagaimana mengatur kualitas WebP?",
@@ -135,12 +135,12 @@ export const TOOL_GUIDES: readonly ToolGuide[] = [
       {
         question: "Berapa jumlah gambar yang bisa digabung?",
         answer:
-          "Satu proses mendukung hingga 20 gambar, dengan ukuran maksimal 15 MB per gambar.",
+          "Satu proses mendukung hingga 20 gambar, dengan ukuran maksimal 15 MB, 8 megapiksel, dan sisi 8.192 px per gambar.",
       },
       {
         question: "Format gambar apa yang didukung?",
         answer:
-          "Tool menerima format gambar umum seperti PNG, JPG, WebP, GIF, BMP, dan AVIF. Validasi akhir dilakukan saat gambar dibaca di browser.",
+          "Tool menerima PNG, JPG, WebP, GIF, BMP, dan AVIF. Signature, tipe berkas, dan dimensi diperiksa sebelum gambar didekode di browser.",
       },
       {
         question: "Apakah saya bisa mengatur ukuran halaman PDF?",
