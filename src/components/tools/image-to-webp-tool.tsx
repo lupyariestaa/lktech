@@ -17,10 +17,14 @@ import { Button, ButtonAnchor } from "@/components/ui/button";
 import {
   IMAGE_ACCEPT_ATTR,
   IMAGE_LIMITS,
+  type FitMode,
   buildOutputName,
   clampQuality,
+  computeCanvasSize,
+  computeFitGeometry,
   computeTargetSize,
   formatBytes,
+  isValidHexColor,
   validateImageFile,
 } from "@/lib/tools/image-tool-pure";
 import {
@@ -65,6 +69,12 @@ type QueueItem = {
 
 type ZipResult = { url: string; name: string; size: number };
 type Preset = "fast" | "balanced" | "high" | "manual";
+
+const DEFAULT_BG_COLOR = "#ffffff";
+const FIT_OPTIONS: Array<{ value: FitMode; label: string; hint: string }> = [
+  { value: "contain", label: "Contain", hint: "Muat penuh, latar mengisi ruang kosong" },
+  { value: "cover", label: "Cover", hint: "Isi kanvas penuh, tepi gambar dipotong" },
+];
 
 const PRESETS: Array<{
   id: Exclude<Preset, "manual">;
@@ -127,6 +137,8 @@ export function ImageToWebpTool() {
   const [quality, setQuality] = useState(0.8);
   const [maxDim, setMaxDim] = useState<number>(IMAGE_LIMITS.maxOutputDimension);
   const [preset, setPreset] = useState<Preset>("balanced");
+  const [fitMode, setFitMode] = useState<FitMode>("contain");
+  const [bgColor, setBgColor] = useState(DEFAULT_BG_COLOR);
   const [running, setRunning] = useState(false);
   const [zipping, setZipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -270,12 +282,26 @@ export function ImageToWebpTool() {
           const dimensionCheck = validateWebpDimensions(decoded.width, decoded.height);
           if (!dimensionCheck.ok) throw new Error(dimensionCheck.reason);
 
-          const size = computeTargetSize(decoded.width, decoded.height, maxDim);
-          const canvas = createCanvas(size.width, size.height);
+          const size = computeCanvasSize(decoded.width, decoded.height, maxDim);
+          const geo = computeFitGeometry(
+            decoded.width,
+            decoded.height,
+            size.width,
+            size.height,
+            fitMode,
+          );
+          const canvas = createCanvas(geo.canvasW, geo.canvasH);
           try {
             const context = canvas.getContext("2d");
             if (!context) throw new Error("Kanvas gambar tidak tersedia di browser ini.");
-            context.drawImage(decoded.source, 0, 0, size.width, size.height);
+            const bg = isValidHexColor(bgColor) ? bgColor : DEFAULT_BG_COLOR;
+            context.fillStyle = bg;
+            context.fillRect(0, 0, geo.canvasW, geo.canvasH);
+            context.drawImage(
+              decoded.source,
+              geo.sx, geo.sy, geo.sw, geo.sh,
+              geo.dx, geo.dy, geo.dw, geo.dh,
+            );
 
             const blob = await canvasToBlob(canvas, "image/webp", clampQuality(quality));
             if (blob.type !== "image/webp") {
@@ -291,7 +317,7 @@ export function ImageToWebpTool() {
             if (container.animated) {
               throw new Error("Hasil WebP tidak boleh berupa animasi.");
             }
-            if (container.width !== size.width || container.height !== size.height) {
+            if (container.width !== geo.canvasW || container.height !== geo.canvasH) {
               throw new Error("Dimensi hasil WebP tidak sesuai dengan target.");
             }
 
@@ -317,8 +343,8 @@ export function ImageToWebpTool() {
                         url,
                         name,
                         size: blob.size,
-                        width: size.width,
-                        height: size.height,
+                        width: geo.canvasW,
+                        height: geo.canvasH,
                       },
                       error: undefined,
                     }
@@ -574,6 +600,65 @@ export function ImageToWebpTool() {
                 </select>
                 <span className="text-[11px] text-muted">
                   Tidak melakukan upscale; gambar yang lebih kecil dibiarkan.
+                </span>
+              </label>
+
+              <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 p-4">
+                <span className="text-xs font-semibold text-secondary">Mode fit</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {FIT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      disabled={running || zipping}
+                      aria-pressed={fitMode === opt.value}
+                      onClick={() => setFitMode(opt.value)}
+                      className={cn(
+                        "rounded-xl border p-2.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none disabled:cursor-not-allowed",
+                        fitMode === opt.value
+                          ? "border-primary bg-primary-50 font-semibold text-primary"
+                          : "border-slate-200 text-secondary hover:border-primary/40",
+                      )}
+                    >
+                      <span className="block font-semibold">{opt.label}</span>
+                      <span className="mt-0.5 block opacity-70">{opt.hint}</span>
+                    </button>
+                  ))}
+                </div>
+                {fitMode === "cover" && (
+                  <p className="text-[11px] text-amber-700">
+                    Cover memotong tepi gambar agar kanvas penuh terisi.
+                  </p>
+                )}
+              </div>
+
+              <label className="flex flex-col gap-2 rounded-2xl border border-slate-200 p-4">
+                <span className="text-xs font-semibold text-secondary">Warna latar</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={isValidHexColor(bgColor) ? bgColor : DEFAULT_BG_COLOR}
+                    disabled={running || zipping}
+                    onChange={(e) => setBgColor(e.target.value)}
+                    className="h-9 w-10 cursor-pointer rounded border border-slate-200 p-0.5 disabled:cursor-not-allowed"
+                    aria-label="Pilih warna latar"
+                  />
+                  <input
+                    type="text"
+                    value={bgColor}
+                    disabled={running || zipping}
+                    onChange={(e) => setBgColor(e.target.value)}
+                    placeholder="#ffffff"
+                    className="h-9 w-28 rounded-lg border border-slate-200 px-2.5 font-mono text-sm text-secondary focus:ring-2 focus:ring-primary/30 focus:outline-none disabled:cursor-not-allowed"
+                    aria-label="Kode warna latar hex"
+                  />
+                  {!isValidHexColor(bgColor) && (
+                    <span className="text-xs text-rose-600">Format tidak valid</span>
+                  )}
+                </div>
+                <span className="text-[11px] text-muted">
+                  Dipakai saat contain (ruang kosong) atau cover. WebP tetap menyimpan alpha bila
+                  warna latar tidak diinginkan — ubah preset ke manual dan biarkan default.
                 </span>
               </label>
             </div>

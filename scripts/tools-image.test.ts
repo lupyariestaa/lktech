@@ -6,10 +6,13 @@ import {
   PDF_PAGE_PRESETS,
   buildOutputName,
   clampQuality,
+  computeCanvasSize,
+  computeFitGeometry,
   computeTargetSize,
   fitImageOnPage,
   formatBytes,
   isAcceptedImageType,
+  isValidHexColor,
   pageSizeForImage,
   sanitizeBaseName,
   validateImageFile,
@@ -120,4 +123,59 @@ test("pageSizeForImage & preset halaman", () => {
   assert.deepEqual(pageSizeForImage(0, Number.NaN), { width: 1, height: 1 });
   assert.equal(PDF_PAGE_PRESETS.a4.width, 595.28);
   assert.equal(PDF_PAGE_PRESETS.letter.height, 792);
+});
+
+test("computeFitGeometry: contain tidak upscale, posisi center", () => {
+  // 400×200 → kanvas 800×400 (2× lebih besar) → contain, skala max 1 → gambar tetap 400×200, center
+  const c = computeFitGeometry(400, 200, 800, 400, "contain");
+  assert.equal(c.canvasW, 800);
+  assert.equal(c.canvasH, 400);
+  assert.equal(c.sw, 400); // seluruh sumber
+  assert.equal(c.sh, 200);
+  assert.equal(c.dw, 400); // tidak di-upscale
+  assert.equal(c.dh, 200);
+  assert.equal(c.dx, 200); // (800-400)/2
+  assert.equal(c.dy, 100); // (400-200)/2
+});
+
+test("computeFitGeometry: contain downscale mempertahankan rasio", () => {
+  // 1600×800 → kanvas 800×400 → scale 0.5 → 800×400 centered
+  const c = computeFitGeometry(1600, 800, 800, 400, "contain");
+  assert.equal(c.dw, 800);
+  assert.equal(c.dh, 400);
+  assert.equal(c.dx, 0);
+  assert.equal(c.dy, 0);
+});
+
+test("computeFitGeometry: cover crops center", () => {
+  // 1600×800 → kanvas 400×400
+  // scale = min(1600/400, 800/400) = min(4, 2) = 2
+  // sw = 400*2 = 800, sh = 400*2 = 800
+  // sx = (1600-800)/2 = 400, sy = (800-800)/2 = 0
+  const c = computeFitGeometry(1600, 800, 400, 400, "cover");
+  assert.equal(c.canvasW, 400);
+  assert.equal(c.canvasH, 400);
+  assert.equal(c.sw, 800);
+  assert.equal(c.sh, 800);
+  assert.equal(c.sx, 400);
+  assert.equal(c.sy, 0);
+  assert.equal(c.dx, 0);
+  assert.equal(c.dy, 0);
+});
+
+test("computeCanvasSize: tanpa ratio sama dengan computeTargetSize", () => {
+  const a = computeCanvasSize(1600, 800, 1024);
+  const b = computeTargetSize(1600, 800, 1024);
+  assert.deepEqual(a, { width: b.width, height: b.height });
+});
+
+test("isValidHexColor: format valid & tidak valid", () => {
+  assert.equal(isValidHexColor("#fff"), true);
+  assert.equal(isValidHexColor("#ffffff"), true);
+  assert.equal(isValidHexColor("#FFFFFF"), true);
+  assert.equal(isValidHexColor("#ffffffff"), true);
+  assert.equal(isValidHexColor("#ffff"), true);
+  assert.equal(isValidHexColor("ffffff"), false);
+  assert.equal(isValidHexColor("#gg0000"), false);
+  assert.equal(isValidHexColor(""), false);
 });

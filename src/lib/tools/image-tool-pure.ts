@@ -175,6 +175,98 @@ export function buildOutputName(name: string, ext: string, fallback?: string): s
 
 // ===== Ukuran & geometri =====
 
+export type FitMode = "contain" | "cover";
+
+/**
+ * Hitung kanvas target dan posisi gambar sumber setelah scaling.
+ *
+ * - `contain`: gambar muat penuh (mungkin ada ruang kosong → isi warna latar).
+ * - `cover`:   kanvas penuh terisi (gambar dipotong sisi yang kelebihan).
+ *
+ * Tidak pernah melakukan upscale: bila gambar sudah lebih kecil dari kanvas,
+ * skalanya dibatasi 1.
+ *
+ * Mengembalikan koordinat sumber (`sx/sy/sw/sh`) untuk drawImage 9-param serta
+ * koordinat tujuan (`dx/dy/dw/dh`) pada kanvas berukuran `canvasW × canvasH`.
+ */
+export function computeFitGeometry(
+  srcW: number,
+  srcH: number,
+  canvasW: number,
+  canvasH: number,
+  mode: FitMode,
+): {
+  canvasW: number;
+  canvasH: number;
+  sx: number;
+  sy: number;
+  sw: number;
+  sh: number;
+  dx: number;
+  dy: number;
+  dw: number;
+  dh: number;
+} {
+  const iw = Math.max(1, Math.round(srcW));
+  const ih = Math.max(1, Math.round(srcH));
+  const cw = Math.max(1, Math.round(canvasW));
+  const ch = Math.max(1, Math.round(canvasH));
+
+  if (mode === "cover") {
+    const scale = Math.min(iw / cw, ih / ch);
+    const sw = Math.round(cw * scale);
+    const sh = Math.round(ch * scale);
+    const sx = Math.round((iw - sw) / 2);
+    const sy = Math.round((ih - sh) / 2);
+    return { canvasW: cw, canvasH: ch, sx, sy, sw, sh, dx: 0, dy: 0, dw: cw, dh: ch };
+  }
+
+  // contain
+  const scaleX = cw / iw;
+  const scaleY = ch / ih;
+  const scale = Math.min(scaleX, scaleY, 1);
+  const dw = Math.max(1, Math.round(iw * scale));
+  const dh = Math.max(1, Math.round(ih * scale));
+  const dx = Math.round((cw - dw) / 2);
+  const dy = Math.round((ch - dh) / 2);
+  return { canvasW: cw, canvasH: ch, sx: 0, sy: 0, sw: iw, sh: ih, dx, dy, dw, dh };
+}
+
+/**
+ * Hitung ukuran kanvas output: bounded oleh `maxDim`, lalu disesuaikan
+ * rasio aspek target. Bila tidak ada `targetRatio`, kanvas = ukuran sumber
+ * (sama dengan `computeTargetSize`).
+ */
+export function computeCanvasSize(
+  srcW: number,
+  srcH: number,
+  maxDim: number,
+  targetRatio?: number,
+): { width: number; height: number } {
+  const iw = Math.max(1, Math.round(srcW));
+  const ih = Math.max(1, Math.round(srcH));
+  if (!Number.isFinite(targetRatio) || targetRatio! <= 0) {
+    const r = computeTargetSize(iw, ih, maxDim);
+    return { width: r.width, height: r.height };
+  }
+  const ratio = targetRatio!;
+  const longest = Math.max(iw, ih);
+  const scale = Math.min(1, maxDim / longest);
+  const scaledW = Math.max(1, Math.round(iw * scale));
+  const scaledH = Math.max(1, Math.round(ih * scale));
+  if (ratio >= 1) {
+    const h = Math.max(1, Math.round(scaledW / ratio));
+    return { width: scaledW, height: Math.min(h, maxDim) };
+  }
+  const w = Math.max(1, Math.round(scaledH * ratio));
+  return { width: Math.min(w, maxDim), height: scaledH };
+}
+
+/** Validasi warna latar hex (#rgb, #rrggbb, #rgba, #rrggbbaa). */
+export function isValidHexColor(hex: string): boolean {
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hex);
+}
+
 /** Hitung ukuran target setelah dibatasi `maxDim` pada sisi terpanjang. */
 export function computeTargetSize(
   width: number,
